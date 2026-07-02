@@ -66,8 +66,8 @@ reorder — earlier items unblock later ones.
       Qwen 3.6 27B — whichever is alive), one adapter (`pi_vanilla`),
       one suite (Aider Polyglot), k=1 trial, **5 problems** only. Prove
       the manifest/verdict path works before scaling.
-- [ ] **P11. Suite: Terminal-Bench Core.** `harness/suites/terminal_bench.py`
-      wraps `harbor run` against `terminal-bench-core@0.1.1` using
+- [ ] **P11. Suite: Terminal-Bench.** `harness/suites/terminal_bench.py`
+      wraps `harbor run` against `terminal-bench@latest` using
       `--agent-import-path` per adapter. **Patch the Harbor `upload_dir`
       bug first** (agent-created `/tests` dir → verifier paths at
       `/tests/tests/test.sh`). Start with k=1 on a 5-task slice to

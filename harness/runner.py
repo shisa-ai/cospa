@@ -86,7 +86,7 @@ def get_little_coder_version():
 def run_trial(suite, adapter, model_id, task_id, trial_k, results_dir, vendor_dir):
     """Run a single trial of a single task."""
     # Create output directory
-    trial_dir = results_dir / model_id / adapter / suite / task_id / f"trial-{trial_k}"
+    trial_dir = Path(results_dir) / model_id / adapter.name / suite.name / task_id / f"trial-{trial_k}"
     trial_dir.mkdir(parents=True, exist_ok=True)
 
     # Create workdir for this trial

@@ -25,3 +25,8 @@ Thumbs.db
 .vscode/
 *.swp
 *.swo
+
+# AI agent workspaces
+.pi/
+.claude/
+.codex/

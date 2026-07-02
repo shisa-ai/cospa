@@ -1,0 +1,27 @@
+# Results — generated, not committed (keep one example)
+results/*
+!results/.gitkeep
+
+# Vendored dependencies
+vendor/
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+.venv/
+venv/
+*.egg-info/
+
+# Node
+node_modules/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Editor
+.idea/
+.vscode/
+*.swp
+*.swo

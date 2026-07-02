@@ -5,11 +5,15 @@ Adapter registry — load adapters by name.
 from harness.adapters.pi_vanilla import PiVanillaAdapter
 from harness.adapters.pi_devstack import PiDevstackAdapter
 from harness.adapters.little_coder import LittleCoderAdapter
+from harness.adapters.pi_superpowers import PiSuperpowersAdapter
+from harness.adapters.little_coder_superpowers import LittleCoderSuperpowersAdapter
 
 ADAPTERS = {
     "pi_vanilla": PiVanillaAdapter,
     "pi_devstack": PiDevstackAdapter,
     "little_coder": LittleCoderAdapter,
+    "pi_superpowers": PiSuperpowersAdapter,
+    "little_coder_superpowers": LittleCoderSuperpowersAdapter,
 }
 
 

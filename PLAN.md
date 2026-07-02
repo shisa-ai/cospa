@@ -9,6 +9,11 @@
 > **harness**, on the theory that scaffold–model fit dominates raw model quality
 > for small models (cf. *Honey, I Shrunk the Coding Agent*).
 
+All Python code runs inside the `coding-eval` mamba environment
+(`python=3.12`). Use `mamba run -n coding-eval <cmd>` or `conda activate
+coding-eval` before invoking any harness script. The setup script (P2)
+verifies the env exists and is on the right version.
+
 ---
 
 ## 0. Punchlist (do these, in order)
@@ -21,10 +26,11 @@ reorder — earlier items unblock later ones.
       for `results/` (keep one example), `node_modules/`, `.venv/`,
       `vendor/`. README stub.
 - [ ] **P2. Install script (`scripts/setup.sh`).** Verifies pi (≥ some
-      version), installs Harbor (`uv tool install harbor`), clones/pins
-      Terminal-Bench-Core **v0.1.1** and Aider Polyglot dataset under
-      `vendor/`. **Does not** touch models or providers — model setup is
-      a separate concern, by design.
+      version), verifies the `coding-eval` mamba env (python=3.12) exists
+      and is active, installs Harbor (`uv tool install harbor`), clones
+      Terminal-Bench (latest, `harbor-framework/terminal-bench`) and
+      Aider Polyglot dataset under `vendor/`. **Does not** touch models
+      or providers — model setup is a separate concern, by design.
 - [ ] **P3. Models check (`scripts/check-models.sh`).** Reads model IDs
       from a `configs/models.yaml` (or `~/.pi/agent/models.json`), pings
       each provider with a 1-token completion, reports alive/dead +
@@ -152,12 +158,15 @@ runner. Cheap signal; do this before any TB run.
 - Verdict: pass/fail per problem; partial credit possible per-language if
   tests are tiered (record raw pass count, derive binary for the headline).
 
-### Terminal-Bench Core v0.1.1 (P11, second)
+### Terminal-Bench (P11, second)
 
-Smaller subset of TB 2.0 — cheaper iteration. Agentic / tool-heavy, the
-opposite signal from Polyglot.
+Latest from `harbor-framework/terminal-bench` — the canonical agentic
+eval. We use it via Harbor; Core is the subset we run first for cheap
+iteration, then graduate to the full suite if Core separates the
+harnesses cleanly.
 
-- Driven by Harbor: `harbor run -d terminal-bench-core@0.1.1 \
+- Repo: https://github.com/harbor-framework/terminal-bench (latest)
+- Driven by Harbor: `harbor run -d terminal-bench@latest \
   --agent-import-path <adapter> -m <model> -n <k>`.
 - Per-adapter `--agent-import-path`:
   - `pi_vanilla`, `pi_devstack`, `*_superpowers` → adapter wraps the
@@ -189,8 +198,8 @@ database. `view-scores/` (P12) reads it cold. This means we can re-score
 without re-running, and partial runs compose by directory union.
 
 Reproducibility levers we record but do not enforce: pi version,
-little-coder version, Harbor version, TB-Core pin, sampling params, env
-hash. A run is "comparable" to another only if these match; the viewer
+little-coder version, Harbor version, TB pin, mamba env hash, sampling
+params. A run is "comparable" to another only if these match; the viewer
 flags mismatches in the comparison view.
 
 ## 5. What we are explicitly NOT doing (v1)

@@ -113,3 +113,38 @@ def test_runner_main_proceeds_with_skip_reachability():
 
     # With skip_reachability=True, main must NOT abort before load_suite
     mock_suite.assert_called()
+
+
+def test_runner_main_aborts_when_suite_has_no_tasks():
+    """Missing/empty datasets must fail loudly instead of producing a green no-op run."""
+    import argparse
+    from harness import runner as runner_mod
+
+    args = argparse.Namespace(
+        suite="aider_polyglot",
+        adapter="pi_vanilla",
+        model="test/model",
+        problems=1,
+        k=1,
+        results_dir=Path(tempfile.mkdtemp()),
+        vendor_dir=Path(tempfile.mkdtemp()),
+        config=Path("/tmp/c"),
+        skip_reachability=True,
+    )
+
+    with patch.object(runner_mod, "parse_args", return_value=args), \
+         patch.object(runner_mod, "load_suite") as mock_suite, \
+         patch.object(runner_mod, "load_adapter") as mock_adapter, \
+         patch.object(runner_mod, "run_trial") as mock_run_trial:
+        fake_suite = mock_suite.return_value
+        fake_suite.get_task_ids.return_value = []
+
+        try:
+            runner_mod.main()
+        except SystemExit as e:
+            assert e.code != 0, f"expected nonzero exit, got {e.code}"
+        else:
+            assert False, "main() must exit when no tasks are discovered"
+
+    mock_adapter.assert_called()
+    mock_run_trial.assert_not_called()

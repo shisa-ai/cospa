@@ -847,3 +847,78 @@ required fixes are:
 3. Fix Aider Polyglot scoring for Go and add language-runner coverage.
 4. Vendor `polyglot-benchmark` locally and run the 5-problem Aider smoke.
 5. Run a Docker-enabled Terminal-Bench smoke and verify Harbor score ingestion.
+
+---
+
+## Fourth Follow-up Audit (remaining-issues RED/GREEN fix pass)
+
+The remaining code-level blockers from the third audit have now been fixed with
+RED/GREEN tests. The only item still not fully closed is a live
+Docker-backed Terminal-Bench smoke; Docker is not accessible in this
+environment, so that remains an environment-gated verification step rather
+than an unaddressed harness bug.
+
+### Verification Run
+
+Commands run:
+
+```bash
+mamba run -n coding-eval python -m pytest -q
+bash tests/scripts/run_all.sh
+mamba run -n coding-eval python -c "from harness.suites.terminal_bench import TerminalBenchSuite; ... # captured Harbor commands"
+mamba run -n coding-eval python -c "from harness.suites.aider_polyglot import AiderPolyglotSuite; ... # Go output count"
+mamba run -n coding-eval python -c "from harness.runner import get_terminal_bench_pin; print(get_terminal_bench_pin(Path('vendor')))"
+git clone https://github.com/Aider-AI/polyglot-benchmark.git vendor/polyglot-benchmark
+mamba run -n coding-eval python -c "from harness.suites.aider_polyglot import AiderPolyglotSuite; print(len(AiderPolyglotSuite().get_task_ids(vendor_dir='vendor')))"
+```
+
+Observed:
+
+- Python tests pass: `70 passed`.
+- Shell tests pass: 11 assertions.
+- Terminal-Bench commands now use distinct custom Harbor agents:
+  `PiVanillaHarborAgent`, `PiDevstackHarborAgent`,
+  `PiSuperpowersHarborAgent`, `LittleCoderHarborAgent`, and
+  `LittleCoderSuperpowersHarborAgent`.
+- The Harbor subprocess receives `PYTHONPATH` with the repo root, so it can
+  import `harness.harbor_agents`.
+- A `trial_k=3` Terminal-Bench `run_trial()` now sends exactly one Harbor
+  attempt for that trial, not `--n-attempts 3`.
+- Standard `go test -v` output with two passing tests now counts as `2`.
+- `get_terminal_bench_pin(Path('vendor'))` resolves the vendored
+  Terminal-Bench checkout to commit
+  `1a6ffa9674b571da0ed040c470cb40c4d85f9b9b` instead of returning symbolic
+  `head`.
+- `vendor/polyglot-benchmark` was cloned locally for smoke verification, and
+  Aider Polyglot discovery now returns `225` tasks. The dataset remains under
+  ignored `vendor/` and is not part of the commit.
+
+### Fixes Landed
+
+| Third-audit issue | Status after this pass |
+|---|---|
+| A. Terminal-Bench collapses adapter arms | Fixed. `TerminalBenchSuite.AGENT_MAP` now points each adapter to a distinct `harness.harbor_agents:*` import path. The custom agents invoke the corresponding `pi`/`little-coder` CLI flags, including the bench-only superpowers skill subset. |
+| B. Terminal-Bench `k` semantics | Fixed. The outer runner owns repeated trials; each Terminal-Bench trial calls Harbor with `n_attempts=1`. |
+| C. Aider Polyglot Go scoring | Fixed. `_count_tests()` now counts normal `go test -v` `--- PASS:` lines. |
+| D. Aider Polyglot not runnable locally | Fixed for this checkout. `vendor/polyglot-benchmark` is present locally and discovery returns all 225 tasks. Setup already clones this dataset and fails loudly if it cannot. |
+| E. Live Terminal-Bench execution | Still environment-gated. Harbor CLI wiring is tested and command-shaped correctly, but Docker access here is denied, so a real Harbor score-ingestion smoke still needs a Docker-enabled host. |
+| F. Manifest metadata weakness | Improved. Sampling fields now record explicit `server-default` markers instead of nulls; `tool_call_parser` records `server-config-unobserved` unless overridden; `served_model` can be set through `CODING_EVAL_SERVED_MODEL`; Terminal-Bench `head` resolves to the local git commit. |
+
+### New Coverage
+
+- `tests/test_terminal_bench.py` now asserts adapter variants map to distinct
+  custom Harbor agents, `PYTHONPATH` is set for importability, and `trial_k`
+  is not forwarded as Harbor attempts.
+- `tests/test_aider_polyglot.py` now covers normal Go verbose test output.
+- `tests/test_reachability.py` now ensures missing datasets fail loudly
+  instead of producing a zero-task successful run.
+- `tests/test_manifest.py` now covers explicit sampling/tool-parser metadata
+  and symbolic Terminal-Bench pin resolution.
+
+### Remaining Operational Smoke
+
+Before claiming Terminal-Bench is end-to-end verified, run a Docker-enabled
+smoke on a machine that can access `/var/run/docker.sock`, with one reachable
+model, one custom Harbor agent, and one task such as `hello-world`. The code
+path is now wired and tested at the command boundary, but this environment
+cannot validate Docker execution or Harbor score ingestion.

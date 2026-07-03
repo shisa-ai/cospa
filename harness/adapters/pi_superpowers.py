@@ -51,19 +51,23 @@ class AdapterResult:
 def _resolve_bench_skill_paths() -> list:
     """Return --skill paths for each bench skill that exists on disk.
 
-    Looks under ~/.pi/agent/skills/<name>/ for each name in BENCH_SKILLS and
-    returns the directory paths. Missing skills are silently skipped (the
-    bench still runs, just without that skill). We never return the bare
+    Prefer installed user skills under ~/.pi/agent/skills/<name>/, then fall
+    back to the repo-local bench skill definitions. We never return the bare
     skills directory — only individual, allowlisted skill subdirs.
     """
-    skills_root = Path.home() / ".pi" / "agent" / "skills"
+    skills_roots = [
+        Path.home() / ".pi" / "agent" / "skills",
+        Path(__file__).resolve().parents[1] / "bench_skills",
+    ]
     paths = []
-    if not skills_root.is_dir():
-        return paths
     for name in BENCH_SKILLS:
-        candidate = skills_root / name
-        if candidate.is_dir() and name not in INTERACTIVE_SKILLS:
-            paths.append(str(candidate))
+        if name in INTERACTIVE_SKILLS:
+            continue
+        for skills_root in skills_roots:
+            candidate = skills_root / name
+            if candidate.is_dir():
+                paths.append(str(candidate))
+                break
     return paths
 
 

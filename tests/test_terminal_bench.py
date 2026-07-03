@@ -6,6 +6,8 @@ Reproduces ORNITH-CODER-REVIEW.md findings #4 and follow-up audit item B:
     not raise UnboundLocalError on tasks lacking verifier.py/scorer.py.
   - run_harbor_job must use --n-attempts/-k, --model/-m, --agent/-a,
     --registry-path, and the head version's commit_hash.
+  - Terminal-Bench must preserve adapter identity via custom Harbor agents,
+    not collapse pi_vanilla/pi_devstack/pi_superpowers into the same agent.
   - The runner must delegate terminal_bench trials to run_harbor_job
     instead of the generic adapter path.
 """
@@ -130,17 +132,16 @@ def test_run_harbor_job_uses_correct_flags():
     assert result["returncode"] == 0, result
 
 
-def test_run_harbor_job_uses_pi_agent_for_pi_adapters():
-    """pi_vanilla/devstack/superpowers -> agent 'pi'; little_coder -> 'aider'."""
+def test_run_harbor_job_uses_custom_agent_for_each_adapter_family():
+    """Adapter labels must resolve to coding-eval custom Harbor agents."""
     suite = TerminalBenchSuite()
     seen = {}
 
     def fake_run(cmd, **kwargs):
         import subprocess as sp
-        # record the agent value (the token after --agent/-a)
         for i, c in enumerate(cmd):
             if c in ("--agent", "-a") and i + 1 < len(cmd):
-                seen[cmd[i + 1]] = cmd[i + 1]
+                seen[current_adapter] = cmd[i + 1]
         return sp.CompletedProcess(args=cmd, returncode=0, stdout="", stderr="")
 
     with patch("subprocess.run", side_effect=fake_run):
@@ -148,13 +149,83 @@ def test_run_harbor_job_uses_pi_agent_for_pi_adapters():
             workdir = Path(tmp) / "w"
             workdir.mkdir()
             jobs = Path(tmp) / "jobs"
-            for adapter in ("pi_vanilla", "pi_devstack", "pi_superpowers"):
-                suite.run_harbor_job("t", "m", adapter, workdir, jobs, 1)
-            suite.run_harbor_job("t", "m", "little_coder", workdir, jobs, 1)
+            for current_adapter in (
+                "pi_vanilla",
+                "pi_devstack",
+                "pi_superpowers",
+                "little_coder",
+            ):
+                suite.run_harbor_job("t", "test/model", current_adapter, workdir, jobs, 1)
 
-    assert "pi" in seen, seen
-    # little_coder maps to aider
-    assert "aider" in seen, seen
+    assert seen["pi_vanilla"] == "harness.harbor_agents:PiVanillaHarborAgent"
+    assert seen["pi_devstack"] == "harness.harbor_agents:PiDevstackHarborAgent"
+    assert seen["pi_superpowers"] == "harness.harbor_agents:PiSuperpowersHarborAgent"
+    assert seen["little_coder"] == "harness.harbor_agents:LittleCoderHarborAgent"
+
+
+def test_run_harbor_job_uses_distinct_custom_agents_for_adapter_variants():
+    """Each harness adapter must map to a distinct custom Harbor agent.
+
+    Otherwise Terminal-Bench would repeat the same built-in Harbor agent under
+    different result labels, invalidating the scaffold comparison.
+    """
+    suite = TerminalBenchSuite()
+    seen = {}
+
+    def fake_run(cmd, **kwargs):
+        import subprocess as sp
+        for i, c in enumerate(cmd):
+            if c in ("--agent", "-a") and i + 1 < len(cmd):
+                seen[current_adapter] = cmd[i + 1]
+        return sp.CompletedProcess(args=cmd, returncode=0, stdout="", stderr="")
+
+    adapters = (
+        "pi_vanilla",
+        "pi_devstack",
+        "pi_superpowers",
+        "little_coder",
+        "little_coder_superpowers",
+    )
+    with patch("subprocess.run", side_effect=fake_run):
+        with tempfile.TemporaryDirectory() as tmp:
+            workdir = Path(tmp) / "w"
+            workdir.mkdir()
+            jobs = Path(tmp) / "jobs"
+            for current_adapter in adapters:
+                suite.run_harbor_job("t", "test/model", current_adapter, workdir, jobs, 1)
+
+    assert set(seen) == set(adapters), seen
+    assert len(set(seen.values())) == len(adapters), seen
+    assert all(":" in agent for agent in seen.values()), seen
+    assert "pi" not in seen.values(), seen
+    assert "aider" not in seen.values(), seen
+
+
+def test_run_harbor_job_sets_pythonpath_for_custom_agent_import():
+    """The Harbor subprocess must be able to import harness.* custom agents."""
+    suite = TerminalBenchSuite()
+    captured = {}
+
+    def fake_run(cmd, **kwargs):
+        import subprocess as sp
+        captured["env"] = kwargs.get("env", {})
+        return sp.CompletedProcess(args=cmd, returncode=0, stdout="", stderr="")
+
+    with patch("subprocess.run", side_effect=fake_run):
+        with tempfile.TemporaryDirectory() as tmp:
+            workdir = Path(tmp) / "w"
+            workdir.mkdir()
+            suite.run_harbor_job(
+                "hello-world",
+                "test/model",
+                "pi_vanilla",
+                workdir,
+                Path(tmp) / "jobs",
+                1,
+            )
+
+    pythonpath = captured["env"].get("PYTHONPATH", "")
+    assert str(PROJECT_ROOT) in pythonpath.split(os.pathsep), pythonpath
 
 
 def test_get_terminal_bench_pin_reads_commit_hash():
@@ -217,3 +288,39 @@ def test_runner_delegates_terminal_bench_to_harbor():
     )
     assert harbor_calls[0][0] == "hello-world"
     assert harbor_calls[0][1] == "nvidia/nemotron-3-ultra-550b-a55b"
+
+
+def test_runner_terminal_bench_trial_uses_one_harbor_attempt_per_trial():
+    """run_trial's trial index must not be forwarded as Harbor attempts.
+
+    The outer runner already loops over k trials. Forwarding trial_k to
+    --n-attempts makes k=3 run 1+2+3 attempts instead of 3 comparable trials.
+    """
+    from harness.runner import run_trial
+    from harness.adapters.pi_vanilla import PiVanillaAdapter
+
+    suite = TerminalBenchSuite()
+    adapter = PiVanillaAdapter()
+    attempts = []
+
+    def fake_harbor(self, task_id, model_id, adapter_name, workdir, jobs_dir,
+                    n_attempts=1, vendor_dir=None):
+        attempts.append(n_attempts)
+        return {"returncode": 0, "stdout": "", "stderr": ""}
+
+    with tempfile.TemporaryDirectory() as tmp:
+        tmp = Path(tmp)
+        vendor_dir = tmp / "vendor"
+        _make_task_yaml_task(vendor_dir, "hello-world")
+        with patch.object(TerminalBenchSuite, "run_harbor_job", fake_harbor):
+            run_trial(
+                suite,
+                adapter,
+                "nvidia/nemotron-3-ultra-550b-a55b",
+                "hello-world",
+                3,
+                tmp / "results",
+                vendor_dir,
+            )
+
+    assert attempts == [1], attempts

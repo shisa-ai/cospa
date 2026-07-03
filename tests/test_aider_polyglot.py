@@ -116,3 +116,17 @@ def test_setup_sh_uses_real_benchmark_and_fails_loudly_when_missing(monkeypatch=
     )
     # And it must exit nonzero on clone failure rather than continuing
     assert "exit 1" in text, "setup.sh must exit 1 on dataset clone failure"
+
+
+def test_count_tests_counts_go_test_verbose_output():
+    """A successful `go test -v` run must not be marked failed as 0 tests."""
+    suite = AiderPolyglotSuite()
+    output = """=== RUN   TestTwoFer
+--- PASS: TestTwoFer (0.00s)
+=== RUN   TestTwoFerNamed
+--- PASS: TestTwoFerNamed (0.00s)
+PASS
+ok  example/twofer 0.123s
+"""
+
+    assert suite._count_tests(output) == 2

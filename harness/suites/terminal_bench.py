@@ -9,6 +9,7 @@ Reference: vendor/terminal-bench/CLAUDE.md
 """
 
 import json
+import os
 import re
 import shutil
 import subprocess
@@ -16,6 +17,9 @@ import time
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, Dict, List
+
+
+PROJECT_ROOT = Path(__file__).resolve().parents[2]
 
 
 @dataclass
@@ -97,16 +101,33 @@ class TerminalBenchSuite:
     # the semantics explicit.
     verify_on_adapter_failure = True
 
-    # Map adapter name -> Harbor agent. pi* adapters run as the `pi` agent;
-    # little_coder* run as `aider` (little-coder is a pi fork, but Harbor
-    # exposes it through the aider adapter contract).
+    # Map each harness adapter to a distinct custom Harbor agent. Using
+    # Harbor's built-in `pi`/`aider` agents would collapse multiple benchmark
+    # arms into the same execution path and invalidate the scaffold comparison.
     AGENT_MAP = {
-        "pi_vanilla": "pi",
-        "pi_devstack": "pi",
-        "pi_superpowers": "pi",
-        "little_coder": "aider",
-        "little_coder_superpowers": "aider",
+        "pi_vanilla": "harness.harbor_agents:PiVanillaHarborAgent",
+        "pi_devstack": "harness.harbor_agents:PiDevstackHarborAgent",
+        "pi_superpowers": "harness.harbor_agents:PiSuperpowersHarborAgent",
+        "little_coder": "harness.harbor_agents:LittleCoderHarborAgent",
+        "little_coder_superpowers": (
+            "harness.harbor_agents:LittleCoderSuperpowersHarborAgent"
+        ),
     }
+
+    def _harbor_env(self) -> Dict[str, str]:
+        """Return env vars for the Harbor subprocess.
+
+        Custom Harbor agents live in this repository, while `harbor run`
+        executes in Harbor's own Python environment. Prepending PROJECT_ROOT to
+        PYTHONPATH lets Harbor import `harness.harbor_agents`.
+        """
+        env = os.environ.copy()
+        existing = env.get("PYTHONPATH")
+        parts = [str(PROJECT_ROOT)]
+        if existing:
+            parts.append(existing)
+        env["PYTHONPATH"] = os.pathsep.join(parts)
+        return env
 
     def get_task_ids(self, vendor_dir: Path = None) -> List[str]:
         """Get all task IDs from Terminal-Bench registry or original-tasks directory."""
@@ -297,6 +318,7 @@ class TerminalBenchSuite:
                 capture_output=True,
                 text=True,
                 timeout=3600,
+                env=self._harbor_env(),
             )
             return {
                 "returncode": result.returncode,

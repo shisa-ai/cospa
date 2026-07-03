@@ -131,11 +131,56 @@ def get_terminal_bench_pin(vendor_dir: Path) -> str:
         # `commit_hash` (not `pin`); fall back to `pin` for older schemas.
         for entry in registry:
             if entry.get("version") == "head":
-                return entry.get("commit_hash") or entry.get("pin") or "unknown"
+                pin = entry.get("commit_hash") or entry.get("pin") or "unknown"
+                if pin != "head":
+                    return pin
+
+                # The vendored registry currently uses the symbolic string
+                # "head". Resolve it to the actual local git commit so the
+                # manifest contains an immutable dataset pin.
+                result = subprocess.run(
+                    ["git", "-C", str(registry_file.parent), "rev-parse", "HEAD"],
+                    capture_output=True,
+                    text=True,
+                    timeout=5,
+                )
+                if result.returncode == 0 and result.stdout.strip():
+                    return result.stdout.strip()
+                return pin
 
         return "unknown"
     except Exception:
         return "unknown"
+
+
+def _manifest_sampling(task_data: dict) -> dict:
+    """Return explicit sampling metadata for the manifest.
+
+    The harness does not control server-side sampling for pi/little-coder
+    providers, but null values make runs look accidentally incomplete. Use
+    task/env overrides when available and otherwise record a deliberate
+    "server-default" marker.
+    """
+    return {
+        "temperature": task_data.get("temperature")
+        or os.environ.get("CODING_EVAL_TEMPERATURE")
+        or "server-default",
+        "top_p": task_data.get("top_p")
+        or os.environ.get("CODING_EVAL_TOP_P")
+        or "server-default",
+        "max_tokens": task_data.get("max_tokens")
+        or os.environ.get("CODING_EVAL_MAX_TOKENS")
+        or "server-default",
+    }
+
+
+def _manifest_tool_call_parser(task_data: dict) -> str:
+    """Return the best available tool-call parser/config identifier."""
+    return (
+        task_data.get("tool_call_parser")
+        or os.environ.get("CODING_EVAL_TOOL_CALL_PARSER")
+        or "server-config-unobserved"
+    )
 
 
 def should_run_reachability_check(skip: bool = False) -> bool:
@@ -237,7 +282,11 @@ def run_trial(suite, adapter, model_id, task_id, trial_k, results_dir, vendor_di
         "model": {
             "id": model_id,
             "provider": provider,
-            "served_model": model_id,  # May differ from model_id if using rtk proxy
+            "served_model": (
+                task_data.get("served_model")
+                or os.environ.get("CODING_EVAL_SERVED_MODEL")
+                or model_id
+            ),
         },
         "adapter": {
             "id": adapter.__class__.__name__,
@@ -248,16 +297,11 @@ def run_trial(suite, adapter, model_id, task_id, trial_k, results_dir, vendor_di
             "task_id": task_id,
         },
         "trial": trial_k,
-        "sampling": {
-            # Defaults; overridable via task_data if a suite/adapter sets them
-            "temperature": task_data.get("temperature"),
-            "top_p": task_data.get("top_p"),
-            "max_tokens": task_data.get("max_tokens"),
-        },
+        "sampling": _manifest_sampling(task_data),
         # Identifier for the tool-call parser/config the adapter uses.
         # pi/little-coder use their built-in tool-call handling; adapters may
         # override via task_data["tool_call_parser"].
-        "tool_call_parser": task_data.get("tool_call_parser", "pi-default"),
+        "tool_call_parser": _manifest_tool_call_parser(task_data),
         "env": {
             "hash": get_env_hash(),
             "pi_version": get_pi_version(),
@@ -296,7 +340,7 @@ def run_trial(suite, adapter, model_id, task_id, trial_k, results_dir, vendor_di
                 adapter_name=adapter.name,
                 workdir=workdir,
                 jobs_dir=jobs_dir,
-                n_attempts=trial_k,
+                n_attempts=1,
                 vendor_dir=vendor_dir,
             )
             manifest["exit_code"] = harbor_result.get("returncode", -1)
@@ -435,6 +479,14 @@ def main():
     # Filter by --problems if specified
     if args.problems:
         task_ids = task_ids[:args.problems]
+
+    if not task_ids:
+        print(
+            f"✗ No tasks discovered for suite '{args.suite}' in {args.vendor_dir}. "
+            "Run scripts/setup.sh or provide a valid --vendor-dir.",
+            file=sys.stderr,
+        )
+        sys.exit(1)
 
     print(f"Running {len(task_ids)} tasks x {args.k} trials = {len(task_ids) * args.k} total trials")
     print(f"Suite: {args.suite}, Adapter: {args.adapter}, Model: {args.model}")

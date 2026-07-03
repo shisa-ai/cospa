@@ -279,6 +279,11 @@ class AiderPolyglotSuite:
             return int(match.group(1))
 
         # Try to parse go test output
+        match = re.findall(r"^--- PASS:", output, re.MULTILINE)
+        if match:
+            return len(match)
+
+        # Legacy/custom go output with an explicit count
         match = re.search(r"^ok\s+.*\((\d+)\s+tests?\)", output, re.MULTILINE)
         if match:
             return int(match.group(1))

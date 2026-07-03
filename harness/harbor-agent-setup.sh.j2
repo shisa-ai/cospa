@@ -1,0 +1,43 @@
+#!/bin/bash
+set -euo pipefail
+
+if ! command -v npm >/dev/null 2>&1; then
+    apt-get update
+    apt-get install -y curl
+    curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.40.2/install.sh | bash
+    # shellcheck disable=SC1091
+    source "$HOME/.nvm/nvm.sh"
+    nvm install 22
+else
+    if [[ -f "$HOME/.nvm/nvm.sh" ]]; then
+        # shellcheck disable=SC1091
+        source "$HOME/.nvm/nvm.sh"
+    fi
+fi
+
+if ! command -v {{ cli_command }} >/dev/null 2>&1; then
+    PKG="{{ npm_package }}"
+    if [[ -n "{{ version }}" && "{{ version }}" != "latest" ]]; then
+        PKG="${PKG}@{{ version }}"
+    fi
+    npm install -g "$PKG"
+fi
+
+{% if include_bench_skills %}
+mkdir -p /installed-agent/bench-skills/systematic-debugging
+cat >/installed-agent/bench-skills/systematic-debugging/SKILL.md <<'EOF'
+# Systematic Debugging
+
+When a task fails, form a concrete hypothesis, run the smallest useful
+diagnostic command, inspect the actual output, and make one targeted change.
+Do not guess repeatedly without checking the result.
+EOF
+
+mkdir -p /installed-agent/bench-skills/verification-before-completion
+cat >/installed-agent/bench-skills/verification-before-completion/SKILL.md <<'EOF'
+# Verification Before Completion
+
+Before finishing, run the task's relevant tests or validation command. If that
+is impossible, state exactly what command could not run and why.
+EOF
+{% endif %}

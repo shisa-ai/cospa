@@ -68,8 +68,12 @@ def test_manifest_has_required_fields():
     # sampling params must be recorded
     assert "sampling" in manifest, manifest.keys()
     assert isinstance(manifest["sampling"], dict)
+    assert manifest["sampling"]["temperature"] is not None
+    assert manifest["sampling"]["top_p"] is not None
+    assert manifest["sampling"]["max_tokens"] is not None
     # tool_call_parser/config identifier
     assert "tool_call_parser" in manifest, manifest.keys()
+    assert manifest["tool_call_parser"] != "pi-default"
     # timing
     assert manifest.get("run_end_time"), "run_end_time must be set"
     assert manifest["timing"].get("wall_clock_seconds") is not None
@@ -102,6 +106,30 @@ def test_terminal_bench_pin_reads_commit_hash():
         ]))
         pin = get_terminal_bench_pin(vendor)
     assert pin == "abc123def456", pin
+
+
+def test_terminal_bench_pin_resolves_symbolic_head_to_git_commit():
+    """A registry commit_hash of 'head' is not an immutable pin."""
+    with tempfile.TemporaryDirectory() as tmp:
+        vendor = Path(tmp) / "vendor"
+        tb = vendor / "terminal-bench"
+        tb.mkdir(parents=True)
+        (tb / "registry.json").write_text(json.dumps([
+            {
+                "name": "terminal-bench-core",
+                "version": "head",
+                "commit_hash": "head",
+                "task_id_subset": None,
+            }
+        ]))
+
+        with patch("harness.runner.subprocess.run") as mock_run:
+            mock_run.return_value = sp.CompletedProcess(
+                args=["git"], returncode=0, stdout="abc123gitsha\n", stderr=""
+            )
+            pin = get_terminal_bench_pin(vendor)
+
+    assert pin == "abc123gitsha", pin
 
 
 def test_manifest_env_hash_recorded():

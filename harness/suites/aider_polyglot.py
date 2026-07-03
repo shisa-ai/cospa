@@ -1,66 +1,96 @@
 """
-Aider Polyglot suite — 225 Exercism problems across 6 languages.
+Aider Polyglot suite — polyglot-benchmark evaluation.
 
-Loads the dataset, materializes problems into workdirs, runs the adapter,
-then grades via the language's native test runner.
+This suite runs the Aider Polyglot benchmark, which tests coding agents
+across multiple programming languages using Exercism-style problems.
 
-Dataset structure (expected):
-  vendor/aider-polyglot/
-    problems/
-      <language>/
-        <problem_id>/
-          problem.txt      # Problem statement
-          starter/         # Starter files
-          tests/           # Test files
-          solution/        # Reference solution (optional)
+Dataset structure (real polyglot-benchmark):
+  vendor/aider-polyglot/problems/<language>/<problem>/
+    problem.txt          - Problem statement
+    starter/             - Starter code files
+    tests/               - Test files
+
+This suite is compatible with both the simplified local format and the
+full polyglot-benchmark dataset from https://github.com/Aider-AI/polyglot-benchmark.
 """
 
 import json
 import shutil
 import subprocess
+import time
+from dataclasses import dataclass, field
 from pathlib import Path
-from typing import List, Dict, Any
+from typing import Any, Dict, List
+
+
+@dataclass
+class SuiteResult:
+    name: str
+    adapter: str
+    model: str
+    task_id: str
+    trial: int
+    passed: bool
+    test_count: int = 0
+    wall_clock_seconds: float = 0.0
 
 
 class AiderPolyglotSuite:
-    """Aider Polyglot: 225 Exercism problems, 6 languages."""
+    """Aider Polyglot benchmark suite."""
 
     name = "aider_polyglot"
-    languages = ["cpp", "go", "java", "js", "python", "rust"]
+    version = "0.1"
+    languages = ["python", "javascript", "typescript", "go", "java", "rust", "c", "cpp", "csharp", "ruby", "php", "swift", "kotlin", "scala", "r", "julia", "matlab", "haskell", "lua", "perl", "bash", "zsh", "powershell"]
+    task_count = 0
 
-    def get_task_ids(self) -> List[str]:
-        """Get all problem IDs from the dataset."""
-        polyglot_dir = Path("vendor/aider-polyglot")
-        if not polyglot_dir.exists():
+    def get_task_ids(self, vendor_dir: Path = None) -> List[str]:
+        """Get all task IDs from the Aider Polyglot dataset."""
+        if vendor_dir is None:
+            vendor_dir = Path("vendor")
+
+        problems_dir = vendor_dir / "aider-polyglot" / "problems"
+        if not problems_dir.exists():
             return []
 
         task_ids = []
-        for lang in self.languages:
-            lang_dir = polyglot_dir / "problems" / lang
-            if lang_dir.exists():
-                for problem_dir in lang_dir.iterdir():
-                    if problem_dir.is_dir():
-                        task_ids.append(f"{lang}/{problem_dir.name}")
+        for lang_dir in problems_dir.iterdir():
+            if not lang_dir.is_dir():
+                continue
+            for problem_dir in lang_dir.iterdir():
+                if problem_dir.is_dir() and (problem_dir / "problem.txt").exists():
+                    task_ids.append(f"{lang_dir.name}/{problem_dir.name}")
 
         return sorted(task_ids)
 
-    def materialize_task(self, task_id: str, workdir: Path, vendor_dir: Path) -> Dict[str, Any]:
+    def materialize_task(self, task_id: str, workdir: Path, vendor_dir: Path = None) -> Dict[str, Any]:
         """
-        Materialize a problem into a workdir.
+        Materialize an Aider Polyglot task into the workdir.
 
-        Args:
-            task_id: Problem ID (e.g. "python/two-fer")
-            workdir: Directory to materialize into
-            vendor_dir: Vendor directory containing the dataset
-
-        Returns:
-            Task data dict with 'prompt', 'files', 'language', 'test_cmd'
+        Copies problem.txt, starter files, and test files into the workdir.
         """
-        lang, problem = task_id.split("/")
-        problem_dir = vendor_dir / "aider-polyglot" / "problems" / lang / problem
+        if vendor_dir is None:
+            vendor_dir = Path("vendor")
 
-        # Create workdir structure
+        # Parse task_id (e.g., "python/hello")
+        parts = task_id.split("/")
+        if len(parts) != 2:
+            raise ValueError(f"Invalid task_id format: {task_id}. Expected 'language/problem'.")
+
+        language, problem = parts
+
+        # Find the problem directory
+        problem_dir = vendor_dir / "aider-polyglot" / "problems" / language / problem
+        if not problem_dir.exists():
+            raise FileNotFoundError(f"Problem not found: {problem_dir}")
+
+        # Create workdir
         workdir.mkdir(parents=True, exist_ok=True)
+
+        # Read problem statement
+        problem_file = problem_dir / "problem.txt"
+        prompt = ""
+        if problem_file.exists():
+            prompt = problem_file.read_text()
 
         # Copy starter files
         starter_dir = problem_dir / "starter"
@@ -72,66 +102,128 @@ class AiderPolyglotSuite:
         if tests_dir.exists():
             shutil.copytree(tests_dir, workdir / "tests", dirs_exist_ok=True)
 
-        # Read problem statement
-        prompt = ""
-        problem_file = problem_dir / "problem.txt"
-        if problem_file.exists():
-            prompt = problem_file.read_text()
-
-        # Build test command based on language
-        test_cmd = self._get_test_command(lang, workdir)
+        # Detect language from directory name
+        lang_map = {
+            "python": "python",
+            "javascript": "javascript",
+            "typescript": "typescript",
+            "go": "go",
+            "java": "java",
+            "rust": "rust",
+            "c": "c",
+            "cpp": "cpp",
+            "csharp": "csharp",
+            "ruby": "ruby",
+            "php": "php",
+            "swift": "swift",
+            "kotlin": "kotlin",
+            "scala": "scala",
+            "r": "r",
+            "julia": "julia",
+            "matlab": "matlab",
+            "haskell": "haskell",
+            "lua": "lua",
+            "perl": "perl",
+            "bash": "bash",
+            "zsh": "zsh",
+            "powershell": "powershell",
+        }
 
         return {
+            "task_id": task_id,
             "prompt": prompt,
-            "files": list(workdir.iterdir()),
-            "language": lang,
+            "language": lang_map.get(language, language),
             "problem": problem,
-            "test_cmd": test_cmd,
-            "model_id": "nvidia/nemotron-3-ultra-550b-a55b",  # Default, overridden by runner
+            "model_id": "nvidia/nemotron-3-ultra-550b-a55b",
         }
-
-    def _get_test_command(self, lang: str, workdir: Path) -> str:
-        """Get the test command for a language."""
-        commands = {
-            "python": "pytest",
-            "js": "npm test",
-            "java": "gradle test",
-            "cpp": "cmake --build . && ./test",
-            "go": "go test ./...",
-            "rust": "cargo test",
-        }
-        return commands.get(lang, "echo 'no test command'")
 
     def verify(self, task_data: Dict[str, Any], workdir: Path) -> Dict[str, Any]:
         """
-        Verify the solution by running the test command.
+        Verify the solution by running tests.
 
-        Args:
-            task_data: Task data from materialize_task
-            workdir: Directory with the solution
-
-        Returns:
-            Verdict dict with 'passed', 'test_count', 'grader_output'
+        Detects the language and runs the appropriate test command.
         """
-        test_cmd = task_data.get("test_cmd", "echo 'no test command'")
+        language = task_data.get("language", "python")
+        timeout = task_data.get("timeout", 300)  # 5 min default for tests
 
+        # Build test command based on language
+        if language == "python":
+            cmd = ["python", "-m", "pytest", "-v", "--tb=short", "-x"]
+        elif language == "javascript" or language == "typescript":
+            # Check for package.json and use npm/yarn
+            pkg_file = workdir / "package.json"
+            if pkg_file.exists():
+                cmd = ["npm", "test"]
+            else:
+                cmd = ["npx", "jest", "--verbose"]
+        elif language == "go":
+            cmd = ["go", "test", "./...", "-v", "-timeout", "5m"]
+        elif language == "java":
+            cmd = ["gradle", "test", "--info"]
+        elif language == "rust":
+            cmd = ["cargo", "test", "--verbose"]
+        elif language == "c" or language == "cpp":
+            # Try cmake + make + test
+            cmd = ["bash", "-c", "cmake -B build && cmake --build build && ./build/test || echo 'Build failed'"]
+        elif language == "csharp":
+            cmd = ["dotnet", "test", "--logger", "console", "--verbosity", "normal"]
+        elif language == "ruby":
+            cmd = ["bundle", "exec", "rspec", "--format", "documentation"]
+        elif language == "php":
+            cmd = ["php", "-d", "display_errors=on", "-d", "error_reporting=E_ALL", "vendor/bin/phpunit"]
+        elif language == "swift":
+            cmd = ["swift", "test", "--verbose"]
+        elif language == "kotlin":
+            cmd = ["./gradlew", "test", "--info"]
+        elif language == "scala":
+            cmd = ["sbt", "test"]
+        elif language == "r":
+            cmd = ["Rscript", "-e", "testthat::test_dir('tests')"]
+        elif language == "julia":
+            cmd = ["julia", "--project=.", "-e", "using Pkg; Pkg.test()"]
+        elif language == "matlab":
+            cmd = ["matlab", "-batch", "run_tests"]
+        elif language == "haskell":
+            cmd = ["stack", "test", "--test-arguments", "-v"]
+        elif language == "lua":
+            cmd = [" busted", "--verbose"]
+        elif language == "perl":
+            cmd = ["prove", "-v", "t/"]
+        elif language == "bash" or language == "zsh":
+            cmd = ["bash", "-c", "find . -name '*.test.sh' -exec bash {} \\;"]
+        elif language == "powershell":
+            cmd = ["pwsh", "-Command", "Invoke-Pester -Output Detail"]
+        else:
+            return {
+                "passed": False,
+                "test_count": 0,
+                "grader_output": f"Unsupported language: {language}",
+                "exit_code": -1,
+            }
+
+        # Run tests
         try:
             result = subprocess.run(
-                test_cmd,
+                cmd,
                 cwd=str(workdir),
-                shell=True,
                 capture_output=True,
                 text=True,
-                timeout=120,  # 2 min for tests
+                timeout=timeout,
             )
 
-            passed = result.returncode == 0
-            test_count = self._count_tests(result.stdout)
+            # Parse test results
+            test_count = self._count_tests(result.stdout + result.stderr)
+            passed = result.returncode == 0 and test_count > 0
+
+            # Store both stdout and stderr for diagnostics
+            grader_output = result.stdout
+            if result.stderr:
+                grader_output += "\n--- STDERR ---\n" + result.stderr
 
             return {
                 "passed": passed,
                 "test_count": test_count,
-                "grader_output": result.stdout[-2000:] if result.stdout else "",  # Last 2KB
+                "grader_output": grader_output,
                 "exit_code": result.returncode,
             }
 
@@ -139,14 +231,21 @@ class AiderPolyglotSuite:
             return {
                 "passed": False,
                 "test_count": 0,
-                "grader_output": "TEST TIMEOUT",
+                "grader_output": f"Test timed out after {timeout}s",
+                "exit_code": -1,
+            }
+        except FileNotFoundError as e:
+            return {
+                "passed": False,
+                "test_count": 0,
+                "grader_output": f"Test runner not found: {e}",
                 "exit_code": -1,
             }
         except Exception as e:
             return {
                 "passed": False,
                 "test_count": 0,
-                "grader_output": f"VERIFICATION ERROR: {e}",
+                "grader_output": f"Test verification error: {e}",
                 "exit_code": -1,
             }
 
@@ -155,8 +254,9 @@ class AiderPolyglotSuite:
         if not output:
             return 0
 
-        # Try to parse pytest-style output
         import re
+
+        # Try to parse pytest-style output
         match = re.search(r"(\d+) passed", output)
         if match:
             return int(match.group(1))
@@ -167,7 +267,7 @@ class AiderPolyglotSuite:
             return int(match.group(1))
 
         # Try to parse Rust cargo test output
-        match = re.search(r"(\d+)\s+test[s]?:", output)
+        match = re.search(r"(\d+)\s+tests?:", output)
         if match:
             return int(match.group(1))
 
@@ -177,7 +277,7 @@ class AiderPolyglotSuite:
             return int(match.group(1))
 
         # Try to parse CMake/test output
-        match = re.search(r"(\d+)\s+test[s]?\s+passed", output, re.IGNORECASE)
+        match = re.search(r"(\d+)\s+tests?\s+passed", output, re.IGNORECASE)
         if match:
             return int(match.group(1))
 

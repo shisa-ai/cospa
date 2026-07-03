@@ -16,6 +16,7 @@ from typing import Optional
 class AdapterResult:
     returncode: int
     usage: Optional[object] = None
+    error: Optional[str] = None
 
 
 class LittleCoderAdapter:
@@ -43,24 +44,26 @@ class LittleCoderAdapter:
         cmd = [
             "little-coder",
             "--print",
-            "-m", task_data.get("model_id", "nvidia/nemotron-3-ultra-550b-a55b"),
+            "--model", task_data.get("model_id", "nvidia/nemotron-3-ultra-550b-a55b"),
         ]
 
         # Run little-coder in the workdir, passing the prompt
         try:
-            result = subprocess.run(
-                cmd,
-                input=prompt,
-                cwd=str(workdir),
-                stdout=open(log_file, "w"),
-                stderr=stderr_file,
-                text=True,
-                timeout=task_data.get("timeout", 600),  # 10 min default
-            )
+            with open(log_file, "w") as log_f:
+                with open(stderr_file, "w") as stderr_f:
+                    result = subprocess.run(
+                        cmd,
+                        input=prompt,
+                        cwd=str(workdir),
+                        stdout=log_f,
+                        stderr=stderr_f,
+                        text=True,
+                        timeout=task_data.get("timeout", 600),  # 10 min default
+                    )
 
             return AdapterResult(returncode=result.returncode)
 
         except subprocess.TimeoutExpired:
             return AdapterResult(returncode=-1)
         except Exception as e:
-            return AdapterResult(returncode=-1)
+            return AdapterResult(returncode=-1, error=str(e))

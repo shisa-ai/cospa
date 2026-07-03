@@ -65,7 +65,16 @@ echo ""
 
 ALIVE=0
 DEAD=0
+SKIPPED=0
 TIMEOUT=10  # seconds per model
+
+# Parse --fail-on-dead flag
+FAIL_ON_DEAD=false
+for arg in "$@"; do
+    if [[ "$arg" == "--fail-on-dead" ]]; then
+        FAIL_ON_DEAD=true
+    fi
+done
 
 for MODEL_ID in "${MAPFILE[@]}"; do
     # Extract provider and model name
@@ -108,6 +117,7 @@ if isinstance(providers, dict):
 
     if [[ -z "$PROVIDER_BASE_URL" ]]; then
         echo -e "  ${YELLOW}SKIP${NC} $MODEL_ID (no provider endpoint found)"
+        ((SKIPPED++))
         continue
     fi
 
@@ -137,11 +147,21 @@ done
 
 echo ""
 echo "── Summary ──"
-echo "  Alive:  $ALIVE"
-echo "  Dead:   $DEAD"
-echo "  Total:  $((ALIVE + DEAD))"
+echo "  Alive:   $ALIVE"
+echo "  Dead:    $DEAD"
+echo "  Skipped: $SKIPPED"
+echo "  Total:   $((ALIVE + DEAD))"
 echo ""
 
 if [[ $DEAD -gt 0 ]]; then
     echo -e "${YELLOW}⚠ Some models are unreachable. Check provider endpoints.${NC}"
 fi
+
+if [[ $ALIVE -eq 0 && $DEAD -gt 0 ]]; then
+    echo -e "${RED}✗ FAIL: No models are alive!${NC}"
+    if [[ "$FAIL_ON_DEAD" == "true" ]]; then
+        exit 1
+    fi
+fi
+
+exit 0

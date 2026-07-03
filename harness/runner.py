@@ -83,10 +83,47 @@ def get_little_coder_version():
         return "unknown"
 
 
+def get_harbor_version():
+    """Get Harbor version if available."""
+    try:
+        result = subprocess.run(
+            ["harbor", "--version"],
+            capture_output=True, text=True, timeout=5
+        )
+        return result.stdout.strip() or "unknown"
+    except Exception:
+        return "unknown"
+
+
+def get_terminal_bench_pin(vendor_dir: Path) -> str:
+    """Get the Terminal-Bench pin/patch hash from the registry."""
+    registry_file = Path(vendor_dir) / "terminal-bench" / "registry.json"
+    if not registry_file.exists():
+        return "unknown"
+
+    try:
+        with open(registry_file) as f:
+            registry = json.load(f)
+
+        # Look for the head version's pin
+        for entry in registry:
+            if entry.get("version") == "head":
+                return entry.get("pin", "unknown")
+
+        return "unknown"
+    except Exception:
+        return "unknown"
+
+
 def run_trial(suite, adapter, model_id, task_id, trial_k, results_dir, vendor_dir):
     """Run a single trial of a single task."""
-    # Create output directory
-    trial_dir = Path(results_dir) / model_id / adapter.name / suite.name / task_id / f"trial-{trial_k}"
+    from harness.path_utils import encode_model_path, encode_task_path
+
+    # Create output directory with URL-encoded model and task IDs
+    # This handles IDs containing slashes (e.g., "nvidia/nemotron-...")
+    encoded_model = encode_model_path(model_id)
+    encoded_task = encode_task_path(task_id)
+    trial_dir = Path(results_dir) / encoded_model / adapter.name / suite.name / encoded_task / f"trial-{trial_k}"
     trial_dir.mkdir(parents=True, exist_ok=True)
 
     # Create workdir for this trial
@@ -99,10 +136,15 @@ def run_trial(suite, adapter, model_id, task_id, trial_k, results_dir, vendor_di
     # Override model_id with the actual model from args
     task_data["model_id"] = model_id
 
-    # Build manifest
+    # Parse provider from model_id (e.g., "nvidia/nemotron-..." -> provider="nvidia")
+    provider = model_id.split("/")[0] if "/" in model_id else "unknown"
+
+    # Build manifest with all required fields
     manifest = {
         "model": {
             "id": model_id,
+            "provider": provider,
+            "served_model": model_id,  # May differ from model_id if using rtk proxy
         },
         "adapter": {
             "id": adapter.__class__.__name__,
@@ -117,11 +159,14 @@ def run_trial(suite, adapter, model_id, task_id, trial_k, results_dir, vendor_di
             "hash": get_env_hash(),
             "pi_version": get_pi_version(),
             "little_coder_version": get_little_coder_version(),
+            "harbor_version": get_harbor_version(),
+            "terminal_bench_pin": get_terminal_bench_pin(vendor_dir),
         },
         "timing": {},
         "token_usage": {},
         "exit_code": None,
         "created_at": datetime.now(timezone.utc).isoformat(),
+        "run_end_time": None,  # Set after adapter completes
     }
 
     # Run the adapter
@@ -132,11 +177,18 @@ def run_trial(suite, adapter, model_id, task_id, trial_k, results_dir, vendor_di
     stderr_file = out_dir / "stderr.log"
 
     start_time = time.time()
+    adapter_failed = False
     try:
         # Run adapter as subprocess
         result = adapter.run(task_data, workdir, log_file, stderr_file)
         manifest["exit_code"] = result.returncode
         manifest["timing"]["wall_clock_seconds"] = time.time() - start_time
+        manifest["run_end_time"] = datetime.now(timezone.utc).isoformat()
+
+        # Capture error if adapter reported one
+        if hasattr(result, "error") and result.error:
+            manifest["error"] = result.error
+            adapter_failed = True
 
         # Capture token usage if available
         if hasattr(result, "usage") and result.usage:
@@ -148,14 +200,26 @@ def run_trial(suite, adapter, model_id, task_id, trial_k, results_dir, vendor_di
     except Exception as e:
         manifest["exit_code"] = -1
         manifest["timing"]["wall_clock_seconds"] = time.time() - start_time
+        manifest["run_end_time"] = datetime.now(timezone.utc).isoformat()
         manifest["error"] = str(e)
+        adapter_failed = True
 
         # Write error to log
         with open(log_file, "a") as f:
             f.write(f"\n[ERROR] {e}\n")
 
-    # Run the suite's verifier
-    verdict = suite.verify(task_data, workdir)
+    # Run the suite's verifier only if adapter didn't fail
+    # (unless suite explicitly wants to verify even on failure)
+    if not adapter_failed:
+        verdict = suite.verify(task_data, workdir)
+    else:
+        verdict = {
+            "passed": False,
+            "test_count": 0,
+            "grader_output": f"Adapter failed with exit code {manifest.get('exit_code', -1)}",
+            "exit_code": manifest.get("exit_code", -1),
+            "adapter_failed": True,
+        }
 
     # Write verdict
     verdict_path = trial_dir / "verdict.json"
@@ -188,7 +252,7 @@ def main():
     adapter = load_adapter(args.adapter)
 
     # Get task list from suite
-    task_ids = suite.get_task_ids()
+    task_ids = suite.get_task_ids(vendor_dir=args.vendor_dir)
 
     # Filter by --problems if specified
     if args.problems:

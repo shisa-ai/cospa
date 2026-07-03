@@ -113,11 +113,13 @@ class ScoreHandler(SimpleHTTPRequestHandler):
         if not RESULTS_DIR.exists():
             return scores
 
+        from harness.path_utils import decode_model_path
+
         for model_dir in RESULTS_DIR.iterdir():
             if not model_dir.is_dir():
                 continue
 
-            model_id = model_dir.name
+            model_id = decode_model_path(model_dir.name)
 
             for adapter_dir in model_dir.iterdir():
                 if not adapter_dir.is_dir():
@@ -131,27 +133,37 @@ class ScoreHandler(SimpleHTTPRequestHandler):
 
                     suite_id = suite_dir.name
 
-                    # Count trials
-                    trials = []
-                    for trial_dir in suite_dir.iterdir():
-                        if trial_dir.is_dir() and trial_dir.name.startswith("trial-"):
-                            verdict_file = trial_dir / "verdict.json"
-                            if verdict_file.exists():
-                                with open(verdict_file) as f:
-                                    verdict = json.load(f)
-                                    trials.append(verdict.get("passed", False))
+                    # Group trials by task, then apply pass@k (majority) semantics
+                    task_trials = {}
+                    for task_dir in suite_dir.iterdir():
+                        if not task_dir.is_dir():
+                            continue
+                        for trial_dir in task_dir.iterdir():
+                            if trial_dir.is_dir() and trial_dir.name.startswith("trial-"):
+                                verdict_file = trial_dir / "verdict.json"
+                                if verdict_file.exists():
+                                    with open(verdict_file) as f:
+                                        verdict = json.load(f)
+                                        task_id = decode_task_path(task_dir.name)
+                                        if task_id not in task_trials:
+                                            task_trials[task_id] = []
+                                        task_trials[task_id].append(verdict.get("passed", False))
 
-                    if not trials:
+                    if not task_trials:
                         continue
 
-                    passed = sum(1 for t in trials if t)
-                    total = len(trials)
-                    pass_rate = (passed / total) * 100
+                    # Count tasks that passed (majority of trials)
+                    total_tasks = len(task_trials)
+                    passed_tasks = sum(
+                        1 for trials in task_trials.values()
+                        if sum(1 for t in trials if t) > len(trials) / 2
+                    )
+                    pass_rate = (passed_tasks / total_tasks) * 100 if total_tasks > 0 else 0
 
-                    # Calculate 95% CI (Wilson score interval approximation)
-                    if total > 0:
+                    # Calculate 95% CI (Wilson score interval approximation) at task level
+                    if total_tasks > 0:
                         p = pass_rate / 100
-                        n = total
+                        n = total_tasks
                         z = 1.96  # 95% CI
                         denominator = 1 + z**2 / n
                         center = (p + z**2 / (2 * n)) / denominator
@@ -168,17 +180,22 @@ class ScoreHandler(SimpleHTTPRequestHandler):
                         "pass_rate": pass_rate,
                         "ci_lower": ci_lower,
                         "ci_upper": ci_upper,
-                        "total": total,
-                        "passed": passed,
+                        "total_tasks": total_tasks,
+                        "passed_tasks": passed_tasks,
+                        "method": "pass@k majority",
                     })
 
         return scores
 
     def get_task_details(self, model: str, adapter: str, suite: str) -> dict:
         """Get per-task details for a specific run."""
+        from harness.path_utils import decode_model_path, decode_task_path
+
         details = []
 
-        suite_dir = RESULTS_DIR / model / adapter / suite
+        # Decode URL-encoded model and task IDs
+        decoded_model = decode_model_path(model)
+        suite_dir = RESULTS_DIR / decoded_model / adapter / suite
         if not suite_dir.exists():
             return {"error": "Not found", "tasks": []}
 
@@ -200,7 +217,9 @@ class ScoreHandler(SimpleHTTPRequestHandler):
                     with open(manifest_file) as f:
                         manifest = json.load(f)
 
-                task_id = manifest.get("suite", {}).get("task_id", "unknown")
+                # Decode the task_id from the directory name
+                encoded_task = trial_dir.parent.name
+                task_id = decode_task_path(encoded_task)
                 if task_id not in task_trials:
                     task_trials[task_id] = []
 
@@ -211,19 +230,24 @@ class ScoreHandler(SimpleHTTPRequestHandler):
                     "wall_clock_seconds": manifest.get("timing", {}).get("wall_clock_seconds", 0),
                 })
 
-        # Build details list
+        # Build details list using pass@k semantics (majority of trials must pass)
         for task_id, trials in task_trials.items():
-            # Use the first trial as the representative
             first_trial = trials[0]
+            n_trials = len(trials)
+            n_passed = sum(1 for t in trials if t["passed"])
+            # Task passes if majority of trials pass (pass@k with majority rule)
+            task_passed = n_passed > n_trials / 2
+
             details.append({
                 "task_id": task_id,
                 "trials": trials,
-                "passed": any(t["passed"] for t in trials),  # Pass if any trial passed
+                "passed": task_passed,
+                "pass_at_k": f"{n_passed}/{n_trials}",
                 "test_count": first_trial["test_count"],
                 "wall_clock_seconds": first_trial["wall_clock_seconds"],
             })
 
-        return {"model": model, "adapter": adapter, "suite": suite, "tasks": details}
+        return {"model": decoded_model, "adapter": adapter, "suite": suite, "tasks": details}
 
 
 def main():

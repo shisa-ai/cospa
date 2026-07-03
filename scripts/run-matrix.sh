@@ -13,22 +13,33 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_DIR="$(dirname "$SCRIPT_DIR")"
 
 # Defaults
-MODELS=("nvidia/nemotron-3-ultra-550b-a55b")
-ADAPTERS=("pi_vanilla" "pi_devstack" "little_coder")
 K=1
 PROBLEMS=""
 SUITE="aider_polyglot"
+MODELS_FILE="$PROJECT_DIR/configs/models.yaml"
 
 # Parse args
 while [[ $# -gt 0 ]]; do
     case $1 in
         --models)
-            MODELS=($2)
-            shift 2
+            # Accept multiple models as separate arguments or comma-separated
+            if [[ $# -ge 2 ]]; then
+                IFS=',' read -ra MODES <<< "$2"
+                MODELS=("${MODES[@]}")
+                shift 2
+            else
+                echo "Error: --models requires an argument"
+                exit 1
+            fi
             ;;
         --adapters)
-            ADAPTERS=($2)
-            shift 2
+            if [[ $# -ge 2 ]]; then
+                IFS=',' read -ra ADAPTERS <<< "$2"
+                shift 2
+            else
+                echo "Error: --adapters requires an argument"
+                exit 1
+            fi
             ;;
         --k)
             K=$2
@@ -42,12 +53,31 @@ while [[ $# -gt 0 ]]; do
             SUITE=$2
             shift 2
             ;;
+        --models-file)
+            MODELS_FILE=$2
+            shift 2
+            ;;
         *)
             echo "Unknown option: $1"
             exit 1
             ;;
     esac
 done
+
+# Load default adapters if not specified
+if [[ ${#ADAPTERS[@]} -eq 0 ]]; then
+    ADAPTERS=("pi_vanilla" "pi_devstack" "little_coder")
+fi
+
+# Load models from file if not specified via --models
+if [[ ${#MODELS[@]} -eq 0 ]]; then
+    if [[ -f "$MODELS_FILE" ]]; then
+        mapfile -t MODELS < <(grep '^\s*- id:' "$MODELS_FILE" | sed 's/.*- id:\s*//')
+    else
+        echo "Error: No models specified and $MODELS_FILE not found"
+        exit 1
+    fi
+fi
 
 echo "── Running matrix ──"
 echo "  Models: ${MODELS[*]}"
@@ -62,17 +92,22 @@ for MODEL in "${MODELS[@]}"; do
     for ADAPTER in "${ADAPTERS[@]}"; do
         echo "── Model: $MODEL, Adapter: $ADAPTER ──"
 
-        CMD="mamba run -n coding-eval python $PROJECT_DIR/harness/runner.py"
-        CMD+=" --suite $SUITE"
-        CMD+=" --adapter $ADAPTER"
-        CMD+=" --model $MODEL"
-        CMD+=" --k $K"
+        # Use proper quoting instead of eval
+        mamba run -n coding-eval python "$PROJECT_DIR/harness/runner.py" \
+            --suite "$SUITE" \
+            --adapter "$ADAPTER" \
+            --model "$MODEL" \
+            --k "$K"
 
         if [[ -n "$PROBLEMS" ]]; then
-            CMD+=" --problems $PROBLEMS"
+            mamba run -n coding-eval python "$PROJECT_DIR/harness/runner.py" \
+                --suite "$SUITE" \
+                --adapter "$ADAPTER" \
+                --model "$MODEL" \
+                --k "$K" \
+                --problems "$PROBLEMS"
         fi
 
-        eval $CMD
         echo ""
     done
 done

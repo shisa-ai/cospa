@@ -3,6 +3,14 @@ little_coder_superpowers adapter — little-coder + Superpowers skills (bench mo
 
 Strips interactive skill-check flows. This is the "Superpowers helps little_coder"
 arm of the 2x2 ablation.
+
+NOTE: This is a simplified implementation. In a full bench, we would:
+1. Load only specific Superpowers skills (systematic-debugging, verification)
+2. Strip interactive flows that require user input
+3. Use --no-skills and then explicitly load only the bench-appropriate skills
+
+For now, we load all skills from ~/.pi/agent/skills, which may include
+interactive flows. This is a known limitation (see ORNITH-CODER-REVIEW.md #8).
 """
 
 import subprocess
@@ -15,6 +23,7 @@ from typing import Optional
 class AdapterResult:
     returncode: int
     usage: Optional[object] = None
+    error: Optional[str] = None
 
 
 class LittleCoderSuperpowersAdapter:
@@ -27,14 +36,7 @@ class LittleCoderSuperpowersAdapter:
         """
         Run little-coder with Superpowers skills in headless mode.
 
-        Args:
-            task_data: Dict with 'prompt' (problem statement) and 'files' (starter files)
-            workdir: Directory containing the task files
-            log_file: Path to write session log
-            stderr_file: Path to write stderr
-
-        Returns:
-            AdapterResult with exit code and optional token usage
+        Uses --no-skills then explicitly loads only the Superpowers skills directory.
         """
         prompt = task_data.get("prompt", "")
 
@@ -42,7 +44,8 @@ class LittleCoderSuperpowersAdapter:
         cmd = [
             "little-coder",
             "--print",
-            "-m", task_data.get("model_id", "nvidia/nemotron-3-ultra-550b-a55b"),
+            "--no-skills",
+            "--model", task_data.get("model_id", "nvidia/nemotron-3-ultra-550b-a55b"),
         ]
 
         # Add Superpowers skills
@@ -52,19 +55,21 @@ class LittleCoderSuperpowersAdapter:
 
         # Run little-coder in the workdir, passing the prompt
         try:
-            result = subprocess.run(
-                cmd,
-                input=prompt,
-                cwd=str(workdir),
-                stdout=open(log_file, "w"),
-                stderr=stderr_file,
-                text=True,
-                timeout=task_data.get("timeout", 600),  # 10 min default
-            )
+            with open(log_file, "w") as log_f:
+                with open(stderr_file, "w") as stderr_f:
+                    result = subprocess.run(
+                        cmd,
+                        input=prompt,
+                        cwd=str(workdir),
+                        stdout=log_f,
+                        stderr=stderr_f,
+                        text=True,
+                        timeout=task_data.get("timeout", 600),  # 10 min default
+                    )
 
             return AdapterResult(returncode=result.returncode)
 
         except subprocess.TimeoutExpired:
             return AdapterResult(returncode=-1)
         except Exception as e:
-            return AdapterResult(returncode=-1)
+            return AdapterResult(returncode=-1, error=str(e))

@@ -1,8 +1,12 @@
 """
 pi_devstack adapter — canonical devstack pi profile.
 
-Launches pi with the devstack's extensions and skills loaded. This is
-"pi as we run it day-to-day" — mid-scaffold.
+Launches pi with the devstack's extensions and skills loaded via normal
+discovery. This is "pi as we run it day-to-day" — mid-scaffold.
+
+The devstack configuration is managed by pi-packages.json and pi's
+normal extension/skill discovery mechanism. We do NOT use --no-extensions
+or --no-skills here, because we want the full devstack behavior.
 """
 
 import subprocess
@@ -15,10 +19,11 @@ from typing import Optional
 class AdapterResult:
     returncode: int
     usage: Optional[object] = None
+    error: Optional[str] = None
 
 
 class PiDevstackAdapter:
-    """Pi with devstack extensions and skills."""
+    """Pi with devstack extensions and skills (normal discovery)."""
 
     name = "pi_devstack"
     version = "devstack"
@@ -27,57 +32,34 @@ class PiDevstackAdapter:
         """
         Run pi with devstack extensions and skills in headless mode.
 
-        Args:
-            task_data: Dict with 'prompt' (problem statement) and 'files' (starter files)
-            workdir: Directory containing the task files
-            log_file: Path to write session log
-            stderr_file: Path to write stderr
-
-        Returns:
-            AdapterResult with exit code and optional token usage
+        Uses pi's normal extension/skill discovery (no --no-extensions flag).
         """
         prompt = task_data.get("prompt", "")
 
-        # Build the pi command with devstack extensions and skills
+        # Build the pi command — use normal devstack discovery
         cmd = [
             "pi",
             "--print",
-            "--no-extensions",
-            "--no-skills",
-            "-m", task_data.get("model_id", "nvidia/nemotron-3-ultra-550b-a55b"),
+            "--model", task_data.get("model_id", "nvidia/nemotron-3-ultra-550b-a55b"),
         ]
-
-        # Add devstack extensions (individual files)
-        extensions_dir = Path.home() / ".pi" / "agent" / "extensions"
-        if extensions_dir.exists():
-            for ext in extensions_dir.iterdir():
-                if ext.is_file():
-                    cmd.extend(["--extension", str(ext)])
-                elif ext.is_dir():
-                    # If it's a directory, load all .ts files in it
-                    for ext_file in ext.glob("*.ts"):
-                        cmd.extend(["--extension", str(ext_file)])
-
-        # Add devstack skills
-        skills_dir = Path.home() / ".pi" / "agent" / "skills"
-        if skills_dir.exists():
-            cmd.extend(["--skill", str(skills_dir)])
 
         # Run pi in the workdir, passing the prompt
         try:
-            result = subprocess.run(
-                cmd,
-                input=prompt,
-                cwd=str(workdir),
-                stdout=open(log_file, "w"),
-                stderr=stderr_file,
-                text=True,
-                timeout=task_data.get("timeout", 600),  # 10 min default
-            )
+            with open(log_file, "w") as log_f:
+                with open(stderr_file, "w") as stderr_f:
+                    result = subprocess.run(
+                        cmd,
+                        input=prompt,
+                        cwd=str(workdir),
+                        stdout=log_f,
+                        stderr=stderr_f,
+                        text=True,
+                        timeout=task_data.get("timeout", 600),  # 10 min default
+                    )
 
             return AdapterResult(returncode=result.returncode)
 
         except subprocess.TimeoutExpired:
             return AdapterResult(returncode=-1)
         except Exception as e:
-            return AdapterResult(returncode=-1)
+            return AdapterResult(returncode=-1, error=str(e))

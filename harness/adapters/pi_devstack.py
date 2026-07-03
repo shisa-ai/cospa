@@ -42,15 +42,21 @@ class PiDevstackAdapter:
         cmd = [
             "pi",
             "--print",
+            "--no-extensions",
+            "--no-skills",
             "-m", task_data.get("model_id", "nvidia/nemotron-3-ultra-550b-a55b"),
         ]
 
-        # Add devstack extensions
+        # Add devstack extensions (individual files)
         extensions_dir = Path.home() / ".pi" / "agent" / "extensions"
         if extensions_dir.exists():
             for ext in extensions_dir.iterdir():
                 if ext.is_file():
                     cmd.extend(["--extension", str(ext)])
+                elif ext.is_dir():
+                    # If it's a directory, load all .ts files in it
+                    for ext_file in ext.glob("*.ts"):
+                        cmd.extend(["--extension", str(ext_file)])
 
         # Add devstack skills
         skills_dir = Path.home() / ".pi" / "agent" / "skills"

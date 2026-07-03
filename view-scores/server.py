@@ -180,8 +180,10 @@ class ScoreHandler(SimpleHTTPRequestHandler):
 
         suite_dir = RESULTS_DIR / model / adapter / suite
         if not suite_dir.exists():
-            return {"error": "Not found"}
+            return {"error": "Not found", "tasks": []}
 
+        # Group trials by task_id (there may be multiple trials per task)
+        task_trials = {}
         for trial_dir in suite_dir.iterdir():
             if trial_dir.is_dir() and trial_dir.name.startswith("trial-"):
                 verdict_file = trial_dir / "verdict.json"
@@ -198,13 +200,28 @@ class ScoreHandler(SimpleHTTPRequestHandler):
                     with open(manifest_file) as f:
                         manifest = json.load(f)
 
-                details.append({
+                task_id = manifest.get("suite", {}).get("task_id", "unknown")
+                if task_id not in task_trials:
+                    task_trials[task_id] = []
+
+                task_trials[task_id].append({
                     "trial": trial_dir.name,
-                    "task_id": manifest.get("suite", {}).get("task_id", "unknown"),
                     "passed": verdict.get("passed", False),
                     "test_count": verdict.get("test_count", 0),
                     "wall_clock_seconds": manifest.get("timing", {}).get("wall_clock_seconds", 0),
                 })
+
+        # Build details list
+        for task_id, trials in task_trials.items():
+            # Use the first trial as the representative
+            first_trial = trials[0]
+            details.append({
+                "task_id": task_id,
+                "trials": trials,
+                "passed": any(t["passed"] for t in trials),  # Pass if any trial passed
+                "test_count": first_trial["test_count"],
+                "wall_clock_seconds": first_trial["wall_clock_seconds"],
+            })
 
         return {"model": model, "adapter": adapter, "suite": suite, "tasks": details}
 

@@ -37,10 +37,10 @@ echo ""
 # Parse model IDs from YAML or JSON
 if [[ "$MODELS_FILE" == *.yaml ]]; then
     # YAML: - id: provider/model-id
-    MAPFILE=<(grep '^\s*- id:' "$MODELS_FILE" | sed 's/.*- id:\s*//')
+    mapfile -t MAPFILE < <(grep '^\s*- id:' "$MODELS_FILE" | sed 's/.*- id:\s*//')
 else
     # JSON: array of {id: "provider/model-id"}
-    MAPFILE=<(python3 -c "
+    mapfile -t MAPFILE < <(python3 -c "
 import json, sys
 with open('$MODELS_FILE') as f:
     data = json.load(f)

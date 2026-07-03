@@ -33,13 +33,23 @@ class TerminalBenchSuite:
         with open(registry_file) as f:
             registry = json.load(f)
 
+        # Registry is a list of dataset versions
         task_ids = []
-        for task_key in registry.keys():
-            # Extract task ID from registry key (e.g., "org/name" -> "name")
-            task_id = task_key.split("/")[-1]
-            task_ids.append(task_id)
+        for entry in registry:
+            # Use the head version if available, otherwise use the latest
+            if entry.get("version") == "head" and entry.get("task_id_subset") is None:
+                # Head version with no subset = all tasks
+                # We'll need to discover tasks from the tasks/ directory
+                tasks_dir = Path("vendor/terminal-bench/tasks")
+                if tasks_dir.exists():
+                    for task_dir in tasks_dir.iterdir():
+                        if task_dir.is_dir():
+                            task_ids.append(task_dir.name)
+                break
+            elif entry.get("task_id_subset"):
+                task_ids.extend(entry["task_id_subset"])
 
-        return sorted(task_ids)
+        return sorted(set(task_ids))  # Deduplicate
 
     def materialize_task(self, task_id: str, workdir: Path, vendor_dir: Path) -> Dict[str, Any]:
         """
@@ -58,15 +68,36 @@ class TerminalBenchSuite:
 
     def verify(self, task_data: Dict[str, Any], workdir: Path) -> Dict[str, Any]:
         """
-        Verify the solution by running harbor run.
+        Verify the solution by checking Harbor output.
 
-        This is a stub — full implementation delegates to harbor run.
+        For Terminal-Bench, verification is handled by Harbor's scoring.
+        This method checks if Harbor has produced a score for the task.
         """
+        # Check if there's a Harbor output directory for this task
+        harbor_output = workdir / ".harbor"
+        if harbor_output.exists():
+            # Look for score files
+            score_file = harbor_output / "score.json"
+            if score_file.exists():
+                try:
+                    with open(score_file) as f:
+                        score_data = json.load(f)
+                    return {
+                        "passed": score_data.get("score", 0) > 0,
+                        "test_count": score_data.get("total_tests", 0),
+                        "grader_output": json.dumps(score_data, indent=2),
+                        "exit_code": 0,
+                    }
+                except Exception:
+                    pass
+
+        # If no Harbor output, return a pending status
         return {
             "passed": False,
             "test_count": 0,
-            "grader_output": "STUB — use harbor run directly",
+            "grader_output": "No Harbor output found — run harbor run first",
             "exit_code": -1,
+            "pending": True,
         }
 
     def run_harbor_job(self, adapter_name: str, task_ids: List[str], n_attempts: int = 1) -> Dict[str, Any]:

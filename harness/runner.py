@@ -96,6 +96,9 @@ def run_trial(suite, adapter, model_id, task_id, trial_k, results_dir, vendor_di
     # Materialize the task into the workdir
     task_data = suite.materialize_task(task_id, workdir, vendor_dir)
 
+    # Override model_id with the actual model from args
+    task_data["model_id"] = model_id
+
     # Build manifest
     manifest = {
         "model": {

@@ -67,6 +67,11 @@ class AiderPolyglotSuite:
         if starter_dir.exists():
             shutil.copytree(starter_dir, workdir, dirs_exist_ok=True)
 
+        # Copy test files
+        tests_dir = problem_dir / "tests"
+        if tests_dir.exists():
+            shutil.copytree(tests_dir, workdir / "tests", dirs_exist_ok=True)
+
         # Read problem statement
         prompt = ""
         problem_file = problem_dir / "problem.txt"
@@ -151,17 +156,29 @@ class AiderPolyglotSuite:
             return 0
 
         # Try to parse pytest-style output
-        if "passed" in output:
-            import re
-            match = re.search(r"(\d+) passed", output)
-            if match:
-                return int(match.group(1))
+        import re
+        match = re.search(r"(\d+) passed", output)
+        if match:
+            return int(match.group(1))
 
         # Try to parse go test output
-        if "ok" in output:
-            import re
-            match = re.search(r"(\d+)\.(\d+)s", output)
-            if match:
-                return 1  # Simplified
+        match = re.search(r"^ok\s+.*\((\d+)\s+tests?\)", output, re.MULTILINE)
+        if match:
+            return int(match.group(1))
+
+        # Try to parse Rust cargo test output
+        match = re.search(r"(\d+)\s+test[s]?:", output)
+        if match:
+            return int(match.group(1))
+
+        # Try to parse Java test output
+        match = re.search(r"Tests\s+run:\s+(\d+)", output)
+        if match:
+            return int(match.group(1))
+
+        # Try to parse CMake/test output
+        match = re.search(r"(\d+)\s+test[s]?\s+passed", output, re.IGNORECASE)
+        if match:
+            return int(match.group(1))
 
         return 0

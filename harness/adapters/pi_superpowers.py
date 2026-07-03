@@ -46,6 +46,8 @@ class PiSuperpowersAdapter:
         cmd = [
             "pi",
             "--print",
+            "--no-extensions",
+            "--no-skills",
             "-m", task_data.get("model_id", "nvidia/nemotron-3-ultra-550b-a55b"),
         ]
 

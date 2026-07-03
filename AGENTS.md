@@ -2,19 +2,19 @@
 
 coding-eval is a multi-model, multi-adapter coding benchmark harness
 (Aider Polyglot, Terminal-Bench) with a runner, adapters, suites, a score
-viewer, and orchestration scripts. See `PLAN.md` for architecture and
-roadmap and `ORNITH-CODER-REVIEW.md` for the audit history.
+viewer, and orchestration scripts. See `docs/PLAN.md` for architecture and
+roadmap and `docs/ORNITH-CODER-REVIEW.md` for the audit history.
 
 This `AGENTS.md` is read every session. It covers only ground rules that
-apply to every task. Scope-specific detail lives in `PLAN.md`,
-`ORNITH-CODER-REVIEW.md`, and `docs/IMPROVEMENT.md`.
+apply to every task. Scope-specific detail lives in `docs/PLAN.md`,
+`docs/ORNITH-CODER-REVIEW.md`, and `docs/IMPROVEMENT.md`.
 
 Instruction precedence: if this file conflicts with platform / system /
 developer instructions, follow those first.
 
 ## Summary
 
-- **Source of truth:** `PLAN.md`. Update it when architecture or phase
+- **Source of truth:** `docs/PLAN.md`. Update it when architecture or phase
   plans move.
 - **Testing discipline:** RED/GREEN TDD is the default. Write the failing
   test first, then fix the code until it passes. See "Testing" below.
@@ -35,8 +35,8 @@ developer instructions, follow those first.
 
 | Path | Purpose |
 | --- | --- |
-| `PLAN.md` | Architecture, phase roadmap, matrix design. |
-| `ORNITH-CODER-REVIEW.md` | Audit history and per-finding resolution status. |
+| `docs/PLAN.md` | Architecture, phase roadmap, matrix design. |
+| `docs/ORNITH-CODER-REVIEW.md` | Audit history and per-finding resolution status. |
 | `docs/IMPROVEMENT.md` | Process lessons from the third audit; re-read before a fix pass. |
 | `harness/runner.py` | Trial execution, manifest writing, reachability check. |
 | `harness/adapters/` | Per-agent adapters (pi_vanilla, pi_devstack, pi_superpowers, little_coder*). |
@@ -54,9 +54,9 @@ developer instructions, follow those first.
 ### Before Starting
 
 1. `git status -sb` — note unrelated changes and leave them alone.
-2. Skim the relevant section of `PLAN.md` and the tail of
-   `ORNITH-CODER-REVIEW.md` so you know what is already fixed, partial, or
-   open.
+2. Skim the relevant section of `docs/PLAN.md` and the tail of
+   `docs/ORNITH-CODER-REVIEW.md` so you know what is already fixed,
+   partial, or open.
 3. Re-read `docs/IMPROVEMENT.md` before any fix/audit pass — it captures
    the process bugs that let regressions slip through.
 
@@ -70,15 +70,15 @@ developer instructions, follow those first.
 - Treat `results/` and `vendor/` carefully. Do not mass-delete, rebaseline,
   or rewrite prior runs unless asked.
 - Log non-trivial decisions in the commit message or
-  `ORNITH-CODER-REVIEW.md`, not just in chat.
+  `docs/ORNITH-CODER-REVIEW.md`, not just in chat.
 
 ### After Changes (before claiming done)
 
 - Run the narrowest relevant verification tier (see below).
 - For a bug fix: confirm the *RED* test you wrote at the start now passes,
   and that it would have failed before the fix.
-- Update `ORNITH-CODER-REVIEW.md` per-item status if your change resolves a
-  listed finding. Use the explicit evidence vocabulary from
+- Update `docs/ORNITH-CODER-REVIEW.md` per-item status if your change
+  resolves a listed finding. Use the explicit evidence vocabulary from
   `docs/IMPROVEMENT.md` (`fixed (unit test)` vs `fixed (integration test)`
   vs `wired (unverified)` vs `partial`).
 - **Commit immediately** when the logical unit is complete and validation
@@ -138,8 +138,8 @@ commits with clear provenance.
 - **Commit immediately** after a logical unit is complete and validation
   passes. Do not ask, do not wait to be asked, and do not start the next
   logical unit until the previous validated unit is committed.
-- Include related docs in the same unit (a change that needed an
-  `ORNITH-CODER-REVIEW.md` or `docs/` update commits them together).
+- Include related docs in the same unit (a change that needed a
+  `docs/ORNITH-CODER-REVIEW.md` or `docs/` update commits them together).
 - Do not commit mid-task while exploring, debugging, or in a broken state.
 
 ### Commit Mechanics (hard rules)
@@ -187,9 +187,10 @@ formatters, mass import reordering) unless the user explicitly asks.
 Working tree is shared state. Other agents or the human may be editing
 concurrently.
 
-- **High-conflict files:** `AGENTS.md`, `PLAN.md`, `ORNITH-CODER-REVIEW.md`,
-  `docs/IMPROVEMENT.md`, `harness/runner.py`, `harness/suites/*.py`,
-  `view-scores/server.py`, `scripts/run-matrix.sh`, `scripts/check-models.sh`,
+- **High-conflict files:** `AGENTS.md`, `docs/PLAN.md`,
+  `docs/ORNITH-CODER-REVIEW.md`, `docs/IMPROVEMENT.md`,
+  `harness/runner.py`, `harness/suites/*.py`, `view-scores/server.py`,
+  `scripts/run-matrix.sh`, `scripts/check-models.sh`,
   `configs/models.yaml`, `pyproject.toml`.
 - Same-file contention: stop and coordinate. Do not force-stage or revert.
 - Ignore unrelated modified files unless the task explicitly requires it.

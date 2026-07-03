@@ -937,7 +937,8 @@ A focused hardening pass found and fixed additional local code issues:
   so clean machines do not need a global Gradle install for vendored Exercism
   tasks (`fixed (unit test)`).
 - The C++ verifier now runs the real Exercism CMake `test_<exercise>` target
-  instead of a nonexistent generic `./build/test` binary (`fixed (unit test)`).
+  through a problem-named source path instead of a nonexistent generic
+  `./build/test` binary (`fixed (unit test + real-artifact smoke)`).
 - The C++ verifier no longer masks failing build/test commands with
   `|| echo`, preserving nonzero exit codes from CMake/build/test failures
   (`fixed (unit test)`).
@@ -952,5 +953,5 @@ Verification:
 
 ```bash
 mamba run -n coding-eval python -m pytest -q  # 81 passed
-bash tests/scripts/run_all.sh                 # 13 assertions passed
+bash tests/scripts/run_all.sh                 # 18 assertions passed
 ```

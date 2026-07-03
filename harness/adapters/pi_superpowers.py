@@ -3,18 +3,13 @@ pi_superpowers adapter — pi + Superpowers skills (bench mode).
 
 Strips interactive skill-check flows (no user present to answer clarifying
 questions). Keeps only systematic-debugging + verification-before-completion
-skills.
+skills. This is the "Superpowers helps pi_vanilla on TB (recovery discipline)"
+arm of the 2x2 ablation.
 
-This is the "Superpowers helps pi_vanilla on TB (recovery discipline)" arm
-of the 2x2 ablation.
-
-NOTE: This is a simplified implementation. In a full bench, we would:
-1. Load only specific Superpowers skills (systematic-debugging, verification)
-2. Strip interactive flows that require user input
-3. Use --no-skills and then explicitly load only the bench-appropriate skills
-
-For now, we load all skills from ~/.pi/agent/skills, which may include
-interactive flows. This is a known limitation (see ORNITH-CODER-REVIEW.md #8).
+We use --no-skills to disable default discovery, then explicitly load ONLY
+the bench-appropriate skills from a configured allowlist. We do NOT pass the
+entire ~/.pi/agent/skills directory, because that brings in arbitrary
+interactive user skills (review finding #8).
 """
 
 import subprocess
@@ -23,11 +18,53 @@ from pathlib import Path
 from typing import Optional
 
 
+# Bench-appropriate skills only. These are the Superpowers subset that helps
+# with systematic debugging and verification discipline without requiring a
+# human in the loop.
+BENCH_SKILLS = [
+    "systematic-debugging",
+    "verification-before-completion",
+]
+
+# Known interactive skills that MUST be stripped under bench mode.
+INTERACTIVE_SKILLS = {
+    "check",
+    "realitycheck",
+    "shisa-kb",
+    "rc-analyze",
+    "rc-export",
+    "rc-extract",
+    "rc-search",
+    "rc-stats",
+    "rc-synthesize",
+    "rc-validate",
+}
+
+
 @dataclass
 class AdapterResult:
     returncode: int
     usage: Optional[object] = None
     error: Optional[str] = None
+
+
+def _resolve_bench_skill_paths() -> list:
+    """Return --skill paths for each bench skill that exists on disk.
+
+    Looks under ~/.pi/agent/skills/<name>/ for each name in BENCH_SKILLS and
+    returns the directory paths. Missing skills are silently skipped (the
+    bench still runs, just without that skill). We never return the bare
+    skills directory — only individual, allowlisted skill subdirs.
+    """
+    skills_root = Path.home() / ".pi" / "agent" / "skills"
+    paths = []
+    if not skills_root.is_dir():
+        return paths
+    for name in BENCH_SKILLS:
+        candidate = skills_root / name
+        if candidate.is_dir() and name not in INTERACTIVE_SKILLS:
+            paths.append(str(candidate))
+    return paths
 
 
 class PiSuperpowersAdapter:
@@ -38,14 +75,14 @@ class PiSuperpowersAdapter:
 
     def run(self, task_data: dict, workdir: Path, log_file: Path, stderr_file: Path) -> AdapterResult:
         """
-        Run pi with Superpowers skills in headless mode.
+        Run pi with the Superpowers bench subset in headless mode.
 
-        Uses --no-extensions --no-skills then explicitly loads only
-        the Superpowers skills directory.
+        Uses --no-skills to disable default discovery, then loads only the
+        allowlisted bench skills (systematic-debugging,
+        verification-before-completion). Interactive skills are stripped.
         """
         prompt = task_data.get("prompt", "")
 
-        # Build the pi command with Superpowers skills
         cmd = [
             "pi",
             "--print",
@@ -54,14 +91,10 @@ class PiSuperpowersAdapter:
             "--model", task_data.get("model_id", "nvidia/nemotron-3-ultra-550b-a55b"),
         ]
 
-        # Add Superpowers skills (systematic debugging + verification)
-        # In bench mode, we strip interactive flows by using --no-skills
-        # and then loading only the specific skills directory
-        skills_dir = Path.home() / ".pi" / "agent" / "skills"
-        if skills_dir.exists():
-            cmd.extend(["--skill", str(skills_dir)])
+        # Load ONLY the bench-appropriate skills (never the whole user dir)
+        for skill_path in _resolve_bench_skill_paths():
+            cmd.extend(["--skill", skill_path])
 
-        # Run pi in the workdir, passing the prompt
         try:
             with open(log_file, "w") as log_f:
                 with open(stderr_file, "w") as stderr_f:
@@ -72,7 +105,7 @@ class PiSuperpowersAdapter:
                         stdout=log_f,
                         stderr=stderr_f,
                         text=True,
-                        timeout=task_data.get("timeout", 600),  # 10 min default
+                        timeout=task_data.get("timeout", 600),
                     )
 
             return AdapterResult(returncode=result.returncode)

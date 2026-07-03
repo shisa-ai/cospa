@@ -44,17 +44,39 @@ def parse_args():
     parser.add_argument("--results-dir", default=PROJECT_ROOT / "results", help="Results output directory")
     parser.add_argument("--vendor-dir", default=PROJECT_ROOT / "vendor", help="Vendored datasets directory")
     parser.add_argument("--config", default=PROJECT_ROOT / "configs" / "models.yaml", help="Models config file")
+    parser.add_argument(
+        "--skip-reachability",
+        action="store_true",
+        default=False,
+        help="Skip the pre-run model reachability check (use for offline/smoke runs)",
+    )
     return parser.parse_args()
 
 
 def get_env_hash():
-    """Get a hash of the current environment for reproducibility."""
+    """Return a short hash identifying the current Python environment.
+
+    This combines the interpreter path with the sorted list of installed
+    packages and returns a SHA-256 digest, so two environments that look
+    identical but differ in installed packages produce different hashes.
+    Previously this returned the raw `sys.executable` string, which is a
+    path — not a hash — and breaks manifest comparability (review #10).
+    """
+    import hashlib
     try:
-        result = subprocess.run(
-            ["mamba", "run", "-n", "coding-eval", "python", "-c", "import sys; print(sys.executable)"],
-            capture_output=True, text=True, timeout=10
-        )
-        return result.stdout.strip()
+        parts = [sys.executable, sys.version]
+        # Include installed distributions so the hash reflects the env contents
+        try:
+            import importlib.metadata as md
+            dists = sorted(
+                f"{d.metadata['Name']}=={d.version}"
+                for d in md.distributions()
+            )
+            parts.extend(dists)
+        except Exception:
+            pass
+        payload = "\n".join(parts).encode()
+        return hashlib.sha256(payload).hexdigest()[:16]
     except Exception:
         return "unknown"
 
@@ -105,19 +127,90 @@ def get_terminal_bench_pin(vendor_dir: Path) -> str:
         with open(registry_file) as f:
             registry = json.load(f)
 
-        # Look for the head version's pin
+        # Look for the head version's commit hash. The registry uses
+        # `commit_hash` (not `pin`); fall back to `pin` for older schemas.
         for entry in registry:
             if entry.get("version") == "head":
-                return entry.get("pin", "unknown")
+                return entry.get("commit_hash") or entry.get("pin") or "unknown"
 
         return "unknown"
     except Exception:
         return "unknown"
 
 
+def should_run_reachability_check(skip: bool = False) -> bool:
+    """Decide whether to run the model reachability check at startup.
+
+    Enabled by default. The CLI exposes --skip-reachability for offline or
+    smoke runs where the user explicitly accepts the risk.
+    """
+    return not skip
+
+
+def check_model_reachable(model_id: str, timeout: float = 10.0) -> bool:
+    """Best-effort reachability probe for a model id.
+
+    Reads ~/.pi/agent/models.json to find the provider's baseUrl for the
+    model's provider, then issues a 1-token completion. Returns True if the
+    endpoint responds HTTP 200, False otherwise (including unknown provider
+    or missing config). Never raises.
+
+    This is the same logic as scripts/check-models.sh but in-process so the
+    runner can call it before starting a matrix (PLAN.md #137-138).
+    """
+    import urllib.request
+    import urllib.error
+
+    provider = model_id.split("/")[0] if "/" in model_id else None
+    model_name = model_id.split("/", 1)[1] if "/" in model_id else model_id
+    if provider is None:
+        return False
+
+    models_json = Path.home() / ".pi" / "agent" / "models.json"
+    if not models_json.exists():
+        return False
+
+    try:
+        with open(models_json) as f:
+            data = json.load(f)
+    except Exception:
+        return False
+
+    providers = data.get("providers", data) if isinstance(data, dict) else {}
+    prov_cfg = providers.get(provider) if isinstance(providers, dict) else None
+    if not isinstance(prov_cfg, dict):
+        return False
+    base_url = prov_cfg.get("baseUrl") or prov_cfg.get("base_url")
+    if not base_url:
+        return False
+
+    payload = json.dumps({
+        "model": model_name,
+        "messages": [{"role": "user", "content": "hi"}],
+        "max_tokens": 1,
+    }).encode()
+    req = urllib.request.Request(
+        f"{base_url.rstrip('/')}/chat/completions",
+        data=payload,
+        headers={"Content-Type": "application/json"},
+        method="POST",
+    )
+    try:
+        with urllib.request.urlopen(req, timeout=timeout) as resp:
+            return resp.status == 200
+    except urllib.error.HTTPError as e:
+        return e.code == 200
+    except Exception:
+        return False
+
+
 def run_trial(suite, adapter, model_id, task_id, trial_k, results_dir, vendor_dir):
     """Run a single trial of a single task."""
     from harness.path_utils import encode_model_path, encode_task_path
+
+    # Normalize path inputs (argparse and callers may hand us strings)
+    results_dir = Path(results_dir)
+    vendor_dir = Path(vendor_dir)
 
     # Create output directory with URL-encoded model and task IDs
     # This handles IDs containing slashes (e.g., "nvidia/nemotron-...")
@@ -155,6 +248,16 @@ def run_trial(suite, adapter, model_id, task_id, trial_k, results_dir, vendor_di
             "task_id": task_id,
         },
         "trial": trial_k,
+        "sampling": {
+            # Defaults; overridable via task_data if a suite/adapter sets them
+            "temperature": task_data.get("temperature"),
+            "top_p": task_data.get("top_p"),
+            "max_tokens": task_data.get("max_tokens"),
+        },
+        # Identifier for the tool-call parser/config the adapter uses.
+        # pi/little-coder use their built-in tool-call handling; adapters may
+        # override via task_data["tool_call_parser"].
+        "tool_call_parser": task_data.get("tool_call_parser", "pi-default"),
         "env": {
             "hash": get_env_hash(),
             "pi_version": get_pi_version(),
@@ -176,47 +279,103 @@ def run_trial(suite, adapter, model_id, task_id, trial_k, results_dir, vendor_di
     log_file = out_dir / "session.log"
     stderr_file = out_dir / "stderr.log"
 
+    # Terminal-Bench is Harbor-driven: the suite owns execution and scoring.
+    # The generic adapter path does not apply (there is no in-workdir prompt
+    # loop; Harbor runs the agent inside a container and scores via pytest).
+    # Suites that expose `run_harbor_job` take over here.
     start_time = time.time()
     adapter_failed = False
-    try:
-        # Run adapter as subprocess
-        result = adapter.run(task_data, workdir, log_file, stderr_file)
-        manifest["exit_code"] = result.returncode
-        manifest["timing"]["wall_clock_seconds"] = time.time() - start_time
-        manifest["run_end_time"] = datetime.now(timezone.utc).isoformat()
+    harbor_result = None
+    if hasattr(suite, "run_harbor_job") and getattr(suite, "name", "") == "terminal_bench":
+        jobs_dir = trial_dir / "jobs"
+        jobs_dir.mkdir(exist_ok=True)
+        try:
+            harbor_result = suite.run_harbor_job(
+                task_id=task_id,
+                model_id=model_id,
+                adapter_name=adapter.name,
+                workdir=workdir,
+                jobs_dir=jobs_dir,
+                n_attempts=trial_k,
+                vendor_dir=vendor_dir,
+            )
+            manifest["exit_code"] = harbor_result.get("returncode", -1)
+            manifest["timing"]["wall_clock_seconds"] = time.time() - start_time
+            manifest["run_end_time"] = datetime.now(timezone.utc).isoformat()
+            if harbor_result.get("stderr"):
+                with open(stderr_file, "w") as sf:
+                    sf.write(harbor_result["stderr"])
+            if harbor_result.get("stdout"):
+                with open(log_file, "w") as lf:
+                    lf.write(harbor_result["stdout"])
+            if harbor_result.get("returncode", -1) != 0:
+                adapter_failed = True
+                manifest["error"] = harbor_result.get("stderr") or (
+                    f"Harbor job exited with code {harbor_result.get('returncode')}"
+                )
+        except Exception as e:
+            manifest["exit_code"] = -1
+            manifest["timing"]["wall_clock_seconds"] = time.time() - start_time
+            manifest["run_end_time"] = datetime.now(timezone.utc).isoformat()
+            manifest["error"] = f"Harbor job raised: {e}"
+            adapter_failed = True
+    else:
+        try:
+            # Run adapter as subprocess
+            result = adapter.run(task_data, workdir, log_file, stderr_file)
+            manifest["exit_code"] = result.returncode
+            manifest["timing"]["wall_clock_seconds"] = time.time() - start_time
+            manifest["run_end_time"] = datetime.now(timezone.utc).isoformat()
 
-        # Capture error if adapter reported one
-        if hasattr(result, "error") and result.error:
-            manifest["error"] = result.error
+            # Capture error if adapter reported one
+            if hasattr(result, "error") and result.error:
+                manifest["error"] = result.error
+                adapter_failed = True
+
+            # Any nonzero return code is an adapter failure unless the suite
+            # explicitly opts into verification after failure. This prevents
+            # false passes from starter code that already satisfies a weak or
+            # disconnected verifier (review finding #6 / audit item C).
+            if result.returncode != 0:
+                adapter_failed = True
+                if "error" not in manifest:
+                    manifest["error"] = f"Adapter exited with code {result.returncode}"
+
+            # Capture token usage if available
+            if hasattr(result, "usage") and result.usage:
+                manifest["token_usage"] = {
+                    "prompt_tokens": getattr(result.usage, "prompt_tokens", None),
+                    "completion_tokens": getattr(result.usage, "completion_tokens", None),
+                    "total_tokens": getattr(result.usage, "total_tokens", None),
+                }
+        except Exception as e:
+            manifest["exit_code"] = -1
+            manifest["timing"]["wall_clock_seconds"] = time.time() - start_time
+            manifest["run_end_time"] = datetime.now(timezone.utc).isoformat()
+            manifest["error"] = str(e)
             adapter_failed = True
 
-        # Capture token usage if available
-        if hasattr(result, "usage") and result.usage:
-            manifest["token_usage"] = {
-                "prompt_tokens": getattr(result.usage, "prompt_tokens", None),
-                "completion_tokens": getattr(result.usage, "completion_tokens", None),
-                "total_tokens": getattr(result.usage, "total_tokens", None),
-            }
-    except Exception as e:
-        manifest["exit_code"] = -1
-        manifest["timing"]["wall_clock_seconds"] = time.time() - start_time
-        manifest["run_end_time"] = datetime.now(timezone.utc).isoformat()
-        manifest["error"] = str(e)
-        adapter_failed = True
+            # Write error to log
+            with open(log_file, "a") as f:
+                f.write(f"\n[ERROR] {e}\n")
 
-        # Write error to log
-        with open(log_file, "a") as f:
-            f.write(f"\n[ERROR] {e}\n")
-
-    # Run the suite's verifier only if adapter didn't fail
-    # (unless suite explicitly wants to verify even on failure)
-    if not adapter_failed:
+    # Run the suite's verifier only if the adapter succeeded. A suite may
+    # explicitly opt into post-failure verification by setting
+    # `verify_on_adapter_failure = True` (e.g. for suites whose verifier is
+    # the source of truth, like a Harbor-scored Terminal-Bench trial).
+    verify_on_failure = getattr(
+        suite, "verify_on_adapter_failure", False
+    )
+    if not adapter_failed or verify_on_failure:
         verdict = suite.verify(task_data, workdir)
     else:
         verdict = {
             "passed": False,
             "test_count": 0,
-            "grader_output": f"Adapter failed with exit code {manifest.get('exit_code', -1)}",
+            "grader_output": (
+                f"Adapter failed with exit code {manifest.get('exit_code', -1)}"
+                + (f": {manifest.get('error', '')}" if manifest.get("error") else "")
+            ),
             "exit_code": manifest.get("exit_code", -1),
             "adapter_failed": True,
         }
@@ -246,6 +405,25 @@ def run_trial(suite, adapter, model_id, task_id, trial_k, results_dir, vendor_di
 
 def main():
     args = parse_args()
+
+    # Coerce CLI path args to Path (argparse returns strings for user input)
+    args.results_dir = Path(args.results_dir)
+    args.vendor_dir = Path(args.vendor_dir)
+    args.config = Path(args.config)
+
+    # Pre-run reachability check (PLAN.md #137-138). Refuse to start the
+    # matrix if the model can't be pinged, unless the user opts out with
+    # --skip-reachability. This prevents silent all-fail runs against an
+    # unreachable provider.
+    if should_run_reachability_check(skip=args.skip_reachability):
+        if not check_model_reachable(args.model):
+            print(
+                f"✗ Model '{args.model}' is unreachable. Aborting.\n"
+                f"  (pass --skip-reachability to bypass this check for offline/smoke runs)",
+                file=sys.stderr,
+            )
+            sys.exit(1)
+        print(f"✓ Model '{args.model}' is reachable.")
 
     # Load suite and adapter
     suite = load_suite(args.suite)

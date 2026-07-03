@@ -36,103 +36,120 @@ class SuiteResult:
 
 
 class AiderPolyglotSuite:
-    """Aider Polyglot benchmark suite."""
+    """Aider Polyglot benchmark suite.
+
+    Dataset: https://github.com/Aider-AI/polyglot-benchmark
+    Layout (Exercism-sourced, 225 problems across 6 languages):
+
+        polyglot-benchmark/<lang>/exercises/practice/<problem>/
+            .docs/instructions.md       <- problem statement
+            <basename>.<ext>            <- starter file (functions with `pass`)
+            <basename>_test.<ext>       <- test file
+
+    The previous implementation assumed a simplified
+    `problems/<lang>/<problem>/{problem.txt, starter/, tests/}` shape that
+    does not exist in the real benchmark. We now read the real layout.
+    """
 
     name = "aider_polyglot"
-    version = "0.1"
-    languages = ["python", "javascript", "typescript", "go", "java", "rust", "c", "cpp", "csharp", "ruby", "php", "swift", "kotlin", "scala", "r", "julia", "matlab", "haskell", "lua", "perl", "bash", "zsh", "powershell"]
+    version = "0.2"
+    # Languages present in the real polyglot-benchmark repo
+    languages = ["python", "go", "rust", "cpp", "java", "javascript"]
     task_count = 0
 
+    # Map language -> file extension used for starter/test files
+    LANG_EXT = {
+        "python": "py",
+        "go": "go",
+        "rust": "rs",
+        "cpp": "cpp",
+        "java": "java",
+        "javascript": "js",
+    }
+
+    def _problem_dir(self, vendor_dir: Path, language: str, problem: str) -> Path:
+        """Locate the on-disk problem directory for a (language, problem)."""
+        # Real polyglot-benchmark layout
+        return (
+            vendor_dir
+            / "polyglot-benchmark"
+            / language
+            / "exercises"
+            / "practice"
+            / problem
+        )
+
     def get_task_ids(self, vendor_dir: Path = None) -> List[str]:
-        """Get all task IDs from the Aider Polyglot dataset."""
+        """Discover all task IDs from the polyglot-benchmark dataset."""
         if vendor_dir is None:
             vendor_dir = Path("vendor")
+        vendor_dir = Path(vendor_dir)
 
-        problems_dir = vendor_dir / "aider-polyglot" / "problems"
-        if not problems_dir.exists():
+        root = vendor_dir / "polyglot-benchmark"
+        if not root.exists():
             return []
 
         task_ids = []
-        for lang_dir in problems_dir.iterdir():
-            if not lang_dir.is_dir():
+        for lang_dir in sorted(root.iterdir()):
+            if not lang_dir.is_dir() or lang_dir.name not in self.LANG_EXT:
                 continue
-            for problem_dir in lang_dir.iterdir():
-                if problem_dir.is_dir() and (problem_dir / "problem.txt").exists():
+            practice_dir = lang_dir / "exercises" / "practice"
+            if not practice_dir.is_dir():
+                continue
+            for problem_dir in sorted(practice_dir.iterdir()):
+                if not problem_dir.is_dir():
+                    continue
+                # A problem is real if it has an instructions.md
+                if (problem_dir / ".docs" / "instructions.md").exists():
                     task_ids.append(f"{lang_dir.name}/{problem_dir.name}")
 
         return sorted(task_ids)
 
     def materialize_task(self, task_id: str, workdir: Path, vendor_dir: Path = None) -> Dict[str, Any]:
         """
-        Materialize an Aider Polyglot task into the workdir.
+        Materialize a polyglot-benchmark problem into the workdir.
 
-        Copies problem.txt, starter files, and test files into the workdir.
+        Copies the starter file and test file into the workdir root, and
+        extracts the prompt from .docs/instructions.md.
         """
         if vendor_dir is None:
             vendor_dir = Path("vendor")
+        vendor_dir = Path(vendor_dir)
 
-        # Parse task_id (e.g., "python/hello")
+        # Parse task_id (e.g., "python/two-fer", "go/zebra-puzzle")
         parts = task_id.split("/")
         if len(parts) != 2:
-            raise ValueError(f"Invalid task_id format: {task_id}. Expected 'language/problem'.")
+            raise ValueError(
+                f"Invalid task_id format: {task_id}. Expected 'language/problem'."
+            )
 
         language, problem = parts
-
-        # Find the problem directory
-        problem_dir = vendor_dir / "aider-polyglot" / "problems" / language / problem
+        problem_dir = self._problem_dir(vendor_dir, language, problem)
         if not problem_dir.exists():
             raise FileNotFoundError(f"Problem not found: {problem_dir}")
 
-        # Create workdir
         workdir.mkdir(parents=True, exist_ok=True)
 
-        # Read problem statement
-        problem_file = problem_dir / "problem.txt"
+        # Prompt from .docs/instructions.md
         prompt = ""
-        if problem_file.exists():
-            prompt = problem_file.read_text()
+        instr_file = problem_dir / ".docs" / "instructions.md"
+        if instr_file.exists():
+            prompt = instr_file.read_text()
 
-        # Copy starter files
-        starter_dir = problem_dir / "starter"
-        if starter_dir.exists():
-            shutil.copytree(starter_dir, workdir, dirs_exist_ok=True)
-
-        # Copy test files
-        tests_dir = problem_dir / "tests"
-        if tests_dir.exists():
-            shutil.copytree(tests_dir, workdir / "tests", dirs_exist_ok=True)
-
-        # Detect language from directory name
-        lang_map = {
-            "python": "python",
-            "javascript": "javascript",
-            "typescript": "typescript",
-            "go": "go",
-            "java": "java",
-            "rust": "rust",
-            "c": "c",
-            "cpp": "cpp",
-            "csharp": "csharp",
-            "ruby": "ruby",
-            "php": "php",
-            "swift": "swift",
-            "kotlin": "kotlin",
-            "scala": "scala",
-            "r": "r",
-            "julia": "julia",
-            "matlab": "matlab",
-            "haskell": "haskell",
-            "lua": "lua",
-            "perl": "perl",
-            "bash": "bash",
-            "zsh": "zsh",
-            "powershell": "powershell",
-        }
+        # Copy ALL files from the problem dir into the workdir root so the
+        # language's test runner can find starter + tests + module files.
+        for item in problem_dir.iterdir():
+            if item.name == ".docs":
+                continue
+            if item.is_dir():
+                shutil.copytree(item, workdir / item.name, dirs_exist_ok=True)
+            else:
+                shutil.copy2(item, workdir / item.name)
 
         return {
             "task_id": task_id,
             "prompt": prompt,
-            "language": lang_map.get(language, language),
+            "language": language,
             "problem": problem,
             "model_id": "nvidia/nemotron-3-ultra-550b-a55b",
         }

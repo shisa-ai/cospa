@@ -192,58 +192,58 @@ class TestSuites:
         with pytest.raises(ValueError, match="Unknown suite"):
             load_suite("unknown_suite")
 
-    def test_aider_polyglot_materialize_task(self):
+    def test_aider_polyglot_materialize_task(self, make_polyglot_problem):
         """Test that aider_polyglot materializes tasks correctly."""
         suite = AiderPolyglotSuite()
 
         with tempfile.TemporaryDirectory() as tmpdir:
             tmpdir = Path(tmpdir)
             vendor_dir = tmpdir / "vendor"
-            vendor_dir.mkdir()
-            problem_dir = vendor_dir / "aider-polyglot" / "problems" / "python" / "hello"
-            problem_dir.mkdir(parents=True)
-
-            (problem_dir / "problem.txt").write_text("Write a hello function")
-            (problem_dir / "starter").mkdir()
-            (problem_dir / "starter" / "hello.py").write_text("def hello():\n    pass")
-            (problem_dir / "tests").mkdir()
-            (problem_dir / "tests" / "test_hello.py").write_text(
-                "from hello import hello\ndef test_hello():\n    assert hello() == 'Hello, World!'"
+            make_polyglot_problem(
+                vendor_dir, "python", "two-fer",
+                instructions="Write a two-fer function",
+                starter_name="two_fer",
+                starter_content="def two_fer(name=None):\n    pass\n",
+                test_content=(
+                    "from two_fer import two_fer\n"
+                    "def test_two_fer():\n"
+                    "    assert two_fer() == 'One for you, one for me.'\n"
+                ),
             )
 
             workdir = tmpdir / "workdir"
-            task_data = suite.materialize_task("python/hello", workdir, vendor_dir)
+            task_data = suite.materialize_task("python/two-fer", workdir, vendor_dir)
 
-            # Check that files were copied
-            assert (workdir / "hello.py").exists()
-            assert (workdir / "tests" / "test_hello.py").exists()
+            # Check that starter and test files were copied to workdir root
+            assert (workdir / "two_fer.py").exists()
+            assert (workdir / "two_fer_test.py").exists()
 
             # Check task_data
-            assert task_data["prompt"] == "Write a hello function"
+            assert "two-fer" in task_data["prompt"]
             assert task_data["language"] == "python"
-            assert task_data["problem"] == "hello"
+            assert task_data["problem"] == "two-fer"
 
-    def test_aider_polyglot_get_task_ids(self):
+    def test_aider_polyglot_get_task_ids(self, make_polyglot_problem):
         """Test that aider_polyglot discovers tasks correctly."""
         suite = AiderPolyglotSuite()
 
         with tempfile.TemporaryDirectory() as tmpdir:
             tmpdir = Path(tmpdir)
             vendor_dir = tmpdir / "vendor"
-            vendor_dir.mkdir()
-
-            # Create multiple problems
-            for lang, problem in [("python", "hello"), ("javascript", "fib")]:
-                problem_dir = vendor_dir / "aider-polyglot" / "problems" / lang / problem
-                problem_dir.mkdir(parents=True)
-                (problem_dir / "problem.txt").write_text(f"Problem: {problem}")
-                (problem_dir / "starter").mkdir()
-                (problem_dir / "tests").mkdir()
+            make_polyglot_problem(
+                vendor_dir, "python", "two-fer",
+                starter_name="two_fer",
+            )
+            make_polyglot_problem(
+                vendor_dir, "javascript", "fib",
+                starter_content="function fib(n) { return n; }\n",
+                test_content="console.log('test');\n",
+            )
 
             task_ids = suite.get_task_ids(vendor_dir)
             assert len(task_ids) == 2
             assert "javascript/fib" in task_ids
-            assert "python/hello" in task_ids
+            assert "python/two-fer" in task_ids
 
     def test_terminal_bench_get_task_ids_empty(self):
         """Test that terminal_bench returns empty list when no registry."""
@@ -283,7 +283,7 @@ class TestSuites:
 class TestRunner:
     """Test runner functionality."""
 
-    def test_run_trial_creates_directory_structure(self):
+    def test_run_trial_creates_directory_structure(self, make_polyglot_problem):
         """Test that run_trial creates the correct directory structure."""
         suite = AiderPolyglotSuite()
         adapter = PiVanillaAdapter()
@@ -291,17 +291,16 @@ class TestRunner:
         with tempfile.TemporaryDirectory() as tmpdir:
             tmpdir = Path(tmpdir)
             vendor_dir = tmpdir / "vendor"
-            vendor_dir.mkdir()
-
-            # Create a problem directory
-            problem_dir = vendor_dir / "aider-polyglot" / "problems" / "python" / "hello"
-            problem_dir.mkdir(parents=True)
-            (problem_dir / "problem.txt").write_text("Write a hello function")
-            (problem_dir / "starter").mkdir()
-            (problem_dir / "starter" / "hello.py").write_text("def hello():\n    pass")
-            (problem_dir / "tests").mkdir()
-            (problem_dir / "tests" / "test_hello.py").write_text(
-                "from hello import hello\ndef test_hello():\n    assert hello() == 'Hello, World!'"
+            make_polyglot_problem(
+                vendor_dir, "python", "two-fer",
+                instructions="Write a two-fer function",
+                starter_name="two_fer",
+                starter_content="def two_fer(name=None):\n    pass\n",
+                test_content=(
+                    "from two_fer import two_fer\n"
+                    "def test_two_fer():\n"
+                    "    assert two_fer() == 'One for you, one for me.'\n"
+                ),
             )
 
             results_dir = tmpdir / "results"
@@ -309,12 +308,12 @@ class TestRunner:
             with patch("subprocess.run") as mock_run:
                 mock_run.return_value = MagicMock(returncode=0, stdout="LLM output", stderr="")
                 manifest, verdict = run_trial(
-                    suite, adapter, "test/model", "python/hello", 1,
+                    suite, adapter, "test/model", "python/two-fer", 1,
                     results_dir, vendor_dir
                 )
 
                 # Check that trial directory was created with encoded paths
-                trial_dir = results_dir / "test%2Fmodel" / "pi_vanilla" / "aider_polyglot" / "python%2Fhello" / "trial-1"
+                trial_dir = results_dir / "test%2Fmodel" / "pi_vanilla" / "aider_polyglot" / "python%2Ftwo-fer" / "trial-1"
                 assert trial_dir.exists()
                 assert (trial_dir / "manifest.json").exists()
                 assert (trial_dir / "verdict.json").exists()
@@ -324,9 +323,9 @@ class TestRunner:
                 assert manifest["model"]["id"] == "test/model"
                 assert manifest["model"]["provider"] == "test"
                 assert manifest["adapter"]["id"] == "PiVanillaAdapter"
-                assert manifest["suite"]["task_id"] == "python/hello"
+                assert manifest["suite"]["task_id"] == "python/two-fer"
 
-    def test_model_id_passed_correctly(self):
+    def test_model_id_passed_correctly(self, make_polyglot_problem):
         """Test that model_id from args is used in command and manifest."""
         suite = AiderPolyglotSuite()
         adapter = PiVanillaAdapter()
@@ -334,17 +333,16 @@ class TestRunner:
         with tempfile.TemporaryDirectory() as tmpdir:
             tmpdir = Path(tmpdir)
             vendor_dir = tmpdir / "vendor"
-            vendor_dir.mkdir()
-
-            # Create a problem directory
-            problem_dir = vendor_dir / "aider-polyglot" / "problems" / "python" / "hello"
-            problem_dir.mkdir(parents=True)
-            (problem_dir / "problem.txt").write_text("Write a hello function")
-            (problem_dir / "starter").mkdir()
-            (problem_dir / "starter" / "hello.py").write_text("def hello():\n    pass")
-            (problem_dir / "tests").mkdir()
-            (problem_dir / "tests" / "test_hello.py").write_text(
-                "from hello import hello\ndef test_hello():\n    assert hello() == 'Hello, World!'"
+            make_polyglot_problem(
+                vendor_dir, "python", "two-fer",
+                instructions="Write a two-fer function",
+                starter_name="two_fer",
+                starter_content="def two_fer(name=None):\n    pass\n",
+                test_content=(
+                    "from two_fer import two_fer\n"
+                    "def test_two_fer():\n"
+                    "    assert two_fer() == 'One for you, one for me.'\n"
+                ),
             )
 
             results_dir = tmpdir / "results"
@@ -352,7 +350,7 @@ class TestRunner:
             with patch("subprocess.run") as mock_run:
                 mock_run.return_value = MagicMock(returncode=0, stdout="LLM output", stderr="")
                 manifest, verdict = run_trial(
-                    suite, adapter, "my-custom/model", "python/hello", 1,
+                    suite, adapter, "my-custom/model", "python/two-fer", 1,
                     results_dir, vendor_dir
                 )
 

@@ -1,0 +1,138 @@
+"""
+Tests for runner failure semantics.
+
+A nonzero adapter return code MUST be treated as adapter failure and skip
+suite verification. This prevents false passes when starter code already
+satisfies a (broken or absent) verifier.
+
+These tests use a fake adapter that returns a nonzero return code with no
+error string, exactly the failure mode called out in
+ORNITH-CODER-REVIEW.md finding #6 / follow-up audit item C.
+"""
+
+import json
+import sys
+import tempfile
+from pathlib import Path
+from unittest.mock import patch
+
+PROJECT_ROOT = Path(__file__).resolve().parent.parent
+sys.path.insert(0, str(PROJECT_ROOT))
+
+from harness.adapters.pi_vanilla import PiVanillaAdapter, AdapterResult
+from harness.suites.aider_polyglot import AiderPolyglotSuite
+from harness.runner import run_trial
+
+
+class FakeFailingAdapter:
+    """Adapter whose subprocess exits nonzero without setting `error`."""
+
+    name = "fake_failing"
+    version = "test"
+
+    def run(self, task_data, workdir, log_file, stderr_file):
+        # Exactly the regression shape from the audit: nonzero rc, no error
+        return AdapterResult(returncode=1, error=None)
+
+
+def _make_aider_problem(vendor_dir: Path):
+    """Build a real-shaped polyglot-benchmark problem."""
+    pdir = (
+        vendor_dir
+        / "polyglot-benchmark"
+        / "python"
+        / "exercises"
+        / "practice"
+        / "two-fer"
+    )
+    pdir.mkdir(parents=True)
+    (pdir / ".docs").mkdir()
+    (pdir / ".docs" / "instructions.md").write_text("Write a two-fer function")
+    (pdir / "two_fer.py").write_text("def two_fer(name=None):\n    pass\n")
+    (pdir / "two_fer_test.py").write_text(
+        "from two_fer import two_fer\n"
+        "def test_two_fer():\n    assert two_fer() == 'One for you, one for me.'"
+    )
+
+
+def test_nonzero_adapter_return_code_marks_failure_and_skips_verify(monkeypatch):
+    """A nonzero adapter rc with no error must skip verification and record failure."""
+    suite = AiderPolyglotSuite()
+    adapter = FakeFailingAdapter()
+
+    # Track whether suite.verify() was called — it must NOT be.
+    verify_calls = []
+    original_verify = suite.verify
+
+    def spy_verify(task_data, workdir):
+        verify_calls.append(task_data)
+        return original_verify(task_data, workdir)
+
+    monkeypatch.setattr(suite, "verify", spy_verify)
+
+    with tempfile.TemporaryDirectory() as tmp:
+        tmp = Path(tmp)
+        vendor_dir = tmp / "vendor"
+        vendor_dir.mkdir()
+        _make_aider_problem(vendor_dir)
+        results_dir = tmp / "results"
+
+        manifest, verdict = run_trial(
+            suite, adapter, "test/model", "python/two-fer", 1,
+            results_dir, vendor_dir,
+        )
+
+    # Verification must not have run for a failed adapter
+    assert verify_calls == [], (
+        f"suite.verify() must not run after adapter failure, got {verify_calls}"
+    )
+
+    # Verdict must reflect adapter failure
+    assert verdict["passed"] is False, (
+        f"verdict.passed must be False after adapter failure, got {verdict}"
+    )
+    assert verdict.get("adapter_failed") is True, (
+        f"verdict.adapter_failed must be True, got {verdict}"
+    )
+
+    # Manifest exit code reflects the real nonzero rc
+    assert manifest["exit_code"] == 1, (
+        f"manifest.exit_code must be the adapter's nonzero rc, got {manifest['exit_code']}"
+    )
+
+
+def test_zero_adapter_return_code_still_runs_verify():
+    """Sanity: when the adapter succeeds, verification runs as normal."""
+    suite = AiderPolyglotSuite()
+    adapter = PiVanillaAdapter()
+
+    verify_calls = []
+    original_verify = suite.verify
+
+    def spy_verify(task_data, workdir):
+        verify_calls.append(task_data)
+        return original_verify(task_data, workdir)
+
+    suite.verify = spy_verify
+
+    with tempfile.TemporaryDirectory() as tmp:
+        tmp = Path(tmp)
+        vendor_dir = tmp / "vendor"
+        vendor_dir.mkdir()
+        _make_aider_problem(vendor_dir)
+        results_dir = tmp / "results"
+
+        with patch("subprocess.run") as mock_run:
+            mock_run.return_value.__class__ = lambda x: x  # noqa
+            # Use a real CompletedProcess-like object
+            import subprocess as sp
+            mock_run.return_value = sp.CompletedProcess(
+                args=[], returncode=0, stdout="ok", stderr=""
+            )
+            run_trial(
+                suite, adapter, "test/model", "python/two-fer", 1,
+                results_dir, vendor_dir,
+            )
+
+    assert len(verify_calls) == 1, "verify() should run once when adapter succeeds"
+    suite.verify = original_verify

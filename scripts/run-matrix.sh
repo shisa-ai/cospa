@@ -18,6 +18,11 @@ PROBLEMS=""
 SUITE="aider_polyglot"
 MODELS_FILE="$PROJECT_DIR/configs/models.yaml"
 
+# Initialize arrays empty so `${#ARR[@]}` is safe under `set -u` before the
+# user provides --models/--adapters.
+MODELS=()
+ADAPTERS=()
+
 # Parse args
 while [[ $# -gt 0 ]]; do
     case $1 in
@@ -87,26 +92,24 @@ echo "  Problems: ${PROBLEMS:-all}"
 echo "  Suite: $SUITE"
 echo ""
 
-# Run each model x adapter combination
+# Run each model x adapter combination exactly once. If --problems is set,
+# forward it; otherwise run the full suite. (Previously the script ran the
+# full suite once AND then ran the --problems subset — a double-run.)
+PROBLEMS_ARG=()
+if [[ -n "$PROBLEMS" ]]; then
+    PROBLEMS_ARG=(--problems "$PROBLEMS")
+fi
+
 for MODEL in "${MODELS[@]}"; do
     for ADAPTER in "${ADAPTERS[@]}"; do
         echo "── Model: $MODEL, Adapter: $ADAPTER ──"
 
-        # Use proper quoting instead of eval
         mamba run -n coding-eval python "$PROJECT_DIR/harness/runner.py" \
             --suite "$SUITE" \
             --adapter "$ADAPTER" \
             --model "$MODEL" \
-            --k "$K"
-
-        if [[ -n "$PROBLEMS" ]]; then
-            mamba run -n coding-eval python "$PROJECT_DIR/harness/runner.py" \
-                --suite "$SUITE" \
-                --adapter "$ADAPTER" \
-                --model "$MODEL" \
-                --k "$K" \
-                --problems "$PROBLEMS"
-        fi
+            --k "$K" \
+            "${PROBLEMS_ARG[@]}"
 
         echo ""
     done

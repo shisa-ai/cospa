@@ -82,10 +82,11 @@ for MODEL_ID in "${MAPFILE[@]}"; do
     MODEL_NAME="${MODEL_ID#*/}"
 
     # Try to find the provider config in models.json
-    PROVIDER_URL=""
+    PROVIDER_BASE_URL=""
     PROVIDER_KEY=""
     if [[ -f "$HOME/.pi/agent/models.json" ]]; then
-        # Extract base URL for this provider
+        # Extract base URL for this provider. The pi models.json uses
+        # camelCase keys (`baseUrl`, `apiKey`); tolerate snake_case too.
         PROVIDER_URL=$(python3 -c "
 import json
 with open('$HOME/.pi/agent/models.json') as f:
@@ -93,14 +94,12 @@ with open('$HOME/.pi/agent/models.json') as f:
 providers = data.get('providers', data) if isinstance(data, dict) else data
 if isinstance(providers, dict):
     for k, v in providers.items():
-        if k == '$PROVIDER':
-            print(v.get('base_url', ''))
-            print(k)
+        if k == '$PROVIDER' and isinstance(v, dict):
+            print(v.get('baseUrl') or v.get('base_url') or '')
             break
 " 2>/dev/null)
         if [[ -n "$PROVIDER_URL" ]]; then
-            PROVIDER_BASE_URL=$(echo "$PROVIDER_URL" | head -1)
-            PROVIDER_KEY=$(echo "$PROVIDER_URL" | tail -1)
+            PROVIDER_BASE_URL="$PROVIDER_URL"
         fi
     fi
 
@@ -117,7 +116,10 @@ if isinstance(providers, dict):
 
     if [[ -z "$PROVIDER_BASE_URL" ]]; then
         echo -e "  ${YELLOW}SKIP${NC} $MODEL_ID (no provider endpoint found)"
-        ((SKIPPED++))
+        # NOTE: `((SKIPPED++))` returns status 1 when the expression
+        # evaluates to 0 (i.e. the first increment), which under `set -e`
+        # would terminate the script. Use arithmetic assignment instead.
+        SKIPPED=$((SKIPPED + 1))
         continue
     fi
 
@@ -138,10 +140,10 @@ if isinstance(providers, dict):
 
     if [[ "$HTTP_CODE" == "200" ]]; then
         echo -e "  ${GREEN}✓ ALIVE${NC} $MODEL_ID — ${ELAPSED_MS}ms (HTTP $HTTP_CODE)"
-        ((ALIVE++))
+        ALIVE=$((ALIVE + 1))
     else
         echo -e "  ${RED}✗ DEAD${NC}  $MODEL_ID — ${ELAPSED_MS}ms (HTTP $HTTP_CODE)"
-        ((DEAD++))
+        DEAD=$((DEAD + 1))
     fi
 done
 
@@ -150,16 +152,27 @@ echo "── Summary ──"
 echo "  Alive:   $ALIVE"
 echo "  Dead:    $DEAD"
 echo "  Skipped: $SKIPPED"
-echo "  Total:   $((ALIVE + DEAD))"
+echo "  Total:   $((ALIVE + DEAD + SKIPPED))"
 echo ""
 
 if [[ $DEAD -gt 0 ]]; then
     echo -e "${YELLOW}⚠ Some models are unreachable. Check provider endpoints.${NC}"
 fi
 
-if [[ $ALIVE -eq 0 && $DEAD -gt 0 ]]; then
-    echo -e "${RED}✗ FAIL: No models are alive!${NC}"
-    if [[ "$FAIL_ON_DEAD" == "true" ]]; then
+# Fail closed when no model is reachable. This covers two cases that previously
+# looked clean:
+#   - every model DEAD (provider returned an error)
+#   - every model SKIPPED (no provider endpoint could be resolved at all)
+# In both situations the matrix cannot run, so we exit nonzero regardless of
+# the --fail-on-dead flag unless the user explicitly opted out.
+if [[ $ALIVE -eq 0 ]]; then
+    echo -e "${RED}✗ FAIL: No models are alive (alive=0, dead=$DEAD, skipped=$SKIPPED).${NC}"
+    if [[ "$FAIL_ON_DEAD" == "true" || "$SKIPPED" -eq 0 ]]; then
+        exit 1
+    fi
+    # Even with all-skipped and no --fail-on-dead, an all-skipped matrix is
+    # almost certainly a configuration error; surface it as a failure.
+    if [[ "$SKIPPED" -gt 0 ]]; then
         exit 1
     fi
 fi

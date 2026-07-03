@@ -64,8 +64,8 @@ class ScoreHandler(SimpleHTTPRequestHandler):
                 <td>{score['suite']}</td>
                 <td>{score['pass_rate']:.1f}%</td>
                 <td>{score['ci_lower']:.1f}% - {score['ci_upper']:.1f}%</td>
-                <td>{score['total']}</td>
-                <td>{score['passed']}</td>
+                <td>{score['total_tasks']}</td>
+                <td>{score['passed_tasks']}</td>
                 <td><a href="/?model={score['model']}&adapter={score['adapter']}&suite={score['suite']}">Details</a></td>
             </tr>
             """
@@ -108,12 +108,12 @@ class ScoreHandler(SimpleHTTPRequestHandler):
 
     def get_scores(self) -> list:
         """Get aggregated scores from results directory."""
+        from harness.path_utils import decode_model_path, decode_task_path
+
         scores = []
 
         if not RESULTS_DIR.exists():
             return scores
-
-        from harness.path_utils import decode_model_path
 
         for model_dir in RESULTS_DIR.iterdir():
             if not model_dir.is_dir():
@@ -133,21 +133,26 @@ class ScoreHandler(SimpleHTTPRequestHandler):
 
                     suite_id = suite_dir.name
 
-                    # Group trials by task, then apply pass@k (majority) semantics
+                    # The runner writes one directory per (encoded) task,
+                    # each containing trial-* subdirs. We must recurse through
+                    # the encoded task directory to find trials.
                     task_trials = {}
                     for task_dir in suite_dir.iterdir():
                         if not task_dir.is_dir():
                             continue
+                        # task_dir is the encoded task id directory
+                        task_id = decode_task_path(task_dir.name)
                         for trial_dir in task_dir.iterdir():
-                            if trial_dir.is_dir() and trial_dir.name.startswith("trial-"):
-                                verdict_file = trial_dir / "verdict.json"
-                                if verdict_file.exists():
-                                    with open(verdict_file) as f:
-                                        verdict = json.load(f)
-                                        task_id = decode_task_path(task_dir.name)
-                                        if task_id not in task_trials:
-                                            task_trials[task_id] = []
-                                        task_trials[task_id].append(verdict.get("passed", False))
+                            if not (trial_dir.is_dir() and trial_dir.name.startswith("trial-")):
+                                continue
+                            verdict_file = trial_dir / "verdict.json"
+                            if not verdict_file.exists():
+                                continue
+                            with open(verdict_file) as f:
+                                verdict = json.load(f)
+                            task_trials.setdefault(task_id, []).append(
+                                verdict.get("passed", False)
+                            )
 
                     if not task_trials:
                         continue
@@ -188,54 +193,60 @@ class ScoreHandler(SimpleHTTPRequestHandler):
         return scores
 
     def get_task_details(self, model: str, adapter: str, suite: str) -> dict:
-        """Get per-task details for a specific run."""
-        from harness.path_utils import decode_model_path, decode_task_path
+        """Get per-task details for a specific run.
 
-        details = []
+        `model` arrives URL-encoded from the query string (because the
+        runner writes encoded directory names). We keep it encoded for the
+        filesystem lookup and only decode it for display.
+        """
+        from harness.path_utils import decode_model_path, decode_task_path, encode_model_path
 
-        # Decode URL-encoded model and task IDs
+        # The query string may carry either the decoded model id (from a
+        # /api/scores row) or the encoded one. Normalize to encoded for FS use.
+        encoded_model = encode_model_path(decode_model_path(model))
         decoded_model = decode_model_path(model)
-        suite_dir = RESULTS_DIR / decoded_model / adapter / suite
+
+        suite_dir = RESULTS_DIR / encoded_model / adapter / suite
         if not suite_dir.exists():
             return {"error": "Not found", "tasks": []}
 
-        # Group trials by task_id (there may be multiple trials per task)
-        task_trials = {}
-        for trial_dir in suite_dir.iterdir():
-            if trial_dir.is_dir() and trial_dir.name.startswith("trial-"):
-                verdict_file = trial_dir / "verdict.json"
-                manifest_file = trial_dir / "manifest.json"
+        details = []
+
+        # suite_dir contains one directory per encoded task id, each holding
+        # trial-* subdirectories.
+        for task_dir in suite_dir.iterdir():
+            if not task_dir.is_dir():
+                continue
+            task_id = decode_task_path(task_dir.name)
+
+            trials = []
+            for trial_dir in sorted(task_dir.iterdir()):
+                if not (trial_dir.is_dir() and trial_dir.name.startswith("trial-")):
+                    continue
 
                 verdict = {}
                 manifest = {}
-
+                verdict_file = trial_dir / "verdict.json"
+                manifest_file = trial_dir / "manifest.json"
                 if verdict_file.exists():
                     with open(verdict_file) as f:
                         verdict = json.load(f)
-
                 if manifest_file.exists():
                     with open(manifest_file) as f:
                         manifest = json.load(f)
 
-                # Decode the task_id from the directory name
-                encoded_task = trial_dir.parent.name
-                task_id = decode_task_path(encoded_task)
-                if task_id not in task_trials:
-                    task_trials[task_id] = []
-
-                task_trials[task_id].append({
+                trials.append({
                     "trial": trial_dir.name,
                     "passed": verdict.get("passed", False),
                     "test_count": verdict.get("test_count", 0),
                     "wall_clock_seconds": manifest.get("timing", {}).get("wall_clock_seconds", 0),
                 })
 
-        # Build details list using pass@k semantics (majority of trials must pass)
-        for task_id, trials in task_trials.items():
-            first_trial = trials[0]
+            if not trials:
+                continue
+
             n_trials = len(trials)
             n_passed = sum(1 for t in trials if t["passed"])
-            # Task passes if majority of trials pass (pass@k with majority rule)
             task_passed = n_passed > n_trials / 2
 
             details.append({
@@ -243,8 +254,8 @@ class ScoreHandler(SimpleHTTPRequestHandler):
                 "trials": trials,
                 "passed": task_passed,
                 "pass_at_k": f"{n_passed}/{n_trials}",
-                "test_count": first_trial["test_count"],
-                "wall_clock_seconds": first_trial["wall_clock_seconds"],
+                "test_count": trials[0]["test_count"],
+                "wall_clock_seconds": trials[0]["wall_clock_seconds"],
             })
 
         return {"model": decoded_model, "adapter": adapter, "suite": suite, "tasks": details}

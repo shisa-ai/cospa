@@ -104,21 +104,24 @@ fi
 # ── 5. Clone Aider Polyglot dataset ──────────────────────────────────────
 echo ""
 echo "── Checking Aider Polyglot dataset ──"
-POLY_DIR="$VENDOR_DIR/aider-polyglot"
+POLY_DIR="$VENDOR_DIR/polyglot-benchmark"
 if [[ -d "$POLY_DIR/.git" ]]; then
     log_ok "Aider Polyglot dataset already cloned at $POLY_DIR"
     cd "$POLY_DIR"
     git pull --ff-only || log_warn "Could not pull latest"
     cd "$PROJECT_DIR"
 else
-    log_warn "Cloning Aider Polyglot dataset..."
+    log_warn "Cloning Aider Polyglot dataset (polyglot-benchmark)..."
     mkdir -p "$VENDOR_DIR"
-    # Use the public Exercism dataset — adjust URL if you have a private fork
-    git clone https://github.com/Aider-AI/aider-polyglot.git "$POLY_DIR" 2>/dev/null || {
-        log_warn "aider-polyglot repo not public; creating placeholder"
-        mkdir -p "$POLY_DIR"
-        echo "# Aider Polyglot dataset" > "$POLY_DIR/README.md"
-    }
+    # Real benchmark: Exercism-sourced exercises across python/go/rust/cpp/
+    # java/javascript. Do NOT silently fall back to a placeholder — a missing
+    # dataset is a setup failure, not a quiet success.
+    if ! git clone https://github.com/Aider-AI/polyglot-benchmark.git "$POLY_DIR"; then
+        log_err "Failed to clone polyglot-benchmark. The dataset is required."
+        log_err "  If you are offline, vendor it manually into: $POLY_DIR"
+        rm -rf "$POLY_DIR"
+        exit 1
+    fi
     log_ok "Aider Polyglot dataset at $POLY_DIR"
 fi
 

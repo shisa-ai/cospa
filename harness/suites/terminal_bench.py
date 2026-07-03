@@ -9,6 +9,7 @@ Reference: vendor/terminal-bench/CLAUDE.md
 """
 
 import json
+import re
 import shutil
 import subprocess
 import time
@@ -29,6 +30,59 @@ class SuiteResult:
     wall_clock_seconds: float = 0.0
 
 
+def _parse_task_yaml(text: str) -> Dict[str, Any]:
+    """Parse the subset of task.yaml we care about.
+
+    PyYAML isn't a hard dependency of the harness, so we prefer it when
+    available and fall back to a small hand-rolled parser for the
+    `instruction:` block scalar. The instruction field is the only one we
+    actually consume.
+    """
+    try:
+        import yaml  # type: ignore
+        data = yaml.safe_load(text) or {}
+        return data if isinstance(data, dict) else {}
+    except ImportError:
+        pass
+
+    # Hand-rolled fallback: handle `instruction: |-` and `instruction: |`
+    # block scalars, plus simple `key: value` lines.
+    result: Dict[str, Any] = {}
+    lines = text.splitlines()
+    i = 0
+    while i < len(lines):
+        line = lines[i]
+        stripped = line.lstrip()
+        if not stripped or stripped.startswith("#"):
+            i += 1
+            continue
+        # Match `instruction: |-` or `instruction: |` or `instruction: >-`
+        m_instr = re.match(r"^instruction\s*:\s*([|>][-+]?)\s*$", line)
+        if m_instr:
+            block_indent = len(line) - len(line.lstrip()) + 2  # child indent
+            block_lines = []
+            i += 1
+            while i < len(lines):
+                bl = lines[i]
+                if bl.strip() == "":
+                    block_lines.append("")
+                    i += 1
+                    continue
+                cur_indent = len(bl) - len(bl.lstrip())
+                if cur_indent < block_indent:
+                    break
+                block_lines.append(bl[block_indent:])
+                i += 1
+            result["instruction"] = "\n".join(block_lines).rstrip() + "\n"
+            continue
+        # Plain `key: value`
+        m_kv = re.match(r"^([A-Za-z_][A-Za-z0-9_]*)\s*:\s*(.*)$", line)
+        if m_kv and m_kv.group(2):
+            result[m_kv.group(1)] = m_kv.group(2).strip().strip('"\'')
+        i += 1
+    return result
+
+
 class TerminalBenchSuite:
     """Terminal-Bench suite using Harbor for execution."""
 
@@ -37,10 +91,28 @@ class TerminalBenchSuite:
     languages = ["python"]
     task_count = 0
 
+    # Harbor is the source of truth for Terminal-Bench scoring, so we want
+    # verify() to run even if the (no-op) adapter returned nonzero — the
+    # adapter path is bypassed entirely for this suite, but this flag keeps
+    # the semantics explicit.
+    verify_on_adapter_failure = True
+
+    # Map adapter name -> Harbor agent. pi* adapters run as the `pi` agent;
+    # little_coder* run as `aider` (little-coder is a pi fork, but Harbor
+    # exposes it through the aider adapter contract).
+    AGENT_MAP = {
+        "pi_vanilla": "pi",
+        "pi_devstack": "pi",
+        "pi_superpowers": "pi",
+        "little_coder": "aider",
+        "little_coder_superpowers": "aider",
+    }
+
     def get_task_ids(self, vendor_dir: Path = None) -> List[str]:
         """Get all task IDs from Terminal-Bench registry or original-tasks directory."""
         if vendor_dir is None:
             vendor_dir = Path("vendor")
+        vendor_dir = Path(vendor_dir)
 
         registry_file = vendor_dir / "terminal-bench" / "registry.json"
         if not registry_file.exists():
@@ -71,39 +143,46 @@ class TerminalBenchSuite:
         """
         Materialize a Terminal-Bench task into the workdir.
 
-        For Terminal-Bench, we don't copy files — we let Harbor handle
-        task setup via its own mechanisms. The workdir is used as the
-        jobs directory for Harbor output.
-
-        Returns task_data with metadata for the adapter/Harbor.
+        Real Terminal-Bench tasks are described by a `task.yaml` whose
+        `instruction` field is the agent prompt. Older/legacy tasks used
+        `instruction.md`; we support both. The verifier/scorer fields are
+        optional (most tasks use Harbor's built-in pytest parser instead),
+        so we initialize them to empty strings and never raise if they're
+        absent.
         """
         if vendor_dir is None:
             vendor_dir = Path("vendor")
+        vendor_dir = Path(vendor_dir)
 
-        # Copy the original task into the workdir
+        prompt = ""
+        verifier = ""
+        scorer = ""
+        task_meta: Dict[str, Any] = {}
+
         original_task_dir = vendor_dir / "terminal-bench" / "original-tasks" / task_id
         if original_task_dir.exists():
-            # Clear workdir and copy task files
             if workdir.exists():
                 shutil.rmtree(workdir)
             workdir.mkdir(parents=True, exist_ok=True)
             shutil.copytree(original_task_dir, workdir, dirs_exist_ok=True)
 
-            # Read the task instruction if available
-            instruction_file = workdir / "instruction.md"
-            prompt = ""
-            if instruction_file.exists():
-                prompt = instruction_file.read_text()
+            # Primary source: task.yaml `instruction` field
+            task_yaml = workdir / "task.yaml"
+            if task_yaml.exists():
+                task_meta = _parse_task_yaml(task_yaml.read_text())
+                prompt = task_meta.get("instruction", "")
 
-            # Read the verifier if available
+            # Legacy fallback: instruction.md
+            if not prompt:
+                instruction_file = workdir / "instruction.md"
+                if instruction_file.exists():
+                    prompt = instruction_file.read_text()
+
+            # Optional verifier.py / scorer.py (not present in most tasks)
             verifier_file = workdir / "verifier.py"
-            verifier = ""
             if verifier_file.exists():
                 verifier = verifier_file.read_text()
-
-            # Read the scorer if available
             scorer_file = workdir / "scorer.py"
-            scorer = ""
             if scorer_file.exists():
                 scorer = scorer_file.read_text()
         else:
@@ -114,6 +193,7 @@ class TerminalBenchSuite:
             "prompt": prompt,
             "verifier": verifier,
             "scorer": scorer,
+            "task_meta": task_meta,
             "model_id": "nvidia/nemotron-3-ultra-550b-a55b",
         }
 
@@ -166,34 +246,49 @@ class TerminalBenchSuite:
         workdir: Path,
         jobs_dir: Path,
         n_attempts: int = 1,
+        vendor_dir: Path = None,
     ) -> Dict[str, Any]:
         """
         Run a Harbor job for a Terminal-Bench task.
 
-        This is the primary execution path for Terminal-Bench tasks.
-        It delegates to `harbor run` with the appropriate agent and model.
-        """
-        # Map adapter name to Harbor agent
-        agent_map = {
-            "pi_vanilla": "pi",
-            "pi_devstack": "pi",
-            "pi_superpowers": "pi",
-            "little_coder": "aider",
-            "little_coder_superpowers": "aider",
-        }
-        agent = agent_map.get(adapter_name, "pi")
+        This is the primary execution path for Terminal-Bench tasks. It
+        delegates to `harbor run` with the agent, model, and dataset
+        resolved from the vendored registry.
 
-        # Build harbor command
+        Per `harbor run --help`:
+          -k, --n-attempts   attempts per trial   (NOT -n, which is concurrency)
+          -a, --agent        agent to run
+          -m, --model        model name for the agent
+          -o, --jobs-dir     directory for job results
+          --registry-path    path to a registry.json
+          -t, --task         run a single task from the registry
+        """
+        agent = self.AGENT_MAP.get(adapter_name, "pi")
+
+        # Resolve the registry so Harbor can pick up the task definition.
+        # The head version's commit_hash/branch identify the dataset.
+        registry_path = None
+        task_ref = None
+        if vendor_dir is not None:
+            vendor_dir = Path(vendor_dir)
+            reg = vendor_dir / "terminal-bench" / "registry.json"
+            if reg.exists():
+                registry_path = reg
+                task_ref = f"terminal-bench-core/{task_id}"
+
         cmd = [
-            "harbor",
-            "run",
+            "harbor", "run",
             "--agent", agent,
             "--model", model_id,
-            "--jobs-dir", str(jobs_dir),
             "--n-attempts", str(n_attempts),
-            "--path", str(workdir),
-            "--yes",  # Auto-confirm
+            "--jobs-dir", str(jobs_dir),
+            "--yes",
         ]
+        if registry_path is not None:
+            cmd += ["--registry-path", str(registry_path), "--task", task_ref]
+        else:
+            # Fallback: point Harbor at the task directory directly.
+            cmd += ["--path", str(workdir)]
 
         try:
             result = subprocess.run(
@@ -201,23 +296,16 @@ class TerminalBenchSuite:
                 cwd=str(workdir),
                 capture_output=True,
                 text=True,
-                timeout=3600,  # 1 hour timeout for Harbor
+                timeout=3600,
             )
-
             return {
                 "returncode": result.returncode,
                 "stdout": result.stdout,
                 "stderr": result.stderr,
             }
         except subprocess.TimeoutExpired:
-            return {
-                "returncode": -1,
-                "stdout": "",
-                "stderr": "Harbor job timed out",
-            }
+            return {"returncode": -1, "stdout": "", "stderr": "Harbor job timed out"}
+        except FileNotFoundError as e:
+            return {"returncode": -1, "stdout": "", "stderr": f"harbor not found: {e}"}
         except Exception as e:
-            return {
-                "returncode": -1,
-                "stdout": "",
-                "stderr": str(e),
-            }
+            return {"returncode": -1, "stdout": "", "stderr": str(e)}

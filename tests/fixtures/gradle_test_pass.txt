@@ -1,0 +1,8 @@
+> Task :test
+
+TwoFerTest > no name given PASSED
+TwoFerTest > a name given PASSED
+
+BUILD SUCCESSFUL in 1s
+2 actionable tasks: 2 executed
+2 tests completed, 0 failed

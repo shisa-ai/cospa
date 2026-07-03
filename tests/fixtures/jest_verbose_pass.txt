@@ -1,0 +1,8 @@
+PASS ./two-fer.test.js
+  two-fer
+    ✓ no name given (2 ms)
+    ✓ a name given
+
+Tests:       2 passed, 2 total
+Snapshots:   0 total
+Time:        0.321 s

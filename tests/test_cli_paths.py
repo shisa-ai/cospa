@@ -11,6 +11,7 @@ See ORNITH-CODER-REVIEW.md follow-up audit item G.
 import sys
 import tempfile
 from pathlib import Path
+from unittest.mock import patch
 
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(PROJECT_ROOT))
@@ -99,3 +100,61 @@ def test_run_trial_accepts_str_paths():
             )
 
     assert manifest["exit_code"] == 0
+
+
+def test_runner_main_rejects_nonpositive_k():
+    """--k must be a positive trial count, not a silent no-op."""
+    import argparse
+    from harness import runner as runner_mod
+
+    args = argparse.Namespace(
+        suite="aider_polyglot",
+        adapter="pi_vanilla",
+        model="test/model",
+        problems=1,
+        k=0,
+        results_dir=Path(tempfile.mkdtemp()),
+        vendor_dir=Path(tempfile.mkdtemp()),
+        config=Path("/tmp/c"),
+        skip_reachability=True,
+    )
+
+    with patch.object(runner_mod, "parse_args", return_value=args), \
+         patch.object(runner_mod, "load_suite") as mock_suite:
+        try:
+            runner_mod.main()
+        except SystemExit as e:
+            assert e.code != 0, f"expected nonzero exit, got {e.code}"
+        else:
+            assert False, "main() must exit for --k 0"
+
+    mock_suite.assert_not_called()
+
+
+def test_runner_main_rejects_nonpositive_problem_limit():
+    """--problems must be positive when provided."""
+    import argparse
+    from harness import runner as runner_mod
+
+    args = argparse.Namespace(
+        suite="aider_polyglot",
+        adapter="pi_vanilla",
+        model="test/model",
+        problems=-1,
+        k=1,
+        results_dir=Path(tempfile.mkdtemp()),
+        vendor_dir=Path(tempfile.mkdtemp()),
+        config=Path("/tmp/c"),
+        skip_reachability=True,
+    )
+
+    with patch.object(runner_mod, "parse_args", return_value=args), \
+         patch.object(runner_mod, "load_suite") as mock_suite:
+        try:
+            runner_mod.main()
+        except SystemExit as e:
+            assert e.code != 0, f"expected nonzero exit, got {e.code}"
+        else:
+            assert False, "main() must exit for negative --problems"
+
+    mock_suite.assert_not_called()

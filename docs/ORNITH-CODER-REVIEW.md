@@ -922,3 +922,35 @@ smoke on a machine that can access `/var/run/docker.sock`, with one reachable
 model, one custom Harbor agent, and one task such as `hello-world`. The code
 path is now wired and tested at the command boundary, but this environment
 cannot validate Docker execution or Harbor score ingestion.
+
+---
+
+## Production-readiness follow-up
+
+A focused hardening pass found and fixed additional local code issues:
+
+- Aider Polyglot language scoring is now covered by real runner-output
+  fixtures for Python/pytest, Go, Rust/cargo, JavaScript/Jest, Java/Gradle,
+  and C++/CTest (`fixed (unit test)`). The parser now counts Gradle, CTest,
+  and Catch2 success summaries instead of only the earlier Go sample.
+- The Java verifier now prefers a checked-in `./gradlew` wrapper when present,
+  so clean machines do not need a global Gradle install for vendored Exercism
+  tasks (`fixed (unit test)`).
+- The C++ verifier now runs the real Exercism CMake `test_<exercise>` target
+  instead of a nonexistent generic `./build/test` binary (`fixed (unit test)`).
+- The C++ verifier no longer masks failing build/test commands with
+  `|| echo`, preserving nonzero exit codes from CMake/build/test failures
+  (`fixed (unit test)`).
+- The runner and `scripts/run-matrix.sh` now reject missing/nonpositive `--k`
+  and `--problems` values before starting a run, preventing silent zero-trial
+  or negative-slice executions (`fixed (unit + shell tests)`).
+- The score viewer now escapes result metadata in generated HTML and URL-quotes
+  Details links, so model/adapter/suite names from result artifacts render as
+  data rather than markup (`fixed (unit test)`).
+
+Verification:
+
+```bash
+mamba run -n coding-eval python -m pytest -q  # 81 passed
+bash tests/scripts/run_all.sh                 # 13 assertions passed
+```

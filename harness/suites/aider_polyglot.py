@@ -15,6 +15,7 @@ full polyglot-benchmark dataset from https://github.com/Aider-AI/polyglot-benchm
 """
 
 import json
+import shlex
 import shutil
 import subprocess
 import time
@@ -176,12 +177,32 @@ class AiderPolyglotSuite:
         elif language == "go":
             cmd = ["go", "test", "./...", "-v", "-timeout", "5m"]
         elif language == "java":
-            cmd = ["gradle", "test", "--info"]
+            gradle_cmd = "./gradlew" if (workdir / "gradlew").exists() else "gradle"
+            cmd = [gradle_cmd, "test", "--info"]
         elif language == "rust":
             cmd = ["cargo", "test", "--verbose"]
         elif language == "c" or language == "cpp":
-            # Try cmake + make + test
-            cmd = ["bash", "-c", "cmake -B build && cmake --build build && ./build/test || echo 'Build failed'"]
+            # Try cmake + build + test. Do not append a shell fallback such as
+            # `|| echo ...`: that masks nonzero build/test exits as success.
+            problem = task_data.get("problem")
+            source_dir = "."
+            if problem:
+                source_link = workdir / problem
+                if not source_link.exists():
+                    source_link.symlink_to(".", target_is_directory=True)
+                if (source_link / "CMakeLists.txt").exists():
+                    source_dir = problem
+            build_cmd = "cmake --build build"
+            if problem:
+                build_cmd += f" --target {shlex.quote(f'test_{problem}')}"
+            cmd = [
+                "bash",
+                "-c",
+                (
+                    f"cmake -S {shlex.quote(source_dir)} -B build "
+                    f"-DEXERCISM_RUN_ALL_TESTS=ON && {build_cmd}"
+                ),
+            ]
         elif language == "csharp":
             cmd = ["dotnet", "test", "--logger", "console", "--verbosity", "normal"]
         elif language == "ruby":
@@ -293,13 +314,29 @@ class AiderPolyglotSuite:
         if match:
             return int(match.group(1))
 
-        # Try to parse Java test output
+        # Try to parse Java/Maven/Gradle test output
         match = re.search(r"Tests\s+run:\s+(\d+)", output)
         if match:
             return int(match.group(1))
+        match = re.search(r"(\d+)\s+tests?\s+completed", output, re.IGNORECASE)
+        if match:
+            return int(match.group(1))
+        match = re.search(r"\[\s*(\d+)\s+tests?\s+successful\s*\]", output, re.IGNORECASE)
+        if match:
+            return int(match.group(1))
 
-        # Try to parse CMake/test output
+        # Try to parse CMake/CTest output
+        match = re.search(
+            r"All tests passed \([^)]*\bin\s+(\d+)\s+test cases?\)",
+            output,
+            re.IGNORECASE,
+        )
+        if match:
+            return int(match.group(1))
         match = re.search(r"(\d+)\s+tests?\s+passed", output, re.IGNORECASE)
+        if match:
+            return int(match.group(1))
+        match = re.search(r"tests?\s+failed\s+out\s+of\s+(\d+)", output, re.IGNORECASE)
         if match:
             return int(match.group(1))
 

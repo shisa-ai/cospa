@@ -89,4 +89,22 @@ else
     FAIL=$((FAIL + 1))
 fi
 
+# Test 3: options that require values must fail cleanly, not via set -u
+OUT=$(bash "$PROJ/scripts/run-matrix.sh" --k 2>&1)
+RC=$?
+assert_exit 1 "$RC" "--k without value exits nonzero"
+assert_contains "Error: --k requires an argument" "$OUT" "--k missing value has clear error"
+assert_not_contains "unbound variable" "$OUT" "--k missing value avoids shell unbound-variable error"
+
+# Test 4: numeric options must be positive integers
+OUT=$(bash "$PROJ/scripts/run-matrix.sh" --models fake/model-one --adapters pi_vanilla --k 0 2>&1)
+RC=$?
+assert_exit 1 "$RC" "--k 0 exits nonzero"
+assert_contains "Error: --k must be a positive integer" "$OUT" "--k 0 has clear error"
+
+OUT=$(bash "$PROJ/scripts/run-matrix.sh" --models fake/model-one --adapters pi_vanilla --problems -1 2>&1)
+RC=$?
+assert_exit 1 "$RC" "--problems -1 exits nonzero"
+assert_contains "Error: --problems must be a positive integer" "$OUT" "--problems -1 has clear error"
+
 summary

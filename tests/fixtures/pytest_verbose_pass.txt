@@ -1,0 +1,7 @@
+============================= test session starts ==============================
+collected 2 items
+
+two_fer_test.py::test_two_fer_no_name PASSED                         [ 50%]
+two_fer_test.py::test_two_fer_named PASSED                           [100%]
+
+============================== 2 passed in 0.02s ===============================

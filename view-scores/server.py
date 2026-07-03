@@ -8,11 +8,12 @@ Usage:
   python view-scores/server.py
 """
 
+import html
 import json
 import statistics
 from pathlib import Path
 from http.server import HTTPServer, SimpleHTTPRequestHandler
-from urllib.parse import urlparse, parse_qs
+from urllib.parse import urlparse, parse_qs, urlencode
 
 RESULTS_DIR = Path(__file__).resolve().parent.parent / "results"
 
@@ -57,16 +58,26 @@ class ScoreHandler(SimpleHTTPRequestHandler):
         rows = ""
 
         for score in scores:
+            model = html.escape(str(score["model"]))
+            adapter = html.escape(str(score["adapter"]))
+            suite = html.escape(str(score["suite"]))
+            details_href = "/?" + urlencode(
+                {
+                    "model": str(score["model"]),
+                    "adapter": str(score["adapter"]),
+                    "suite": str(score["suite"]),
+                }
+            )
             rows += f"""
             <tr>
-                <td>{score['model']}</td>
-                <td>{score['adapter']}</td>
-                <td>{score['suite']}</td>
+                <td>{model}</td>
+                <td>{adapter}</td>
+                <td>{suite}</td>
                 <td>{score['pass_rate']:.1f}%</td>
                 <td>{score['ci_lower']:.1f}% - {score['ci_upper']:.1f}%</td>
                 <td>{score['total_tasks']}</td>
                 <td>{score['passed_tasks']}</td>
-                <td><a href="/?model={score['model']}&adapter={score['adapter']}&suite={score['suite']}">Details</a></td>
+                <td><a href="{html.escape(details_href, quote=True)}">Details</a></td>
             </tr>
             """
 

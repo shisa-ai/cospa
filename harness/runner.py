@@ -53,6 +53,16 @@ def parse_args():
     return parser.parse_args()
 
 
+def validate_args(args) -> None:
+    """Validate parsed CLI arguments before loading suites or adapters."""
+    if args.k < 1:
+        print("✗ --k must be a positive integer", file=sys.stderr)
+        sys.exit(2)
+    if args.problems is not None and args.problems < 1:
+        print("✗ --problems must be a positive integer", file=sys.stderr)
+        sys.exit(2)
+
+
 def get_env_hash():
     """Return a short hash identifying the current Python environment.
 
@@ -454,6 +464,7 @@ def main():
     args.results_dir = Path(args.results_dir)
     args.vendor_dir = Path(args.vendor_dir)
     args.config = Path(args.config)
+    validate_args(args)
 
     # Pre-run reachability check (PLAN.md #137-138). Refuse to start the
     # matrix if the model can't be pinged, unless the user opts out with

@@ -1,0 +1,6 @@
+=== RUN   TestTwoFer
+--- PASS: TestTwoFer (0.00s)
+=== RUN   TestTwoFerNamed
+--- PASS: TestTwoFerNamed (0.00s)
+PASS
+ok  example/twofer 0.123s

@@ -1,0 +1,9 @@
+Test project /tmp/two-fer/build
+    Start 1: two_fer_test
+1/2 Test #1: two_fer_test ....................   Passed    0.01 sec
+    Start 2: two_fer_extra_test
+2/2 Test #2: two_fer_extra_test ..............   Passed    0.01 sec
+
+100% tests passed, 0 tests failed out of 2
+
+Total Test time (real) =   0.02 sec

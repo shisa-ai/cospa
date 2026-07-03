@@ -142,6 +142,39 @@ def test_generate_html_renders_rows_without_keyerror():
     assert "pi_vanilla" in html
 
 
+def test_generate_html_escapes_result_metadata_and_quotes_detail_links():
+    """Viewer HTML must not render result metadata as executable markup.
+
+    Results are durable local artifacts, but they can contain model IDs from
+    external config/provider names. Treat them as data when rendering HTML.
+    """
+    with tempfile.TemporaryDirectory() as tmp:
+        results_dir = Path(tmp) / "results"
+        results_dir.mkdir()
+        model_id = '<script>alert("x")</script>&model=evil'
+        adapter = "pi_vanilla'><img src=x onerror=alert(1)>"
+        suite = 'aider_polyglot&suite=evil'
+        base = (
+            results_dir
+            / encode_model_path(model_id)
+            / adapter
+            / suite
+            / encode_task_path("python/hello")
+        )
+        _write_trial(base / "trial-1", passed=True)
+
+        h, _ = _make_handler(results_dir)
+        html = h.generate_html()
+
+    assert '<script>alert("x")</script>' not in html
+    assert '<img src=x onerror=alert(1)>' not in html
+    assert '&lt;script&gt;alert(&quot;x&quot;)&lt;/script&gt;&amp;model=evil' in html
+    assert 'pi_vanilla&#x27;&gt;&lt;img src=x onerror=alert(1)&gt;' in html
+    assert 'model=%3Cscript%3Ealert%28%22x%22%29%3C%2Fscript%3E%26model%3Devil' in html
+    assert 'adapter=pi_vanilla%27%3E%3Cimg+src%3Dx+onerror%3Dalert%281%29%3E' in html
+    assert 'suite=aider_polyglot%26suite%3Devil' in html
+
+
 def test_get_task_details_with_encoded_model_and_task():
     """get_task_details() must locate the encoded dir and decode task IDs."""
     with tempfile.TemporaryDirectory() as tmp:

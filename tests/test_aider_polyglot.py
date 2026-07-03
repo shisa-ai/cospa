@@ -16,9 +16,13 @@ These tests build a minimal but real-shaped polyglot tree and exercise the
 suite against it.
 """
 
+import subprocess
 import sys
 import tempfile
 from pathlib import Path
+from unittest.mock import patch
+
+import pytest
 
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(PROJECT_ROOT))
@@ -118,15 +122,93 @@ def test_setup_sh_uses_real_benchmark_and_fails_loudly_when_missing(monkeypatch=
     assert "exit 1" in text, "setup.sh must exit 1 on dataset clone failure"
 
 
-def test_count_tests_counts_go_test_verbose_output():
-    """A successful `go test -v` run must not be marked failed as 0 tests."""
+@pytest.mark.parametrize(
+    ("fixture_name", "expected_count"),
+    [
+        ("pytest_verbose_pass.txt", 2),
+        ("go_test_verbose_pass.txt", 2),
+        ("cargo_test_pass.txt", 2),
+        ("jest_verbose_pass.txt", 2),
+        ("gradle_test_pass.txt", 2),
+        ("ctest_pass.txt", 2),
+    ],
+)
+def test_count_tests_counts_real_language_runner_outputs(fixture_name, expected_count):
+    """Successful language runner output must not be marked failed as 0 tests."""
     suite = AiderPolyglotSuite()
-    output = """=== RUN   TestTwoFer
---- PASS: TestTwoFer (0.00s)
-=== RUN   TestTwoFerNamed
---- PASS: TestTwoFerNamed (0.00s)
-PASS
-ok  example/twofer 0.123s
-"""
+    output = (PROJECT_ROOT / "tests" / "fixtures" / fixture_name).read_text()
 
-    assert suite._count_tests(output) == 2
+    assert suite._count_tests(output) == expected_count
+
+
+def test_verify_cpp_command_does_not_mask_test_runner_failures():
+    """The C++ verifier must preserve nonzero build/test exit codes."""
+    suite = AiderPolyglotSuite()
+    captured = {}
+
+    def fake_run(cmd, **kwargs):
+        captured["cmd"] = list(cmd)
+        return subprocess.CompletedProcess(
+            args=cmd,
+            returncode=1,
+            stdout="0 tests passed, 2 tests failed out of 2\n",
+            stderr="",
+        )
+
+    with tempfile.TemporaryDirectory() as tmp:
+        with patch("subprocess.run", side_effect=fake_run):
+            verdict = suite.verify({"language": "cpp", "timeout": 1}, Path(tmp))
+
+    shell_cmd = captured["cmd"][-1]
+    assert "||" not in shell_cmd, shell_cmd
+    assert verdict["passed"] is False
+    assert verdict["exit_code"] == 1
+
+
+def test_verify_cpp_runs_exercism_cmake_test_target():
+    """C++ exercises expose test_<exercise> targets, not build/test."""
+    suite = AiderPolyglotSuite()
+
+    def fake_run(cmd, **kwargs):
+        return subprocess.CompletedProcess(
+            args=cmd,
+            returncode=0,
+            stdout="All tests passed (12 assertions in 3 test cases)\n",
+            stderr="",
+        )
+
+    with tempfile.TemporaryDirectory() as tmp:
+        (Path(tmp) / "CMakeLists.txt").write_text("add_custom_target(test_allergies)\n")
+        with patch("subprocess.run", side_effect=fake_run) as mock_run:
+            verdict = suite.verify(
+                {"language": "cpp", "problem": "allergies", "timeout": 1},
+                Path(tmp),
+            )
+
+    shell_cmd = mock_run.call_args[0][0][-1]
+    assert "./build/test" not in shell_cmd, shell_cmd
+    assert "cmake -S allergies -B build" in shell_cmd, shell_cmd
+    assert "cmake --build build --target test_allergies" in shell_cmd, shell_cmd
+    assert verdict["passed"] is True
+    assert verdict["test_count"] == 3
+
+
+def test_verify_java_prefers_checked_in_gradle_wrapper():
+    """Java exercises vendor gradlew, so clean machines do not need global gradle."""
+    suite = AiderPolyglotSuite()
+
+    with tempfile.TemporaryDirectory() as tmp:
+        workdir = Path(tmp)
+        (workdir / "gradlew").write_text("#!/usr/bin/env sh\n")
+        with patch("subprocess.run") as mock_run:
+            mock_run.return_value = subprocess.CompletedProcess(
+                args=["./gradlew"],
+                returncode=0,
+                stdout="3 tests completed, 0 failed\n",
+                stderr="",
+            )
+            verdict = suite.verify({"language": "java", "timeout": 1}, workdir)
+
+    assert mock_run.call_args[0][0][:2] == ["./gradlew", "test"]
+    assert verdict["passed"] is True
+    assert verdict["test_count"] == 3

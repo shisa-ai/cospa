@@ -23,42 +23,57 @@ MODELS_FILE="$PROJECT_DIR/configs/models.yaml"
 MODELS=()
 ADAPTERS=()
 
+require_value() {
+    local option="$1"
+    if [[ $# -lt 2 || -z "$2" || "$2" == --* ]]; then
+        echo "Error: $option requires an argument"
+        exit 1
+    fi
+}
+
+require_positive_integer() {
+    local option="$1"
+    local value="$2"
+    if [[ ! "$value" =~ ^[1-9][0-9]*$ ]]; then
+        echo "Error: $option must be a positive integer"
+        exit 1
+    fi
+}
+
 # Parse args
 while [[ $# -gt 0 ]]; do
     case $1 in
         --models)
             # Accept multiple models as separate arguments or comma-separated
-            if [[ $# -ge 2 ]]; then
-                IFS=',' read -ra MODES <<< "$2"
-                MODELS=("${MODES[@]}")
-                shift 2
-            else
-                echo "Error: --models requires an argument"
-                exit 1
-            fi
+            require_value "$1" "${2:-}"
+            IFS=',' read -ra MODES <<< "$2"
+            MODELS=("${MODES[@]}")
+            shift 2
             ;;
         --adapters)
-            if [[ $# -ge 2 ]]; then
-                IFS=',' read -ra ADAPTERS <<< "$2"
-                shift 2
-            else
-                echo "Error: --adapters requires an argument"
-                exit 1
-            fi
+            require_value "$1" "${2:-}"
+            IFS=',' read -ra ADAPTERS <<< "$2"
+            shift 2
             ;;
         --k)
+            require_value "$1" "${2:-}"
+            require_positive_integer "$1" "$2"
             K=$2
             shift 2
             ;;
         --problems)
+            require_value "$1" "${2:-}"
+            require_positive_integer "$1" "$2"
             PROBLEMS=$2
             shift 2
             ;;
         --suite)
+            require_value "$1" "${2:-}"
             SUITE=$2
             shift 2
             ;;
         --models-file)
+            require_value "$1" "${2:-}"
             MODELS_FILE=$2
             shift 2
             ;;

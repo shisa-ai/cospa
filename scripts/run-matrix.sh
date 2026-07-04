@@ -2,7 +2,7 @@
 # run-matrix.sh — Run the full eval matrix.
 #
 # Usage:
-#   bash scripts/run-matrix.sh [--models ...] [--adapters ...] [--k 3] [--problems 225]
+#   bash scripts/run-matrix.sh [--models ...] [--adapters ...] [--k 3] [--problems 225] [--run-id ...]
 #
 # Example:
 #   bash scripts/run-matrix.sh --models nvidia/nemotron-3-ultra-550b-a55b --adapters pi_vanilla --k 1 --problems 5
@@ -17,6 +17,7 @@ K=1
 PROBLEMS=""
 SUITE="aider_polyglot"
 MODELS_FILE="$PROJECT_DIR/configs/models.yaml"
+RUN_ID="$(date -u +%Y%m%dT%H%M%S.%NZ)-$$"
 
 # Initialize arrays empty so `${#ARR[@]}` is safe under `set -u` before the
 # user provides --models/--adapters.
@@ -77,6 +78,11 @@ while [[ $# -gt 0 ]]; do
             MODELS_FILE=$2
             shift 2
             ;;
+        --run-id)
+            require_value "$1" "${2:-}"
+            RUN_ID=$2
+            shift 2
+            ;;
         *)
             echo "Unknown option: $1"
             exit 1
@@ -105,6 +111,7 @@ echo "  Adapters: ${ADAPTERS[*]}"
 echo "  K: $K"
 echo "  Problems: ${PROBLEMS:-all}"
 echo "  Suite: $SUITE"
+echo "  Run ID: $RUN_ID"
 echo ""
 
 # Run each model x adapter combination exactly once. If --problems is set,
@@ -124,6 +131,7 @@ for MODEL in "${MODELS[@]}"; do
             --adapter "$ADAPTER" \
             --model "$MODEL" \
             --k "$K" \
+            --run-id "$RUN_ID" \
             "${PROBLEMS_ARG[@]}"
 
         echo ""

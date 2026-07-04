@@ -24,7 +24,7 @@ assert_exit() {
 
 assert_contains() {
     local needle="$1" haystack="$2" label="$3"
-    if grep -qF "$needle" <<<"$haystack"; then
+    if grep -qF -- "$needle" <<<"$haystack"; then
         echo "  ✓ $label"
         PASS=$((PASS + 1))
     else
@@ -36,7 +36,7 @@ assert_contains() {
 
 assert_not_contains() {
     local needle="$1" haystack="$2" label="$3"
-    if grep -qF "$needle" <<<"$haystack"; then
+    if grep -qF -- "$needle" <<<"$haystack"; then
         echo "  ✗ $label (unexpected: '$needle')"
         echo "    output: ${haystack:0:200}"
         FAIL=$((FAIL + 1))

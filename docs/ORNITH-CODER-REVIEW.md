@@ -1031,6 +1031,24 @@ smoke as one row:
 local/ornith-1.0-35b | pi_vanilla | terminal_bench | 1/1 passed
 ```
 
-Follow-up validation for this pass: the full pytest suite reports `88 passed`;
-`bash tests/scripts/run_all.sh` reports `22` shell assertions passed; and
+Follow-up validation for this pass: the full pytest suite reports `91 passed`;
+`bash tests/scripts/run_all.sh` reports `25` shell assertions passed; and
 `http://localhost:8000/api/scores` returns the Terminal-Bench smoke row above.
+
+### Parallel-safe default result roots
+
+Default CLI output is now isolated by model and run id:
+
+```text
+results/runs/<encoded-model>-<run-id>/<encoded-model>/<adapter>/<suite>/<task>/trial-<k>/
+```
+
+This means two normal `harness/runner.py` invocations no longer race on the
+same default `results/<model>/.../trial-<k>` path. Supplying `--results-dir`
+remains an explicit opt-in to an exact shared output root for intentional
+merge/rebaseline behavior.
+
+`scripts/run-matrix.sh` now generates one matrix `--run-id` and forwards it to
+each runner process, grouping all cells from one matrix invocation while still
+keeping concurrent matrix invocations separate. Users can also pass
+`--run-id <name>` for a stable wrapper name (`fixed (unit + shell tests)`).

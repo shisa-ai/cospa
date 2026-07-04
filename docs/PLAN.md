@@ -45,7 +45,9 @@ reorder — earlier items unblock later ones.
       `(suite, model, adapter, trial_k)` and runs *one task*: spawns the
       adapter as a subprocess, captures stdout/stderr/exit, runs the
       suite's verifier, writes
-      `results/<model>/<adapter>/<suite>/<task_id>/trial-<k>/{manifest.json,out/,verdict.json}`.
+      `results/runs/<encoded-model>-<run-id>/<model>/<adapter>/<suite>/<task_id>/trial-<k>/{manifest.json,out/,verdict.json}`
+      by default. Explicit `--results-dir` remains an exact output root for
+      intentional merges.
       Manifest records: model id + provider, adapter id + version,
       sampling params, env hash, start/end time, token usage (if known).
       This is the single load-bearing component of the harness.
@@ -183,15 +185,20 @@ harnesses cleanly.
 
 ## 4. Reproducibility & results layout
 
-Every task run produces a self-contained directory:
+Every normal CLI invocation writes under a model-prefixed run wrapper, so
+parallel invocations do not race by default:
 
 ```
-results/<model>/<adapter>/<suite>/<task_id>/trial-<k>/
+results/runs/<encoded-model>-<run-id>/<encoded-model>/<adapter>/<suite>/<task_id>/trial-<k>/
 ├── manifest.json     # model, adapter, params, env hash, timing
 ├── out/              # adapter stdout/stderr, session log
 ├── workdir/          # final state of the task workdir (git diff vs initial)
 └── verdict.json      # suite-specific: pass/fail, test counts, grader output
 ```
+
+Direct `run_trial()` callers and explicit `--results-dir` users can still
+write to a chosen root; doing so is an intentional merge/rebaseline behavior,
+not the safe default.
 
 Aggregation is a pure function over this tree — no in-flight state, no
 database. `view-scores/` (P12) reads it cold. This means we can re-score

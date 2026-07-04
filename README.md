@@ -46,6 +46,15 @@ The viewer serves `http://localhost:8000` and reads the `results/` tree cold.
 It also finds named smoke-run wrappers such as
 `results/e2e-smoke-terminal-bench-20260704-1100/...`.
 
+By default, CLI runs write to an isolated run wrapper:
+
+```text
+results/runs/<encoded-model>-<run-id>/<encoded-model>/<adapter>/<suite>/<task>/trial-<k>/
+```
+
+This makes repeated or concurrent invocations independent unless you
+intentionally provide a shared `--results-dir`.
+
 ## Directory layout
 
 ```
@@ -84,12 +93,12 @@ offline/smoke run where you accept that risk.
 
 ## Parallel Runs
 
-`scripts/run-matrix.sh` runs matrix cells sequentially. You can still run
-multiple eval processes at the same time by launching independent
-`harness/runner.py` commands, as long as they do not write the same
-`results/<model>/<adapter>/<suite>/<task>/trial-<k>/` directory.
+`scripts/run-matrix.sh` runs matrix cells sequentially and passes one run id to
+all cells in that matrix invocation. Individual `harness/runner.py` CLI
+invocations are also parallel-safe by default because each one gets a unique
+model-prefixed run wrapper under `results/runs/`.
 
-The safest pattern is one wrapper results directory per concurrent process:
+You can provide a stable `--run-id` when you want a readable wrapper name:
 
 ```bash
 mamba run -n coding-eval python harness/runner.py \
@@ -98,7 +107,7 @@ mamba run -n coding-eval python harness/runner.py \
   --model local/ornith-1.0-35b \
   --problems 5 \
   --k 1 \
-  --results-dir results/parallel/pi-vanilla &
+  --run-id smoke-pi-vanilla &
 
 mamba run -n coding-eval python harness/runner.py \
   --suite aider_polyglot \
@@ -106,16 +115,23 @@ mamba run -n coding-eval python harness/runner.py \
   --model local/ornith-1.0-35b \
   --problems 5 \
   --k 1 \
-  --results-dir results/parallel/pi-devstack &
+  --run-id smoke-pi-devstack &
 
 wait
 ```
 
-The score viewer recursively discovers those wrapper directories. Avoid
-running two processes against the same output directory and same matrix cell;
-that will race on `trial-<k>` files. Terminal-Bench runs also share Docker and
-model-serving capacity, so start with low concurrency and watch provider rate
-limits.
+The score viewer recursively discovers those wrappers. Supplying
+`--results-dir` disables the default wrapper and writes exactly to that root;
+use it only for intentional merges. Avoid running two processes against the
+same explicit output directory and same matrix cell, because that will race on
+`trial-<k>` files. Terminal-Bench runs also share Docker and model-serving
+capacity, so start with low concurrency and watch provider rate limits.
+
+For a full matrix with a stable wrapper name:
+
+```bash
+bash scripts/run-matrix.sh --run-id 20260704-smoke --problems 5 --k 1
+```
 
 ## Reproducibility
 
@@ -131,8 +147,8 @@ model, adapter, sampling params, env hash, and timing in `manifest.json`.
 ## Current Verified State
 
 - Python tests: `mamba run -n coding-eval python -m pytest -q` reports
-  `88 passed`.
-- Shell harness: `bash tests/scripts/run_all.sh` reports `22` assertions
+  `91 passed`.
+- Shell harness: `bash tests/scripts/run_all.sh` reports `25` assertions
   passed.
 - Terminal-Bench Docker smoke: `local/ornith-1.0-35b` + `pi_vanilla` +
   `hello-world` completed through Harbor 0.16 with `verifier_result.rewards.reward: 1.0`.

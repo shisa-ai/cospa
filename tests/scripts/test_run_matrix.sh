@@ -66,6 +66,14 @@ else
     echo "  ✗ default matrix runs 3 cells (got $N_RUNS runs)"
     FAIL=$((FAIL + 1))
 fi
+RUN_ID_COUNT=$(grep -c -- "--run-id" "$RUNNER_LOG" 2>/dev/null || echo 0)
+if [[ "$RUN_ID_COUNT" -eq 3 ]]; then
+    echo "  ✓ default matrix forwards a run id to every cell"
+    PASS=$((PASS + 1))
+else
+    echo "  ✗ default matrix forwards a run id to every cell (got $RUN_ID_COUNT)"
+    FAIL=$((FAIL + 1))
+fi
 
 # Test 2: --problems must NOT double-run each cell
 rm -f "$RUNNER_LOG"
@@ -88,6 +96,13 @@ else
     echo "  ✗ --problems 5 forwarded to runner (log: $(cat "$RUNNER_LOG"))"
     FAIL=$((FAIL + 1))
 fi
+
+# Test 2b: explicit --run-id must be forwarded exactly
+rm -f "$RUNNER_LOG"
+OUT=$(bash "$PROJ/scripts/run-matrix.sh" --models fake/model-one --adapters pi_vanilla --run-id matrix-a 2>&1)
+RC=$?
+assert_exit 0 "$RC" "--run-id invocation exits 0"
+assert_contains "--run-id matrix-a" "$(cat "$RUNNER_LOG")" "--run-id forwarded to runner"
 
 # Test 3: options that require values must fail cleanly, not via set -u
 OUT=$(bash "$PROJ/scripts/run-matrix.sh" --k 2>&1)

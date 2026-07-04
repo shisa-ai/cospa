@@ -102,6 +102,72 @@ def test_run_trial_accepts_str_paths():
     assert manifest["exit_code"] == 0
 
 
+def test_resolve_results_dir_defaults_to_model_run_wrapper():
+    """Omitting --results-dir must isolate CLI output by model + run id."""
+    from harness.runner import resolve_results_dir
+
+    results_dir, run_id = resolve_results_dir(
+        "test/model",
+        requested_results_dir=None,
+        run_id="run-a",
+    )
+
+    assert run_id == "run-a"
+    assert results_dir == PROJECT_ROOT / "results" / "runs" / "test%2Fmodel-run-a"
+
+
+def test_resolve_results_dir_preserves_explicit_output_root():
+    """Explicit --results-dir remains an intentional shared/merge root."""
+    from harness.runner import resolve_results_dir
+
+    with tempfile.TemporaryDirectory() as tmp:
+        requested = Path(tmp) / "shared-results"
+        results_dir, run_id = resolve_results_dir(
+            "test/model",
+            requested_results_dir=requested,
+            run_id="run-a",
+        )
+
+    assert results_dir == requested
+    assert run_id is None
+
+
+def test_runner_main_uses_default_model_run_results_wrapper():
+    """Normal CLI invocations should not race on default results/ paths."""
+    import argparse
+    from harness import runner as runner_mod
+
+    args = argparse.Namespace(
+        suite="aider_polyglot",
+        adapter="pi_vanilla",
+        model="test/model",
+        problems=1,
+        k=1,
+        results_dir=None,
+        run_id="run-a",
+        vendor_dir=Path(tempfile.mkdtemp()),
+        config=Path("/tmp/c"),
+        skip_reachability=True,
+    )
+    captured_results = []
+
+    def fake_run_trial(suite, adapter, model, task_id, trial_k, results_dir, vendor_dir):
+        captured_results.append(Path(results_dir))
+        return {"timing": {"wall_clock_seconds": 0}}, {"passed": True}
+
+    with patch.object(runner_mod, "parse_args", return_value=args), \
+         patch.object(runner_mod, "load_suite") as mock_suite, \
+         patch.object(runner_mod, "load_adapter") as mock_adapter, \
+         patch.object(runner_mod, "run_trial", side_effect=fake_run_trial):
+        mock_suite.return_value.get_task_ids.return_value = ["python/two-fer"]
+        mock_adapter.return_value.name = "pi_vanilla"
+        runner_mod.main()
+
+    assert captured_results == [
+        PROJECT_ROOT / "results" / "runs" / "test%2Fmodel-run-a"
+    ]
+
+
 def test_runner_main_rejects_nonpositive_k():
     """--k must be a positive trial count, not a silent no-op."""
     import argparse

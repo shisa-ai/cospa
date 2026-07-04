@@ -5,7 +5,7 @@ Takes (suite, model, adapter, trial_k) and runs one task:
   1. Spawns the adapter as a subprocess
   2. Captures stdout/stderr/exit
   3. Runs the suite's verifier
-  4. Writes results/<model>/<adapter>/<suite>/<task_id>/trial-<k>/{manifest.json, out/, verdict.json}
+  4. Writes results/runs/<model-run>/<model>/<adapter>/<suite>/<task_id>/trial-<k>/{manifest.json, out/, verdict.json}
 
 Usage:
   mamba run -n coding-eval python harness/runner.py \
@@ -23,6 +23,7 @@ import shutil
 import subprocess
 import sys
 import time
+import uuid
 from datetime import datetime, timezone
 from pathlib import Path
 
@@ -32,6 +33,7 @@ sys.path.insert(0, str(PROJECT_ROOT))
 
 from harness.adapters import load_adapter
 from harness.suites import load_suite
+from harness.path_utils import encode_path_component
 
 
 def parse_args():
@@ -41,7 +43,22 @@ def parse_args():
     parser.add_argument("--model", required=True, help="Model ID (e.g. nvidia/nemotron-3-ultra-550b-a55b)")
     parser.add_argument("--problems", type=int, default=None, help="Number of problems to run (None = all)")
     parser.add_argument("--k", type=int, default=1, help="Number of trials per problem")
-    parser.add_argument("--results-dir", default=PROJECT_ROOT / "results", help="Results output directory")
+    parser.add_argument(
+        "--results-dir",
+        default=None,
+        help=(
+            "Exact results output root. If omitted, a unique "
+            "results/runs/<encoded-model>-<run-id> directory is used."
+        ),
+    )
+    parser.add_argument(
+        "--run-id",
+        default=None,
+        help=(
+            "Run id for the default results wrapper. Ignored when "
+            "--results-dir is supplied. Defaults to a timestamp plus random suffix."
+        ),
+    )
     parser.add_argument("--vendor-dir", default=PROJECT_ROOT / "vendor", help="Vendored datasets directory")
     parser.add_argument("--config", default=PROJECT_ROOT / "configs" / "models.yaml", help="Models config file")
     parser.add_argument(
@@ -61,6 +78,34 @@ def validate_args(args) -> None:
     if args.problems is not None and args.problems < 1:
         print("✗ --problems must be a positive integer", file=sys.stderr)
         sys.exit(2)
+
+
+def generate_run_id() -> str:
+    """Generate a path-safe run id for default CLI output isolation."""
+    timestamp = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%S.%fZ")
+    return f"{timestamp}-{os.getpid()}-{uuid.uuid4().hex[:8]}"
+
+
+def resolve_results_dir(
+    model_id: str,
+    requested_results_dir: Path | str | None,
+    run_id: str | None = None,
+) -> tuple[Path, str | None]:
+    """Resolve the effective results root for a CLI invocation.
+
+    Direct run_trial() callers and explicit --results-dir users keep exact
+    control of the output root. The CLI default is isolated by model + run id
+    so two identical commands do not race on the same trial paths.
+    """
+    if requested_results_dir is not None:
+        return Path(requested_results_dir), None
+
+    resolved_run_id = run_id or generate_run_id()
+    run_component = (
+        f"{encode_path_component(model_id)}-"
+        f"{encode_path_component(resolved_run_id)}"
+    )
+    return PROJECT_ROOT / "results" / "runs" / run_component, resolved_run_id
 
 
 def get_env_hash():
@@ -486,8 +531,14 @@ def run_trial(suite, adapter, model_id, task_id, trial_k, results_dir, vendor_di
 def main():
     args = parse_args()
 
-    # Coerce CLI path args to Path (argparse returns strings for user input)
-    args.results_dir = Path(args.results_dir)
+    # Coerce CLI path args to Path (argparse returns strings for user input).
+    # If --results-dir is omitted, isolate this CLI invocation under a unique
+    # model-prefixed run wrapper to avoid accidental parallel writes.
+    args.results_dir, args.run_id = resolve_results_dir(
+        args.model,
+        getattr(args, "results_dir", None),
+        getattr(args, "run_id", None),
+    )
     args.vendor_dir = Path(args.vendor_dir)
     args.config = Path(args.config)
     validate_args(args)
@@ -527,6 +578,8 @@ def main():
 
     print(f"Running {len(task_ids)} tasks x {args.k} trials = {len(task_ids) * args.k} total trials")
     print(f"Suite: {args.suite}, Adapter: {args.adapter}, Model: {args.model}")
+    if args.run_id:
+        print(f"Run ID: {args.run_id}")
     print(f"Results dir: {args.results_dir}")
     print()
 

@@ -38,6 +38,7 @@ developer instructions, follow those first.
 | `docs/PLAN.md` | Architecture, phase roadmap, matrix design. |
 | `docs/ORNITH-CODER-REVIEW.md` | Audit history and per-finding resolution status. |
 | `docs/IMPROVEMENT.md` | Process lessons from the third audit; re-read before a fix pass. |
+| `WORKLOG.md` | Append-only development log. One entry per validated logical unit; never edit history. |
 | `harness/runner.py` | Trial execution, manifest writing, reachability check. |
 | `harness/adapters/` | Per-agent adapters (pi_vanilla, pi_devstack, pi_superpowers, little_coder*). |
 | `harness/suites/` | Per-benchmark suites (aider_polyglot, terminal_bench). |
@@ -71,6 +72,8 @@ developer instructions, follow those first.
   or rewrite prior runs unless asked.
 - Log non-trivial decisions in the commit message or
   `docs/ORNITH-CODER-REVIEW.md`, not just in chat.
+- **Append to `WORKLOG.md`** when a logical unit is complete and validated
+  (see "WORKLOG Discipline" below). Commit the append in the same unit.
 
 ### After Changes (before claiming done)
 
@@ -115,6 +118,28 @@ skip.
   for `aider_polyglot` does not cover Go/Rust/C++ scoring. Add
   language-specific scoring tests with real tool-output fixtures.
 
+## WORKLOG Discipline
+
+`WORKLOG.md` is the append-only development log. Convention-only
+enforcement (no hook); the rule is upheld by review and by the commit
+discipline below.
+
+- **Append-only.** Never edit, reorder, or delete prior entries. Add new
+  entries at the end only.
+- **One entry per validated logical unit**, format:
+  `## YYYY-MM-DD — short summary (imperative, ≤ 72 chars)` followed by
+  bullets for context, evidence (test name / verification command),
+  decision/rationale, and next actions.
+- **Commit the append with the unit.** The WORKLOG entry is part of the
+  atomic commit (or small atomic group) that completes the unit. Do not
+  leave WORKLOG edits uncommitted across sessions.
+- **Concurrent appends.** If two agents append in the same window,
+  resolve by keeping both entries ordered by timestamp; never drop a
+  prior entry.
+- **Scope.** Log `coding-eval` development only (harness, adapters,
+  suites, scripts, viewer, docs, audits). Do not log routine
+  rebaselining of `results/` or vendoring churn in `vendor/`.
+
 ## Verification Tiers
 
 Run the narrowest tier for your change; escalate at milestone boundaries.
@@ -140,6 +165,8 @@ commits with clear provenance.
   logical unit until the previous validated unit is committed.
 - Include related docs in the same unit (a change that needed a
   `docs/ORNITH-CODER-REVIEW.md` or `docs/` update commits them together).
+- Include the `WORKLOG.md` append in the same unit when the unit is
+  significant enough to log (see "WORKLOG Discipline").
 - Do not commit mid-task while exploring, debugging, or in a broken state.
 
 ### Commit Mechanics (hard rules)
@@ -191,7 +218,7 @@ concurrently.
   `docs/ORNITH-CODER-REVIEW.md`, `docs/IMPROVEMENT.md`,
   `harness/runner.py`, `harness/suites/*.py`, `view-scores/server.py`,
   `scripts/run-matrix.sh`, `scripts/check-models.sh`,
-  `configs/models.yaml`, `pyproject.toml`.
+  `configs/models.yaml`, `pyproject.toml`, `WORKLOG.md`.
 - Same-file contention: stop and coordinate. Do not force-stage or revert.
 - Ignore unrelated modified files unless the task explicitly requires it.
 

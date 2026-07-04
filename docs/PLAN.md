@@ -126,11 +126,11 @@ harness via `configs/models.yaml`, which is just:
 ```yaml
 models:
   - id: nvidia/nemotron-3-ultra-550b-a55b
-  - id: aiand/qwen-3.6-27b
-  - id: glm/glm-5.2
-  - id: minimax/minimax-3
-  - id: minimax/minimax-2.7
-  - id: nvidia/stepfun-3.7-flash
+  - id: aiand/qwen/qwen3.6-27b
+  - id: zai/glm-5.2
+  - id: minimax/MiniMax-M3
+  - id: minimax/MiniMax-M2.7
+  - id: nvidia/stepfun-ai/step-3.7-flash
   - id: local/ornith-1.0-35b
 ```
 

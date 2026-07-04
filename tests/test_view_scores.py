@@ -18,13 +18,14 @@ from harness.path_utils import encode_model_path, encode_task_path
 
 
 def _write_trial(trial_dir: Path, *, passed: bool, wall_clock=10.0, exit_code=0,
-                 test_count=1, adapter_failed=False, task_id="python/hello"):
+                 test_count=1, adapter_failed=False, task_id="python/hello",
+                 pending=False, model_id="nvidia/nemotron-3-ultra-550b-a55b"):
     """Write a manifest.json + verdict.json pair into a trial dir."""
     trial_dir.mkdir(parents=True, exist_ok=True)
     (trial_dir / "manifest.json").write_text(json.dumps({
-        "model": {"id": "nvidia/nemotron-3-ultra-550b-a55b",
-                  "provider": "nvidia",
-                  "served_model": "nvidia/nemotron-3-ultra-550b-a55b"},
+        "model": {"id": model_id,
+                  "provider": model_id.split("/")[0],
+                  "served_model": model_id},
         "adapter": {"id": "PiVanillaAdapter", "version": "vanilla"},
         "suite": {"id": "AiderPolyglotSuite", "task_id": task_id},
         "trial": 1,
@@ -37,6 +38,7 @@ def _write_trial(trial_dir: Path, *, passed: bool, wall_clock=10.0, exit_code=0,
         "grader_output": "ok" if passed else "fail",
         "exit_code": exit_code,
         "adapter_failed": adapter_failed,
+        "pending": pending,
     }, indent=2))
 
 
@@ -96,6 +98,26 @@ def _make_handler(results_dir: Path):
     return h, server_mod
 
 
+def test_server_adds_project_root_to_pythonpath_for_direct_launch():
+    """python view-scores/server.py must be able to import harness.*."""
+    import importlib.util
+
+    root = str(PROJECT_ROOT)
+    original_path = list(sys.path)
+    try:
+        sys.path[:] = [entry for entry in sys.path if entry != root]
+        server_path = PROJECT_ROOT / "view-scores" / "server.py"
+        spec = importlib.util.spec_from_file_location(
+            "view_scores_server_direct_launch_test",
+            server_path,
+        )
+        server_mod = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(server_mod)
+        assert root in sys.path
+    finally:
+        sys.path[:] = original_path
+
+
 def test_get_scores_reads_encoded_tree():
     """get_scores() must aggregate an encoded tree with slashed model/task IDs."""
     with tempfile.TemporaryDirectory() as tmp:
@@ -115,6 +137,95 @@ def test_get_scores_reads_encoded_tree():
     assert row["total_tasks"] == 2, row
     assert row["passed_tasks"] == 1, row
     assert 0 < row["pass_rate"] <= 100, row
+
+
+def test_get_scores_reads_named_run_wrapper_tree():
+    """Smoke runs may live under results/<run-label>/<encoded-model>/..."""
+    with tempfile.TemporaryDirectory() as tmp:
+        results_dir = Path(tmp) / "results"
+        wrapped_results = results_dir / "e2e-smoke-terminal-bench"
+        wrapped_results.mkdir(parents=True)
+        model_id, adapter, suite, task_id, task_id2 = _build_encoded_tree(
+            wrapped_results
+        )
+
+        h, server_mod = _make_handler(results_dir)
+        scores = h.get_scores()
+        details = h.get_task_details(
+            encode_model_path(model_id),
+            adapter,
+            suite,
+        )
+
+    assert len(scores) == 1, scores
+    assert scores[0]["model"] == model_id, scores
+    assert scores[0]["total_tasks"] == 2, scores
+    assert "error" not in details, details
+    assert {task["task_id"] for task in details["tasks"]} == {task_id, task_id2}
+
+
+def test_get_scores_ignores_pending_verdicts():
+    """Incomplete smoke attempts should not count as benchmark failures."""
+    with tempfile.TemporaryDirectory() as tmp:
+        results_dir = Path(tmp) / "results"
+        model_id = "local/ornith-1.0-35b"
+        adapter = "pi_vanilla"
+        suite = "terminal_bench"
+        task_id = "hello-world"
+
+        pending_base = (
+            results_dir
+            / "old-smoke"
+            / encode_model_path(model_id)
+            / adapter
+            / suite
+            / encode_task_path(task_id)
+        )
+        passing_base = (
+            results_dir
+            / "new-smoke"
+            / encode_model_path(model_id)
+            / adapter
+            / suite
+            / encode_task_path(task_id)
+        )
+        _write_trial(
+            pending_base / "trial-1",
+            passed=False,
+            pending=True,
+            model_id=model_id,
+        )
+        _write_trial(passing_base / "trial-1", passed=True, model_id=model_id)
+
+        h, _ = _make_handler(results_dir)
+        scores = h.get_scores()
+        details = h.get_task_details(encode_model_path(model_id), adapter, suite)
+
+    assert len(scores) == 1, scores
+    assert scores[0]["total_tasks"] == 1, scores
+    assert scores[0]["passed_tasks"] == 1, scores
+    assert details["tasks"][0]["pass_at_k"] == "1/1", details
+
+
+def test_get_scores_ignores_manifest_model_path_mismatch():
+    """Pre-encoding artifacts with slashed model paths are malformed rows."""
+    with tempfile.TemporaryDirectory() as tmp:
+        results_dir = Path(tmp) / "results"
+        malformed_base = (
+            results_dir
+            / "nvidia"
+            / "nemotron-3-ultra-550b-a55b"
+            / "pi_vanilla"
+            / "aider_polyglot"
+            / "python"
+            / "hello"
+        )
+        _write_trial(malformed_base / "trial-1", passed=True)
+
+        h, _ = _make_handler(results_dir)
+        scores = h.get_scores()
+
+    assert scores == []
 
 
 def test_get_scores_does_not_raise_nameerror():
@@ -161,7 +272,7 @@ def test_generate_html_escapes_result_metadata_and_quotes_detail_links():
             / suite
             / encode_task_path("python/hello")
         )
-        _write_trial(base / "trial-1", passed=True)
+        _write_trial(base / "trial-1", passed=True, model_id=model_id)
 
         h, _ = _make_handler(results_dir)
         html = h.generate_html()

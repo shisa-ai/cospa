@@ -238,16 +238,42 @@ def check_model_reachable(model_id: str, timeout: float = 10.0) -> bool:
     base_url = prov_cfg.get("baseUrl") or prov_cfg.get("base_url")
     if not base_url:
         return False
+    api_key = prov_cfg.get("apiKey") or prov_cfg.get("api_key")
+    api_key_env = (
+        prov_cfg.get("apiKeyEnv")
+        or prov_cfg.get("api_key_env")
+        or prov_cfg.get("apiKeyEnvVar")
+        or prov_cfg.get("api_key_env_var")
+    )
+    if api_key_env and os.environ.get(api_key_env):
+        api_key = os.environ[api_key_env]
+
+    provider_models = []
+    for item in prov_cfg.get("models", []):
+        if isinstance(item, dict):
+            value = item.get("id") or item.get("name")
+        else:
+            value = item
+        if isinstance(value, str):
+            provider_models.append(value)
+    resolved_model = model_name
+    if model_id in provider_models:
+        resolved_model = model_id
+    elif model_name in provider_models:
+        resolved_model = model_name
 
     payload = json.dumps({
-        "model": model_name,
+        "model": resolved_model,
         "messages": [{"role": "user", "content": "hi"}],
         "max_tokens": 1,
     }).encode()
+    headers = {"Content-Type": "application/json"}
+    if api_key:
+        headers["Authorization"] = f"Bearer {api_key}"
     req = urllib.request.Request(
         f"{base_url.rstrip('/')}/chat/completions",
         data=payload,
-        headers={"Content-Type": "application/json"},
+        headers=headers,
         method="POST",
     )
     try:

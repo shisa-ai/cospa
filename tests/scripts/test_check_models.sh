@@ -47,4 +47,51 @@ assert_contains "Skipped: 3" "$OUT" "all 3 models counted as skipped"
 # Bug #2: must fail closed when no model is alive (all skipped == not runnable)
 assert_exit 1 "$RC" "exit nonzero when no models are alive"
 
+# Authenticated provider pings must include the provider apiKey from
+# ~/.pi/agent/models.json. Without it, OpenAI-compatible endpoints return 401
+# even when the model is alive.
+AUTH_PROJ="$TMP/auth-proj"
+mkdir -p "$AUTH_PROJ/scripts" "$AUTH_PROJ/configs"
+cp "$PROJECT_DIR/scripts/check-models.sh" "$AUTH_PROJ/scripts/check-models.sh"
+cat > "$AUTH_PROJ/configs/models.yaml" <<'EOF'
+models:
+  - id: fake/model-one
+EOF
+
+AUTH_HOME="$TMP/auth-home"
+mkdir -p "$AUTH_HOME/.pi/agent"
+cat > "$AUTH_HOME/.pi/agent/models.json" <<'EOF'
+{
+  "providers": {
+    "fake": {
+      "baseUrl": "http://fake-provider.test/v1",
+      "apiKey": "test-key",
+      "models": [{"id": "fake/model-one"}]
+    }
+  }
+}
+EOF
+
+BIN="$TMP/bin"
+mkdir -p "$BIN"
+cat > "$BIN/curl" <<'EOF'
+#!/usr/bin/env bash
+args="$(printf '%s\n' "$@")"
+if grep -qF "Authorization: Bearer test-key" <<<"$args" \
+    && grep -qF '"model": "fake/model-one"' <<<"$args"; then
+    printf '200'
+else
+    printf '401'
+fi
+EOF
+chmod +x "$BIN/curl"
+
+AUTH_OUT=$(HOME="$AUTH_HOME" PATH="$BIN:$PATH" bash "$AUTH_PROJ/scripts/check-models.sh" 2>&1)
+AUTH_RC=$?
+
+assert_exit 0 "$AUTH_RC" "authenticated model ping exits zero"
+assert_contains "✓ ALIVE" "$AUTH_OUT" "authenticated model marked alive"
+assert_contains "Alive:   1" "$AUTH_OUT" "authenticated model counted alive"
+assert_not_contains "test-key" "$AUTH_OUT" "api key is not printed"
+
 summary

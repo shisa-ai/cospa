@@ -984,3 +984,53 @@ Observed:
 - Follow-up validation for this closure: `mamba run -n coding-eval python -m
   pytest -q` reports `83 passed`, and `bash tests/scripts/run_all.sh` reports
   `18` shell assertions passed.
+
+### Reachability and result-visibility follow-up
+
+The model preflight and score viewer have been tightened after the live smoke:
+
+- `scripts/check-models.sh` now reads provider `apiKey` values from
+  `~/.pi/agent/models.json` and sends `Authorization: Bearer ...` on
+  reachability probes. It also resolves provider-native model names from the
+  provider's `models` list, so nested names such as
+  `nvidia/nemotron-3-ultra-550b-a55b` are probed correctly
+  (`fixed (shell test + live preflight)`).
+- `harness.runner.check_model_reachable()` now uses the same authenticated
+  provider config path before starting a matrix cell
+  (`fixed (unit test)`).
+- `configs/models.yaml` is aligned with the provider keys/model IDs present in
+  `~/.pi/agent/models.json` (`zai/glm-5.2`,
+  `aiand/qwen/qwen3.6-27b`, `minimax/MiniMax-M3`,
+  `minimax/MiniMax-M2.7`, and
+  `nvidia/stepfun-ai/step-3.7-flash`).
+- `view-scores/server.py` now recursively discovers named run-wrapper
+  directories under `results/`, skips `pending: true` verdicts, and ignores
+  malformed pre-encoding result paths whose manifest model ID does not match
+  the encoded model directory (`fixed (unit test)`).
+- `view-scores/server.py` now adds the repository root to `sys.path` on direct
+  launch, so `python view-scores/server.py` can import `harness.*`
+  (`fixed (unit test + live server smoke)`).
+- `README.md` now documents authenticated model checks, Docker/Harbor
+  requirements, viewing results, the current verified Terminal-Bench smoke,
+  and the safe pattern for concurrent runner processes.
+
+Live `scripts/check-models.sh` output after this pass:
+
+```text
+Alive:   5
+Dead:    2
+Skipped: 0
+Total:   7
+```
+
+The remaining dead models are both Minimax entries, returning HTTP 503 from
+the provider. The current viewer aggregation sees the passing Terminal-Bench
+smoke as one row:
+
+```text
+local/ornith-1.0-35b | pi_vanilla | terminal_bench | 1/1 passed
+```
+
+Follow-up validation for this pass: the full pytest suite reports `88 passed`;
+`bash tests/scripts/run_all.sh` reports `22` shell assertions passed; and
+`http://localhost:8000/api/scores` returns the Terminal-Bench smoke row above.

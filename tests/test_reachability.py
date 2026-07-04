@@ -11,6 +11,7 @@ We stub the reachability check rather than hitting real endpoints.
 
 import sys
 import tempfile
+import json
 from pathlib import Path
 from unittest.mock import patch
 
@@ -29,6 +30,44 @@ def test_check_model_reachable_returns_bool():
         )
         result = check_model_reachable("test/model")
     assert isinstance(result, bool), result
+
+
+def test_check_model_reachable_sends_provider_api_key(monkeypatch, tmp_path):
+    """Reachability probes must authenticate with apiKey from models.json."""
+    models_json = tmp_path / ".pi" / "agent" / "models.json"
+    models_json.parent.mkdir(parents=True)
+    models_json.write_text(json.dumps({
+        "providers": {
+            "test": {
+                "baseUrl": "http://provider.test/v1",
+                "apiKey": "secret-key",
+                "models": [{"id": "test/model-one"}],
+            }
+        }
+    }))
+    monkeypatch.setenv("HOME", str(tmp_path))
+
+    requests = []
+
+    class FakeResponse:
+        status = 200
+
+        def __enter__(self):
+            return self
+
+        def __exit__(self, exc_type, exc, tb):
+            return False
+
+    def fake_urlopen(req, timeout):
+        requests.append(req)
+        return FakeResponse()
+
+    with patch("urllib.request.urlopen", side_effect=fake_urlopen):
+        assert check_model_reachable("test/model-one") is True
+
+    assert requests, "expected one reachability request"
+    assert requests[0].headers.get("Authorization") == "Bearer secret-key"
+    assert json.loads(requests[0].data.decode())["model"] == "test/model-one"
 
 
 def test_should_run_reachability_check_default_true():

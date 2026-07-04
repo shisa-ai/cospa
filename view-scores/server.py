@@ -10,16 +10,47 @@ Usage:
 
 import html
 import json
-import statistics
+import sys
 from pathlib import Path
 from http.server import HTTPServer, SimpleHTTPRequestHandler
 from urllib.parse import urlparse, parse_qs, urlencode
 
-RESULTS_DIR = Path(__file__).resolve().parent.parent / "results"
+PROJECT_ROOT = Path(__file__).resolve().parent.parent
+if str(PROJECT_ROOT) not in sys.path:
+    sys.path.insert(0, str(PROJECT_ROOT))
+RESULTS_DIR = PROJECT_ROOT / "results"
 
 
 class ScoreHandler(SimpleHTTPRequestHandler):
     """HTTP handler for the score viewer."""
+
+    @staticmethod
+    def _iter_trial_dirs(results_dir: Path):
+        """Yield runner trial directories anywhere under results_dir."""
+        if not results_dir.exists():
+            return
+        for verdict_file in results_dir.rglob("verdict.json"):
+            trial_dir = verdict_file.parent
+            if (
+                trial_dir.name.startswith("trial-")
+                and (trial_dir / "manifest.json").exists()
+            ):
+                yield trial_dir
+
+    @staticmethod
+    def _load_trial(trial_dir: Path) -> dict | None:
+        verdict_file = trial_dir / "verdict.json"
+        manifest_file = trial_dir / "manifest.json"
+        try:
+            with open(verdict_file) as f:
+                verdict = json.load(f)
+            if verdict.get("pending"):
+                return None
+            with open(manifest_file) as f:
+                manifest = json.load(f)
+        except Exception:
+            return None
+        return {"trial_dir": trial_dir, "verdict": verdict, "manifest": manifest}
 
     def do_GET(self):
         """Handle GET requests."""
@@ -121,85 +152,67 @@ class ScoreHandler(SimpleHTTPRequestHandler):
         """Get aggregated scores from results directory."""
         from harness.path_utils import decode_model_path, decode_task_path
 
-        scores = []
-
-        if not RESULTS_DIR.exists():
-            return scores
-
-        for model_dir in RESULTS_DIR.iterdir():
-            if not model_dir.is_dir():
+        grouped_trials = {}
+        for trial_dir in self._iter_trial_dirs(RESULTS_DIR):
+            trial = self._load_trial(trial_dir)
+            if trial is None:
+                continue
+            try:
+                task_dir = trial_dir.parent
+                suite_dir = task_dir.parent
+                adapter_dir = suite_dir.parent
+                model_dir = adapter_dir.parent
+            except IndexError:
                 continue
 
             model_id = decode_model_path(model_dir.name)
+            manifest_model = trial["manifest"].get("model", {}).get("id")
+            if manifest_model and manifest_model != model_id:
+                continue
+            adapter_id = adapter_dir.name
+            suite_id = suite_dir.name
+            task_id = decode_task_path(task_dir.name)
+            key = (model_id, adapter_id, suite_id)
+            grouped_trials.setdefault(key, {}).setdefault(task_id, []).append(
+                trial["verdict"].get("passed", False)
+            )
 
-            for adapter_dir in model_dir.iterdir():
-                if not adapter_dir.is_dir():
-                    continue
+        scores = []
+        for (model_id, adapter_id, suite_id), task_trials in sorted(
+            grouped_trials.items()
+        ):
+            # Count tasks that passed (majority of trials)
+            total_tasks = len(task_trials)
+            passed_tasks = sum(
+                1 for trials in task_trials.values()
+                if sum(1 for t in trials if t) > len(trials) / 2
+            )
+            pass_rate = (passed_tasks / total_tasks) * 100 if total_tasks > 0 else 0
 
-                adapter_id = adapter_dir.name
+            # Calculate 95% CI (Wilson score interval approximation) at task level
+            if total_tasks > 0:
+                p = pass_rate / 100
+                n = total_tasks
+                z = 1.96  # 95% CI
+                denominator = 1 + z**2 / n
+                center = (p + z**2 / (2 * n)) / denominator
+                margin = z * ((p * (1 - p) + z**2 / (4 * n)) / n) ** 0.5 / denominator
+                ci_lower = max(0, (center - margin) * 100)
+                ci_upper = min(100, (center + margin) * 100)
+            else:
+                ci_lower = ci_upper = 0
 
-                for suite_dir in adapter_dir.iterdir():
-                    if not suite_dir.is_dir():
-                        continue
-
-                    suite_id = suite_dir.name
-
-                    # The runner writes one directory per (encoded) task,
-                    # each containing trial-* subdirs. We must recurse through
-                    # the encoded task directory to find trials.
-                    task_trials = {}
-                    for task_dir in suite_dir.iterdir():
-                        if not task_dir.is_dir():
-                            continue
-                        # task_dir is the encoded task id directory
-                        task_id = decode_task_path(task_dir.name)
-                        for trial_dir in task_dir.iterdir():
-                            if not (trial_dir.is_dir() and trial_dir.name.startswith("trial-")):
-                                continue
-                            verdict_file = trial_dir / "verdict.json"
-                            if not verdict_file.exists():
-                                continue
-                            with open(verdict_file) as f:
-                                verdict = json.load(f)
-                            task_trials.setdefault(task_id, []).append(
-                                verdict.get("passed", False)
-                            )
-
-                    if not task_trials:
-                        continue
-
-                    # Count tasks that passed (majority of trials)
-                    total_tasks = len(task_trials)
-                    passed_tasks = sum(
-                        1 for trials in task_trials.values()
-                        if sum(1 for t in trials if t) > len(trials) / 2
-                    )
-                    pass_rate = (passed_tasks / total_tasks) * 100 if total_tasks > 0 else 0
-
-                    # Calculate 95% CI (Wilson score interval approximation) at task level
-                    if total_tasks > 0:
-                        p = pass_rate / 100
-                        n = total_tasks
-                        z = 1.96  # 95% CI
-                        denominator = 1 + z**2 / n
-                        center = (p + z**2 / (2 * n)) / denominator
-                        margin = z * ((p * (1 - p) + z**2 / (4 * n)) / n) ** 0.5 / denominator
-                        ci_lower = max(0, (center - margin) * 100)
-                        ci_upper = min(100, (center + margin) * 100)
-                    else:
-                        ci_lower = ci_upper = 0
-
-                    scores.append({
-                        "model": model_id,
-                        "adapter": adapter_id,
-                        "suite": suite_id,
-                        "pass_rate": pass_rate,
-                        "ci_lower": ci_lower,
-                        "ci_upper": ci_upper,
-                        "total_tasks": total_tasks,
-                        "passed_tasks": passed_tasks,
-                        "method": "pass@k majority",
-                    })
+            scores.append({
+                "model": model_id,
+                "adapter": adapter_id,
+                "suite": suite_id,
+                "pass_rate": pass_rate,
+                "ci_lower": ci_lower,
+                "ci_upper": ci_upper,
+                "total_tasks": total_tasks,
+                "passed_tasks": passed_tasks,
+                "method": "pass@k majority",
+            })
 
         return scores
 
@@ -217,44 +230,43 @@ class ScoreHandler(SimpleHTTPRequestHandler):
         encoded_model = encode_model_path(decode_model_path(model))
         decoded_model = decode_model_path(model)
 
-        suite_dir = RESULTS_DIR / encoded_model / adapter / suite
-        if not suite_dir.exists():
+        task_trials = {}
+        for trial_dir in self._iter_trial_dirs(RESULTS_DIR):
+            try:
+                task_dir = trial_dir.parent
+                suite_dir = task_dir.parent
+                adapter_dir = suite_dir.parent
+                model_dir = adapter_dir.parent
+            except IndexError:
+                continue
+            if (
+                model_dir.name != encoded_model
+                or adapter_dir.name != adapter
+                or suite_dir.name != suite
+            ):
+                continue
+            trial = self._load_trial(trial_dir)
+            if trial is None:
+                continue
+            manifest_model = trial["manifest"].get("model", {}).get("id")
+            if manifest_model and manifest_model != decoded_model:
+                continue
+            task_id = decode_task_path(task_dir.name)
+            verdict = trial["verdict"]
+            manifest = trial["manifest"]
+            task_trials.setdefault(task_id, []).append({
+                "trial": trial_dir.name,
+                "passed": verdict.get("passed", False),
+                "test_count": verdict.get("test_count", 0),
+                "wall_clock_seconds": manifest.get("timing", {}).get("wall_clock_seconds", 0),
+            })
+
+        if not task_trials:
             return {"error": "Not found", "tasks": []}
 
         details = []
-
-        # suite_dir contains one directory per encoded task id, each holding
-        # trial-* subdirectories.
-        for task_dir in suite_dir.iterdir():
-            if not task_dir.is_dir():
-                continue
-            task_id = decode_task_path(task_dir.name)
-
-            trials = []
-            for trial_dir in sorted(task_dir.iterdir()):
-                if not (trial_dir.is_dir() and trial_dir.name.startswith("trial-")):
-                    continue
-
-                verdict = {}
-                manifest = {}
-                verdict_file = trial_dir / "verdict.json"
-                manifest_file = trial_dir / "manifest.json"
-                if verdict_file.exists():
-                    with open(verdict_file) as f:
-                        verdict = json.load(f)
-                if manifest_file.exists():
-                    with open(manifest_file) as f:
-                        manifest = json.load(f)
-
-                trials.append({
-                    "trial": trial_dir.name,
-                    "passed": verdict.get("passed", False),
-                    "test_count": verdict.get("test_count", 0),
-                    "wall_clock_seconds": manifest.get("timing", {}).get("wall_clock_seconds", 0),
-                })
-
-            if not trials:
-                continue
+        for task_id, trials in sorted(task_trials.items()):
+            trials = sorted(trials, key=lambda item: item["trial"])
 
             n_trials = len(trials)
             n_passed = sum(1 for t in trials if t["passed"])

@@ -107,13 +107,22 @@ if _HARBOR_NATIVE:
                     *_PROVIDER_ENV_KEYS,
                     "CODING_EVAL_LOCAL_BASE_URL",
                     "CODING_EVAL_LOCAL_API_KEY",
+                    "CODING_EVAL_PI_PROVIDER_NAME",
+                    "CODING_EVAL_PI_PROVIDER_BASE_URL",
+                    "CODING_EVAL_PI_PROVIDER_API_KEY",
+                    "CODING_EVAL_PI_PROVIDER_API",
+                    "CODING_EVAL_PI_PROVIDER_MODEL_ID",
+                    "CODING_EVAL_PI_PROVIDER_MODEL_NAME",
                 )
                 if (value := os.environ.get(key))
             }
 
         async def _write_local_pi_config(self, environment: BaseEnvironment) -> None:
             env = self._provider_env()
-            if not env.get("CODING_EVAL_LOCAL_BASE_URL"):
+            if not (
+                env.get("CODING_EVAL_PI_PROVIDER_BASE_URL")
+                or env.get("CODING_EVAL_LOCAL_BASE_URL")
+            ):
                 return
 
             command = r"""
@@ -124,33 +133,48 @@ const fs = require('fs');
 const os = require('os');
 const path = require('path');
 const dir = path.join(os.homedir(), '.pi', 'agent');
+const providerName = process.env.CODING_EVAL_PI_PROVIDER_NAME || 'local';
+const baseUrl = (
+  process.env.CODING_EVAL_PI_PROVIDER_BASE_URL ||
+  process.env.CODING_EVAL_LOCAL_BASE_URL
+);
+const apiKey = (
+  process.env.CODING_EVAL_PI_PROVIDER_API_KEY ||
+  process.env.CODING_EVAL_LOCAL_API_KEY ||
+  'EMPTY'
+);
+const api = process.env.CODING_EVAL_PI_PROVIDER_API || 'openai-completions';
+const modelId = process.env.CODING_EVAL_PI_PROVIDER_MODEL_ID || 'ornith-1.0-35b';
+const modelName = process.env.CODING_EVAL_PI_PROVIDER_MODEL_NAME || modelId;
+const models = [
+  {
+    id: modelId,
+    name: modelName,
+    reasoning: true,
+    input: ['text'],
+    contextWindow: 262144,
+    maxTokens: 81920,
+    cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0 }
+  }
+];
+if (providerName === 'local') {
+  for (const alias of ['ornith-1.0-35b', 'Ornith-1.0-35B']) {
+    if (!models.some((model) => model.id === alias)) {
+      models.push({
+        id: alias,
+        name: 'Ornith 1.0 35B',
+        reasoning: true,
+        input: ['text'],
+        contextWindow: 262144,
+        maxTokens: 81920,
+        cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0 }
+      });
+    }
+  }
+}
 const cfg = {
   providers: {
-    local: {
-      baseUrl: process.env.CODING_EVAL_LOCAL_BASE_URL,
-      apiKey: process.env.CODING_EVAL_LOCAL_API_KEY || 'EMPTY',
-      api: 'openai-completions',
-      models: [
-        {
-          id: 'ornith-1.0-35b',
-          name: 'Ornith 1.0 35B',
-          reasoning: true,
-          input: ['text'],
-          contextWindow: 262144,
-          maxTokens: 81920,
-          cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0 }
-        },
-        {
-          id: 'Ornith-1.0-35B',
-          name: 'Ornith 1.0 35B',
-          reasoning: true,
-          input: ['text'],
-          contextWindow: 262144,
-          maxTokens: 81920,
-          cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0 }
-        }
-      ]
-    }
+    [providerName]: { baseUrl, apiKey, api, models }
   }
 };
 fs.mkdirSync(dir, { recursive: true });

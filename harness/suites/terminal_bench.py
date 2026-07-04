@@ -114,7 +114,7 @@ class TerminalBenchSuite:
         ),
     }
 
-    def _harbor_env(self) -> Dict[str, str]:
+    def _harbor_env(self, model_id: str | None = None) -> Dict[str, str]:
         """Return env vars for the Harbor subprocess.
 
         Custom Harbor agents live in this repository, while `harbor run`
@@ -128,30 +128,68 @@ class TerminalBenchSuite:
             parts.append(existing)
         env["PYTHONPATH"] = os.pathsep.join(parts)
 
+        if not model_id or "/" not in model_id:
+            return env
+
+        provider_name, provider_model = model_id.split("/", 1)
         models_json = Path.home() / ".pi" / "agent" / "models.json"
+        providers = {}
         if models_json.exists():
             try:
                 with open(models_json) as f:
                     data = json.load(f)
                 providers = data.get("providers", data) if isinstance(data, dict) else {}
-                local_cfg = providers.get("local", {}) if isinstance(providers, dict) else {}
-                if isinstance(local_cfg, dict):
-                    base_url = (
-                        os.environ.get("CODING_EVAL_LOCAL_BASE_URL")
-                        or local_cfg.get("baseUrl")
-                        or local_cfg.get("base_url")
-                    )
-                    api_key = (
-                        os.environ.get("CODING_EVAL_LOCAL_API_KEY")
-                        or local_cfg.get("apiKey")
-                        or local_cfg.get("api_key")
-                    )
-                    if base_url:
-                        env["CODING_EVAL_LOCAL_BASE_URL"] = base_url
-                    if api_key:
-                        env["CODING_EVAL_LOCAL_API_KEY"] = api_key
             except Exception:
-                pass
+                providers = {}
+
+        provider_cfg = providers.get(provider_name, {}) if isinstance(providers, dict) else {}
+        if not isinstance(provider_cfg, dict):
+            provider_cfg = {}
+
+        base_url = provider_cfg.get("baseUrl") or provider_cfg.get("base_url")
+        api_key = provider_cfg.get("apiKey") or provider_cfg.get("api_key")
+        api_key_env = (
+            provider_cfg.get("apiKeyEnv")
+            or provider_cfg.get("api_key_env")
+            or provider_cfg.get("apiKeyEnvVar")
+            or provider_cfg.get("api_key_env_var")
+        )
+        if api_key_env and os.environ.get(api_key_env):
+            api_key = os.environ[api_key_env]
+        if provider_name == "local":
+            base_url = os.environ.get("CODING_EVAL_LOCAL_BASE_URL") or base_url
+            api_key = os.environ.get("CODING_EVAL_LOCAL_API_KEY") or api_key
+        if not base_url:
+            return env
+
+        model_entry = {}
+        for item in provider_cfg.get("models", []):
+            if isinstance(item, dict):
+                candidate = item.get("id") or item.get("name")
+            else:
+                candidate = item
+            if candidate in (provider_model, model_id):
+                model_entry = item if isinstance(item, dict) else {"id": item}
+                break
+
+        resolved_model = model_entry.get("id") or provider_model
+        env["CODING_EVAL_PI_PROVIDER_NAME"] = provider_name
+        env["CODING_EVAL_PI_PROVIDER_BASE_URL"] = base_url
+        env["CODING_EVAL_PI_PROVIDER_API"] = (
+            provider_cfg.get("api")
+            or provider_cfg.get("api_type")
+            or "openai-completions"
+        )
+        env["CODING_EVAL_PI_PROVIDER_MODEL_ID"] = resolved_model
+        env["CODING_EVAL_PI_PROVIDER_MODEL_NAME"] = (
+            model_entry.get("name") or resolved_model
+        )
+        if api_key:
+            env["CODING_EVAL_PI_PROVIDER_API_KEY"] = api_key
+        if provider_name == "local":
+            env["CODING_EVAL_LOCAL_BASE_URL"] = base_url
+            if api_key:
+                env["CODING_EVAL_LOCAL_API_KEY"] = api_key
         return env
 
     def get_task_ids(self, vendor_dir: Path = None) -> List[str]:
@@ -481,7 +519,7 @@ class TerminalBenchSuite:
                     capture_output=True,
                     text=True,
                     timeout=300,
-                    env=self._harbor_env(),
+                    env=self._harbor_env(model_id),
                 )
                 if migrate_result.returncode != 0:
                     return {
@@ -517,7 +555,7 @@ class TerminalBenchSuite:
                 capture_output=True,
                 text=True,
                 timeout=3600,
-                env=self._harbor_env(),
+                env=self._harbor_env(model_id),
             )
             return {
                 "returncode": result.returncode,

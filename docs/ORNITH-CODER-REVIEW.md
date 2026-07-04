@@ -1063,3 +1063,8 @@ keeping concurrent matrix invocations separate. Users can also pass
   `~/.pi/agent/models.json`, add the provider-prefixed id to
   `configs/models.yaml`, then use the normal `check-models.sh` and runner
   commands (`docs`).
+- Terminal-Bench now exports the selected host pi provider config into Harbor's
+  environment, and the custom container agent writes a matching pi
+  `models.json` before execution. This keeps arbitrary local/HF
+  OpenAI-compatible providers usable with `--suite terminal_bench` instead of
+  only the hardcoded legacy `local/ornith` path (`fixed (unit test)`).

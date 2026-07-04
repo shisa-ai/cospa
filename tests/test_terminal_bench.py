@@ -324,6 +324,42 @@ def test_run_harbor_job_sets_pythonpath_for_custom_agent_import():
     assert str(PROJECT_ROOT) in pythonpath.split(os.pathsep), pythonpath
 
 
+def test_harbor_env_exports_host_pi_provider_for_container_agent():
+    """Terminal-Bench containers need the selected host pi provider config."""
+    suite = TerminalBenchSuite()
+
+    with tempfile.TemporaryDirectory() as tmp:
+        home = Path(tmp) / "home"
+        models_json = home / ".pi" / "agent" / "models.json"
+        models_json.parent.mkdir(parents=True)
+        models_json.write_text(json.dumps({
+            "providers": {
+                "hf": {
+                    "baseUrl": "http://127.0.0.1:8000/v1",
+                    "apiKeyEnv": "HF_API_KEY",
+                    "api": "openai-completions",
+                    "models": [
+                        {
+                            "id": "Qwen/Qwen2.5-Coder-7B-Instruct",
+                            "name": "Qwen Coder",
+                        }
+                    ],
+                }
+            }
+        }))
+
+        with patch("harness.suites.terminal_bench.Path.home", return_value=home), \
+             patch.dict(os.environ, {"HF_API_KEY": "secret-key"}):
+            env = suite._harbor_env("hf/Qwen/Qwen2.5-Coder-7B-Instruct")
+
+    assert env["CODING_EVAL_PI_PROVIDER_NAME"] == "hf"
+    assert env["CODING_EVAL_PI_PROVIDER_BASE_URL"] == "http://127.0.0.1:8000/v1"
+    assert env["CODING_EVAL_PI_PROVIDER_API_KEY"] == "secret-key"
+    assert env["CODING_EVAL_PI_PROVIDER_API"] == "openai-completions"
+    assert env["CODING_EVAL_PI_PROVIDER_MODEL_ID"] == "Qwen/Qwen2.5-Coder-7B-Instruct"
+    assert env["CODING_EVAL_PI_PROVIDER_MODEL_NAME"] == "Qwen Coder"
+
+
 def test_get_terminal_bench_pin_reads_commit_hash():
     """get_terminal_bench_pin must read commit_hash, not the nonexistent 'pin'."""
     from harness.runner import get_terminal_bench_pin

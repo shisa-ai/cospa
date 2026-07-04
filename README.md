@@ -101,7 +101,7 @@ provider. For example, a local vLLM-style server might look like this:
 python -m vllm.entrypoints.openai.api_server \
   --model Qwen/Qwen2.5-Coder-7B-Instruct \
   --served-model-name Qwen/Qwen2.5-Coder-7B-Instruct \
-  --host 127.0.0.1 \
+  --host 0.0.0.0 \
   --port 8000
 ```
 
@@ -120,6 +120,13 @@ Add a provider to `~/.pi/agent/models.json`:
   }
 }
 ```
+
+For Aider Polyglot, `http://127.0.0.1:8000/v1` is fine. For
+Terminal-Bench, the agent runs inside Docker, so use an address reachable from
+the task container instead. On Linux Docker that is usually the bridge gateway,
+for example `http://172.17.0.1:8000/v1`; on Docker Desktop,
+`http://host.docker.internal:8000/v1` is usually the right value. Keep the
+server bound to `0.0.0.0` when using those addresses.
 
 Then add the model to `configs/models.yaml` with the provider prefix:
 
@@ -140,6 +147,10 @@ mamba run -n coding-eval python harness/runner.py \
   --problems 5 \
   --k 1
 ```
+
+The same model id can be used with `--suite terminal_bench`; the Harbor custom
+agent copies the selected provider config into the task container before it
+runs. The provider `baseUrl` still has to be reachable from inside Docker.
 
 Use the same pattern for SGLang, llama.cpp, Ollama, or any other HF-serving
 stack as long as it exposes OpenAI-compatible chat completions.

@@ -22,6 +22,7 @@ RC=$?
 assert_exit 0 "$RC" "./run --help exits 0"
 assert_contains "Usage: ./run" "$OUT" "./run help shows root command"
 assert_contains "scripts/run-matrix.sh" "$OUT" "./run help names underlying matrix runner"
+assert_contains "--thinking high" "$OUT" "./run help shows pinned thinking example"
 
 OUT=$("$PROJECT_DIR/run" 2>&1)
 RC=$?

@@ -74,3 +74,31 @@ Append-only development log for the `coding-eval` repository.
   in `main()` so hand-built Namespaces in tests don't need every flag.
 - Next: relaunch ornith aider_polyglot/pi_vanilla under `nohup` (tmux-safe)
   to get a clean, complete signal at a pinned effort level.
+
+## 2026-07-05 — propagate pinned thinking across comparable adapters
+
+- Context: `--thinking` was recorded in runner manifests, but only
+  `pi_vanilla` forwarded it to the underlying command. That made any
+  `pi_devstack` or `little_coder` run with `--thinking high` look comparable
+  in artifacts while still using provider defaults.
+- Changes:
+  - `pi_devstack`, `pi_superpowers`, `little_coder`, and
+    `little_coder_superpowers` now append `--thinking <level>` when
+    `task_data["thinking"]` is set.
+  - `scripts/run-matrix.sh` accepts `--thinking <level>` and forwards it to
+    each runner cell; `./run --help` now shows the pinned-thinking pattern.
+  - Tests assert every comparable adapter forwards pinned thinking and that
+    the matrix wrapper does not drop it.
+- Evidence (RED -> GREEN):
+  - RED: `tests/test_resume_and_thinking.py` failed on `pi_devstack` missing
+    `--thinking`; `tests/scripts/test_run_matrix.sh` failed because
+    `--thinking` was unknown.
+  - GREEN: `mamba run -n coding-eval python -m pytest -q` = 105 passed.
+  - GREEN: `bash tests/scripts/run_all.sh` = all shell tests passed
+    (`test_check_models`, `test_root_entrypoints`, `test_run_matrix`,
+    `test_setup`).
+- Decision: include the superpowers adapters in the propagation test as well,
+  since the runner manifest would otherwise label them with a pinned effort
+  they did not actually request.
+- Next: relaunch comparable cells one at a time with the same `--thinking`
+  value and resume-enabled run id.

@@ -95,6 +95,10 @@ class PiSuperpowersAdapter:
             "--model", task_data.get("model_id", "nvidia/nemotron-3-ultra-550b-a55b"),
         ]
 
+        thinking = task_data.get("thinking")
+        if thinking:
+            cmd.extend(["--thinking", str(thinking)])
+
         # Load ONLY the bench-appropriate skills (never the whole user dir)
         for skill_path in _resolve_bench_skill_paths():
             cmd.extend(["--skill", skill_path])

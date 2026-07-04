@@ -104,6 +104,13 @@ RC=$?
 assert_exit 0 "$RC" "--run-id invocation exits 0"
 assert_contains "--run-id matrix-a" "$(cat "$RUNNER_LOG")" "--run-id forwarded to runner"
 
+# Test 2c: explicit --thinking must be forwarded exactly
+rm -f "$RUNNER_LOG"
+OUT=$(bash "$PROJ/scripts/run-matrix.sh" --models fake/model-one --adapters pi_vanilla --thinking high 2>&1)
+RC=$?
+assert_exit 0 "$RC" "--thinking invocation exits 0"
+assert_contains "--thinking high" "$(cat "$RUNNER_LOG")" "--thinking forwarded to runner"
+
 # Test 3: options that require values must fail cleanly, not via set -u
 OUT=$(bash "$PROJ/scripts/run-matrix.sh" --k 2>&1)
 RC=$?

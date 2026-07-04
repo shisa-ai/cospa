@@ -47,6 +47,10 @@ class LittleCoderAdapter:
             "--model", task_data.get("model_id", "nvidia/nemotron-3-ultra-550b-a55b"),
         ]
 
+        thinking = task_data.get("thinking")
+        if thinking:
+            cmd.extend(["--thinking", str(thinking)])
+
         # Run little-coder in the workdir, passing the prompt
         try:
             with open(log_file, "w") as log_f:

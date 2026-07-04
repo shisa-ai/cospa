@@ -2,10 +2,10 @@
 # run-matrix.sh — Run the full eval matrix.
 #
 # Usage:
-#   bash scripts/run-matrix.sh [--models ...] [--adapters ...] [--k 3] [--problems 225] [--run-id ...]
+#   bash scripts/run-matrix.sh [--models ...] [--adapters ...] [--k 3] [--problems 225] [--run-id ...] [--thinking high]
 #
 # Example:
-#   bash scripts/run-matrix.sh --models nvidia/nemotron-3-ultra-550b-a55b --adapters pi_vanilla --k 1 --problems 5
+#   bash scripts/run-matrix.sh --models local/ornith-1.0-35b --adapters pi_vanilla --k 1 --problems 5 --thinking high
 
 set -euo pipefail
 
@@ -18,6 +18,7 @@ PROBLEMS=""
 SUITE="aider_polyglot"
 MODELS_FILE="$PROJECT_DIR/configs/models.yaml"
 RUN_ID="$(date -u +%Y%m%dT%H%M%S.%NZ)-$$"
+THINKING=""
 
 # Initialize arrays empty so `${#ARR[@]}` is safe under `set -u` before the
 # user provides --models/--adapters.
@@ -83,6 +84,11 @@ while [[ $# -gt 0 ]]; do
             RUN_ID=$2
             shift 2
             ;;
+        --thinking)
+            require_value "$1" "${2:-}"
+            THINKING=$2
+            shift 2
+            ;;
         *)
             echo "Unknown option: $1"
             exit 1
@@ -112,6 +118,7 @@ echo "  K: $K"
 echo "  Problems: ${PROBLEMS:-all}"
 echo "  Suite: $SUITE"
 echo "  Run ID: $RUN_ID"
+echo "  Thinking: ${THINKING:-default}"
 echo ""
 
 # Run each model x adapter combination exactly once. If --problems is set,
@@ -120,6 +127,10 @@ echo ""
 PROBLEMS_ARG=()
 if [[ -n "$PROBLEMS" ]]; then
     PROBLEMS_ARG=(--problems "$PROBLEMS")
+fi
+THINKING_ARG=()
+if [[ -n "$THINKING" ]]; then
+    THINKING_ARG=(--thinking "$THINKING")
 fi
 
 for MODEL in "${MODELS[@]}"; do
@@ -132,6 +143,7 @@ for MODEL in "${MODELS[@]}"; do
             --model "$MODEL" \
             --k "$K" \
             --run-id "$RUN_ID" \
+            "${THINKING_ARG[@]}" \
             "${PROBLEMS_ARG[@]}"
 
         echo ""

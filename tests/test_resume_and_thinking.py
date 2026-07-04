@@ -17,8 +17,6 @@ full-20260704 eval needs:
 Both tests are RED against the current codebase.
 """
 
-import json
-import subprocess
 import sys
 import tempfile
 from pathlib import Path
@@ -27,6 +25,10 @@ from unittest.mock import patch
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(PROJECT_ROOT))
 
+from harness.adapters.little_coder import LittleCoderAdapter
+from harness.adapters.little_coder_superpowers import LittleCoderSuperpowersAdapter
+from harness.adapters.pi_devstack import PiDevstackAdapter
+from harness.adapters.pi_superpowers import PiSuperpowersAdapter
 from harness.adapters.pi_vanilla import PiVanillaAdapter, AdapterResult
 from harness.suites.aider_polyglot import AiderPolyglotSuite
 from harness.runner import run_trial
@@ -183,6 +185,51 @@ def test_pi_vanilla_omits_thinking_flag_when_unset():
     assert "--thinking" not in captured_cmd["cmd"], (
         f"pi_vanilla must NOT add --thinking when unset; got {captured_cmd['cmd']}"
     )
+
+
+def test_all_comparable_adapters_pass_thinking_flag_when_configured():
+    """Every comparable adapter must forward pinned thinking/effort."""
+    adapters = [
+        PiVanillaAdapter(),
+        PiDevstackAdapter(),
+        PiSuperpowersAdapter(),
+        LittleCoderAdapter(),
+        LittleCoderSuperpowersAdapter(),
+    ]
+
+    for adapter in adapters:
+        captured_cmd = {}
+
+        def fake_run(cmd, *args, **kwargs):
+            captured_cmd["cmd"] = list(cmd)
+
+            class _R:
+                returncode = 0
+
+            return _R()
+
+        with tempfile.TemporaryDirectory() as tmp:
+            with patch("subprocess.run", fake_run):
+                adapter.run(
+                    task_data={
+                        "prompt": "do thing",
+                        "model_id": "test/model",
+                        "thinking": "high",
+                    },
+                    workdir=Path(tmp),
+                    log_file=Path(tmp) / "out.log",
+                    stderr_file=Path(tmp) / "err.log",
+                )
+
+        cmd = captured_cmd["cmd"]
+        assert "--thinking" in cmd, (
+            f"{adapter.name} must include --thinking when task_data['thinking'] "
+            f"is set; got {cmd}"
+        )
+        idx = cmd.index("--thinking")
+        assert cmd[idx + 1] == "high", (
+            f"{adapter.name} --thinking must be followed by 'high'; got {cmd}"
+        )
 
 
 def test_manifest_records_thinking_level():

@@ -12,7 +12,7 @@ Usage: ./run [scripts/run-matrix.sh options]
 Runs the coding-eval matrix through scripts/run-matrix.sh.
 
 Examples:
-  ./run --models local/ornith-1.0-35b --adapters pi_vanilla --problems 5 --k 1
+  ./run --models local/ornith-1.0-35b --adapters pi_vanilla --problems 5 --k 1 --thinking high
   ./run --suite terminal_bench --models local/ornith-1.0-35b --adapters pi_vanilla --problems 1 --k 1
   ./run --run-id 20260704-smoke --problems 5 --k 1
 

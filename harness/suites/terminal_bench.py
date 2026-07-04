@@ -114,7 +114,11 @@ class TerminalBenchSuite:
         ),
     }
 
-    def _harbor_env(self, model_id: str | None = None) -> Dict[str, str]:
+    def _harbor_env(
+        self,
+        model_id: str | None = None,
+        thinking: str | None = None,
+    ) -> Dict[str, str]:
         """Return env vars for the Harbor subprocess.
 
         Custom Harbor agents live in this repository, while `harbor run`
@@ -127,6 +131,9 @@ class TerminalBenchSuite:
         if existing:
             parts.append(existing)
         env["PYTHONPATH"] = os.pathsep.join(parts)
+        if thinking:
+            env["CODING_EVAL_THINKING"] = str(thinking)
+            env["CODING_EVAL_REASONING_EFFORT"] = str(thinking)
 
         if not model_id or "/" not in model_id:
             return env
@@ -473,6 +480,7 @@ class TerminalBenchSuite:
         jobs_dir: Path,
         n_attempts: int = 1,
         vendor_dir: Path = None,
+        thinking: str | None = None,
     ) -> Dict[str, Any]:
         """
         Run a Harbor job for a Terminal-Bench task.
@@ -493,6 +501,7 @@ class TerminalBenchSuite:
         workdir = Path(workdir).resolve()
         jobs_dir = Path(jobs_dir).resolve()
         jobs_dir.mkdir(parents=True, exist_ok=True)
+        harbor_env = self._harbor_env(model_id, thinking=thinking)
 
         # Prefer the materialized local task when vendored data is present.
         # This keeps smoke/regression runs independent of Harbor's remote task
@@ -519,7 +528,7 @@ class TerminalBenchSuite:
                     capture_output=True,
                     text=True,
                     timeout=300,
-                    env=self._harbor_env(model_id),
+                    env=harbor_env,
                 )
                 if migrate_result.returncode != 0:
                     return {
@@ -555,7 +564,7 @@ class TerminalBenchSuite:
                 capture_output=True,
                 text=True,
                 timeout=3600,
-                env=self._harbor_env(model_id),
+                env=harbor_env,
             )
             return {
                 "returncode": result.returncode,

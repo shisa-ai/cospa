@@ -13,10 +13,12 @@ Reproduces ORNITH-CODER-REVIEW.md findings #4 and follow-up audit item B:
 """
 
 import json
+import importlib
 import os
 import shutil
 import sys
 import tempfile
+import types
 from pathlib import Path
 from unittest.mock import patch
 
@@ -360,6 +362,119 @@ def test_harbor_env_exports_host_pi_provider_for_container_agent():
     assert env["CODING_EVAL_PI_PROVIDER_MODEL_NAME"] == "Qwen Coder"
 
 
+def test_run_harbor_job_exports_thinking_to_container_agent_env():
+    """Pinned thinking must reach the Harbor subprocess that imports the agent."""
+    suite = TerminalBenchSuite()
+    captured = {}
+
+    def fake_run(cmd, **kwargs):
+        import subprocess as sp
+        if cmd[:2] == ["harbor", "run"]:
+            captured["env"] = kwargs.get("env", {})
+        return sp.CompletedProcess(args=cmd, returncode=0, stdout="", stderr="")
+
+    with patch("subprocess.run", side_effect=fake_run):
+        with tempfile.TemporaryDirectory() as tmp:
+            workdir = Path(tmp) / "w"
+            workdir.mkdir()
+            suite.run_harbor_job(
+                "hello-world",
+                "test/model",
+                "pi_vanilla",
+                workdir,
+                Path(tmp) / "jobs",
+                1,
+                thinking="high",
+            )
+
+    assert captured["env"]["CODING_EVAL_THINKING"] == "high"
+    assert captured["env"]["CODING_EVAL_REASONING_EFFORT"] == "high"
+
+
+def _import_harbor_agents_with_fake_terminal_bench(monkeypatch):
+    """Import harbor_agents without requiring Terminal-Bench's full deps."""
+    for name in list(sys.modules):
+        if name == "harness.harbor_agents" or name.startswith("terminal_bench"):
+            monkeypatch.delitem(sys.modules, name, raising=False)
+
+    class FakeAbstractInstalledAgent:
+        def __init__(self, *args, **kwargs):
+            self._version = kwargs.get("version", "latest")
+
+        @property
+        def version(self):
+            return self._version
+
+        def _get_templated_script_path(self, template_name="setup.sh.j2"):
+            return Path(template_name)
+
+    class FakeTerminalCommand:
+        def __init__(
+            self,
+            *,
+            command,
+            min_timeout_sec,
+            max_timeout_sec,
+            block,
+            append_enter,
+        ):
+            self.command = command
+            self.min_timeout_sec = min_timeout_sec
+            self.max_timeout_sec = max_timeout_sec
+            self.block = block
+            self.append_enter = append_enter
+
+    terminal_bench = types.ModuleType("terminal_bench")
+    agents = types.ModuleType("terminal_bench.agents")
+    installed_agents = types.ModuleType("terminal_bench.agents.installed_agents")
+    abstract_mod = types.ModuleType(
+        "terminal_bench.agents.installed_agents.abstract_installed_agent"
+    )
+    abstract_mod.AbstractInstalledAgent = FakeAbstractInstalledAgent
+    terminal = types.ModuleType("terminal_bench.terminal")
+    models_mod = types.ModuleType("terminal_bench.terminal.models")
+    models_mod.TerminalCommand = FakeTerminalCommand
+
+    monkeypatch.setitem(sys.modules, "terminal_bench", terminal_bench)
+    monkeypatch.setitem(sys.modules, "terminal_bench.agents", agents)
+    monkeypatch.setitem(
+        sys.modules,
+        "terminal_bench.agents.installed_agents",
+        installed_agents,
+    )
+    monkeypatch.setitem(
+        sys.modules,
+        "terminal_bench.agents.installed_agents.abstract_installed_agent",
+        abstract_mod,
+    )
+    monkeypatch.setitem(sys.modules, "terminal_bench.terminal", terminal)
+    monkeypatch.setitem(sys.modules, "terminal_bench.terminal.models", models_mod)
+
+    return importlib.import_module("harness.harbor_agents")
+
+
+def test_harbor_agent_cli_forwards_configured_thinking(monkeypatch):
+    """The custom container agents must pass --thinking to pi/little-coder."""
+    harbor_agents = _import_harbor_agents_with_fake_terminal_bench(monkeypatch)
+
+    with patch.dict(os.environ, {"CODING_EVAL_THINKING": "high"}):
+        agent = harbor_agents.PiDevstackHarborAgent("local/ornith-1.0-35b")
+        command = agent._run_agent_commands("solve it")[0].command
+
+    assert "--thinking high" in command, command
+
+
+def test_harbor_agent_cli_omits_thinking_when_unset(monkeypatch):
+    """Default effort must remain provider/model default unless pinned."""
+    harbor_agents = _import_harbor_agents_with_fake_terminal_bench(monkeypatch)
+
+    with patch.dict(os.environ, {}, clear=True):
+        agent = harbor_agents.PiDevstackHarborAgent("local/ornith-1.0-35b")
+        command = agent._run_agent_commands("solve it")[0].command
+
+    assert "--thinking" not in command, command
+
+
 def test_get_terminal_bench_pin_reads_commit_hash():
     """get_terminal_bench_pin must read commit_hash, not the nonexistent 'pin'."""
     from harness.runner import get_terminal_bench_pin
@@ -390,7 +505,7 @@ def test_runner_delegates_terminal_bench_to_harbor():
     adapter_calls = []
 
     def fake_harbor(self, task_id, model_id, adapter_name, workdir, jobs_dir,
-                    n_attempts=1, vendor_dir=None):
+                    n_attempts=1, vendor_dir=None, thinking=None):
         harbor_calls.append((task_id, model_id, adapter_name))
         return {"returncode": 0, "stdout": "", "stderr": ""}
 
@@ -422,6 +537,39 @@ def test_runner_delegates_terminal_bench_to_harbor():
     assert harbor_calls[0][1] == "nvidia/nemotron-3-ultra-550b-a55b"
 
 
+def test_runner_delegates_terminal_bench_thinking_to_harbor():
+    """Runner --thinking must reach Harbor-backed Terminal-Bench trials."""
+    from harness.runner import run_trial
+    from harness.adapters.pi_vanilla import PiVanillaAdapter
+
+    suite = TerminalBenchSuite()
+    adapter = PiVanillaAdapter()
+    thinking_values = []
+
+    def fake_harbor(self, task_id, model_id, adapter_name, workdir, jobs_dir,
+                    n_attempts=1, vendor_dir=None, thinking=None):
+        thinking_values.append(thinking)
+        return {"returncode": 0, "stdout": "", "stderr": ""}
+
+    with tempfile.TemporaryDirectory() as tmp:
+        tmp = Path(tmp)
+        vendor_dir = tmp / "vendor"
+        _make_task_yaml_task(vendor_dir, "hello-world")
+        with patch.object(TerminalBenchSuite, "run_harbor_job", fake_harbor):
+            run_trial(
+                suite,
+                adapter,
+                "nvidia/nemotron-3-ultra-550b-a55b",
+                "hello-world",
+                1,
+                tmp / "results",
+                vendor_dir,
+                thinking="high",
+            )
+
+    assert thinking_values == ["high"], thinking_values
+
+
 def test_runner_terminal_bench_trial_uses_one_harbor_attempt_per_trial():
     """run_trial's trial index must not be forwarded as Harbor attempts.
 
@@ -436,7 +584,7 @@ def test_runner_terminal_bench_trial_uses_one_harbor_attempt_per_trial():
     attempts = []
 
     def fake_harbor(self, task_id, model_id, adapter_name, workdir, jobs_dir,
-                    n_attempts=1, vendor_dir=None):
+                    n_attempts=1, vendor_dir=None, thinking=None):
         attempts.append(n_attempts)
         return {"returncode": 0, "stdout": "", "stderr": ""}
 

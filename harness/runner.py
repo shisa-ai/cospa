@@ -499,6 +499,7 @@ def run_trial(suite, adapter, model_id, task_id, trial_k, results_dir, vendor_di
                 jobs_dir=jobs_dir,
                 n_attempts=1,
                 vendor_dir=vendor_dir,
+                thinking=thinking,
             )
             manifest["exit_code"] = harbor_result.get("returncode", -1)
             manifest["timing"]["wall_clock_seconds"] = time.time() - start_time

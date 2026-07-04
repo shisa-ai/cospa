@@ -134,3 +134,35 @@ Append-only development log for the `coding-eval` repository.
 - Next: consider recording provider pricing in runner manifests if we want
   cost estimates for all adapters rather than only artifacts that already
   include pricing metadata.
+
+## 2026-07-05 — propagate pinned thinking through Harbor agents
+
+- Context: `--thinking` now reached the direct pi/little-coder adapters, but
+  Terminal-Bench runs bypass those adapters and execute custom Harbor agents
+  inside task containers. That meant Harbor-backed results could still run at
+  provider defaults while manifests recorded a pinned effort.
+- Changes:
+  - `run_trial()` now passes the configured `thinking` value into
+    `TerminalBenchSuite.run_harbor_job()`.
+  - `TerminalBenchSuite` exports pinned effort as both
+    `CODING_EVAL_THINKING` and `CODING_EVAL_REASONING_EFFORT` in the Harbor
+    subprocess environment.
+  - Custom Harbor agents append `--thinking <level>` to pi/little-coder
+    commands when the environment carries a pinned effort, and omit it when
+    unset/default.
+- Evidence (RED -> GREEN):
+  - RED: new Terminal-Bench tests failed because `run_harbor_job()` rejected
+    `thinking=`, Harbor agent commands omitted `--thinking high`, and runner
+    delegated `None`.
+  - GREEN: focused Harbor thinking tests passed.
+  - GREEN: `mamba run -n coding-eval python -m pytest -q tests/test_terminal_bench.py tests/test_resume_and_thinking.py`
+    = 21 passed.
+  - GREEN: `mamba run -n coding-eval python -m pytest -q` = 114 passed.
+  - GREEN: `bash tests/scripts/run_all.sh` = all shell tests passed
+    (`test_check_models`, `test_root_entrypoints`, `test_run_matrix`,
+    `test_setup`).
+- Decision: keep the suite-to-agent contract environment-based because Harbor
+  imports and instantiates the custom agent in a separate process/container
+  boundary; the runner still records the comparable value in manifests.
+- Next: Terminal-Bench estimates and runs can now use the same pinned effort
+  as Aider Polyglot.

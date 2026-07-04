@@ -80,10 +80,38 @@ _PROVIDER_ENV_KEYS = (
     "PI_OFFLINE",
 )
 
+_CODING_EVAL_AGENT_ENV_KEYS = (
+    "CODING_EVAL_LOCAL_BASE_URL",
+    "CODING_EVAL_LOCAL_API_KEY",
+    "CODING_EVAL_PI_PROVIDER_NAME",
+    "CODING_EVAL_PI_PROVIDER_BASE_URL",
+    "CODING_EVAL_PI_PROVIDER_API_KEY",
+    "CODING_EVAL_PI_PROVIDER_API",
+    "CODING_EVAL_PI_PROVIDER_MODEL_ID",
+    "CODING_EVAL_PI_PROVIDER_MODEL_NAME",
+    "CODING_EVAL_THINKING",
+    "CODING_EVAL_REASONING_EFFORT",
+)
+
 _CONTAINER_BENCH_SKILLS = (
     "/installed-agent/bench-skills/systematic-debugging",
     "/installed-agent/bench-skills/verification-before-completion",
 )
+
+
+def _configured_thinking() -> str | None:
+    thinking = (
+        os.environ.get("CODING_EVAL_THINKING")
+        or os.environ.get("CODING_EVAL_REASONING_EFFORT")
+    )
+    if not thinking or thinking == "default":
+        return None
+    return thinking
+
+
+def _thinking_args() -> list[str]:
+    thinking = _configured_thinking()
+    return ["--thinking", thinking] if thinking else []
 
 
 if _HARBOR_NATIVE:
@@ -103,17 +131,7 @@ if _HARBOR_NATIVE:
         def _provider_env(self) -> dict[str, str]:
             return {
                 key: value
-                for key in (
-                    *_PROVIDER_ENV_KEYS,
-                    "CODING_EVAL_LOCAL_BASE_URL",
-                    "CODING_EVAL_LOCAL_API_KEY",
-                    "CODING_EVAL_PI_PROVIDER_NAME",
-                    "CODING_EVAL_PI_PROVIDER_BASE_URL",
-                    "CODING_EVAL_PI_PROVIDER_API_KEY",
-                    "CODING_EVAL_PI_PROVIDER_API",
-                    "CODING_EVAL_PI_PROVIDER_MODEL_ID",
-                    "CODING_EVAL_PI_PROVIDER_MODEL_NAME",
-                )
+                for key in (*_PROVIDER_ENV_KEYS, *_CODING_EVAL_AGENT_ENV_KEYS)
                 if (value := os.environ.get(key))
             }
 
@@ -250,6 +268,7 @@ EOF
                 *self.extra_args,
                 "--model",
                 self.model_name,
+                *_thinking_args(),
                 instruction,
             ]
             await self.exec_as_agent(
@@ -285,7 +304,7 @@ else:
         def _env(self) -> dict[str, str]:
             return {
                 key: value
-                for key in _PROVIDER_ENV_KEYS
+                for key in (*_PROVIDER_ENV_KEYS, *_CODING_EVAL_AGENT_ENV_KEYS)
                 if (value := os.environ.get(key))
             }
 
@@ -308,6 +327,7 @@ else:
                 *self.extra_args,
                 "--model",
                 self._model_name,
+                *_thinking_args(),
                 instruction,
             ]
             return [

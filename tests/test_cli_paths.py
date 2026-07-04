@@ -10,6 +10,8 @@ See ORNITH-CODER-REVIEW.md follow-up audit item G.
 
 import sys
 import tempfile
+import io
+import time
 from pathlib import Path
 from unittest.mock import patch
 
@@ -166,6 +168,40 @@ def test_runner_main_uses_default_model_run_results_wrapper():
     assert captured_results == [
         PROJECT_ROOT / "results" / "runs" / "test%2Fmodel-run-a"
     ]
+
+
+def test_run_with_tty_updates_emits_heartbeat(monkeypatch):
+    """Interactive runs should show periodic progress while a trial runs."""
+    from harness.runner import run_with_tty_updates
+
+    class TtyBuffer(io.StringIO):
+        def isatty(self):
+            return True
+
+    out = TtyBuffer()
+    monkeypatch.setattr(sys, "stdout", out)
+
+    def slow_result():
+        time.sleep(0.03)
+        return "done"
+
+    result = run_with_tty_updates(slow_result, "Trial 1/1", interval=0.01)
+
+    assert result == "done"
+    assert "running" in out.getvalue()
+
+
+def test_run_with_tty_updates_stays_quiet_without_tty(monkeypatch):
+    """Non-interactive logs should not receive spinner/heartbeat noise."""
+    from harness.runner import run_with_tty_updates
+
+    out = io.StringIO()
+    monkeypatch.setattr(sys, "stdout", out)
+
+    result = run_with_tty_updates(lambda: "done", "Trial 1/1", interval=0.01)
+
+    assert result == "done"
+    assert out.getvalue() == ""
 
 
 def test_runner_main_rejects_nonpositive_k():

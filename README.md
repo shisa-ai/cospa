@@ -91,6 +91,66 @@ The runner performs the same authenticated reachability check by default before
 starting a matrix cell. Use `--skip-reachability` only for an intentional
 offline/smoke run where you accept that risk.
 
+## Running Hugging Face Models
+
+The harness does not load Hugging Face checkpoints directly. Run the checkpoint
+behind an OpenAI-compatible `/v1` endpoint, then register that endpoint as a pi
+provider. For example, a local vLLM-style server might look like this:
+
+```bash
+python -m vllm.entrypoints.openai.api_server \
+  --model Qwen/Qwen2.5-Coder-7B-Instruct \
+  --served-model-name Qwen/Qwen2.5-Coder-7B-Instruct \
+  --host 127.0.0.1 \
+  --port 8000
+```
+
+Add a provider to `~/.pi/agent/models.json`:
+
+```json
+{
+  "providers": {
+    "hf": {
+      "baseUrl": "http://127.0.0.1:8000/v1",
+      "apiKey": "EMPTY",
+      "models": [
+        { "id": "Qwen/Qwen2.5-Coder-7B-Instruct" }
+      ]
+    }
+  }
+}
+```
+
+Then add the model to `configs/models.yaml` with the provider prefix:
+
+```yaml
+models:
+  - id: hf/Qwen/Qwen2.5-Coder-7B-Instruct
+```
+
+Verify and run:
+
+```bash
+bash scripts/check-models.sh
+
+mamba run -n coding-eval python harness/runner.py \
+  --suite aider_polyglot \
+  --adapter pi_vanilla \
+  --model hf/Qwen/Qwen2.5-Coder-7B-Instruct \
+  --problems 5 \
+  --k 1
+```
+
+Use the same pattern for SGLang, llama.cpp, Ollama, or any other HF-serving
+stack as long as it exposes OpenAI-compatible chat completions.
+
+## Runner Output
+
+Interactive `harness/runner.py` runs print a lightweight elapsed-time heartbeat
+while each trial is executing. Non-interactive runs, background jobs, and log
+files stay clean; detailed adapter output is still written under each trial's
+`out/` directory.
+
 ## Parallel Runs
 
 `scripts/run-matrix.sh` runs matrix cells sequentially and passes one run id to
@@ -147,7 +207,7 @@ model, adapter, sampling params, env hash, and timing in `manifest.json`.
 ## Current Verified State
 
 - Python tests: `mamba run -n coding-eval python -m pytest -q` reports
-  `91 passed`.
+  `93 passed`.
 - Shell harness: `bash tests/scripts/run_all.sh` reports `25` assertions
   passed.
 - Terminal-Bench Docker smoke: `local/ornith-1.0-35b` + `pi_vanilla` +

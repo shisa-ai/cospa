@@ -22,6 +22,7 @@ import os
 import shutil
 import subprocess
 import sys
+import threading
 import time
 import uuid
 from datetime import datetime, timezone
@@ -106,6 +107,40 @@ def resolve_results_dir(
         f"{encode_path_component(resolved_run_id)}"
     )
     return PROJECT_ROOT / "results" / "runs" / run_component, resolved_run_id
+
+
+def run_with_tty_updates(fn, label: str, interval: float = 5.0):
+    """Run fn while printing lightweight progress in interactive terminals."""
+    if not sys.stdout.isatty():
+        return fn()
+
+    result_box = []
+    error_box = []
+
+    def target():
+        try:
+            result_box.append(fn())
+        except BaseException as exc:
+            error_box.append(exc)
+
+    worker = threading.Thread(target=target, daemon=True)
+    worker.start()
+
+    start = time.monotonic()
+    last_line_len = 0
+    while worker.is_alive():
+        elapsed = int(time.monotonic() - start)
+        line = f"{label} running {elapsed}s..."
+        print("\r" + line, end="", flush=True)
+        last_line_len = max(last_line_len, len(line))
+        worker.join(interval)
+
+    if last_line_len:
+        print("\r" + (" " * last_line_len) + "\r", end="", flush=True)
+
+    if error_box:
+        raise error_box[0]
+    return result_box[0]
 
 
 def get_env_hash():
@@ -587,11 +622,15 @@ def main():
     for task_id in task_ids:
         print(f"── Task: {task_id} ──")
         for k in range(1, args.k + 1):
-            print(f"  Trial {k}/{args.k}...", end=" ", flush=True)
+            trial_label = f"  Trial {k}/{args.k}"
+            print(f"{trial_label}...", end=" ", flush=True)
             try:
-                manifest, verdict = run_trial(
-                    suite, adapter, args.model, task_id, k,
-                    args.results_dir, args.vendor_dir
+                manifest, verdict = run_with_tty_updates(
+                    lambda: run_trial(
+                        suite, adapter, args.model, task_id, k,
+                        args.results_dir, args.vendor_dir
+                    ),
+                    trial_label,
                 )
                 status = "✓" if verdict.get("passed") else "✗"
                 print(f"{status} ({manifest['timing'].get('wall_clock_seconds', 0):.1f}s)")

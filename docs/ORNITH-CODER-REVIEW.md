@@ -1031,7 +1031,7 @@ smoke as one row:
 local/ornith-1.0-35b | pi_vanilla | terminal_bench | 1/1 passed
 ```
 
-Follow-up validation for this pass: the full pytest suite reports `91 passed`;
+Follow-up validation for this pass: the full pytest suite reports `93 passed`;
 `bash tests/scripts/run_all.sh` reports `25` shell assertions passed; and
 `http://localhost:8000/api/scores` returns the Terminal-Bench smoke row above.
 
@@ -1052,3 +1052,14 @@ merge/rebaseline behavior.
 each runner process, grouping all cells from one matrix invocation while still
 keeping concurrent matrix invocations separate. Users can also pass
 `--run-id <name>` for a stable wrapper name (`fixed (unit + shell tests)`).
+
+### Runner usability and HF model docs
+
+- `harness/runner.py` now prints a lightweight elapsed-time heartbeat while a
+  trial is running in an interactive TTY. Non-interactive/background runs keep
+  quiet logs (`fixed (unit test)`).
+- `README.md` now documents the Hugging Face/local-model path: serve a
+  checkpoint behind an OpenAI-compatible `/v1` endpoint, register it in
+  `~/.pi/agent/models.json`, add the provider-prefixed id to
+  `configs/models.yaml`, then use the normal `check-models.sh` and runner
+  commands (`docs`).

@@ -1095,3 +1095,25 @@ zai/glm-5.2 | pi_vanilla | aider_polyglot | 4/5 passed
 - Validation for this UX pass: `mamba run -n coding-eval python -m pytest -q`
   reports `98 passed`; `bash tests/scripts/run_all.sh` reports `35` shell
   assertions passed; py-compile of `view-scores/server.py` passes.
+
+### Little-coder setup and Ornith smoke follow-up
+
+- `scripts/setup.sh` now verifies `little-coder`, installs it with
+  `npm install -g little-coder` when absent, and warns if
+  `little-coder --list-models` cannot read provider config. This closes the
+  CI/setup gap where `scripts/run-matrix.sh` included `little_coder` by
+  default but setup never checked that the launcher existed
+  (`fixed (shell test)`).
+- Runner environment/version probes are now process-local cached. This keeps
+  manifests unchanged while avoiding repeated `little-coder --version` startup
+  overhead across long matrices (`fixed (unit test)`).
+- End-to-end Aider Polyglot smoke with Ornith and little_coder completed:
+
+```text
+run-id: little-coder-ornith-smoke-20260704T0550Z
+local/ornith-1.0-35b | little_coder | aider_polyglot | 5/5 passed
+```
+
+Validation for this little_coder pass: `mamba run -n coding-eval python -m
+pytest -q` reports `100 passed`; `bash tests/scripts/run_all.sh` reports `38`
+shell assertions passed; py-compile of `harness/runner.py` passes.

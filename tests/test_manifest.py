@@ -156,3 +156,24 @@ def test_manifest_env_hash_recorded():
     env_hash = manifest["env"]["hash"]
     assert "/" not in env_hash, f"env.hash is a path: {env_hash}"
     assert all(c in "0123456789abcdef" for c in env_hash.lower()), env_hash
+
+
+def test_little_coder_version_probe_is_cached():
+    """Full matrices must not spawn little-coder --version for every trial."""
+    from harness import runner as runner_mod
+
+    runner_mod.get_little_coder_version.cache_clear()
+    try:
+        with patch("harness.runner.subprocess.run") as mock_run:
+            mock_run.return_value = sp.CompletedProcess(
+                args=["little-coder", "--version"],
+                returncode=0,
+                stdout="0.79.10\n",
+                stderr="",
+            )
+            assert runner_mod.get_little_coder_version() == "0.79.10"
+            assert runner_mod.get_little_coder_version() == "0.79.10"
+
+        assert mock_run.call_count == 1
+    finally:
+        runner_mod.get_little_coder_version.cache_clear()

@@ -34,7 +34,34 @@ else
     exit 1
 fi
 
-# ── 2. Verify coding-eval mamba env ──────────────────────────────────────
+# ── 2. Verify/install little-coder ───────────────────────────────────────
+echo ""
+echo "── Checking little-coder ──"
+if command -v little-coder &>/dev/null; then
+    LITTLE_CODER_VERSION=$(little-coder --version 2>/dev/null || echo "unknown")
+    log_ok "little-coder found: $LITTLE_CODER_VERSION"
+else
+    log_warn "little-coder not found. Installing via npm..."
+    if command -v npm &>/dev/null; then
+        npm install -g little-coder
+        if command -v little-coder &>/dev/null; then
+            LITTLE_CODER_VERSION=$(little-coder --version 2>/dev/null || echo "unknown")
+            log_ok "little-coder installed: $LITTLE_CODER_VERSION"
+        else
+            log_err "npm completed, but little-coder is still not in PATH."
+            exit 1
+        fi
+    else
+        log_err "npm not found. Install Node/npm first, then: npm install -g little-coder"
+        exit 1
+    fi
+fi
+
+if ! little-coder --list-models &>/dev/null; then
+    log_warn "little-coder is installed, but --list-models failed. Check ~/.pi/agent/models.json."
+fi
+
+# ── 3. Verify coding-eval mamba env ──────────────────────────────────────
 echo ""
 echo "── Checking coding-eval mamba env ──"
 if command -v mamba &>/dev/null; then
@@ -68,7 +95,7 @@ else
     exit 1
 fi
 
-# ── 3. Install Harbor ────────────────────────────────────────────────────
+# ── 4. Install Harbor ────────────────────────────────────────────────────
 echo ""
 echo "── Checking Harbor ──"
 if command -v harbor &>/dev/null; then
@@ -84,7 +111,7 @@ else
     fi
 fi
 
-# ── 4. Clone Terminal-Bench ──────────────────────────────────────────────
+# ── 5. Clone Terminal-Bench ──────────────────────────────────────────────
 echo ""
 echo "── Checking Terminal-Bench ──"
 TB_DIR="$VENDOR_DIR/terminal-bench"
@@ -101,7 +128,7 @@ else
     log_ok "Terminal-Bench cloned to $TB_DIR"
 fi
 
-# ── 5. Clone Aider Polyglot dataset ──────────────────────────────────────
+# ── 6. Clone Aider Polyglot dataset ──────────────────────────────────────
 echo ""
 echo "── Checking Aider Polyglot dataset ──"
 POLY_DIR="$VENDOR_DIR/polyglot-benchmark"
@@ -129,6 +156,7 @@ fi
 echo ""
 echo "── Setup complete ──"
 echo "  Pi:     $PI_VERSION"
+echo "  Little: $LITTLE_CODER_VERSION"
 echo "  Python: $PY_VER (in coding-eval env)"
 echo "  Harbor: $(harbor --version 2>/dev/null || echo 'installed')"
 echo "  TB:     $TB_DIR"

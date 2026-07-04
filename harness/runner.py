@@ -26,6 +26,7 @@ import threading
 import time
 import uuid
 from datetime import datetime, timezone
+from functools import lru_cache
 from pathlib import Path
 
 # Add project root to path so we can import harness modules
@@ -143,6 +144,7 @@ def run_with_tty_updates(fn, label: str, interval: float = 5.0):
     return result_box[0]
 
 
+@lru_cache(maxsize=1)
 def get_env_hash():
     """Return a short hash identifying the current Python environment.
 
@@ -171,6 +173,7 @@ def get_env_hash():
         return "unknown"
 
 
+@lru_cache(maxsize=1)
 def get_pi_version():
     """Get pi version if available."""
     try:
@@ -183,6 +186,7 @@ def get_pi_version():
         return "unknown"
 
 
+@lru_cache(maxsize=1)
 def get_little_coder_version():
     """Get little-coder version if available."""
     try:
@@ -195,6 +199,7 @@ def get_little_coder_version():
         return "unknown"
 
 
+@lru_cache(maxsize=1)
 def get_harbor_version():
     """Get Harbor version if available."""
     try:

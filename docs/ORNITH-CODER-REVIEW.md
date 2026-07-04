@@ -1031,7 +1031,7 @@ smoke as one row:
 local/ornith-1.0-35b | pi_vanilla | terminal_bench | 1/1 passed
 ```
 
-Follow-up validation for this pass: the full pytest suite reports `93 passed`;
+Follow-up validation for this pass: the full pytest suite reports `94 passed`;
 `bash tests/scripts/run_all.sh` reports `25` shell assertions passed; and
 `http://localhost:8000/api/scores` returns the Terminal-Bench smoke row above.
 
@@ -1068,3 +1068,15 @@ keeping concurrent matrix invocations separate. Users can also pass
   `models.json` before execution. This keeps arbitrary local/HF
   OpenAI-compatible providers usable with `--suite terminal_bench` instead of
   only the hardcoded legacy `local/ornith` path (`fixed (unit test)`).
+
+### Provider Aider smoke results
+
+The one-model-per-provider background smoke run
+`provider-smoke-20260704T023522Z` completed with `pi_vanilla`,
+`--suite aider_polyglot`, `--problems 5`, and `--k 1`:
+
+```text
+local/ornith-1.0-35b | pi_vanilla | aider_polyglot | 4/5 passed
+nvidia/nemotron-3-ultra-550b-a55b | pi_vanilla | aider_polyglot | 2/5 passed
+zai/glm-5.2 | pi_vanilla | aider_polyglot | 4/5 passed
+```

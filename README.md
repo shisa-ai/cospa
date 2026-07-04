@@ -218,10 +218,13 @@ model, adapter, sampling params, env hash, and timing in `manifest.json`.
 ## Current Verified State
 
 - Python tests: `mamba run -n coding-eval python -m pytest -q` reports
-  `93 passed`.
+  `94 passed`.
 - Shell harness: `bash tests/scripts/run_all.sh` reports `25` assertions
   passed.
 - Terminal-Bench Docker smoke: `local/ornith-1.0-35b` + `pi_vanilla` +
   `hello-world` completed through Harbor 0.16 with `verifier_result.rewards.reward: 1.0`.
 - Smoke artifact:
   `results/e2e-smoke-terminal-bench-20260704-1100/local%2Fornith-1.0-35b/pi_vanilla/terminal_bench/hello-world/trial-1/`.
+- Provider Aider Polyglot smoke run `provider-smoke-20260704T023522Z`
+  completed with `pi_vanilla`, `--problems 5`, `--k 1`: local Ornith `4/5`,
+  NVIDIA Nemotron `2/5`, and Zai GLM `4/5`.

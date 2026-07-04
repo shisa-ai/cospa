@@ -14,6 +14,7 @@ import json
 import sys
 import argparse
 import re
+import statistics
 from pathlib import Path
 from http.server import HTTPServer, SimpleHTTPRequestHandler
 from urllib.parse import urlparse, parse_qs, urlencode
@@ -23,6 +24,9 @@ if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
 RESULTS_DIR = PROJECT_ROOT / "results"
 ANSI_RE = re.compile(r"\033\[[0-9;]*m")
+DEFAULT_INCLUDE_SMOKE = False
+DEFAULT_FILTERS: tuple[str, ...] = ()
+DEFAULT_EXCLUDES: tuple[str, ...] = ()
 
 
 def _ansi(text: str, code: str, enabled: bool) -> str:
@@ -55,6 +59,63 @@ def _score_class(pass_rate: float) -> str:
     return "score-low"
 
 
+def _format_duration(seconds: float | int | None) -> str:
+    if seconds is None:
+        return "-"
+    try:
+        total = int(round(float(seconds)))
+    except (TypeError, ValueError):
+        return "-"
+    if total <= 0:
+        return "-"
+    hours, rem = divmod(total, 3600)
+    minutes, secs = divmod(rem, 60)
+    if hours:
+        return f"{hours}h{minutes:02d}m"
+    if minutes:
+        return f"{minutes}m{secs:02d}s"
+    return f"{secs}s"
+
+
+def _format_tokens(value: float | int | None) -> str:
+    if value is None:
+        return "-"
+    try:
+        total = int(value)
+    except (TypeError, ValueError):
+        return "-"
+    if total <= 0:
+        return "-"
+    return f"{total:,}"
+
+
+def _format_cost(value: float | int | None) -> str:
+    if value is None:
+        return "-"
+    try:
+        amount = float(value)
+    except (TypeError, ValueError):
+        return "-"
+    if amount < 0:
+        return "-"
+    if amount == 0:
+        return "$0"
+    if amount < 1:
+        return f"${amount:.4f}"
+    return f"${amount:,.2f}"
+
+
+def _matches_any(patterns: tuple[str, ...] | list[str], text: str) -> bool:
+    for pattern in patterns:
+        try:
+            if re.search(pattern, text, flags=re.IGNORECASE):
+                return True
+        except re.error:
+            if pattern.lower() in text.lower():
+                return True
+    return False
+
+
 def _visible_len(value: str) -> int:
     return len(ANSI_RE.sub("", value))
 
@@ -82,6 +143,7 @@ def format_scores_terminal(
     results_dir: Path = RESULTS_DIR,
     color: bool = False,
     show_ci: bool = False,
+    verbose: bool = False,
 ) -> str:
     """Return a compact terminal score table.
 
@@ -92,7 +154,24 @@ def format_scores_terminal(
     if not scores:
         return f"No scores found in {results_dir}"
 
-    headers = ["Model", "Adapter", "Suite", "Score", "Passed", "Tasks"]
+    if verbose:
+        headers = [
+            "Model",
+            "Adapter",
+            "Suite",
+            "Status",
+            "Score",
+            "Passed",
+            "Done",
+            "Runtime",
+            "Avg",
+            "Tok In",
+            "Tok Out",
+            "Cost",
+            "ETA",
+        ]
+    else:
+        headers = ["Model", "Adapter", "Suite", "Score", "Passed", "Tasks"]
     if show_ci:
         headers.append("95% CI")
 
@@ -101,14 +180,34 @@ def format_scores_terminal(
         pass_rate = float(score["pass_rate"])
         score_text = f"{pass_rate:.1f}%"
         score_text = _ansi(score_text, _score_color(pass_rate), color)
-        row = [
-            str(score["model"]),
-            str(score["adapter"]),
-            str(score["suite"]),
-            score_text,
-            f"{score['passed_tasks']}/{score['total_tasks']}",
-            str(score["total_tasks"]),
-        ]
+        if verbose:
+            completed = int(score.get("completed_tasks", score["total_tasks"]))
+            expected = int(score.get("expected_tasks", completed))
+            done = f"{completed}/{expected}" if expected != completed else str(completed)
+            row = [
+                str(score["model"]),
+                str(score["adapter"]),
+                str(score["suite"]),
+                str(score.get("status", "complete")),
+                score_text,
+                f"{score['passed_tasks']}/{score['total_tasks']}",
+                done,
+                _format_duration(score.get("total_wall_clock_seconds")),
+                _format_duration(score.get("mean_wall_clock_seconds")),
+                _format_tokens(score.get("prompt_tokens")),
+                _format_tokens(score.get("completion_tokens")),
+                _format_cost(score.get("estimated_cost_usd")),
+                _format_duration(score.get("estimated_remaining_seconds")),
+            ]
+        else:
+            row = [
+                str(score["model"]),
+                str(score["adapter"]),
+                str(score["suite"]),
+                score_text,
+                f"{score['passed_tasks']}/{score['total_tasks']}",
+                str(score["total_tasks"]),
+            ]
         if show_ci:
             row.append(f"{score['ci_lower']:.1f}-{score['ci_upper']:.1f}%")
         rows.append(row)
@@ -133,6 +232,75 @@ class ScoreHandler(SimpleHTTPRequestHandler):
                 and (trial_dir / "manifest.json").exists()
             ):
                 yield trial_dir
+
+    @staticmethod
+    def _iter_started_trial_dirs(results_dir: Path):
+        """Yield trial-* directories, including currently incomplete trials."""
+        if not results_dir.exists():
+            return
+        for trial_dir in results_dir.rglob("trial-*"):
+            if trial_dir.is_dir():
+                yield trial_dir
+
+    @staticmethod
+    def _trial_parts(results_dir: Path, trial_dir: Path) -> dict | None:
+        from harness.path_utils import decode_model_path, decode_task_path
+
+        try:
+            task_dir = trial_dir.parent
+            suite_dir = task_dir.parent
+            adapter_dir = suite_dir.parent
+            model_dir = adapter_dir.parent
+            run_parent = model_dir.parent.relative_to(results_dir)
+        except (IndexError, ValueError):
+            return None
+
+        run_path = "" if str(run_parent) == "." else run_parent.as_posix()
+        return {
+            "trial_dir": trial_dir,
+            "task_dir": task_dir,
+            "suite_dir": suite_dir,
+            "adapter_dir": adapter_dir,
+            "model_dir": model_dir,
+            "run_path": run_path,
+            "model_id": decode_model_path(model_dir.name),
+            "adapter_id": adapter_dir.name,
+            "suite_id": suite_dir.name,
+            "task_id": decode_task_path(task_dir.name),
+        }
+
+    @staticmethod
+    def _trial_search_text(parts: dict) -> str:
+        return " ".join(
+            str(parts.get(key, ""))
+            for key in (
+                "run_path",
+                "model_id",
+                "adapter_id",
+                "suite_id",
+                "task_id",
+                "trial_dir",
+            )
+        )
+
+    @classmethod
+    def _trial_visible(
+        cls,
+        parts: dict,
+        *,
+        include_smoke: bool,
+        filters: tuple[str, ...],
+        excludes: tuple[str, ...],
+    ) -> bool:
+        run_path = str(parts.get("run_path", ""))
+        if not include_smoke and "smoke" in run_path.lower():
+            return False
+        search_text = cls._trial_search_text(parts)
+        if filters and not _matches_any(filters, search_text):
+            return False
+        if excludes and _matches_any(excludes, search_text):
+            return False
+        return True
 
     @staticmethod
     def _load_trial(trial_dir: Path) -> dict | None:
@@ -250,34 +418,215 @@ class ScoreHandler(SimpleHTTPRequestHandler):
 </body>
 </html>"""
 
-    def get_scores(self) -> list:
+    @staticmethod
+    def _expected_task_count(suite_id: str, observed: int) -> int:
+        """Return known suite size for default project results, else observed."""
+        try:
+            if not RESULTS_DIR.resolve().is_relative_to((PROJECT_ROOT / "results").resolve()):
+                return observed
+            from harness.suites import load_suite
+
+            suite = load_suite(suite_id)
+            task_ids = suite.get_task_ids(vendor_dir=PROJECT_ROOT / "vendor")
+            return max(observed, len(task_ids)) if task_ids else observed
+        except Exception:
+            return observed
+
+    @staticmethod
+    def _numeric_value(data: dict, *keys: str) -> float | None:
+        for key in keys:
+            value = data.get(key)
+            if value is None or isinstance(value, bool):
+                continue
+            try:
+                return float(value)
+            except (TypeError, ValueError):
+                continue
+        return None
+
+    @classmethod
+    def _token_usage_from_manifest(cls, manifest: dict) -> dict:
+        usage = manifest.get("token_usage") or manifest.get("usage") or {}
+        if not isinstance(usage, dict):
+            usage = {}
+
+        prompt_tokens = cls._numeric_value(
+            usage,
+            "prompt_tokens",
+            "input_tokens",
+            "tokens_in",
+            "prompt",
+        )
+        completion_tokens = cls._numeric_value(
+            usage,
+            "completion_tokens",
+            "output_tokens",
+            "tokens_out",
+            "completion",
+        )
+        total_tokens = cls._numeric_value(
+            usage,
+            "total_tokens",
+            "tokens_total",
+            "total",
+        )
+
+        prompt = int(prompt_tokens or 0)
+        completion = int(completion_tokens or 0)
+        total = int(total_tokens or 0)
+        if not total and (prompt or completion):
+            total = prompt + completion
+
+        return {
+            "prompt_tokens": prompt,
+            "completion_tokens": completion,
+            "total_tokens": total,
+        }
+
+    @classmethod
+    def _pricing_from_manifest(cls, manifest: dict) -> tuple[float | None, float | None]:
+        model = manifest.get("model", {})
+        if not isinstance(model, dict):
+            model = {}
+
+        pricing = (
+            model.get("cost")
+            or model.get("pricing")
+            or manifest.get("cost")
+            or manifest.get("pricing")
+            or {}
+        )
+        if not isinstance(pricing, dict):
+            return None, None
+
+        input_per_million = cls._numeric_value(
+            pricing,
+            "input",
+            "prompt",
+            "input_per_million",
+            "prompt_per_million",
+            "input_per_1m",
+            "prompt_per_1m",
+        )
+        output_per_million = cls._numeric_value(
+            pricing,
+            "output",
+            "completion",
+            "output_per_million",
+            "completion_per_million",
+            "output_per_1m",
+            "completion_per_1m",
+        )
+        return input_per_million, output_per_million
+
+    @classmethod
+    def _estimate_cost_usd(
+        cls,
+        manifest: dict,
+        prompt_tokens: int,
+        completion_tokens: int,
+    ) -> float | None:
+        usage = manifest.get("token_usage") or manifest.get("usage") or {}
+        if isinstance(usage, dict):
+            direct_cost = cls._numeric_value(
+                usage,
+                "cost_usd",
+                "total_cost_usd",
+                "cost",
+                "total_cost",
+            )
+            if direct_cost is not None:
+                return direct_cost
+
+        direct_cost = cls._numeric_value(
+            manifest,
+            "cost_usd",
+            "total_cost_usd",
+            "estimated_cost_usd",
+        )
+        if direct_cost is not None:
+            return direct_cost
+
+        input_per_million, output_per_million = cls._pricing_from_manifest(manifest)
+        if input_per_million is None and output_per_million is None:
+            return None
+        if prompt_tokens and input_per_million is None:
+            return None
+        if completion_tokens and output_per_million is None:
+            return None
+
+        return (
+            (prompt_tokens / 1_000_000) * (input_per_million or 0)
+            + (completion_tokens / 1_000_000) * (output_per_million or 0)
+        )
+
+    def get_scores(
+        self,
+        *,
+        include_smoke: bool | None = None,
+        filters: list[str] | tuple[str, ...] | None = None,
+        excludes: list[str] | tuple[str, ...] | None = None,
+    ) -> list:
         """Get aggregated scores from results directory."""
-        from harness.path_utils import decode_model_path, decode_task_path
+        include_smoke = DEFAULT_INCLUDE_SMOKE if include_smoke is None else include_smoke
+        filters = tuple(DEFAULT_FILTERS if filters is None else filters)
+        excludes = tuple(DEFAULT_EXCLUDES if excludes is None else excludes)
 
         grouped_trials = {}
-        for trial_dir in self._iter_trial_dirs(RESULTS_DIR):
+        grouped_times = {}
+        grouped_tokens = {}
+        started_tasks = {}
+
+        for trial_dir in self._iter_started_trial_dirs(RESULTS_DIR):
+            parts = self._trial_parts(RESULTS_DIR, trial_dir)
+            if parts is None:
+                continue
+            if not self._trial_visible(
+                parts,
+                include_smoke=include_smoke,
+                filters=filters,
+                excludes=excludes,
+            ):
+                continue
+            key = (parts["model_id"], parts["adapter_id"], parts["suite_id"])
+            started_tasks.setdefault(key, set()).add(parts["task_id"])
+
             trial = self._load_trial(trial_dir)
             if trial is None:
                 continue
-            try:
-                task_dir = trial_dir.parent
-                suite_dir = task_dir.parent
-                adapter_dir = suite_dir.parent
-                model_dir = adapter_dir.parent
-            except IndexError:
-                continue
-
-            model_id = decode_model_path(model_dir.name)
             manifest_model = trial["manifest"].get("model", {}).get("id")
-            if manifest_model and manifest_model != model_id:
+            if manifest_model and manifest_model != parts["model_id"]:
                 continue
-            adapter_id = adapter_dir.name
-            suite_id = suite_dir.name
-            task_id = decode_task_path(task_dir.name)
-            key = (model_id, adapter_id, suite_id)
-            grouped_trials.setdefault(key, {}).setdefault(task_id, []).append(
+            grouped_trials.setdefault(key, {}).setdefault(parts["task_id"], []).append(
                 trial["verdict"].get("passed", False)
             )
+            seconds = trial["manifest"].get("timing", {}).get("wall_clock_seconds")
+            if isinstance(seconds, (int, float)):
+                grouped_times.setdefault(key, {}).setdefault(parts["task_id"], []).append(
+                    float(seconds)
+                )
+            token_usage = self._token_usage_from_manifest(trial["manifest"])
+            token_totals = grouped_tokens.setdefault(
+                key,
+                {
+                    "prompt_tokens": 0,
+                    "completion_tokens": 0,
+                    "total_tokens": 0,
+                    "estimated_cost_usd": 0.0,
+                    "has_estimated_cost": False,
+                },
+            )
+            token_totals["prompt_tokens"] += token_usage["prompt_tokens"]
+            token_totals["completion_tokens"] += token_usage["completion_tokens"]
+            token_totals["total_tokens"] += token_usage["total_tokens"]
+            estimated_cost = self._estimate_cost_usd(
+                trial["manifest"],
+                token_usage["prompt_tokens"],
+                token_usage["completion_tokens"],
+            )
+            if estimated_cost is not None:
+                token_totals["estimated_cost_usd"] += estimated_cost
+                token_totals["has_estimated_cost"] = True
 
         scores = []
         for (model_id, adapter_id, suite_id), task_trials in sorted(
@@ -290,6 +639,51 @@ class ScoreHandler(SimpleHTTPRequestHandler):
                 if sum(1 for t in trials if t) > len(trials) / 2
             )
             pass_rate = (passed_tasks / total_tasks) * 100 if total_tasks > 0 else 0
+            task_times = [
+                sum(trial_times)
+                for trial_times in grouped_times.get(
+                    (model_id, adapter_id, suite_id), {}
+                ).values()
+                if trial_times
+            ]
+            total_wall_clock_seconds = sum(task_times)
+            mean_wall_clock_seconds = (
+                total_wall_clock_seconds / len(task_times) if task_times else 0
+            )
+            median_wall_clock_seconds = statistics.median(task_times) if task_times else 0
+            started_count = len(
+                started_tasks.get((model_id, adapter_id, suite_id), set())
+                | set(task_trials.keys())
+            )
+            expected_tasks = self._expected_task_count(suite_id, total_tasks)
+            remaining_tasks = max(0, expected_tasks - total_tasks)
+            incomplete_started_tasks = max(0, started_count - total_tasks)
+            if remaining_tasks == 0:
+                status = "complete"
+            elif incomplete_started_tasks:
+                status = "running"
+            else:
+                status = "partial"
+            estimated_remaining_seconds = (
+                mean_wall_clock_seconds * remaining_tasks
+                if remaining_tasks and mean_wall_clock_seconds
+                else 0
+            )
+            token_totals = grouped_tokens.get(
+                (model_id, adapter_id, suite_id),
+                {
+                    "prompt_tokens": 0,
+                    "completion_tokens": 0,
+                    "total_tokens": 0,
+                    "estimated_cost_usd": 0.0,
+                    "has_estimated_cost": False,
+                },
+            )
+            estimated_cost_usd = (
+                token_totals["estimated_cost_usd"]
+                if token_totals["has_estimated_cost"]
+                else None
+            )
 
             # Calculate 95% CI (Wilson score interval approximation) at task level
             if total_tasks > 0:
@@ -313,7 +707,21 @@ class ScoreHandler(SimpleHTTPRequestHandler):
                 "ci_lower": ci_lower,
                 "ci_upper": ci_upper,
                 "total_tasks": total_tasks,
+                "completed_tasks": total_tasks,
+                "expected_tasks": expected_tasks,
+                "remaining_tasks": remaining_tasks,
+                "started_tasks": started_count,
+                "incomplete_started_tasks": incomplete_started_tasks,
                 "passed_tasks": passed_tasks,
+                "status": status,
+                "total_wall_clock_seconds": total_wall_clock_seconds,
+                "mean_wall_clock_seconds": mean_wall_clock_seconds,
+                "median_wall_clock_seconds": median_wall_clock_seconds,
+                "estimated_remaining_seconds": estimated_remaining_seconds,
+                "prompt_tokens": token_totals["prompt_tokens"],
+                "completion_tokens": token_totals["completion_tokens"],
+                "total_tokens": token_totals["total_tokens"],
+                "estimated_cost_usd": estimated_cost_usd,
                 "method": "pass@k majority",
             })
 
@@ -404,7 +812,7 @@ def _start_server(host: str, port: int) -> None:
 
 def main(argv: list[str] | None = None) -> int:
     """Run the score viewer CLI."""
-    global RESULTS_DIR
+    global RESULTS_DIR, DEFAULT_INCLUDE_SMOKE, DEFAULT_FILTERS, DEFAULT_EXCLUDES
 
     common = argparse.ArgumentParser(add_help=False)
     common.add_argument(
@@ -412,6 +820,29 @@ def main(argv: list[str] | None = None) -> int:
         type=Path,
         default=argparse.SUPPRESS,
         help="Results directory to read (default: results)",
+    )
+    common.add_argument(
+        "--all",
+        dest="include_smoke",
+        action="store_true",
+        default=False,
+        help="Include smoke/probe runs (hidden by default)",
+    )
+    common.add_argument(
+        "--filter",
+        dest="filters",
+        action="append",
+        default=[],
+        metavar="PATTERN",
+        help="Only include trials whose run/model/adapter/suite/task text matches PATTERN",
+    )
+    common.add_argument(
+        "--exclude",
+        dest="excludes",
+        action="append",
+        default=[],
+        metavar="PATTERN",
+        help="Exclude trials whose run/model/adapter/suite/task text matches PATTERN",
     )
     parser = argparse.ArgumentParser(
         description="View coding-eval scores",
@@ -435,6 +866,12 @@ def main(argv: list[str] | None = None) -> int:
         action="store_true",
         help="Show Wilson 95% confidence intervals",
     )
+    table_parser.add_argument(
+        "-v",
+        "--verbose",
+        action="store_true",
+        help="Show status, runtime, average task time, and ETA",
+    )
 
     json_parser = subparsers.add_parser(
         "json",
@@ -453,6 +890,9 @@ def main(argv: list[str] | None = None) -> int:
 
     args = parser.parse_args(argv)
     RESULTS_DIR = getattr(args, "results_dir", RESULTS_DIR)
+    DEFAULT_INCLUDE_SMOKE = getattr(args, "include_smoke", False)
+    DEFAULT_FILTERS = tuple(getattr(args, "filters", []) or [])
+    DEFAULT_EXCLUDES = tuple(getattr(args, "excludes", []) or [])
 
     # Preserve the old direct-launch behavior: `python view-scores/server.py`
     # starts the web viewer. The root `./view` wrapper defaults to table mode.
@@ -462,18 +902,33 @@ def main(argv: list[str] | None = None) -> int:
 
     handler = _handler()
     if args.command == "table":
+        scores = handler.get_scores(
+            include_smoke=args.include_smoke,
+            filters=args.filters,
+            excludes=args.excludes,
+        )
         print(
             format_scores_terminal(
-                handler.get_scores(),
+                scores,
                 results_dir=RESULTS_DIR,
                 color=_color_enabled(args.color),
                 show_ci=args.show_ci,
+                verbose=args.verbose,
             )
         )
         return 0
     if args.command == "json":
         indent = 2 if args.pretty else None
-        print(json.dumps(handler.get_scores(), indent=indent))
+        print(
+            json.dumps(
+                handler.get_scores(
+                    include_smoke=args.include_smoke,
+                    filters=args.filters,
+                    excludes=args.excludes,
+                ),
+                indent=indent,
+            )
+        )
         return 0
     if args.command == "serve":
         _start_server(args.host, args.port)

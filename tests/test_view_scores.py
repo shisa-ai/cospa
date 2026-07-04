@@ -20,17 +20,22 @@ from harness.path_utils import encode_model_path, encode_task_path
 
 def _write_trial(trial_dir: Path, *, passed: bool, wall_clock=10.0, exit_code=0,
                  test_count=1, adapter_failed=False, task_id="python/hello",
-                 pending=False, model_id="nvidia/nemotron-3-ultra-550b-a55b"):
+                 pending=False, model_id="nvidia/nemotron-3-ultra-550b-a55b",
+                 token_usage=None, model_cost=None):
     """Write a manifest.json + verdict.json pair into a trial dir."""
     trial_dir.mkdir(parents=True, exist_ok=True)
     (trial_dir / "manifest.json").write_text(json.dumps({
-        "model": {"id": model_id,
-                  "provider": model_id.split("/")[0],
-                  "served_model": model_id},
+        "model": {
+            "id": model_id,
+            "provider": model_id.split("/")[0],
+            "served_model": model_id,
+            **({"cost": model_cost} if model_cost is not None else {}),
+        },
         "adapter": {"id": "PiVanillaAdapter", "version": "vanilla"},
         "suite": {"id": "AiderPolyglotSuite", "task_id": task_id},
         "trial": 1,
         "timing": {"wall_clock_seconds": wall_clock},
+        "token_usage": token_usage or {},
         "exit_code": exit_code,
     }, indent=2))
     (trial_dir / "verdict.json").write_text(json.dumps({
@@ -80,6 +85,33 @@ def _build_encoded_tree(results_dir: Path):
     _write_trial(base2 / "trial-2", passed=False, task_id=task_id2)
 
     return model_id, adapter, suite, task_id, task_id2
+
+
+def _write_single_row(
+    results_dir: Path,
+    *,
+    model_id="local/ornith-1.0-35b",
+    adapter="pi_vanilla",
+    suite="aider_polyglot",
+    task_id="python/hello",
+    passed=True,
+    wall_clock=12.0,
+):
+    base = (
+        results_dir
+        / encode_model_path(model_id)
+        / adapter
+        / suite
+        / encode_task_path(task_id)
+    )
+    _write_trial(
+        base / "trial-1",
+        passed=passed,
+        wall_clock=wall_clock,
+        task_id=task_id,
+        model_id=model_id,
+    )
+    return model_id, adapter, suite, task_id
 
 
 def _make_handler(results_dir: Path):
@@ -141,10 +173,10 @@ def test_get_scores_reads_encoded_tree():
 
 
 def test_get_scores_reads_named_run_wrapper_tree():
-    """Smoke runs may live under results/<run-label>/<encoded-model>/..."""
+    """Named runs may live under results/<run-label>/<encoded-model>/..."""
     with tempfile.TemporaryDirectory() as tmp:
         results_dir = Path(tmp) / "results"
-        wrapped_results = results_dir / "e2e-smoke-terminal-bench"
+        wrapped_results = results_dir / "ornith-high-terminal-bench"
         wrapped_results.mkdir(parents=True)
         model_id, adapter, suite, task_id, task_id2 = _build_encoded_tree(
             wrapped_results
@@ -163,6 +195,103 @@ def test_get_scores_reads_named_run_wrapper_tree():
     assert scores[0]["total_tasks"] == 2, scores
     assert "error" not in details, details
     assert {task["task_id"] for task in details["tasks"]} == {task_id, task_id2}
+
+
+def test_get_scores_hides_smoke_runs_by_default_and_all_restores_them():
+    """Default terminal view should focus on real runs, with --all for smoke."""
+    with tempfile.TemporaryDirectory() as tmp:
+        results_dir = Path(tmp) / "results"
+        _write_single_row(
+            results_dir / "e2e-smoke-terminal-bench",
+            adapter="pi_vanilla",
+            suite="terminal_bench",
+            task_id="hello-world",
+        )
+        _write_single_row(
+            results_dir / "runs" / "ornith-high-20260704",
+            adapter="pi_devstack",
+            suite="aider_polyglot",
+            task_id="python/hello",
+        )
+
+        h, _ = _make_handler(results_dir)
+        default_scores = h.get_scores()
+        all_scores = h.get_scores(include_smoke=True)
+
+    assert {row["adapter"] for row in default_scores} == {"pi_devstack"}
+    assert {row["adapter"] for row in all_scores} == {"pi_vanilla", "pi_devstack"}
+
+
+def test_get_scores_supports_filter_and_exclude_patterns():
+    """Pattern filters should operate over run/model/adapter/suite/task text."""
+    with tempfile.TemporaryDirectory() as tmp:
+        results_dir = Path(tmp) / "results"
+        _write_single_row(
+            results_dir / "runs" / "ornith-high-20260704",
+            adapter="pi_vanilla",
+            task_id="python/hello",
+        )
+        _write_single_row(
+            results_dir / "runs" / "ornith-high-20260704",
+            adapter="little_coder",
+            task_id="python/fizz",
+        )
+        _write_single_row(
+            results_dir / "runs" / "glm-default-20260704",
+            model_id="zai/glm-5.2",
+            adapter="pi_devstack",
+            task_id="python/hello",
+        )
+
+        h, _ = _make_handler(results_dir)
+        filtered = h.get_scores(filters=["little"])
+        excluded = h.get_scores(excludes=["vanilla|devstack"])
+        run_filtered = h.get_scores(filters=["ornith-high"], excludes=["vanilla"])
+
+    assert [row["adapter"] for row in filtered] == ["little_coder"]
+    assert [row["adapter"] for row in excluded] == ["little_coder"]
+    assert [row["adapter"] for row in run_filtered] == ["little_coder"]
+
+
+def test_get_scores_aggregates_token_usage_and_estimated_cost():
+    """Verbose rows should have token totals and best-effort USD cost."""
+    with tempfile.TemporaryDirectory() as tmp:
+        results_dir = Path(tmp) / "results"
+        model_id = "priced/model"
+        adapter = "pi_vanilla"
+        suite = "aider_polyglot"
+        task_id = "python/hello"
+        base = (
+            results_dir
+            / "runs"
+            / "priced-run"
+            / encode_model_path(model_id)
+            / adapter
+            / suite
+            / encode_task_path(task_id)
+        )
+        _write_trial(
+            base / "trial-1",
+            passed=True,
+            model_id=model_id,
+            task_id=task_id,
+            token_usage={
+                "prompt_tokens": 1_000_000,
+                "completion_tokens": 500_000,
+                "total_tokens": 1_500_000,
+            },
+            model_cost={"input": 1.0, "output": 2.0},
+        )
+
+        h, _ = _make_handler(results_dir)
+        scores = h.get_scores()
+
+    assert len(scores) == 1, scores
+    row = scores[0]
+    assert row["prompt_tokens"] == 1_000_000
+    assert row["completion_tokens"] == 500_000
+    assert row["total_tokens"] == 1_500_000
+    assert row["estimated_cost_usd"] == 2.0
 
 
 def test_get_scores_ignores_pending_verdicts():
@@ -199,7 +328,7 @@ def test_get_scores_ignores_pending_verdicts():
         _write_trial(passing_base / "trial-1", passed=True, model_id=model_id)
 
         h, _ = _make_handler(results_dir)
-        scores = h.get_scores()
+        scores = h.get_scores(include_smoke=True)
         details = h.get_task_details(encode_model_path(model_id), adapter, suite)
 
     assert len(scores) == 1, scores
@@ -343,6 +472,51 @@ def test_format_scores_terminal_uses_color_and_task_counts():
     assert "50.0%" in output
 
 
+def test_format_scores_terminal_verbose_includes_status_and_timing():
+    """Verbose table should surface runtime and ETA columns."""
+    import importlib.util
+
+    server_path = PROJECT_ROOT / "view-scores" / "server.py"
+    spec = importlib.util.spec_from_file_location("view_scores_server_verbose_test", server_path)
+    server_mod = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(server_mod)
+
+    output = server_mod.format_scores_terminal(
+        [
+            {
+                "model": "local/ornith-1.0-35b",
+                "adapter": "little_coder",
+                "suite": "aider_polyglot",
+                "pass_rate": 50.0,
+                "passed_tasks": 5,
+                "total_tasks": 10,
+                "completed_tasks": 10,
+                "expected_tasks": 20,
+                "status": "running",
+                "total_wall_clock_seconds": 600,
+                "mean_wall_clock_seconds": 60,
+                "prompt_tokens": 1000,
+                "completion_tokens": 500,
+                "total_tokens": 1500,
+                "estimated_cost_usd": 0.0123,
+                "estimated_remaining_seconds": 600,
+            }
+        ],
+        results_dir=Path("/tmp/results"),
+        verbose=True,
+    )
+
+    assert "Status" in output
+    assert "Runtime" in output
+    assert "Tok In" in output
+    assert "Tok Out" in output
+    assert "Cost" in output
+    assert "ETA" in output
+    assert "running" in output
+    assert "10m" in output
+    assert "$0.0123" in output
+
+
 def test_root_view_entrypoint_prints_terminal_scores():
     """./view should be the easy root-level way to inspect score rows."""
     with tempfile.TemporaryDirectory() as tmp:
@@ -366,6 +540,32 @@ def test_root_view_entrypoint_prints_terminal_scores():
     assert "\x1b[" in result.stdout
     assert model_id in result.stdout
     assert "50.0%" in result.stdout
+
+
+def test_root_view_entrypoint_supports_verbose_flag():
+    """./view -v should print the timing/status table variant."""
+    with tempfile.TemporaryDirectory() as tmp:
+        results_dir = Path(tmp) / "results"
+        results_dir.mkdir()
+        _build_encoded_tree(results_dir)
+
+        result = subprocess.run(
+            [
+                str(PROJECT_ROOT / "view"),
+                "--results-dir",
+                str(results_dir),
+                "--color",
+                "never",
+                "-v",
+            ],
+            capture_output=True,
+            text=True,
+        )
+
+    assert result.returncode == 0, result.stderr
+    assert "Status" in result.stdout
+    assert "Runtime" in result.stdout
+    assert "ETA" in result.stdout
 
 
 def test_view_cli_accepts_results_dir_before_subcommand():

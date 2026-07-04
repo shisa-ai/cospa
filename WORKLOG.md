@@ -102,3 +102,35 @@ Append-only development log for the `coding-eval` repository.
   they did not actually request.
 - Next: relaunch comparable cells one at a time with the same `--thinking`
   value and resume-enabled run id.
+
+## 2026-07-05 — add verbose viewer status, filters, tokens, and cost
+
+- Context: live Ornith runs need a quick terminal summary of completion
+  status, timing, remaining work, and resource usage without opening the web
+  UI or manually filtering smoke/probe artifacts.
+- Changes:
+  - `./view -v/--verbose` now shows status, completed/expected tasks,
+    runtime, average task time, input/output tokens, estimated USD cost, and
+    ETA.
+  - `./view` hides smoke/probe runs by default, with `--all` to include them.
+  - `--filter` and `--exclude` pattern matching operate over run, model,
+    adapter, suite, task, and trial path text for table, JSON, and server
+    defaults.
+  - Score rows aggregate `token_usage` from manifests and estimate cost from
+    manifest `model.cost`/`model.pricing` per-million-token prices when
+    available.
+- Evidence (RED -> GREEN):
+  - RED: token/cost focused viewer tests failed on missing `prompt_tokens`
+    and missing `Tok In` verbose column.
+  - GREEN: `mamba run -n coding-eval python -m pytest -q tests/test_view_scores.py`
+    = 18 passed.
+  - GREEN: `mamba run -n coding-eval python -m pytest -q` = 110 passed.
+  - GREEN: `bash tests/scripts/run_all.sh` = all shell tests passed
+    (`test_check_models`, `test_root_entrypoints`, `test_run_matrix`,
+    `test_setup`).
+- Decision: costs remain best-effort and render as unknown when manifests do
+  not carry direct cost or pricing metadata; token counts still aggregate when
+  present.
+- Next: consider recording provider pricing in runner manifests if we want
+  cost estimates for all adapters rather than only artifacts that already
+  include pricing metadata.

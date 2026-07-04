@@ -31,19 +31,23 @@ bash scripts/setup.sh
 bash scripts/check-models.sh
 
 # 3. Run a smoke test (5 problems, pi_vanilla, Aider Polyglot)
-mamba run -n coding-eval python harness/runner.py \
+./run \
   --suite aider_polyglot \
-  --adapter pi_vanilla \
-  --model local/ornith-1.0-35b \
+  --adapters pi_vanilla \
+  --models local/ornith-1.0-35b \
   --problems 5 \
   --k 1
 
-# 4. View results
-mamba run -n coding-eval python view-scores/server.py
+# 4. View scores in the terminal
+./view
+
+# Optional browser UI
+./view serve
 ```
 
-The viewer serves `http://localhost:8000` and reads the `results/` tree cold.
-It also finds named smoke-run wrappers such as
+`./view` prints a colored terminal table with `Score` and `Passed/Total`.
+`./view serve` starts the browser viewer at `http://localhost:8000`. Both read
+the `results/` tree cold and find named smoke-run wrappers such as
 `results/e2e-smoke-terminal-bench-20260704-1100/...`.
 
 By default, CLI runs write to an isolated run wrapper:
@@ -162,6 +166,22 @@ while each trial is executing. Non-interactive runs, background jobs, and log
 files stay clean; detailed adapter output is still written under each trial's
 `out/` directory.
 
+## Viewing Scores
+
+Use the root viewer first:
+
+```bash
+./view                    # colored terminal score table
+./view --show-ci          # add Wilson 95% CI when you need uncertainty bounds
+./view json --pretty      # machine-readable rows
+./view serve              # browser UI at http://localhost:8000
+```
+
+The default score is task-level pass@k majority. For tiny smoke runs, confidence
+intervals are deliberately not shown in the primary terminal/browser table
+because `1/1` and `5/5` runs produce wide bounds that obscure the useful
+operator signal.
+
 ## Parallel Runs
 
 `scripts/run-matrix.sh` runs matrix cells sequentially and passes one run id to
@@ -201,7 +221,7 @@ capacity, so start with low concurrency and watch provider rate limits.
 For a full matrix with a stable wrapper name:
 
 ```bash
-bash scripts/run-matrix.sh --run-id 20260704-smoke --problems 5 --k 1
+./run --run-id 20260704-smoke --problems 5 --k 1
 ```
 
 ## Reproducibility
@@ -218,8 +238,8 @@ model, adapter, sampling params, env hash, and timing in `manifest.json`.
 ## Current Verified State
 
 - Python tests: `mamba run -n coding-eval python -m pytest -q` reports
-  `94 passed`.
-- Shell harness: `bash tests/scripts/run_all.sh` reports `25` assertions
+  `98 passed`.
+- Shell harness: `bash tests/scripts/run_all.sh` reports `35` assertions
   passed.
 - Terminal-Bench Docker smoke: `local/ornith-1.0-35b` + `pi_vanilla` +
   `hello-world` completed through Harbor 0.16 with `verifier_result.rewards.reward: 1.0`.

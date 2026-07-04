@@ -1,0 +1,16 @@
+#!/usr/bin/env bash
+# Root convenience wrapper for the coding-eval score viewer.
+
+set -euo pipefail
+
+ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+
+if [[ $# -gt 0 && ( "$1" == "-h" || "$1" == "--help" ) ]]; then
+    exec python "$ROOT_DIR/view-scores/server.py" --help
+fi
+
+if [[ $# -gt 0 && ( "$1" == "table" || "$1" == "json" || "$1" == "serve" ) ]]; then
+    exec python "$ROOT_DIR/view-scores/server.py" "$@"
+fi
+
+exec python "$ROOT_DIR/view-scores/server.py" table "$@"

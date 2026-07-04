@@ -1,0 +1,29 @@
+#!/usr/bin/env bash
+# Root convenience wrapper for the coding-eval matrix runner.
+
+set -euo pipefail
+
+ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+
+usage() {
+    cat <<'EOF'
+Usage: ./run [scripts/run-matrix.sh options]
+
+Runs the coding-eval matrix through scripts/run-matrix.sh.
+
+Examples:
+  ./run --models local/ornith-1.0-35b --adapters pi_vanilla --problems 5 --k 1
+  ./run --suite terminal_bench --models local/ornith-1.0-35b --adapters pi_vanilla --problems 1 --k 1
+  ./run --run-id 20260704-smoke --problems 5 --k 1
+
+Underlying runner:
+  scripts/run-matrix.sh
+EOF
+}
+
+if [[ $# -eq 0 || ( "$1" == "-h" || "$1" == "--help" ) ]]; then
+    usage
+    exit 0
+fi
+
+exec bash "$ROOT_DIR/scripts/run-matrix.sh" "$@"

@@ -1080,3 +1080,18 @@ local/ornith-1.0-35b | pi_vanilla | aider_polyglot | 4/5 passed
 nvidia/nemotron-3-ultra-550b-a55b | pi_vanilla | aider_polyglot | 2/5 passed
 zai/glm-5.2 | pi_vanilla | aider_polyglot | 4/5 passed
 ```
+
+### Root run/view UX follow-up
+
+- Added root `./view` and `./run` entrypoints in the same style as multieval's
+  executable wrappers. `./view` defaults to a colored terminal score table;
+  `./view serve` starts the existing browser UI; `./view json --pretty` exposes
+  machine-readable rows; `./run` forwards to `scripts/run-matrix.sh` with
+  root-level help (`fixed (unit + shell tests)`).
+- The primary viewer now labels the headline metric as `Score` and shows
+  `Passed/Total`. Wilson CI remains available through `./view --show-ci` and
+  `/api/scores`, but it no longer dominates the default terminal/browser view
+  for tiny smoke runs (`fixed (unit test)`).
+- Validation for this UX pass: `mamba run -n coding-eval python -m pytest -q`
+  reports `98 passed`; `bash tests/scripts/run_all.sh` reports `35` shell
+  assertions passed; py-compile of `view-scores/server.py` passes.

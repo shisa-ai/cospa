@@ -7,6 +7,7 @@ shape called out in ORNITH-CODER-REVIEW.md findings #3, #13 and audit A).
 """
 
 import json
+import subprocess
 import sys
 import tempfile
 from pathlib import Path
@@ -251,6 +252,8 @@ def test_generate_html_renders_rows_without_keyerror():
     assert "<table>" in html
     assert "nvidia/nemotron-3-ultra-550b-a55b" in html
     assert "pi_vanilla" in html
+    assert "<th>Score</th>" in html
+    assert "<th>95% CI</th>" not in html
 
 
 def test_generate_html_escapes_result_metadata_and_quotes_detail_links():
@@ -315,3 +318,77 @@ def test_get_scores_empty_when_no_results():
     with tempfile.TemporaryDirectory() as tmp:
         h, _ = _make_handler(Path(tmp) / "does-not-exist")
         assert h.get_scores() == []
+
+
+def test_format_scores_terminal_uses_color_and_task_counts():
+    """Terminal score output should be readable without opening the web UI."""
+    with tempfile.TemporaryDirectory() as tmp:
+        results_dir = Path(tmp) / "results"
+        results_dir.mkdir()
+        model_id, adapter, suite, task_id, task_id2 = _build_encoded_tree(results_dir)
+
+        h, server_mod = _make_handler(results_dir)
+        scores = h.get_scores()
+        output = server_mod.format_scores_terminal(
+            scores,
+            results_dir=results_dir,
+            color=True,
+        )
+
+    assert "\x1b[" in output
+    assert model_id in output
+    assert adapter in output
+    assert suite in output
+    assert "1/2" in output
+    assert "50.0%" in output
+
+
+def test_root_view_entrypoint_prints_terminal_scores():
+    """./view should be the easy root-level way to inspect score rows."""
+    with tempfile.TemporaryDirectory() as tmp:
+        results_dir = Path(tmp) / "results"
+        results_dir.mkdir()
+        model_id, adapter, suite, task_id, task_id2 = _build_encoded_tree(results_dir)
+
+        result = subprocess.run(
+            [
+                str(PROJECT_ROOT / "view"),
+                "--results-dir",
+                str(results_dir),
+                "--color",
+                "always",
+            ],
+            capture_output=True,
+            text=True,
+        )
+
+    assert result.returncode == 0, result.stderr
+    assert "\x1b[" in result.stdout
+    assert model_id in result.stdout
+    assert "50.0%" in result.stdout
+
+
+def test_view_cli_accepts_results_dir_before_subcommand():
+    """--results-dir should work in normal argparse position before command."""
+    with tempfile.TemporaryDirectory() as tmp:
+        results_dir = Path(tmp) / "results"
+        results_dir.mkdir()
+        model_id, adapter, suite, task_id, task_id2 = _build_encoded_tree(results_dir)
+
+        result = subprocess.run(
+            [
+                sys.executable,
+                str(PROJECT_ROOT / "view-scores" / "server.py"),
+                "--results-dir",
+                str(results_dir),
+                "table",
+                "--color",
+                "never",
+            ],
+            capture_output=True,
+            text=True,
+        )
+
+    assert result.returncode == 0, result.stderr
+    assert model_id in result.stdout
+    assert "50.0%" in result.stdout

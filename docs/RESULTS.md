@@ -91,10 +91,10 @@ params. A run is "comparable" to another only if these match.
 ### Smoke test (5 problems, 1 model, 1 adapter)
 
 ```bash
-mamba run -n coding-eval python harness/runner.py \
+./run \
   --suite aider_polyglot \
-  --adapter pi_vanilla \
-  --model nvidia/nemotron-3-ultra-550b-a55b \
+  --adapters pi_vanilla \
+  --models nvidia/nemotron-3-ultra-550b-a55b \
   --problems 5 \
   --k 1
 ```
@@ -102,9 +102,9 @@ mamba run -n coding-eval python harness/runner.py \
 ### Full matrix
 
 ```bash
-bash scripts/run-matrix.sh \
-  --models nvidia/nemotron-3-ultra-550b-a55b aiand/qwen-3.6-27b \
-  --adapters pi_vanilla pi_devstack little_coder \
+./run \
+  --models nvidia/nemotron-3-ultra-550b-a55b,aiand/qwen/qwen3.6-27b \
+  --adapters pi_vanilla,pi_devstack,little_coder \
   --k 3 \
   --problems 225
 ```
@@ -112,8 +112,9 @@ bash scripts/run-matrix.sh \
 ### View scores
 
 ```bash
-python view-scores/server.py
-# Open http://localhost:8000
+./view
+./view --show-ci
+./view serve
 ```
 
 ## Next Steps

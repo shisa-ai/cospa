@@ -153,7 +153,7 @@ def test_runner_main_uses_default_model_run_results_wrapper():
     )
     captured_results = []
 
-    def fake_run_trial(suite, adapter, model, task_id, trial_k, results_dir, vendor_dir):
+    def fake_run_trial(suite, adapter, model, task_id, trial_k, results_dir, vendor_dir, thinking=None):
         captured_results.append(Path(results_dir))
         return {"timing": {"wall_clock_seconds": 0}}, {"passed": True}
 

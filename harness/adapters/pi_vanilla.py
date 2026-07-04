@@ -48,6 +48,12 @@ class PiVanillaAdapter:
             "--model", task_data.get("model_id", "nvidia/nemotron-3-ultra-550b-a55b"),
         ]
 
+        # Optional thinking/effort level. When set, forward as `pi --thinking <level>`.
+        # When unset, omit the flag entirely so pi/model defaults apply.
+        thinking = task_data.get("thinking")
+        if thinking:
+            cmd.extend(["--thinking", str(thinking)])
+
         # Run pi in the workdir, passing the prompt
         try:
             with open(log_file, "w") as log_f:

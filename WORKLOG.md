@@ -47,3 +47,30 @@ Append-only development log for the `coding-eval` repository.
 - Scope: logs `coding-eval` dev only; excludes routine `results/`
   rebaselining and `vendor/` churn.
 - Next: first real entry will be the next validated logical unit.
+
+## 2026-07-04 — add resume-skip and configurable --thinking/effort to runner
+
+- Context: full-20260704 eval (4 live models x pi_vanilla/pi_devstack x 225
+  aider_polyglot) was killed mid-run by a tmux-pane death (OOM/SIGHUP);
+  rerunning would have wasted ~340 already-completed trials. Also, models
+  ran at pi's per-model default thinking level, making cross-model and
+  cross-effort comparisons uncontrolled.
+- Changes:
+  - `harness/runner.py`: `run_trial` now skips execution and returns the
+    prior `(manifest, verdict)` when the trial dir already contains
+    `verdict.json` (corrupt-file safe: falls through to re-run).
+  - `harness/runner.py`: new `--thinking {off,minimal,low,medium,high,xhigh}`
+    CLI flag, threaded into `task_data["thinking"]` and recorded as
+    `manifest["sampling"]["thinking"]` ("default" when unset).
+  - `harness/adapters/pi_vanilla.py`: emits `pi --thinking <level>` when
+    `task_data["thinking"]` is set; omits the flag when unset.
+- Evidence (RED -> GREEN):
+  - `tests/test_resume_and_thinking.py` (new): 4 tests, all passing.
+    RED confirmed before impl on all 3 behavioral tests; GREEN after.
+  - Full suite: `mamba run -n coding-eval python -m pytest -q` = 104 passed.
+  - Updated `tests/test_cli_paths.py` fake_run_trial signature to match.
+- Decision: resume check lives in `run_trial` (not just `main()`) so direct
+  callers get the same idempotency. `getattr(args, "thinking", None)` used
+  in `main()` so hand-built Namespaces in tests don't need every flag.
+- Next: relaunch ornith aider_polyglot/pi_vanilla under `nohup` (tmux-safe)
+  to get a clean, complete signal at a pinned effort level.

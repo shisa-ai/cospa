@@ -69,6 +69,16 @@ def parse_args():
         default=False,
         help="Skip the pre-run model reachability check (use for offline/smoke runs)",
     )
+    parser.add_argument(
+        "--thinking",
+        default=None,
+        choices=["off", "minimal", "low", "medium", "high", "xhigh"],
+        help=(
+            "Thinking/effort level passed through to the adapter "
+            "(pi --thinking). When unset, the adapter invokes pi with no "
+            "--thinking flag and the model/provider default applies."
+        ),
+    )
     return parser.parse_args()
 
 
@@ -266,6 +276,10 @@ def _manifest_sampling(task_data: dict) -> dict:
         "max_tokens": task_data.get("max_tokens")
         or os.environ.get("CODING_EVAL_MAX_TOKENS")
         or "server-default",
+        # Thinking/effort level. "default" = no --thinking flag was passed
+        # (model/provider default applies). Explicit levels come through as
+        # off/minimal/low/medium/high/xhigh.
+        "thinking": task_data.get("thinking") or "default",
     }
 
 
@@ -370,7 +384,7 @@ def check_model_reachable(model_id: str, timeout: float = 10.0) -> bool:
         return False
 
 
-def run_trial(suite, adapter, model_id, task_id, trial_k, results_dir, vendor_dir):
+def run_trial(suite, adapter, model_id, task_id, trial_k, results_dir, vendor_dir, thinking=None):
     """Run a single trial of a single task."""
     from harness.path_utils import encode_model_path, encode_task_path
 
@@ -383,6 +397,25 @@ def run_trial(suite, adapter, model_id, task_id, trial_k, results_dir, vendor_di
     encoded_model = encode_model_path(model_id)
     encoded_task = encode_task_path(task_id)
     trial_dir = Path(results_dir) / encoded_model / adapter.name / suite.name / encoded_task / f"trial-{trial_k}"
+
+    # Resume: if this trial already has a verdict, do not re-run it.
+    # Re-running a killed eval should fill gaps, not redo completed work.
+    verdict_path = trial_dir / "verdict.json"
+    if verdict_path.exists():
+        try:
+            with open(verdict_path) as vf:
+                prior_verdict = json.load(vf)
+            prior_manifest_path = trial_dir / "manifest.json"
+            prior_manifest = None
+            if prior_manifest_path.exists():
+                with open(prior_manifest_path) as mf:
+                    prior_manifest = json.load(mf)
+            print(f"[resume] skip {model_id}/{adapter.name}/{suite.name}/{task_id}/trial-{trial_k} (verdict exists: passed={prior_verdict.get('passed')})")
+            return prior_manifest, prior_verdict
+        except (json.JSONDecodeError, OSError):
+            # Corrupt verdict/manifest — fall through and re-run.
+            print(f"[resume] verdict exists but unreadable for {task_id}; re-running")
+
     trial_dir.mkdir(parents=True, exist_ok=True)
 
     # Create workdir for this trial
@@ -394,6 +427,9 @@ def run_trial(suite, adapter, model_id, task_id, trial_k, results_dir, vendor_di
 
     # Override model_id with the actual model from args
     task_data["model_id"] = model_id
+    # Propagate thinking/effort level so adapters can pass --thinking to pi.
+    # None means "use the model/provider default" (no --thinking flag).
+    task_data["thinking"] = thinking
 
     # Parse provider from model_id (e.g., "nvidia/nemotron-..." -> provider="nvidia")
     provider = model_id.split("/")[0] if "/" in model_id else "unknown"
@@ -633,7 +669,8 @@ def main():
                 manifest, verdict = run_with_tty_updates(
                     lambda: run_trial(
                         suite, adapter, args.model, task_id, k,
-                        args.results_dir, args.vendor_dir
+                        args.results_dir, args.vendor_dir,
+                        thinking=getattr(args, "thinking", None),
                     ),
                     trial_label,
                 )

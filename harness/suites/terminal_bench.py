@@ -127,6 +127,31 @@ class TerminalBenchSuite:
         if existing:
             parts.append(existing)
         env["PYTHONPATH"] = os.pathsep.join(parts)
+
+        models_json = Path.home() / ".pi" / "agent" / "models.json"
+        if models_json.exists():
+            try:
+                with open(models_json) as f:
+                    data = json.load(f)
+                providers = data.get("providers", data) if isinstance(data, dict) else {}
+                local_cfg = providers.get("local", {}) if isinstance(providers, dict) else {}
+                if isinstance(local_cfg, dict):
+                    base_url = (
+                        os.environ.get("CODING_EVAL_LOCAL_BASE_URL")
+                        or local_cfg.get("baseUrl")
+                        or local_cfg.get("base_url")
+                    )
+                    api_key = (
+                        os.environ.get("CODING_EVAL_LOCAL_API_KEY")
+                        or local_cfg.get("apiKey")
+                        or local_cfg.get("api_key")
+                    )
+                    if base_url:
+                        env["CODING_EVAL_LOCAL_BASE_URL"] = base_url
+                    if api_key:
+                        env["CODING_EVAL_LOCAL_API_KEY"] = api_key
+            except Exception:
+                pass
         return env
 
     def get_task_ids(self, vendor_dir: Path = None) -> List[str]:
@@ -218,6 +243,120 @@ class TerminalBenchSuite:
             "model_id": "nvidia/nemotron-3-ultra-550b-a55b",
         }
 
+    @staticmethod
+    def _path_mtime(path: Path) -> float:
+        try:
+            return path.stat().st_mtime
+        except OSError:
+            return 0.0
+
+    @staticmethod
+    def _read_json(path: Path) -> Dict[str, Any] | None:
+        try:
+            with open(path) as f:
+                data = json.load(f)
+            return data if isinstance(data, dict) else None
+        except Exception:
+            return None
+
+    @staticmethod
+    def _numeric_harbor_rewards(verifier_result: Any) -> Dict[str, float]:
+        if not isinstance(verifier_result, dict):
+            return {}
+
+        raw_rewards = verifier_result.get("rewards")
+        if isinstance(raw_rewards, dict):
+            return {
+                str(key): float(value)
+                for key, value in raw_rewards.items()
+                if isinstance(value, (int, float))
+            }
+
+        for key in ("reward", "score"):
+            value = verifier_result.get(key)
+            if isinstance(value, (int, float)):
+                return {key: float(value)}
+        return {}
+
+    def _verdict_from_harbor_trial_result(
+        self,
+        result_data: Dict[str, Any],
+    ) -> Dict[str, Any] | None:
+        exception_info = result_data.get("exception_info")
+        if exception_info:
+            return {
+                "passed": False,
+                "test_count": 0,
+                "grader_output": json.dumps(result_data, indent=2),
+                "exit_code": -1,
+            }
+
+        verifier_result = result_data.get("verifier_result")
+        rewards = self._numeric_harbor_rewards(verifier_result)
+        if rewards:
+            return {
+                "passed": any(value > 0 for value in rewards.values()),
+                "test_count": len(rewards),
+                "grader_output": json.dumps(result_data, indent=2),
+                "exit_code": 0,
+            }
+
+        if verifier_result is not None:
+            return {
+                "passed": False,
+                "test_count": 0,
+                "grader_output": json.dumps(result_data, indent=2),
+                "exit_code": 0,
+            }
+        return None
+
+    def _verdict_from_harbor_job_result(
+        self,
+        result_data: Dict[str, Any],
+    ) -> Dict[str, Any] | None:
+        stats = result_data.get("stats")
+        if not isinstance(stats, dict):
+            return None
+        if stats.get("n_pending_trials", 0) or not result_data.get("finished_at"):
+            return None
+
+        evals = stats.get("evals")
+        means: list[float] = []
+        trial_count = (
+            stats.get("n_completed_trials")
+            or result_data.get("n_total_trials")
+            or 0
+        )
+        has_errors = stats.get("n_errored_trials", 0) > 0
+        if isinstance(evals, dict):
+            for eval_result in evals.values():
+                if isinstance(eval_result, dict):
+                    trial_count = max(trial_count, eval_result.get("n_trials") or 0)
+                    metrics = eval_result.get("metrics")
+                    if isinstance(metrics, list):
+                        for metric in metrics:
+                            if isinstance(metric, dict):
+                                mean = metric.get("mean")
+                                if isinstance(mean, (int, float)):
+                                    means.append(float(mean))
+
+        if means:
+            return {
+                "passed": any(mean > 0 for mean in means),
+                "test_count": int(trial_count) if trial_count else len(means),
+                "grader_output": json.dumps(result_data, indent=2),
+                "exit_code": -1 if has_errors else 0,
+            }
+
+        if has_errors:
+            return {
+                "passed": False,
+                "test_count": int(trial_count) if trial_count else 0,
+                "grader_output": json.dumps(result_data, indent=2),
+                "exit_code": -1,
+            }
+        return None
+
     def verify(self, task_data: Dict[str, Any], workdir: Path) -> Dict[str, Any]:
         """
         Verify the solution by checking Harbor output.
@@ -225,30 +364,58 @@ class TerminalBenchSuite:
         For Terminal-Bench, verification is handled by Harbor's scoring.
         This method checks if Harbor has produced a score for the task.
         """
-        # Check if there's a Harbor output directory for this task
-        # Harbor stores results in jobs/<job_id>/trials/<trial_id>/
+        # Check if there's a Harbor output directory for this task. Older
+        # Terminal-Bench integrations wrote jobs/<job>/trials/<trial>/score.json;
+        # Harbor 0.16 writes trial results to jobs/<job>/<trial>/result.json.
         harbor_jobs = workdir.parent / "jobs"
         if harbor_jobs.exists():
-            # Look for recent job output
-            for job_dir in sorted(harbor_jobs.iterdir(), reverse=True):
-                if job_dir.is_dir():
-                    trials_dir = job_dir / "trials"
-                    if trials_dir.exists():
-                        for trial_dir in trials_dir.iterdir():
-                            if trial_dir.is_dir():
-                                score_file = trial_dir / "score.json"
-                                if score_file.exists():
-                                    try:
-                                        with open(score_file) as f:
-                                            score_data = json.load(f)
-                                        return {
-                                            "passed": score_data.get("score", 0) > 0,
-                                            "test_count": score_data.get("total_tests", 0),
-                                            "grader_output": json.dumps(score_data, indent=2),
-                                            "exit_code": 0,
-                                        }
-                                    except Exception:
-                                        pass
+            job_dirs = sorted(
+                (
+                    path
+                    for path in harbor_jobs.iterdir()
+                    if path.is_dir() and not path.name.startswith("_local_tasks_")
+                ),
+                key=self._path_mtime,
+                reverse=True,
+            )
+            for job_dir in job_dirs:
+                result_files = sorted(
+                    (
+                        path
+                        for path in job_dir.rglob("result.json")
+                        if path != job_dir / "result.json"
+                    ),
+                    key=self._path_mtime,
+                    reverse=True,
+                )
+                for result_file in result_files:
+                    result_data = self._read_json(result_file)
+                    if result_data is None:
+                        continue
+                    verdict = self._verdict_from_harbor_trial_result(result_data)
+                    if verdict is not None:
+                        return verdict
+
+                for score_file in sorted(
+                    job_dir.rglob("score.json"),
+                    key=self._path_mtime,
+                    reverse=True,
+                ):
+                    score_data = self._read_json(score_file)
+                    if score_data is None:
+                        continue
+                    return {
+                        "passed": score_data.get("score", 0) > 0,
+                        "test_count": score_data.get("total_tests", 0),
+                        "grader_output": json.dumps(score_data, indent=2),
+                        "exit_code": 0,
+                    }
+
+                job_result = self._read_json(job_dir / "result.json")
+                if job_result is not None:
+                    verdict = self._verdict_from_harbor_job_result(job_result)
+                    if verdict is not None:
+                        return verdict
 
         # If no Harbor output, return a pending status
         return {
@@ -285,16 +452,46 @@ class TerminalBenchSuite:
           -t, --task         run a single task from the registry
         """
         agent = self.AGENT_MAP.get(adapter_name, "pi")
+        workdir = Path(workdir).resolve()
+        jobs_dir = Path(jobs_dir).resolve()
+        jobs_dir.mkdir(parents=True, exist_ok=True)
 
-        # Resolve the registry so Harbor can pick up the task definition.
-        # The head version's commit_hash/branch identify the dataset.
+        # Prefer the materialized local task when vendored data is present.
+        # This keeps smoke/regression runs independent of Harbor's remote task
+        # registry and exercises the exact dataset checked out under vendor/.
         registry_path = None
         task_ref = None
+        local_task_path = None
         if vendor_dir is not None:
-            vendor_dir = Path(vendor_dir)
+            vendor_dir = Path(vendor_dir).resolve()
+            original_task = vendor_dir / "terminal-bench" / "original-tasks" / task_id
+            if original_task.exists():
+                local_task_path = jobs_dir / f"_local_tasks_{time.time_ns()}"
+                migrate_cmd = [
+                    "harbor",
+                    "task",
+                    "migrate",
+                    "--input",
+                    str(original_task.resolve()),
+                    "--output",
+                    str(local_task_path),
+                ]
+                migrate_result = subprocess.run(
+                    migrate_cmd,
+                    capture_output=True,
+                    text=True,
+                    timeout=300,
+                    env=self._harbor_env(),
+                )
+                if migrate_result.returncode != 0:
+                    return {
+                        "returncode": migrate_result.returncode,
+                        "stdout": migrate_result.stdout,
+                        "stderr": migrate_result.stderr,
+                    }
             reg = vendor_dir / "terminal-bench" / "registry.json"
-            if reg.exists():
-                registry_path = reg
+            if reg.exists() and local_task_path is None:
+                registry_path = reg.resolve()
                 task_ref = f"terminal-bench-core/{task_id}"
 
         cmd = [
@@ -305,7 +502,9 @@ class TerminalBenchSuite:
             "--jobs-dir", str(jobs_dir),
             "--yes",
         ]
-        if registry_path is not None:
+        if local_task_path is not None:
+            cmd += ["--path", str(local_task_path)]
+        elif registry_path is not None:
             cmd += ["--registry-path", str(registry_path), "--task", task_ref]
         else:
             # Fallback: point Harbor at the task directory directly.

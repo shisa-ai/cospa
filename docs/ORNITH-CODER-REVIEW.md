@@ -853,10 +853,9 @@ required fixes are:
 ## Fourth Follow-up Audit (remaining-issues RED/GREEN fix pass)
 
 The remaining code-level blockers from the third audit have now been fixed with
-RED/GREEN tests. The only item still not fully closed is a live
-Docker-backed Terminal-Bench smoke; Docker is not accessible in this
-environment, so that remains an environment-gated verification step rather
-than an unaddressed harness bug.
+RED/GREEN tests. The live Docker-backed Terminal-Bench smoke that was still
+environment-gated in this pass is now closed in the follow-up verification
+below.
 
 ### Verification Run
 
@@ -901,7 +900,7 @@ Observed:
 | B. Terminal-Bench `k` semantics | Fixed. The outer runner owns repeated trials; each Terminal-Bench trial calls Harbor with `n_attempts=1`. |
 | C. Aider Polyglot Go scoring | Fixed. `_count_tests()` now counts normal `go test -v` `--- PASS:` lines. |
 | D. Aider Polyglot not runnable locally | Fixed for this checkout. `vendor/polyglot-benchmark` is present locally and discovery returns all 225 tasks. Setup already clones this dataset and fails loudly if it cannot. |
-| E. Live Terminal-Bench execution | Still environment-gated. Harbor CLI wiring is tested and command-shaped correctly, but Docker access here is denied, so a real Harbor score-ingestion smoke still needs a Docker-enabled host. |
+| E. Live Terminal-Bench execution | Fixed (end-to-end). A Docker-backed Harbor 0.16 `hello-world` run completed with `exit_code: 0` and `verifier_result.rewards.reward: 1.0`; see the follow-up verification below. |
 | F. Manifest metadata weakness | Improved. Sampling fields now record explicit `server-default` markers instead of nulls; `tool_call_parser` records `server-config-unobserved` unless overridden; `served_model` can be set through `CODING_EVAL_SERVED_MODEL`; Terminal-Bench `head` resolves to the local git commit. |
 
 ### New Coverage
@@ -917,11 +916,10 @@ Observed:
 
 ### Remaining Operational Smoke
 
-Before claiming Terminal-Bench is end-to-end verified, run a Docker-enabled
-smoke on a machine that can access `/var/run/docker.sock`, with one reachable
-model, one custom Harbor agent, and one task such as `hello-world`. The code
-path is now wired and tested at the command boundary, but this environment
-cannot validate Docker execution or Harbor score ingestion.
+Resolved in the follow-up verification below (`fixed (end-to-end)`). The
+Terminal-Bench path now has a Docker-backed Harbor smoke with a real custom
+agent, reachable local model, vendored task migration, and score ingestion into
+`verdict.json`.
 
 ---
 
@@ -955,3 +953,34 @@ Verification:
 mamba run -n coding-eval python -m pytest -q  # 81 passed
 bash tests/scripts/run_all.sh                 # 18 assertions passed
 ```
+
+### Terminal-Bench Docker smoke closure
+
+The remaining Terminal-Bench operational smoke is now verified end-to-end.
+Because the current login shell had not picked up the new Docker supplementary
+group, the run used `sg docker`; a new login shell should be able to run Docker
+directly.
+
+Command shape:
+
+```bash
+CODING_EVAL_LOCAL_BASE_URL=http://172.17.0.1:18989/v1 sg docker -c \
+  'mamba run -n coding-eval python -c "from pathlib import Path; from harness.adapters import load_adapter; from harness.runner import run_trial; from harness.suites.terminal_bench import TerminalBenchSuite; results=Path(\"results/e2e-smoke-terminal-bench-20260704-1100\"); manifest, verdict = run_trial(TerminalBenchSuite(), load_adapter(\"pi_vanilla\"), \"local/ornith-1.0-35b\", \"hello-world\", 1, results, Path(\"vendor\")); print(manifest.get(\"exit_code\")); print(verdict)"'
+```
+
+Observed:
+
+- Docker access through `sg docker` works, and a container can reach the local
+  OpenAI-compatible relay at `http://172.17.0.1:18989/v1`.
+- Harbor 0.16 completed `hello-world` with
+  `MANIFEST_EXIT 0`, `MANIFEST_ERROR None`, and
+  `VERDICT {'passed': True, 'test_count': 1, 'exit_code': 0}`.
+- Harbor wrote the trial result at
+  `results/e2e-smoke-terminal-bench-20260704-1100/local%2Fornith-1.0-35b/pi_vanilla/terminal_bench/hello-world/trial-1/jobs/2026-07-04__10-42-33/hello-world__sYWnS8Z/result.json`
+  with `verifier_result.rewards.reward: 1.0`.
+- `TerminalBenchSuite.verify()` now ingests Harbor 0.16
+  `jobs/<job>/<trial>/result.json` files, while preserving the older
+  `score.json` fallback (`fixed (unit test + end-to-end)`).
+- Follow-up validation for this closure: `mamba run -n coding-eval python -m
+  pytest -q` reports `83 passed`, and `bash tests/scripts/run_all.sh` reports
+  `18` shell assertions passed.

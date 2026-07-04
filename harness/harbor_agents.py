@@ -12,26 +12,35 @@ import os
 import shlex
 import sys
 from pathlib import Path
+from typing import Any
 
 
 try:
-    from terminal_bench.agents.installed_agents.abstract_installed_agent import (
-        AbstractInstalledAgent,
-    )
-    from terminal_bench.terminal.models import TerminalCommand
+    from harbor.agents.installed.base import BaseInstalledAgent
+    from harbor.environments.base import BaseEnvironment
+    from harbor.models.agent.context import AgentContext
+
+    _HARBOR_NATIVE = True
 except ModuleNotFoundError:
-    # Unit tests run in the coding-eval mamba env, which does not install the
-    # terminal_bench package. Use the vendored checkout for importability there;
-    # the Harbor subprocess will normally resolve terminal_bench from Harbor's
-    # own environment.
-    PROJECT_ROOT = Path(__file__).resolve().parent.parent
-    vendored_tb = PROJECT_ROOT / "vendor" / "terminal-bench"
-    if vendored_tb.exists():
-        sys.path.insert(0, str(vendored_tb))
-    from terminal_bench.agents.installed_agents.abstract_installed_agent import (
-        AbstractInstalledAgent,
-    )
-    from terminal_bench.terminal.models import TerminalCommand
+    _HARBOR_NATIVE = False
+
+if not _HARBOR_NATIVE:
+    try:
+        from terminal_bench.agents.installed_agents.abstract_installed_agent import (
+            AbstractInstalledAgent,
+        )
+        from terminal_bench.terminal.models import TerminalCommand
+    except ModuleNotFoundError:
+        # Unit tests run in the coding-eval mamba env, which does not install the
+        # terminal_bench package. Use the vendored checkout for importability there.
+        PROJECT_ROOT = Path(__file__).resolve().parent.parent
+        vendored_tb = PROJECT_ROOT / "vendor" / "terminal-bench"
+        if vendored_tb.exists():
+            sys.path.insert(0, str(vendored_tb))
+        from terminal_bench.agents.installed_agents.abstract_installed_agent import (
+            AbstractInstalledAgent,
+        )
+        from terminal_bench.terminal.models import TerminalCommand
 
 
 _PROVIDER_ENV_KEYS = (
@@ -77,60 +86,215 @@ _CONTAINER_BENCH_SKILLS = (
 )
 
 
-class _BasePiCliHarborAgent(AbstractInstalledAgent):
-    cli_command = "pi"
-    npm_package = "@earendil-works/pi-coding-agent"
-    extra_args: tuple[str, ...] = ()
-    include_bench_skills = False
-    _agent_name = "coding-eval-pi"
+if _HARBOR_NATIVE:
 
-    @staticmethod
-    def name() -> str:
-        return _BasePiCliHarborAgent._agent_name
+    class _BasePiCliHarborAgent(BaseInstalledAgent):
+        cli_command = "pi"
+        npm_package = "@earendil-works/pi-coding-agent"
+        extra_args: tuple[str, ...] = ()
+        include_bench_skills = False
+        _agent_name = "coding-eval-pi"
+        _output_filename = "coding-eval-agent.txt"
 
-    def __init__(self, model_name: str, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        self._model_name = model_name
-        self._version = kwargs.get("version", "latest")
+        @staticmethod
+        def name() -> str:
+            return _BasePiCliHarborAgent._agent_name
 
-    @property
-    def _env(self) -> dict[str, str]:
-        return {
-            key: value
-            for key in _PROVIDER_ENV_KEYS
-            if (value := os.environ.get(key))
+        def _provider_env(self) -> dict[str, str]:
+            return {
+                key: value
+                for key in (
+                    *_PROVIDER_ENV_KEYS,
+                    "CODING_EVAL_LOCAL_BASE_URL",
+                    "CODING_EVAL_LOCAL_API_KEY",
+                )
+                if (value := os.environ.get(key))
+            }
+
+        async def _write_local_pi_config(self, environment: BaseEnvironment) -> None:
+            env = self._provider_env()
+            if not env.get("CODING_EVAL_LOCAL_BASE_URL"):
+                return
+
+            command = r"""
+mkdir -p "$HOME/.pi/agent"
+. "$HOME/.nvm/nvm.sh"
+node <<'NODE'
+const fs = require('fs');
+const os = require('os');
+const path = require('path');
+const dir = path.join(os.homedir(), '.pi', 'agent');
+const cfg = {
+  providers: {
+    local: {
+      baseUrl: process.env.CODING_EVAL_LOCAL_BASE_URL,
+      apiKey: process.env.CODING_EVAL_LOCAL_API_KEY || 'EMPTY',
+      api: 'openai-completions',
+      models: [
+        {
+          id: 'ornith-1.0-35b',
+          name: 'Ornith 1.0 35B',
+          reasoning: true,
+          input: ['text'],
+          contextWindow: 262144,
+          maxTokens: 81920,
+          cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0 }
+        },
+        {
+          id: 'Ornith-1.0-35B',
+          name: 'Ornith 1.0 35B',
+          reasoning: true,
+          input: ['text'],
+          contextWindow: 262144,
+          maxTokens: 81920,
+          cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0 }
         }
+      ]
+    }
+  }
+};
+fs.mkdirSync(dir, { recursive: true });
+fs.writeFileSync(path.join(dir, 'models.json'), JSON.stringify(cfg, null, 2));
+NODE
+"""
+            await self.exec_as_agent(environment, command=command, env=env)
 
-    @property
-    def _install_agent_script_path(self) -> Path:
-        return self._get_templated_script_path("harbor-agent-setup.sh.j2")
+        async def _install_bench_skills(self, environment: BaseEnvironment) -> None:
+            if not self.include_bench_skills:
+                return
+            command = r"""
+mkdir -p /installed-agent/bench-skills/systematic-debugging
+cat >/installed-agent/bench-skills/systematic-debugging/SKILL.md <<'EOF'
+# Systematic Debugging
 
-    def _get_template_variables(self) -> dict[str, str]:
-        return {
-            "version": self.version or "latest",
-            "cli_command": self.cli_command,
-            "npm_package": self.npm_package,
-            "include_bench_skills": self.include_bench_skills,
-        }
+When a task fails, form a concrete hypothesis, run the smallest useful
+diagnostic command, inspect the actual output, and make one targeted change.
+Do not guess repeatedly without checking the result.
+EOF
 
-    def _run_agent_commands(self, instruction: str) -> list[TerminalCommand]:
-        cmd = [
-            self.cli_command,
-            "--print",
-            *self.extra_args,
-            "--model",
-            self._model_name,
-            instruction,
-        ]
-        return [
-            TerminalCommand(
-                command=shlex.join(cmd),
-                min_timeout_sec=0.0,
-                max_timeout_sec=float("inf"),
-                block=True,
-                append_enter=True,
+mkdir -p /installed-agent/bench-skills/verification-before-completion
+cat >/installed-agent/bench-skills/verification-before-completion/SKILL.md <<'EOF'
+# Verification Before Completion
+
+Before finishing, run the task's relevant tests or validation command. If that
+is impossible, state exactly what command could not run and why.
+EOF
+"""
+            await self.exec_as_root(environment, command=command)
+
+        async def install(self, environment: BaseEnvironment) -> None:
+            await self.exec_as_root(
+                environment,
+                command="apt-get update && apt-get install -y curl ca-certificates",
+                env={"DEBIAN_FRONTEND": "noninteractive"},
             )
-        ]
+            version = self.version() or "latest"
+            package = self.npm_package
+            if version != "latest":
+                package = f"{package}@{version}"
+            await self.exec_as_agent(
+                environment,
+                command=(
+                    "set -euo pipefail; "
+                    "if [[ -f \"$HOME/.nvm/nvm.sh\" ]]; then "
+                    ". \"$HOME/.nvm/nvm.sh\"; "
+                    "else "
+                    "curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.40.2/install.sh | bash; "
+                    ". \"$HOME/.nvm/nvm.sh\"; "
+                    "fi; "
+                    "nvm install 22; "
+                    f"if ! command -v {shlex.quote(self.cli_command)} >/dev/null 2>&1; then "
+                    f"npm install -g {shlex.quote(package)}; "
+                    "fi; "
+                    f"{shlex.quote(self.cli_command)} --version"
+                ),
+            )
+            await self._install_bench_skills(environment)
+            await self._write_local_pi_config(environment)
+
+        async def run(
+            self,
+            instruction: str,
+            environment: BaseEnvironment,
+            context: AgentContext,
+        ) -> None:
+            if not self.model_name:
+                raise ValueError("model_name is required")
+            cmd = [
+                self.cli_command,
+                "--print",
+                *self.extra_args,
+                "--model",
+                self.model_name,
+                instruction,
+            ]
+            await self.exec_as_agent(
+                environment,
+                command=(
+                    ". ~/.nvm/nvm.sh; "
+                    f"{shlex.join(cmd)} "
+                    f"2>&1 </dev/null | tee /logs/agent/{self._output_filename}"
+                ),
+                env=self._provider_env(),
+            )
+
+
+else:
+
+    class _BasePiCliHarborAgent(AbstractInstalledAgent):
+        cli_command = "pi"
+        npm_package = "@earendil-works/pi-coding-agent"
+        extra_args: tuple[str, ...] = ()
+        include_bench_skills = False
+        _agent_name = "coding-eval-pi"
+
+        @staticmethod
+        def name() -> str:
+            return _BasePiCliHarborAgent._agent_name
+
+        def __init__(self, model_name: str, *args: Any, **kwargs: Any):
+            super().__init__(*args, **kwargs)
+            self._model_name = model_name
+            self._version = kwargs.get("version", "latest")
+
+        @property
+        def _env(self) -> dict[str, str]:
+            return {
+                key: value
+                for key in _PROVIDER_ENV_KEYS
+                if (value := os.environ.get(key))
+            }
+
+        @property
+        def _install_agent_script_path(self) -> Path:
+            return self._get_templated_script_path("harbor-agent-setup.sh.j2")
+
+        def _get_template_variables(self) -> dict[str, str]:
+            return {
+                "version": self.version or "latest",
+                "cli_command": self.cli_command,
+                "npm_package": self.npm_package,
+                "include_bench_skills": self.include_bench_skills,
+            }
+
+        def _run_agent_commands(self, instruction: str) -> list[TerminalCommand]:
+            cmd = [
+                self.cli_command,
+                "--print",
+                *self.extra_args,
+                "--model",
+                self._model_name,
+                instruction,
+            ]
+            return [
+                TerminalCommand(
+                    command=shlex.join(cmd),
+                    min_timeout_sec=0.0,
+                    max_timeout_sec=float("inf"),
+                    block=True,
+                    append_enter=True,
+                )
+            ]
 
 
 class PiVanillaHarborAgent(_BasePiCliHarborAgent):

@@ -5,7 +5,7 @@ Reproduces ORNITH-CODER-REVIEW.md findings #4 and follow-up audit item B:
   - materialize_task must read task.yaml (not instruction.md), and must
     not raise UnboundLocalError on tasks lacking verifier.py/scorer.py.
   - run_harbor_job must use --n-attempts/-k, --model/-m, --agent/-a,
-    --registry-path, and the head version's commit_hash.
+    and a local --path when a vendored task is present.
   - Terminal-Bench must preserve adapter identity via custom Harbor agents,
     not collapse pi_vanilla/pi_devstack/pi_superpowers into the same agent.
   - The runner must delegate terminal_bench trials to run_harbor_job
@@ -86,21 +86,45 @@ def test_materialize_task_does_not_raise_on_missing_optional_files():
 
 
 def test_run_harbor_job_uses_correct_flags():
-    """run_harbor_job must use --n-attempts, --model, --agent, --registry-path."""
+    """run_harbor_job must use attempts/model/agent and local vendored task path."""
     suite = TerminalBenchSuite()
     captured = {}
 
     def fake_run(cmd, **kwargs):
-        captured["cmd"] = list(cmd)
-        captured["kwargs"] = kwargs
+        if cmd[:3] == ["harbor", "task", "migrate"]:
+            output_dir = Path(cmd[cmd.index("--output") + 1])
+            (output_dir / "hello-world").mkdir(parents=True)
+            captured["migrate_cmd"] = list(cmd)
+        elif cmd[:2] == ["harbor", "run"]:
+            captured["cmd"] = list(cmd)
+            captured["kwargs"] = kwargs
+            if "--path" in cmd:
+                local_path = Path(cmd[cmd.index("--path") + 1])
+                captured["local_task_exists"] = (
+                    local_path / "hello-world"
+                ).exists()
+        if "--path" in cmd:
+            local_path = Path(cmd[cmd.index("--path") + 1])
+            captured["local_task_exists"] = (local_path / "hello-world").exists()
         import subprocess as sp
         return sp.CompletedProcess(args=cmd, returncode=0, stdout="ok", stderr="")
 
     with patch("subprocess.run", side_effect=fake_run) as mock:
         with tempfile.TemporaryDirectory() as tmp:
-            workdir = Path(tmp) / "workdir"
+            tmp = Path(tmp)
+            vendor_dir = tmp / "vendor"
+            _make_task_yaml_task(vendor_dir, "hello-world")
+            (vendor_dir / "terminal-bench" / "registry.json").write_text(json.dumps([
+                {
+                    "name": "terminal-bench-core",
+                    "version": "head",
+                    "commit_hash": "head",
+                    "task_id_subset": None,
+                }
+            ]))
+            workdir = tmp / "workdir"
             workdir.mkdir()
-            jobs_dir = Path(tmp) / "jobs"
+            jobs_dir = tmp / "jobs"
             result = suite.run_harbor_job(
                 task_id="hello-world",
                 model_id="nvidia/nemotron-3-ultra-550b-a55b",
@@ -108,7 +132,7 @@ def test_run_harbor_job_uses_correct_flags():
                 workdir=workdir,
                 jobs_dir=jobs_dir,
                 n_attempts=3,
-                vendor_dir=Path(tmp) / "vendor",
+                vendor_dir=vendor_dir,
             )
 
     cmd = captured["cmd"]
@@ -129,7 +153,79 @@ def test_run_harbor_job_uses_correct_flags():
     # Must pass an agent
     assert "--agent" in cmd or "-a" in cmd, f"missing --agent/-a in {cmd}"
 
+    assert "--path" in cmd, f"missing local --path for vendored task: {cmd}"
+    local_path = Path(cmd[cmd.index("--path") + 1])
+    assert local_path.name.startswith("_local_tasks_"), cmd
+    assert captured["local_task_exists"], cmd
+    assert "--registry-path" not in cmd, f"must not resolve vendored smoke remotely: {cmd}"
+    assert captured["migrate_cmd"][:3] == ["harbor", "task", "migrate"]
+    migrate_input = Path(
+        captured["migrate_cmd"][captured["migrate_cmd"].index("--input") + 1]
+    )
+    assert migrate_input.name == "hello-world", captured["migrate_cmd"]
+
     assert result["returncode"] == 0, result
+
+
+def test_verify_reads_harbor_result_json_rewards():
+    """Harbor 0.16 writes trial verdicts to <job>/<trial>/result.json."""
+    suite = TerminalBenchSuite()
+    with tempfile.TemporaryDirectory() as tmp:
+        tmp = Path(tmp)
+        workdir = tmp / "trial-1" / "workdir"
+        result_dir = (
+            tmp
+            / "trial-1"
+            / "jobs"
+            / "2026-07-04__10-45-00"
+            / "hello-world__abc123"
+        )
+        result_dir.mkdir(parents=True)
+        (result_dir / "result.json").write_text(json.dumps({
+            "task_name": "hello-world",
+            "agent_result": {"output": "done"},
+            "verifier_result": {"rewards": {"reward": 1.0}},
+            "exception_info": None,
+        }))
+
+        verdict = suite.verify({"task_id": "hello-world"}, workdir)
+
+    assert verdict["passed"] is True, verdict
+    assert verdict["test_count"] == 1, verdict
+    assert verdict["exit_code"] == 0, verdict
+    assert not verdict.get("pending", False), verdict
+    assert "verifier_result" in verdict["grader_output"], verdict
+
+
+def test_verify_reports_harbor_result_json_exception_as_failure():
+    """Harbor trial exceptions are final failed results, not pending output."""
+    suite = TerminalBenchSuite()
+    with tempfile.TemporaryDirectory() as tmp:
+        tmp = Path(tmp)
+        workdir = tmp / "trial-1" / "workdir"
+        result_dir = (
+            tmp
+            / "trial-1"
+            / "jobs"
+            / "2026-07-04__10-45-00"
+            / "hello-world__abc123"
+        )
+        result_dir.mkdir(parents=True)
+        (result_dir / "result.json").write_text(json.dumps({
+            "task_name": "hello-world",
+            "verifier_result": None,
+            "exception_info": {
+                "exception_type": "NonZeroAgentExitCodeError",
+                "exception_message": "agent failed",
+            },
+        }))
+
+        verdict = suite.verify({"task_id": "hello-world"}, workdir)
+
+    assert verdict["passed"] is False, verdict
+    assert verdict["exit_code"] == -1, verdict
+    assert not verdict.get("pending", False), verdict
+    assert "NonZeroAgentExitCodeError" in verdict["grader_output"], verdict
 
 
 def test_run_harbor_job_uses_custom_agent_for_each_adapter_family():

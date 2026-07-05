@@ -354,8 +354,141 @@ def test_get_scores_ignores_manifest_model_path_mismatch():
 
         h, _ = _make_handler(results_dir)
         scores = h.get_scores()
+        warnings = h.get_warnings()
 
     assert scores == []
+    assert len(warnings) == 1, warnings
+    assert warnings[0]["code"] == "malformed_result_path"
+    assert "unknown adapter" in warnings[0]["message"]
+
+
+def test_get_scores_warns_on_manifest_model_path_mismatch():
+    """Valid-shaped rows with mismatched manifest/path model IDs are skipped."""
+    with tempfile.TemporaryDirectory() as tmp:
+        results_dir = Path(tmp) / "results"
+        path_model = "local/path-model"
+        manifest_model = "local/manifest-model"
+        task_id = "python/hello"
+        base = (
+            results_dir
+            / encode_model_path(path_model)
+            / "pi_vanilla"
+            / "aider_polyglot"
+            / encode_task_path(task_id)
+        )
+        _write_trial(
+            base / "trial-1",
+            passed=True,
+            task_id=task_id,
+            model_id=manifest_model,
+        )
+
+        h, _ = _make_handler(results_dir)
+        scores = h.get_scores()
+        warnings = h.get_warnings()
+
+    assert scores == []
+    assert len(warnings) == 1, warnings
+    assert warnings[0]["code"] == "malformed_result_path"
+    assert "manifest model" in warnings[0]["message"]
+
+
+def test_get_scores_warns_and_skips_malformed_started_trial_dirs():
+    """Malformed legacy trial dirs must not affect status accounting."""
+    with tempfile.TemporaryDirectory() as tmp:
+        results_dir = Path(tmp) / "results"
+        _write_single_row(
+            results_dir / "runs" / "ornith-high-20260704",
+            adapter="pi_devstack",
+            suite="aider_polyglot",
+            task_id="python/hello",
+        )
+        malformed_trial = (
+            results_dir
+            / "runs"
+            / "local"
+            / "ornith-1.0-35b-ornith-high-20260704"
+            / "local"
+            / "ornith-1.0-35b"
+            / "pi_devstack"
+            / "aider_polyglot"
+            / "rust"
+            / "poker"
+            / "trial-1"
+        )
+        malformed_trial.mkdir(parents=True)
+
+        h, _ = _make_handler(results_dir)
+        scores = h.get_scores()
+        warnings = h.get_warnings()
+
+    assert len(scores) == 1, scores
+    assert scores[0]["adapter"] == "pi_devstack"
+    assert scores[0]["status"] == "complete"
+    assert len(warnings) == 1, warnings
+    assert warnings[0]["code"] == "malformed_result_path"
+    assert "unknown adapter" in warnings[0]["message"]
+
+
+def test_get_scores_ignores_trial_like_workdir_cache_dirs():
+    """Only runner trial-N leaves should be considered started trials."""
+    with tempfile.TemporaryDirectory() as tmp:
+        results_dir = Path(tmp) / "results"
+        model_id, adapter, suite, task_id = _write_single_row(results_dir)
+        trial_dir = (
+            results_dir
+            / encode_model_path(model_id)
+            / adapter
+            / suite
+            / encode_task_path(task_id)
+            / "trial-1"
+        )
+        (trial_dir / "workdir" / "trial-cache").mkdir(parents=True)
+
+        h, _ = _make_handler(results_dir)
+        scores = h.get_scores()
+        warnings = h.get_warnings()
+
+    assert len(scores) == 1, scores
+    assert scores[0]["status"] == "complete"
+    assert warnings == []
+
+
+def test_format_scores_terminal_surfaces_malformed_result_warnings():
+    """Parsing problems should be visible, not silently counted as failures."""
+    import importlib.util
+
+    server_path = PROJECT_ROOT / "view-scores" / "server.py"
+    spec = importlib.util.spec_from_file_location(
+        "view_scores_server_warning_test", server_path
+    )
+    server_mod = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(server_mod)
+
+    output = server_mod.format_scores_terminal(
+        [
+            {
+                "model": "local/ornith-1.0-35b",
+                "adapter": "pi_devstack",
+                "suite": "aider_polyglot",
+                "pass_rate": 100.0,
+                "passed_tasks": 1,
+                "total_tasks": 1,
+                "ci_lower": 20.7,
+                "ci_upper": 100.0,
+            }
+        ],
+        results_dir=Path("/tmp/results"),
+        warnings=[
+            {
+                "code": "malformed_result_path",
+                "message": "malformed result path skipped: /tmp/bad/trial-1",
+            }
+        ],
+    )
+
+    assert "Warnings:" in output
+    assert "malformed result path skipped" in output
 
 
 def test_get_scores_does_not_raise_nameerror():
@@ -395,8 +528,8 @@ def test_generate_html_escapes_result_metadata_and_quotes_detail_links():
         results_dir = Path(tmp) / "results"
         results_dir.mkdir()
         model_id = '<script>alert("x")</script>&model=evil'
-        adapter = "pi_vanilla'><img src=x onerror=alert(1)>"
-        suite = 'aider_polyglot&suite=evil'
+        adapter = "pi_vanilla"
+        suite = "aider_polyglot"
         base = (
             results_dir
             / encode_model_path(model_id)
@@ -410,12 +543,10 @@ def test_generate_html_escapes_result_metadata_and_quotes_detail_links():
         html = h.generate_html()
 
     assert '<script>alert("x")</script>' not in html
-    assert '<img src=x onerror=alert(1)>' not in html
     assert '&lt;script&gt;alert(&quot;x&quot;)&lt;/script&gt;&amp;model=evil' in html
-    assert 'pi_vanilla&#x27;&gt;&lt;img src=x onerror=alert(1)&gt;' in html
     assert 'model=%3Cscript%3Ealert%28%22x%22%29%3C%2Fscript%3E%26model%3Devil' in html
-    assert 'adapter=pi_vanilla%27%3E%3Cimg+src%3Dx+onerror%3Dalert%281%29%3E' in html
-    assert 'suite=aider_polyglot%26suite%3Devil' in html
+    assert 'adapter=pi_vanilla' in html
+    assert 'suite=aider_polyglot' in html
 
 
 def test_get_task_details_with_encoded_model_and_task():

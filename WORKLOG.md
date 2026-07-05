@@ -166,3 +166,34 @@ Append-only development log for the `coding-eval` repository.
   boundary; the runner still records the comparable value in manifests.
 - Next: Terminal-Bench estimates and runs can now use the same pinned effort
   as Aider Polyglot.
+
+## 2026-07-05 — warn on malformed score artifacts
+
+- Context: legacy malformed result paths with unencoded model/task segments
+  were being interpreted as started tasks, which could make viewer rows look
+  running or incomplete instead of surfacing a parsing problem.
+- Changes:
+  - The score viewer now validates parsed adapter and suite names before
+    counting a started task, warns on malformed result paths, and exposes
+    warnings in terminal, JSON stderr, `/api/warnings`, and the HTML view.
+  - Started-task discovery now only treats `trial-N` leaf directories as
+    runner trials, avoiding false warnings from trial-like cache directories
+    inside workdirs.
+  - Empty legacy malformed Ornith result trees were moved into
+    `results-malformed-quarantine/` and that quarantine root is ignored by
+    git; no result data was deleted.
+  - Verified the token/cost columns are blank because existing manifests have
+    empty `token_usage` and no pricing metadata, not because the viewer drops
+    captured usage.
+- Evidence (RED -> GREEN):
+  - RED: malformed-result viewer tests failed on missing warning plumbing.
+  - GREEN: focused malformed-result tests passed.
+  - GREEN: `mamba run -n coding-eval python -m pytest -q` = 118 passed.
+  - GREEN: `bash tests/scripts/run_all.sh` = all shell tests passed
+    (`test_check_models`, `test_root_entrypoints`, `test_run_matrix`,
+    `test_setup`).
+- Decision: preserve malformed result artifacts in quarantine rather than
+  deleting or counting them; a parsing warning is a harness-data issue, not a
+  wrong model answer.
+- Next: record structured token usage/pricing in runner manifests if pi or
+  little-coder expose it through a machine-readable interface.

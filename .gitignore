@@ -1,6 +1,7 @@
 # Results — generated, not committed (keep one example)
 results/*
 !results/.gitkeep
+results-malformed-quarantine/
 
 # Vendored dependencies
 vendor/

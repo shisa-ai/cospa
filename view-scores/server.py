@@ -116,8 +116,31 @@ def _matches_any(patterns: tuple[str, ...] | list[str], text: str) -> bool:
     return False
 
 
+def _known_adapter_names() -> set[str]:
+    from harness.adapters import ADAPTERS
+
+    return set(ADAPTERS)
+
+
+def _known_suite_names() -> set[str]:
+    from harness.suites import SUITES
+
+    return set(SUITES)
+
+
 def _visible_len(value: str) -> int:
     return len(ANSI_RE.sub("", value))
+
+
+def _format_warnings_terminal(warnings: list[dict] | None) -> str:
+    if not warnings:
+        return ""
+    lines = ["Warnings:"]
+    for warning in warnings[:5]:
+        lines.append(f"- {warning.get('message', warning)}")
+    if len(warnings) > 5:
+        lines.append(f"- ... {len(warnings) - 5} more warning(s)")
+    return "\n".join(lines)
 
 
 def _format_table(headers: list[str], rows: list[list[str]]) -> str:
@@ -144,6 +167,7 @@ def format_scores_terminal(
     color: bool = False,
     show_ci: bool = False,
     verbose: bool = False,
+    warnings: list[dict] | None = None,
 ) -> str:
     """Return a compact terminal score table.
 
@@ -151,8 +175,10 @@ def format_scores_terminal(
     Confidence intervals are available on request, but they are intentionally
     hidden by default because tiny smoke runs produce very wide intervals.
     """
+    warning_text = _format_warnings_terminal(warnings)
     if not scores:
-        return f"No scores found in {results_dir}"
+        output = f"No scores found in {results_dir}"
+        return f"{output}\n\n{warning_text}" if warning_text else output
 
     if verbose:
         headers = [
@@ -214,7 +240,8 @@ def format_scores_terminal(
 
     title = _ansi("Coding Eval Scores", "1", color)
     subtitle = f"Results: {results_dir}"
-    return f"{title}\n{subtitle}\n\n{_format_table(headers, rows)}"
+    output = f"{title}\n{subtitle}\n\n{_format_table(headers, rows)}"
+    return f"{output}\n\n{warning_text}" if warning_text else output
 
 
 class ScoreHandler(SimpleHTTPRequestHandler):
@@ -233,13 +260,25 @@ class ScoreHandler(SimpleHTTPRequestHandler):
             ):
                 yield trial_dir
 
+    def _reset_warnings(self) -> None:
+        self._warnings = []
+
+    def _warn(self, code: str, message: str, path: Path | None = None) -> None:
+        warning = {"code": code, "message": message}
+        if path is not None:
+            warning["path"] = str(path)
+        self._warnings.append(warning)
+
+    def get_warnings(self) -> list[dict]:
+        return list(getattr(self, "_warnings", []))
+
     @staticmethod
     def _iter_started_trial_dirs(results_dir: Path):
         """Yield trial-* directories, including currently incomplete trials."""
         if not results_dir.exists():
             return
         for trial_dir in results_dir.rglob("trial-*"):
-            if trial_dir.is_dir():
+            if trial_dir.is_dir() and re.fullmatch(r"trial-\d+", trial_dir.name):
                 yield trial_dir
 
     @staticmethod
@@ -302,6 +341,33 @@ class ScoreHandler(SimpleHTTPRequestHandler):
             return False
         return True
 
+    def _trial_parts_valid(self, parts: dict) -> bool:
+        adapter = str(parts.get("adapter_id", ""))
+        suite = str(parts.get("suite_id", ""))
+        trial_dir = parts.get("trial_dir")
+
+        if adapter not in _known_adapter_names():
+            self._warn(
+                "malformed_result_path",
+                (
+                    "malformed result path skipped: "
+                    f"unknown adapter {adapter!r} in {trial_dir}"
+                ),
+                trial_dir if isinstance(trial_dir, Path) else None,
+            )
+            return False
+        if suite not in _known_suite_names():
+            self._warn(
+                "malformed_result_path",
+                (
+                    "malformed result path skipped: "
+                    f"unknown suite {suite!r} in {trial_dir}"
+                ),
+                trial_dir if isinstance(trial_dir, Path) else None,
+            )
+            return False
+        return True
+
     @staticmethod
     def _load_trial(trial_dir: Path) -> dict | None:
         verdict_file = trial_dir / "verdict.json"
@@ -325,6 +391,9 @@ class ScoreHandler(SimpleHTTPRequestHandler):
             self.serve_html(self.generate_html())
         elif parsed.path == "/api/scores":
             self.serve_json(self.get_scores())
+        elif parsed.path == "/api/warnings":
+            self.get_scores()
+            self.serve_json(self.get_warnings())
         elif parsed.path == "/api/tasks":
             params = parse_qs(parsed.query)
             model = params.get("model", [""])[0]
@@ -351,7 +420,24 @@ class ScoreHandler(SimpleHTTPRequestHandler):
     def generate_html(self) -> str:
         """Generate the HTML page."""
         scores = self.get_scores()
+        warnings = self.get_warnings()
         rows = ""
+        warning_rows = ""
+
+        for warning in warnings:
+            warning_rows += (
+                '<li><code>'
+                + html.escape(str(warning.get("code", "warning")))
+                + "</code>: "
+                + html.escape(str(warning.get("message", warning)))
+                + "</li>"
+            )
+
+        warnings_html = (
+            f'<section class="warnings"><h2>Warnings</h2><ul>{warning_rows}</ul></section>'
+            if warning_rows
+            else ""
+        )
 
         for score in scores:
             model = html.escape(str(score["model"]))
@@ -394,11 +480,15 @@ class ScoreHandler(SimpleHTTPRequestHandler):
         .score-mid {{ color: #9a6700; font-weight: 700; }}
         .score-low {{ color: #b42318; font-weight: 700; }}
         .note {{ color: #666; margin: 0 0 16px 0; }}
+        .warnings {{ background: #fff7ed; border: 1px solid #fed7aa; padding: 12px; margin: 0 0 16px 0; }}
+        .warnings h2 {{ margin: 0 0 8px 0; font-size: 16px; color: #9a3412; }}
+        .warnings ul {{ margin: 0; padding-left: 20px; }}
     </style>
 </head>
 <body>
     <h1>Coding Eval Score Viewer</h1>
     <p class="note">Score is task-level pass@k majority. Confidence intervals are available from <code>/api/scores</code> and <code>./view --show-ci</code>.</p>
+    {warnings_html}
     <table>
         <thead>
             <tr>
@@ -576,10 +666,16 @@ class ScoreHandler(SimpleHTTPRequestHandler):
         grouped_times = {}
         grouped_tokens = {}
         started_tasks = {}
+        self._reset_warnings()
 
         for trial_dir in self._iter_started_trial_dirs(RESULTS_DIR):
             parts = self._trial_parts(RESULTS_DIR, trial_dir)
             if parts is None:
+                self._warn(
+                    "malformed_result_path",
+                    f"malformed result path skipped: unable to parse {trial_dir}",
+                    trial_dir,
+                )
                 continue
             if not self._trial_visible(
                 parts,
@@ -588,14 +684,27 @@ class ScoreHandler(SimpleHTTPRequestHandler):
                 excludes=excludes,
             ):
                 continue
-            key = (parts["model_id"], parts["adapter_id"], parts["suite_id"])
-            started_tasks.setdefault(key, set()).add(parts["task_id"])
+            if not self._trial_parts_valid(parts):
+                continue
 
             trial = self._load_trial(trial_dir)
+            if trial is not None:
+                manifest_model = trial["manifest"].get("model", {}).get("id")
+                if manifest_model and manifest_model != parts["model_id"]:
+                    self._warn(
+                        "malformed_result_path",
+                        (
+                            "malformed result path skipped: manifest model "
+                            f"{manifest_model!r} does not match path model "
+                            f"{parts['model_id']!r} in {trial_dir}"
+                        ),
+                        trial_dir,
+                    )
+                    continue
+
+            key = (parts["model_id"], parts["adapter_id"], parts["suite_id"])
+            started_tasks.setdefault(key, set()).add(parts["task_id"])
             if trial is None:
-                continue
-            manifest_model = trial["manifest"].get("model", {}).get("id")
-            if manifest_model and manifest_model != parts["model_id"]:
                 continue
             grouped_trials.setdefault(key, {}).setdefault(parts["task_id"], []).append(
                 trial["verdict"].get("passed", False)
@@ -907,6 +1016,7 @@ def main(argv: list[str] | None = None) -> int:
             filters=args.filters,
             excludes=args.excludes,
         )
+        warnings = handler.get_warnings()
         print(
             format_scores_terminal(
                 scores,
@@ -914,18 +1024,23 @@ def main(argv: list[str] | None = None) -> int:
                 color=_color_enabled(args.color),
                 show_ci=args.show_ci,
                 verbose=args.verbose,
+                warnings=warnings,
             )
         )
         return 0
     if args.command == "json":
         indent = 2 if args.pretty else None
+        scores = handler.get_scores(
+            include_smoke=args.include_smoke,
+            filters=args.filters,
+            excludes=args.excludes,
+        )
+        warning_text = _format_warnings_terminal(handler.get_warnings())
+        if warning_text:
+            print(warning_text, file=sys.stderr)
         print(
             json.dumps(
-                handler.get_scores(
-                    include_smoke=args.include_smoke,
-                    filters=args.filters,
-                    excludes=args.excludes,
-                ),
+                scores,
                 indent=indent,
             )
         )

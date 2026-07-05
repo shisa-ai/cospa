@@ -298,3 +298,27 @@ Append-only development log for the `coding-eval` repository.
   and pricing columns stay behind `./view -v`.
 - Next: rerun superpowers usage backfill after the live sequential run
   finishes so those rows get the same default cost columns.
+
+## 2026-07-05 — guard partial cost ratios
+
+- Context: the live `pi_devstack_superpowers` runner was started before
+  telemetry capture landed, so new verdicts appeared faster than usage
+  backfill. The viewer summed cost from observed manifests but divided by all
+  completed tasks, temporarily making `$ /Task` and `Pass/$` look too good.
+- Changes:
+  - Score aggregation now tracks completed trials and costed trials per row.
+  - `$ /Task` and `Pass/$` are shown only when every completed trial in the
+    row has cost coverage.
+  - Verbose score rows now show `Costed` coverage so partial/pre-patch rows
+    are obvious.
+- Evidence (RED -> GREEN):
+  - RED: viewer tests reproduced a row with 1 costed trial out of 2 completed
+    trials and still-computed ratios.
+  - GREEN: `mamba run -n coding-eval python -m pytest -q` = 131 passed.
+  - GREEN: `bash tests/scripts/run_all.sh` = all shell tests passed
+    (`test_check_models`, `test_root_entrypoints`, `test_run_matrix`,
+    `test_setup`).
+- Decision: keep total `Cost` visible even when partial, but suppress derived
+  efficiency ratios until cost coverage is complete.
+- Next: continue using `scripts/backfill-usage.py --filter superpowers` to
+  catch up the pre-patch live run, or wait and run it once after completion.

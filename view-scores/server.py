@@ -214,6 +214,7 @@ def format_scores_terminal(
             "Reason",
             "Cached",
             "Cost",
+            "Costed",
             "$/Task",
             "Pass/$",
             "ETA",
@@ -259,6 +260,11 @@ def format_scores_terminal(
                 _format_tokens(score.get("reasoning_tokens")),
                 _format_tokens(score.get("cached_tokens")),
                 _format_cost(score.get("estimated_cost_usd")),
+                (
+                    f"{score.get('costed_trials', 0)}/{score.get('completed_trials', 0)}"
+                    if score.get("completed_trials")
+                    else "-"
+                ),
                 _format_cost(score.get("cost_per_completed_task_usd")),
                 _format_rate(score.get("passed_tasks_per_usd")),
                 _format_duration(score.get("estimated_remaining_seconds")),
@@ -779,6 +785,7 @@ class ScoreHandler(SimpleHTTPRequestHandler):
         grouped_times = {}
         grouped_tokens = {}
         grouped_pricing = {}
+        grouped_cost_coverage = {}
         started_tasks = {}
         self._reset_warnings()
 
@@ -839,6 +846,11 @@ class ScoreHandler(SimpleHTTPRequestHandler):
                     float(seconds)
                 )
             token_usage = self._token_usage_from_manifest(trial["manifest"])
+            coverage = grouped_cost_coverage.setdefault(
+                key,
+                {"completed_trials": 0, "costed_trials": 0},
+            )
+            coverage["completed_trials"] += 1
             token_totals = grouped_tokens.setdefault(
                 key,
                 {
@@ -868,6 +880,7 @@ class ScoreHandler(SimpleHTTPRequestHandler):
             if estimated_cost is not None:
                 token_totals["estimated_cost_usd"] += estimated_cost
                 token_totals["has_estimated_cost"] = True
+                coverage["costed_trials"] += 1
 
         scores = []
         for (model_id, adapter_id, suite_id), task_trials in sorted(
@@ -928,14 +941,29 @@ class ScoreHandler(SimpleHTTPRequestHandler):
                 if token_totals["has_estimated_cost"]
                 else None
             )
+            coverage = grouped_cost_coverage.get(
+                (model_id, adapter_id, suite_id),
+                {"completed_trials": 0, "costed_trials": 0},
+            )
+            completed_trials = coverage["completed_trials"]
+            costed_trials = coverage["costed_trials"]
+            has_complete_cost = (
+                estimated_cost_usd is not None
+                and completed_trials > 0
+                and costed_trials == completed_trials
+            )
+            has_partial_cost = (
+                estimated_cost_usd is not None
+                and 0 < costed_trials < completed_trials
+            )
             cost_per_completed_task_usd = (
                 estimated_cost_usd / total_tasks
-                if estimated_cost_usd is not None and total_tasks
+                if has_complete_cost and total_tasks
                 else None
             )
             passed_tasks_per_usd = (
                 passed_tasks / estimated_cost_usd
-                if estimated_cost_usd and estimated_cost_usd > 0
+                if has_complete_cost and estimated_cost_usd and estimated_cost_usd > 0
                 else None
             )
             (
@@ -990,6 +1018,9 @@ class ScoreHandler(SimpleHTTPRequestHandler):
                 "estimated_cost_usd": estimated_cost_usd,
                 "cost_per_completed_task_usd": cost_per_completed_task_usd,
                 "passed_tasks_per_usd": passed_tasks_per_usd,
+                "completed_trials": completed_trials,
+                "costed_trials": costed_trials,
+                "has_partial_cost": has_partial_cost,
                 "input_cost_per_million_usd": input_cost_per_million_usd,
                 "output_cost_per_million_usd": output_cost_per_million_usd,
                 "cache_read_cost_per_million_usd": cache_read_cost_per_million_usd,

@@ -346,6 +346,47 @@ def test_get_scores_prefers_direct_usage_cost():
     assert scores[0]["cost_per_completed_task_usd"] == 0.1234
 
 
+def test_get_scores_marks_partial_cost_coverage_and_suppresses_ratios():
+    """Cost/task and pass/$ must not use partial cost coverage."""
+    with tempfile.TemporaryDirectory() as tmp:
+        results_dir = Path(tmp) / "results"
+        model_id = "priced/model"
+        adapter = "pi_vanilla"
+        suite = "aider_polyglot"
+
+        for task_id, token_usage in [
+            ("python/with-cost", {"prompt_tokens": 1000, "cost_usd": 0.01}),
+            ("python/no-cost", {}),
+        ]:
+            base = (
+                results_dir
+                / "runs"
+                / "priced-run"
+                / encode_model_path(model_id)
+                / adapter
+                / suite
+                / encode_task_path(task_id)
+            )
+            _write_trial(
+                base / "trial-1",
+                passed=True,
+                model_id=model_id,
+                task_id=task_id,
+                token_usage=token_usage,
+            )
+
+        h, _ = _make_handler(results_dir)
+        scores = h.get_scores()
+
+    row = scores[0]
+    assert row["estimated_cost_usd"] == 0.01
+    assert row["costed_trials"] == 1
+    assert row["completed_trials"] == 2
+    assert row["has_partial_cost"] is True
+    assert row["cost_per_completed_task_usd"] is None
+    assert row["passed_tasks_per_usd"] is None
+
+
 def test_get_scores_ignores_pending_verdicts():
     """Incomplete smoke attempts should not count as benchmark failures."""
     with tempfile.TemporaryDirectory() as tmp:
@@ -749,6 +790,8 @@ def test_format_scores_terminal_verbose_includes_status_and_timing():
                 "estimated_cost_usd": 0.0123,
                 "input_cost_per_million_usd": 0.14,
                 "output_cost_per_million_usd": 1.04,
+                "costed_trials": 9,
+                "completed_trials": 10,
                 "estimated_remaining_seconds": 600,
             }
         ],
@@ -762,6 +805,8 @@ def test_format_scores_terminal_verbose_includes_status_and_timing():
     assert "Tok Out" in output
     assert "$/M In" in output
     assert "$/M Out" in output
+    assert "Costed" in output
+    assert "9/10" in output
     assert "Cost" in output
     assert "ETA" in output
     assert "running" in output

@@ -733,8 +733,29 @@ class ScoreHandler(SimpleHTTPRequestHandler):
                 "cost",
                 "total_cost",
             )
-            if direct_cost is not None:
+            has_tokens = any(
+                value > 0
+                for value in (
+                    prompt_tokens,
+                    completion_tokens,
+                    cached_tokens,
+                    cache_creation_tokens,
+                )
+            )
+            if direct_cost is not None and direct_cost > 0:
                 return direct_cost
+            if direct_cost is not None and not has_tokens:
+                return None
+        else:
+            has_tokens = any(
+                value > 0
+                for value in (
+                    prompt_tokens,
+                    completion_tokens,
+                    cached_tokens,
+                    cache_creation_tokens,
+                )
+            )
 
         direct_cost = cls._numeric_value(
             manifest,
@@ -742,8 +763,10 @@ class ScoreHandler(SimpleHTTPRequestHandler):
             "total_cost_usd",
             "estimated_cost_usd",
         )
-        if direct_cost is not None:
+        if direct_cost is not None and direct_cost > 0:
             return direct_cost
+        if direct_cost is not None and not has_tokens:
+            return None
 
         (
             input_per_million,
@@ -751,16 +774,18 @@ class ScoreHandler(SimpleHTTPRequestHandler):
             cache_read_per_million,
             cache_write_per_million,
         ) = cls._pricing_from_manifest(manifest)
+        if not has_tokens:
+            return None
         if input_per_million is None and output_per_million is None:
-            return None
+            return direct_cost
         if prompt_tokens and input_per_million is None:
-            return None
+            return direct_cost
         if completion_tokens and output_per_million is None:
-            return None
+            return direct_cost
         if cached_tokens and cache_read_per_million is None:
-            return None
+            return direct_cost
         if cache_creation_tokens and cache_write_per_million is None:
-            return None
+            return direct_cost
 
         return (
             (prompt_tokens / 1_000_000) * (input_per_million or 0)

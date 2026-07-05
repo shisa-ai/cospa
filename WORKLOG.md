@@ -398,3 +398,28 @@ Append-only development log for the `coding-eval` repository.
   container export source.
 - Next: run a real Terminal-Bench probe before scaling the full suite and
   confirm its verbose score row has complete `Costed` coverage.
+
+## 2026-07-05 — fix zero-cost usage estimates
+
+- Context: GLM-5.2 traces carried observed tokens but direct provider cost
+  values of zero, so the viewer treated the row as free instead of estimating
+  cost from repo pricing. Rows with pricing metadata but no usage also showed
+  as fully costed.
+- Changes:
+  - Viewer cost estimation now falls back to token pricing when direct usage
+    cost is zero and token counts are present.
+  - Pricing metadata alone no longer marks a trial as costed when no usage
+    tokens or positive direct cost were observed.
+  - Added regression coverage for both GLM-style zero direct cost and
+    Terminal-Bench-style pricing-only smoke rows.
+- Evidence (RED -> GREEN):
+  - RED: new viewer tests reproduced `$0` GLM costs and `Costed 1/1` for a
+    pricing-only row with no tokens.
+  - GREEN: `mamba run -n coding-eval python -m pytest -q` = 139 passed.
+  - GREEN: `bash tests/scripts/run_all.sh` = all shell tests passed
+    (`test_check_models`, `test_root_entrypoints`, `test_run_matrix`,
+    `test_setup`).
+- Decision: zero-cost pricing remains valid for genuinely free models with
+  observed tokens; missing usage remains unknown, not zero.
+- Next: add first-class run grouping or run-id display so historical probes
+  and reruns do not contaminate model/adapter/suite cost comparisons.

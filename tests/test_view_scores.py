@@ -346,6 +346,81 @@ def test_get_scores_prefers_direct_usage_cost():
     assert scores[0]["cost_per_completed_task_usd"] == 0.1234
 
 
+def test_get_scores_estimates_when_direct_usage_cost_is_zero_with_pricing():
+    """Zero provider cost plus tokens should fall back to benchmark pricing."""
+    with tempfile.TemporaryDirectory() as tmp:
+        results_dir = Path(tmp) / "results"
+        model_id = "zai/glm-5.2"
+        adapter = "pi_vanilla"
+        suite = "aider_polyglot"
+        task_id = "python/hello"
+        base = (
+            results_dir
+            / "runs"
+            / "priced-run"
+            / encode_model_path(model_id)
+            / adapter
+            / suite
+            / encode_task_path(task_id)
+        )
+        _write_trial(
+            base / "trial-1",
+            passed=True,
+            model_id=model_id,
+            task_id=task_id,
+            token_usage={
+                "prompt_tokens": 1_000_000,
+                "completion_tokens": 1_000_000,
+                "cached_tokens": 1_000_000,
+                "cost_usd": 0,
+            },
+            model_cost={"input": 1.4, "output": 4.4, "cacheRead": 0.26},
+        )
+
+        h, _ = _make_handler(results_dir)
+        scores = h.get_scores()
+
+    assert round(scores[0]["estimated_cost_usd"], 2) == 6.06
+    assert round(scores[0]["cost_per_completed_task_usd"], 2) == 6.06
+
+
+def test_get_scores_does_not_mark_pricing_only_rows_as_costed():
+    """Pricing metadata without observed usage is not cost coverage."""
+    with tempfile.TemporaryDirectory() as tmp:
+        results_dir = Path(tmp) / "results"
+        model_id = "priced/model"
+        adapter = "pi_vanilla"
+        suite = "terminal_bench"
+        task_id = "hello-world"
+        base = (
+            results_dir
+            / "runs"
+            / "priced-run"
+            / encode_model_path(model_id)
+            / adapter
+            / suite
+            / encode_task_path(task_id)
+        )
+        _write_trial(
+            base / "trial-1",
+            passed=True,
+            model_id=model_id,
+            task_id=task_id,
+            token_usage={},
+            model_cost={"input": 1.0, "output": 2.0},
+        )
+
+        h, _ = _make_handler(results_dir)
+        scores = h.get_scores()
+
+    row = scores[0]
+    assert row["estimated_cost_usd"] is None
+    assert row["costed_trials"] == 0
+    assert row["completed_trials"] == 1
+    assert row["cost_per_completed_task_usd"] is None
+    assert row["passed_tasks_per_usd"] is None
+
+
 def test_get_scores_marks_partial_cost_coverage_and_suppresses_ratios():
     """Cost/task and pass/$ must not use partial cost coverage."""
     with tempfile.TemporaryDirectory() as tmp:

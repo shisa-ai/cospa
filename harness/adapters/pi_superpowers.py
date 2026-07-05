@@ -17,6 +17,8 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Optional
 
+from harness.subprocess_utils import run_command
+
 
 # Bench-appropriate skills only. These are the Superpowers subset that helps
 # with systematic debugging and verification discipline without requiring a
@@ -106,7 +108,7 @@ class PiSuperpowersAdapter:
         try:
             with open(log_file, "w") as log_f:
                 with open(stderr_file, "w") as stderr_f:
-                    result = subprocess.run(
+                    result = run_command(
                         cmd,
                         input=prompt,
                         cwd=str(workdir),

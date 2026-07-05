@@ -21,7 +21,7 @@ sys.path.insert(0, str(PROJECT_ROOT))
 
 from harness.adapters.pi_vanilla import PiVanillaAdapter, AdapterResult
 from harness.suites.aider_polyglot import AiderPolyglotSuite
-from harness.runner import run_trial
+from harness.runner import run_trial, run_trial_with_retries
 
 
 class FakeFailingAdapter:
@@ -43,6 +43,44 @@ class FakePassingAdapter:
 
     def run(self, task_data, workdir, log_file, stderr_file):
         return AdapterResult(returncode=0, error=None)
+
+
+class FakeFlakyInfraAdapter:
+    """Adapter that fails once like an infrastructure error, then succeeds."""
+
+    name = "fake_flaky_infra"
+    version = "test"
+
+    def __init__(self):
+        self.calls = 0
+
+    def run(self, task_data, workdir, log_file, stderr_file):
+        self.calls += 1
+        if self.calls == 1:
+            return AdapterResult(returncode=-1, error="adapter timed out")
+        return AdapterResult(returncode=0, error=None)
+
+
+class FakeWrongAnswerSuite:
+    """Minimal suite for retry behavior tests."""
+
+    name = "fake_suite"
+
+    def __init__(self, passed: bool):
+        self.passed = passed
+        self.verify_calls = 0
+
+    def materialize_task(self, task_id, workdir, vendor_dir):
+        return {"prompt": "solve it", "task_id": task_id}
+
+    def verify(self, task_data, workdir):
+        self.verify_calls += 1
+        return {
+            "passed": self.passed,
+            "test_count": 1,
+            "grader_output": "ok" if self.passed else "wrong answer",
+            "exit_code": 0,
+        }
 
 
 def _make_aider_problem(vendor_dir: Path):
@@ -151,6 +189,53 @@ def test_verify_exception_records_failed_verdict_and_manifest(monkeypatch):
     assert verdict_exists
 
 
+def test_retry_retries_infrastructure_failure_then_records_success():
+    """Infra failures should be retried before recording the final verdict."""
+    suite = FakeWrongAnswerSuite(passed=True)
+    adapter = FakeFlakyInfraAdapter()
+
+    with tempfile.TemporaryDirectory() as tmp:
+        tmp = Path(tmp)
+        manifest, verdict = run_trial_with_retries(
+            suite,
+            adapter,
+            "test/model",
+            "task/one",
+            1,
+            tmp / "results",
+            tmp / "vendor",
+            retries=2,
+        )
+
+    assert adapter.calls == 2
+    assert verdict["passed"] is True
+    assert manifest["retry"]["attempt"] == 2
+    assert manifest["retry"]["max_attempts"] == 3
+
+
+def test_retry_does_not_retry_normal_wrong_answer():
+    """A valid but wrong solution is benchmark signal, not infrastructure."""
+    suite = FakeWrongAnswerSuite(passed=False)
+    adapter = FakePassingAdapter()
+
+    with tempfile.TemporaryDirectory() as tmp:
+        tmp = Path(tmp)
+        manifest, verdict = run_trial_with_retries(
+            suite,
+            adapter,
+            "test/model",
+            "task/one",
+            1,
+            tmp / "results",
+            tmp / "vendor",
+            retries=2,
+        )
+
+    assert suite.verify_calls == 1
+    assert verdict["passed"] is False
+    assert "retry" not in manifest
+
+
 def test_zero_adapter_return_code_still_runs_verify():
     """Sanity: when the adapter succeeds, verification runs as normal."""
     suite = AiderPolyglotSuite()
@@ -172,7 +257,7 @@ def test_zero_adapter_return_code_still_runs_verify():
         _make_aider_problem(vendor_dir)
         results_dir = tmp / "results"
 
-        with patch("subprocess.run") as mock_run:
+        with patch("harness.adapters.pi_vanilla.run_command") as mock_run:
             mock_run.return_value.__class__ = lambda x: x  # noqa
             # Use a real CompletedProcess-like object
             import subprocess as sp

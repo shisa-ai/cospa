@@ -186,7 +186,7 @@ def test_pi_vanilla_passes_thinking_flag_when_configured():
         return _R()
 
     with tempfile.TemporaryDirectory() as tmp:
-        with patch("harness.adapters.pi_vanilla.subprocess.run", fake_run):
+        with patch("harness.adapters.pi_vanilla.run_command", fake_run):
             adapter.run(
                 task_data={
                     "prompt": "do thing",
@@ -222,7 +222,7 @@ def test_pi_vanilla_omits_thinking_flag_when_unset():
         return _R()
 
     with tempfile.TemporaryDirectory() as tmp:
-        with patch("harness.adapters.pi_vanilla.subprocess.run", fake_run):
+        with patch("harness.adapters.pi_vanilla.run_command", fake_run):
             adapter.run(
                 task_data={"prompt": "do thing", "model_id": "test/model"},
                 workdir=Path(tmp),
@@ -258,7 +258,7 @@ def test_all_comparable_adapters_pass_thinking_flag_when_configured():
             return _R()
 
         with tempfile.TemporaryDirectory() as tmp:
-            with patch("subprocess.run", fake_run):
+            with patch(f"{adapter.__class__.__module__}.run_command", fake_run):
                 adapter.run(
                     task_data={
                         "prompt": "do thing",

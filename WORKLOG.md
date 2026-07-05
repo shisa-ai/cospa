@@ -570,3 +570,32 @@ Append-only development log for the `coding-eval` repository.
 - Decision: keep pricing in repo config as the benchmark source of truth.
 - Next: backfill existing Qwen manifests if/when Qwen eval runs produce
   observed token usage.
+
+## 2026-07-06 — track runner liveness and clean child groups
+
+- Context: stale result rows were shown as `running` because the viewer inferred
+  liveness from incomplete trial directories. Separately, adapter/verifier
+  subprocesses could leave orphaned `pi`, `npm`, `cargo`, or browser children
+  after timeout or runner termination.
+- Changes:
+  - Added cell-level `.runner-heartbeat.json` files with pid, host, state,
+    current task/trial, and progress counters.
+  - Updated `./view -v` aggregation to use fresh heartbeats or live runner
+    process fallback, and to report stale incomplete rows as `stalled`.
+  - Added bounded infrastructure retries via `run_trial_with_retries()` while
+    preserving wrong answers as single-attempt benchmark signal.
+  - Added `run_command()` process-group cleanup and routed adapters plus suite
+    verifier/Harbor subprocesses through it.
+- Evidence (RED -> GREEN):
+  - RED: stale incomplete trials were reported as `running`; retry and
+    process-group cleanup entrypoints were missing.
+  - GREEN: targeted liveness/retry/cleanup tests passed.
+  - GREEN: `mamba run -n coding-eval python -m pytest -q` = 155 passed.
+  - GREEN: `bash tests/scripts/run_all.sh` = all shell tests passed.
+  - Operational check: cached-disabled `./view -v --all --filter
+    'glm-5.2|qwen3.6' --no-cache` shows live Qwen rows as `running` and dead
+    GLM rows as `stalled`.
+- Decision: use explicit heartbeats as the primary liveness signal and `/proc`
+  scanning only as a compatibility fallback for pre-heartbeat runners.
+- Next: resume stalled GLM runs under the new runner and clean orphaned
+  subprocesses that no live runner owns.

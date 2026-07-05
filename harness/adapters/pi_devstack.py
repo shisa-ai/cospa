@@ -14,6 +14,8 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Optional
 
+from harness.subprocess_utils import run_command
+
 
 @dataclass
 class AdapterResult:
@@ -51,7 +53,7 @@ class PiDevstackAdapter:
         try:
             with open(log_file, "w") as log_f:
                 with open(stderr_file, "w") as stderr_f:
-                    result = subprocess.run(
+                    result = run_command(
                         cmd,
                         input=prompt,
                         cwd=str(workdir),

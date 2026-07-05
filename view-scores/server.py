@@ -37,7 +37,9 @@ DEFAULT_CACHE_PATH = Path(
         PROJECT_ROOT / ".cache" / "view-scores.json",
     )
 )
-SCORE_CACHE_VERSION = 2
+SCORE_CACHE_VERSION = 3
+RUN_HEARTBEAT_FILE = ".runner-heartbeat.json"
+RUN_HEARTBEAT_STALE_SECONDS = 90
 
 
 def _ansi(text: str, code: str, enabled: bool) -> str:
@@ -449,6 +451,88 @@ class ScoreHandler(SimpleHTTPRequestHandler):
         return {"trial_dir": trial_dir, "verdict": verdict, "manifest": manifest}
 
     @staticmethod
+    def _pid_is_running(pid: int) -> bool:
+        if pid <= 0:
+            return False
+        try:
+            os.kill(pid, 0)
+            return True
+        except OSError:
+            return False
+
+    @classmethod
+    def _heartbeat_is_live(cls, heartbeat: dict, *, now: float | None = None) -> bool:
+        if not isinstance(heartbeat, dict) or heartbeat.get("state") != "running":
+            return False
+        updated_at = heartbeat.get("updated_at_epoch")
+        try:
+            updated_at = float(updated_at)
+        except (TypeError, ValueError):
+            return False
+        now = time.time() if now is None else now
+        if now - updated_at > RUN_HEARTBEAT_STALE_SECONDS:
+            return False
+        pid = heartbeat.get("pid")
+        try:
+            pid = int(pid)
+        except (TypeError, ValueError):
+            return False
+        return cls._pid_is_running(pid)
+
+    @classmethod
+    def _cell_has_live_heartbeat(cls, suite_dirs: set[Path]) -> bool:
+        for suite_dir in suite_dirs:
+            heartbeat_path = suite_dir / RUN_HEARTBEAT_FILE
+            try:
+                heartbeat = json.loads(heartbeat_path.read_text())
+            except (OSError, json.JSONDecodeError):
+                continue
+            if cls._heartbeat_is_live(heartbeat):
+                return True
+        return False
+
+    @staticmethod
+    def _option_value(argv: list[str], name: str) -> str | None:
+        for index, arg in enumerate(argv):
+            if arg == name and index + 1 < len(argv):
+                return argv[index + 1]
+            prefix = f"{name}="
+            if arg.startswith(prefix):
+                return arg[len(prefix):]
+        return None
+
+    @classmethod
+    def _has_live_runner_process(
+        cls,
+        model_id: str,
+        adapter_id: str,
+        suite_id: str,
+        run_path: str = "",
+    ) -> bool:
+        """Best-effort fallback for pre-heartbeat live runners."""
+        proc_root = Path("/proc")
+        if not proc_root.exists():
+            return False
+        for cmdline_path in proc_root.glob("[0-9]*/cmdline"):
+            try:
+                raw = cmdline_path.read_bytes()
+            except OSError:
+                continue
+            if not raw:
+                continue
+            argv = [part.decode(errors="replace") for part in raw.split(b"\0") if part]
+            if not any(part.endswith("runner.py") for part in argv):
+                continue
+            if cls._option_value(argv, "--model") != model_id:
+                continue
+            if cls._option_value(argv, "--adapter") != adapter_id:
+                continue
+            if cls._option_value(argv, "--suite") != suite_id:
+                continue
+            return True
+        return False
+
+    @staticmethod
     def _file_signature(path: Path) -> tuple[bool, int, int]:
         try:
             stat = path.stat()
@@ -495,17 +579,46 @@ class ScoreHandler(SimpleHTTPRequestHandler):
         excludes: tuple[str, ...],
     ) -> str:
         signature = []
+        heartbeat_paths = set()
+        include_liveness_time_bucket = False
         for entry in entries:
             trial_dir = entry["trial_dir"]
+            manifest_signature = cls._file_signature(trial_dir / "manifest.json")
+            verdict_signature = cls._file_signature(trial_dir / "verdict.json")
             try:
                 rel_trial = trial_dir.relative_to(results_dir).as_posix()
             except ValueError:
                 rel_trial = str(trial_dir)
             signature.append({
                 "trial": rel_trial,
-                "manifest": cls._file_signature(trial_dir / "manifest.json"),
-                "verdict": cls._file_signature(trial_dir / "verdict.json"),
+                "manifest": manifest_signature,
+                "verdict": verdict_signature,
             })
+            if not manifest_signature[0] or not verdict_signature[0]:
+                include_liveness_time_bucket = True
+            parts = entry.get("parts")
+            if parts is not None:
+                heartbeat_paths.add(parts["suite_dir"] / RUN_HEARTBEAT_FILE)
+
+        heartbeat_signature = []
+        for heartbeat_path in sorted(heartbeat_paths):
+            try:
+                rel_path = heartbeat_path.relative_to(results_dir).as_posix()
+            except ValueError:
+                rel_path = str(heartbeat_path)
+            file_sig = cls._file_signature(heartbeat_path)
+            heartbeat_signature.append({
+                "path": rel_path,
+                "file": file_sig,
+            })
+            if file_sig[0]:
+                try:
+                    heartbeat = json.loads(heartbeat_path.read_text())
+                    if heartbeat.get("state") == "running":
+                        include_liveness_time_bucket = True
+                except (OSError, json.JSONDecodeError):
+                    include_liveness_time_bucket = True
+
         payload = {
             "version": SCORE_CACHE_VERSION,
             "results_dir": str(results_dir.resolve()),
@@ -513,6 +626,12 @@ class ScoreHandler(SimpleHTTPRequestHandler):
             "filters": list(filters),
             "excludes": list(excludes),
             "trials": signature,
+            "heartbeats": heartbeat_signature,
+            "liveness_bucket": (
+                int(time.time() // RUN_HEARTBEAT_STALE_SECONDS)
+                if include_liveness_time_bucket
+                else None
+            ),
         }
         encoded = json.dumps(payload, sort_keys=True, separators=(",", ":")).encode()
         return hashlib.sha256(encoded).hexdigest()
@@ -1036,6 +1155,8 @@ class ScoreHandler(SimpleHTTPRequestHandler):
         grouped_pricing = {}
         grouped_cost_coverage = {}
         started_tasks = {}
+        suite_dirs_by_key = {}
+        run_paths_by_key = {}
         self._reset_warnings()
         trial_entries = self._visible_trial_entries(
             RESULTS_DIR,
@@ -1083,6 +1204,8 @@ class ScoreHandler(SimpleHTTPRequestHandler):
                     continue
 
             key = (parts["model_id"], parts["adapter_id"], parts["suite_id"])
+            suite_dirs_by_key.setdefault(key, set()).add(parts["suite_dir"])
+            run_paths_by_key.setdefault(key, set()).add(parts.get("run_path", ""))
             started_tasks.setdefault(key, set()).add(parts["task_id"])
             if trial is None:
                 continue
@@ -1177,10 +1300,24 @@ class ScoreHandler(SimpleHTTPRequestHandler):
             expected_tasks = self._expected_task_count(suite_id, total_tasks)
             remaining_tasks = max(0, expected_tasks - total_tasks)
             incomplete_started_tasks = max(0, started_count - total_tasks)
-            if remaining_tasks == 0:
+            key = (model_id, adapter_id, suite_id)
+            live_runner = self._cell_has_live_heartbeat(
+                suite_dirs_by_key.get(key, set())
+            ) or any(
+                self._has_live_runner_process(
+                    model_id,
+                    adapter_id,
+                    suite_id,
+                    run_path,
+                )
+                for run_path in run_paths_by_key.get(key, {""})
+            )
+            if remaining_tasks == 0 and not incomplete_started_tasks:
                 status = "complete"
-            elif incomplete_started_tasks:
+            elif live_runner:
                 status = "running"
+            elif incomplete_started_tasks:
+                status = "stalled"
             else:
                 status = "partial"
             estimated_remaining_seconds = (

@@ -789,6 +789,68 @@ def test_get_scores_warns_and_skips_malformed_started_trial_dirs():
     assert "unknown adapter" in warnings[0]["message"]
 
 
+def test_get_scores_marks_incomplete_without_live_runner_stalled(monkeypatch):
+    """An incomplete started trial is not proof that the runner is alive."""
+    with tempfile.TemporaryDirectory() as tmp:
+        results_dir = Path(tmp) / "results"
+        model_id, adapter, suite, _ = _write_single_row(
+            results_dir,
+            task_id="python/one",
+        )
+        incomplete_trial = (
+            results_dir
+            / encode_model_path(model_id)
+            / adapter
+            / suite
+            / encode_task_path("python/two")
+            / "trial-1"
+        )
+        incomplete_trial.mkdir(parents=True)
+
+        h, server_mod = _make_handler(results_dir)
+        monkeypatch.setattr(
+            server_mod.ScoreHandler,
+            "_expected_task_count",
+            staticmethod(lambda suite_id, observed: 2),
+        )
+        monkeypatch.setattr(
+            server_mod.ScoreHandler,
+            "_has_live_runner_process",
+            classmethod(lambda cls, model, adapter, suite, run_path="": False),
+        )
+        scores = h.get_scores()
+
+    assert len(scores) == 1, scores
+    assert scores[0]["status"] == "stalled"
+    assert scores[0]["incomplete_started_tasks"] == 1
+
+
+def test_get_scores_marks_partial_live_runner_running(monkeypatch):
+    """A live runner process should mark an otherwise partial row running."""
+    with tempfile.TemporaryDirectory() as tmp:
+        results_dir = Path(tmp) / "results"
+        model_id, adapter, suite, _ = _write_single_row(
+            results_dir,
+            task_id="python/one",
+        )
+
+        h, server_mod = _make_handler(results_dir)
+        monkeypatch.setattr(
+            server_mod.ScoreHandler,
+            "_expected_task_count",
+            staticmethod(lambda suite_id, observed: 2),
+        )
+        monkeypatch.setattr(
+            server_mod.ScoreHandler,
+            "_has_live_runner_process",
+            classmethod(lambda cls, model, adapter, suite, run_path="": True),
+        )
+        scores = h.get_scores()
+
+    assert len(scores) == 1, scores
+    assert scores[0]["status"] == "running"
+
+
 def test_get_scores_ignores_trial_like_workdir_cache_dirs():
     """Only runner trial-N leaves should be considered started trials."""
     with tempfile.TemporaryDirectory() as tmp:

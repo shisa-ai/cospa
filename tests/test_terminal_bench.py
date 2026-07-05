@@ -140,7 +140,7 @@ def test_run_harbor_job_uses_correct_flags():
         import subprocess as sp
         return sp.CompletedProcess(args=cmd, returncode=0, stdout="ok", stderr="")
 
-    with patch("subprocess.run", side_effect=fake_run) as mock:
+    with patch("harness.suites.terminal_bench.run_command", side_effect=fake_run) as mock:
         with tempfile.TemporaryDirectory() as tmp:
             tmp = Path(tmp)
             vendor_dir = tmp / "vendor"
@@ -271,7 +271,7 @@ def test_run_harbor_job_uses_custom_agent_for_each_adapter_family():
                 seen[current_adapter] = cmd[i + 1]
         return sp.CompletedProcess(args=cmd, returncode=0, stdout="", stderr="")
 
-    with patch("subprocess.run", side_effect=fake_run):
+    with patch("harness.suites.terminal_bench.run_command", side_effect=fake_run):
         with tempfile.TemporaryDirectory() as tmp:
             workdir = Path(tmp) / "w"
             workdir.mkdir()
@@ -319,7 +319,7 @@ def test_run_harbor_job_uses_distinct_custom_agents_for_adapter_variants():
         "little_coder",
         "little_coder_superpowers",
     )
-    with patch("subprocess.run", side_effect=fake_run):
+    with patch("harness.suites.terminal_bench.run_command", side_effect=fake_run):
         with tempfile.TemporaryDirectory() as tmp:
             workdir = Path(tmp) / "w"
             workdir.mkdir()
@@ -344,7 +344,7 @@ def test_run_harbor_job_sets_pythonpath_for_custom_agent_import():
         captured["env"] = kwargs.get("env", {})
         return sp.CompletedProcess(args=cmd, returncode=0, stdout="", stderr="")
 
-    with patch("subprocess.run", side_effect=fake_run):
+    with patch("harness.suites.terminal_bench.run_command", side_effect=fake_run):
         with tempfile.TemporaryDirectory() as tmp:
             workdir = Path(tmp) / "w"
             workdir.mkdir()
@@ -408,7 +408,7 @@ def test_run_harbor_job_exports_thinking_to_container_agent_env():
             captured["env"] = kwargs.get("env", {})
         return sp.CompletedProcess(args=cmd, returncode=0, stdout="", stderr="")
 
-    with patch("subprocess.run", side_effect=fake_run):
+    with patch("harness.suites.terminal_bench.run_command", side_effect=fake_run):
         with tempfile.TemporaryDirectory() as tmp:
             workdir = Path(tmp) / "w"
             workdir.mkdir()

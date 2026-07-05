@@ -114,7 +114,7 @@ class TestAdapters:
         log_file = workdir / "log.txt"
         stderr_file = workdir / "stderr.txt"
 
-        with patch("subprocess.run") as mock_run:
+        with patch("harness.adapters.pi_vanilla.run_command") as mock_run:
             mock_run.return_value = MagicMock(returncode=0, stdout="output", stderr="")
             adapter.run(task_data, workdir, log_file, stderr_file)
 
@@ -133,7 +133,7 @@ class TestAdapters:
         log_file = workdir / "log.txt"
         stderr_file = workdir / "stderr.txt"
 
-        with patch("subprocess.run") as mock_run:
+        with patch("harness.adapters.pi_vanilla.run_command") as mock_run:
             mock_run.return_value = MagicMock(returncode=0, stdout="output", stderr="")
             adapter.run(task_data, workdir, log_file, stderr_file)
 
@@ -152,7 +152,7 @@ class TestAdapters:
         log_file = workdir / "log.txt"
         stderr_file = workdir / "stderr.txt"
 
-        with patch("subprocess.run") as mock_run:
+        with patch("harness.adapters.pi_devstack.run_command") as mock_run:
             mock_run.return_value = MagicMock(returncode=0, stdout="output", stderr="")
             adapter.run(task_data, workdir, log_file, stderr_file)
 
@@ -170,7 +170,7 @@ class TestAdapters:
         log_file = workdir / "log.txt"
         stderr_file = workdir / "stderr.txt"
 
-        with patch("subprocess.run") as mock_run:
+        with patch("harness.adapters.little_coder.run_command") as mock_run:
             mock_run.return_value = MagicMock(returncode=0, stdout="output", stderr="")
             adapter.run(task_data, workdir, log_file, stderr_file)
 
@@ -311,8 +311,10 @@ class TestRunner:
 
             results_dir = tmpdir / "results"
 
-            with patch("subprocess.run") as mock_run:
-                mock_run.return_value = MagicMock(returncode=0, stdout="LLM output", stderr="")
+            with patch("harness.adapters.pi_vanilla.run_command") as mock_adapter_run, \
+                 patch("harness.suites.aider_polyglot.run_command") as mock_verify_run:
+                mock_adapter_run.return_value = MagicMock(returncode=0, stdout="LLM output", stderr="")
+                mock_verify_run.return_value = MagicMock(returncode=0, stdout="1 passed", stderr="")
                 manifest, verdict = run_trial(
                     suite, adapter, "test/model", "python/two-fer", 1,
                     results_dir, vendor_dir
@@ -353,8 +355,10 @@ class TestRunner:
 
             results_dir = tmpdir / "results"
 
-            with patch("subprocess.run") as mock_run:
+            with patch("harness.adapters.pi_vanilla.run_command") as mock_run, \
+                 patch("harness.suites.aider_polyglot.run_command") as mock_verify_run:
                 mock_run.return_value = MagicMock(returncode=0, stdout="LLM output", stderr="")
+                mock_verify_run.return_value = MagicMock(returncode=0, stdout="1 passed", stderr="")
                 manifest, verdict = run_trial(
                     suite, adapter, "my-custom/model", "python/two-fer", 1,
                     results_dir, vendor_dir

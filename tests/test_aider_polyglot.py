@@ -179,7 +179,7 @@ def test_verify_cpp_command_does_not_mask_test_runner_failures():
         )
 
     with tempfile.TemporaryDirectory() as tmp:
-        with patch("subprocess.run", side_effect=fake_run):
+        with patch("harness.suites.aider_polyglot.run_command", side_effect=fake_run):
             verdict = suite.verify({"language": "cpp", "timeout": 1}, Path(tmp))
 
     shell_cmd = captured["cmd"][-1]
@@ -202,7 +202,7 @@ def test_verify_cpp_runs_exercism_cmake_test_target():
 
     with tempfile.TemporaryDirectory() as tmp:
         (Path(tmp) / "CMakeLists.txt").write_text("add_custom_target(test_allergies)\n")
-        with patch("subprocess.run", side_effect=fake_run) as mock_run:
+        with patch("harness.suites.aider_polyglot.run_command", side_effect=fake_run) as mock_run:
             verdict = suite.verify(
                 {"language": "cpp", "problem": "allergies", "timeout": 1},
                 Path(tmp),
@@ -223,7 +223,7 @@ def test_verify_java_prefers_checked_in_gradle_wrapper():
     with tempfile.TemporaryDirectory() as tmp:
         workdir = Path(tmp)
         (workdir / "gradlew").write_text("#!/usr/bin/env sh\n")
-        with patch("subprocess.run") as mock_run:
+        with patch("harness.suites.aider_polyglot.run_command") as mock_run:
             mock_run.return_value = subprocess.CompletedProcess(
                 args=["./gradlew"],
                 returncode=0,

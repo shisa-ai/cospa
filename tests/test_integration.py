@@ -15,7 +15,6 @@ import sys
 import tempfile
 from pathlib import Path
 from unittest.mock import patch
-import subprocess as sp
 
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(PROJECT_ROOT))
@@ -65,9 +64,8 @@ def test_adapter_runs_real_subprocess_and_writes_logs(monkeypatch):
             exit 0
         """)
 
-        # Put bindir first on PATH for the subprocess
-        env = dict(os.environ)
-        env["PATH"] = f"{bindir}:{env.get('PATH', '')}"
+        # Put bindir first on PATH for the subprocess.
+        monkeypatch.setenv("PATH", f"{bindir}:{os.environ.get('PATH', '')}")
 
         workdir = tmp / "workdir"
         workdir.mkdir()
@@ -82,16 +80,7 @@ def test_adapter_runs_real_subprocess_and_writes_logs(monkeypatch):
             "timeout": 30,
         }
 
-        # Patch subprocess.run's env via monkeypatching the module-level env
-        # by running the adapter with the modified environment.
-        original_run = sp.run
-
-        def patched_run(*args, **kwargs):
-            kwargs.setdefault("env", env)
-            return original_run(*args, **kwargs)
-
-        with patch("harness.adapters.pi_vanilla.subprocess.run", side_effect=patched_run):
-            result = adapter.run(task_data, workdir, log_file, stderr_file)
+        result = adapter.run(task_data, workdir, log_file, stderr_file)
 
         assert result.returncode == 0, result
         assert "pi-invoked" in log_file.read_text(), log_file.read_text()
@@ -114,9 +103,15 @@ def test_full_pipeline_runner_to_viewer_with_encoded_paths(tmp_path):
     _make_problem(vendor_dir)
     results_dir = tmp_path / "results"
 
-    with patch("harness.adapters.pi_vanilla.subprocess.run") as mock_run:
-        mock_run.return_value = sp.CompletedProcess(
+    import subprocess as sp
+
+    with patch("harness.adapters.pi_vanilla.run_command") as mock_adapter_run, \
+         patch("harness.suites.aider_polyglot.run_command") as mock_verify_run:
+        mock_adapter_run.return_value = sp.CompletedProcess(
             args=[], returncode=0, stdout="ok", stderr=""
+        )
+        mock_verify_run.return_value = sp.CompletedProcess(
+            args=[], returncode=0, stdout="1 passed", stderr=""
         )
         manifest, verdict = run_trial(
             suite, adapter, "nvidia/nemotron-3-ultra-550b-a55b",

@@ -49,7 +49,7 @@ def _run_adapter(adapter, tmp_path):
         import subprocess as sp
         return sp.CompletedProcess(args=cmd, returncode=0, stdout="", stderr="")
 
-    with patch("subprocess.run", side_effect=fake_run):
+    with patch(f"{adapter.__class__.__module__}.run_command", side_effect=fake_run):
         adapter.run(task_data, workdir, log_file, stderr_file)
     return captured["cmd"]
 

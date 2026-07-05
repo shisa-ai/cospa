@@ -18,6 +18,8 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, Dict, List
 
+from harness.subprocess_utils import run_command
+
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 
@@ -526,7 +528,7 @@ class TerminalBenchSuite:
                     "--output",
                     str(local_task_path),
                 ]
-                migrate_result = subprocess.run(
+                migrate_result = run_command(
                     migrate_cmd,
                     capture_output=True,
                     text=True,
@@ -561,7 +563,7 @@ class TerminalBenchSuite:
             cmd += ["--path", str(workdir)]
 
         try:
-            result = subprocess.run(
+            result = run_command(
                 cmd,
                 cwd=str(workdir),
                 capture_output=True,

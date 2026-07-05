@@ -19,6 +19,7 @@ Usage:
 import argparse
 import json
 import os
+import socket
 import shutil
 import subprocess
 import sys
@@ -93,6 +94,15 @@ def parse_args():
             "--thinking flag and the model/provider default applies."
         ),
     )
+    parser.add_argument(
+        "--retries",
+        type=int,
+        default=2,
+        help=(
+            "Retry infrastructure failures this many times per trial. "
+            "Wrong answers are not retried."
+        ),
+    )
     return parser.parse_args()
 
 
@@ -103,6 +113,9 @@ def validate_args(args) -> None:
         sys.exit(2)
     if args.problems is not None and args.problems < 1:
         print("✗ --problems must be a positive integer", file=sys.stderr)
+        sys.exit(2)
+    if getattr(args, "retries", 2) < 0:
+        print("✗ --retries must be zero or greater", file=sys.stderr)
         sys.exit(2)
 
 
@@ -403,7 +416,20 @@ def check_model_reachable(model_id: str, timeout: float = 10.0) -> bool:
         return False
 
 
-def run_trial(suite, adapter, model_id, task_id, trial_k, results_dir, vendor_dir, thinking=None):
+def run_trial(
+    suite,
+    adapter,
+    model_id,
+    task_id,
+    trial_k,
+    results_dir,
+    vendor_dir,
+    thinking=None,
+    *,
+    force=False,
+    retry_attempt=1,
+    max_attempts=1,
+):
     """Run a single trial of a single task."""
     from harness.path_utils import encode_model_path, encode_task_path
 
@@ -422,7 +448,7 @@ def run_trial(suite, adapter, model_id, task_id, trial_k, results_dir, vendor_di
     # need to be re-run so later aggregation has both files.
     verdict_path = trial_dir / "verdict.json"
     manifest_path = trial_dir / "manifest.json"
-    if verdict_path.exists() and manifest_path.exists():
+    if not force and verdict_path.exists() and manifest_path.exists():
         try:
             with open(verdict_path) as vf:
                 prior_verdict = json.load(vf)
@@ -433,7 +459,7 @@ def run_trial(suite, adapter, model_id, task_id, trial_k, results_dir, vendor_di
         except (json.JSONDecodeError, OSError):
             # Corrupt verdict/manifest: fall through and re-run.
             print(f"[resume] existing artifacts unreadable for {task_id}; re-running")
-    elif verdict_path.exists() or manifest_path.exists():
+    elif not force and (verdict_path.exists() or manifest_path.exists()):
         print(f"[resume] incomplete artifacts for {task_id}; re-running")
 
     trial_dir.mkdir(parents=True, exist_ok=True)
@@ -496,6 +522,11 @@ def run_trial(suite, adapter, model_id, task_id, trial_k, results_dir, vendor_di
         "created_at": datetime.now(timezone.utc).isoformat(),
         "run_end_time": None,  # Set after adapter completes
     }
+    if retry_attempt > 1:
+        manifest["retry"] = {
+            "attempt": retry_attempt,
+            "max_attempts": max_attempts,
+        }
 
     # Run the adapter
     out_dir = trial_dir / "out"
@@ -665,6 +696,136 @@ def run_trial(suite, adapter, model_id, task_id, trial_k, results_dir, vendor_di
     return manifest, verdict
 
 
+def _is_retryable_infra_failure(manifest: dict, verdict: dict) -> bool:
+    """Return True for failures that are infrastructure, not model quality."""
+    if verdict.get("verifier_failed"):
+        return True
+    if verdict.get("adapter_failed") and manifest.get("exit_code") == -1:
+        return True
+    if manifest.get("exit_code") == -1 and manifest.get("error"):
+        return True
+    return False
+
+
+def run_trial_with_retries(
+    suite,
+    adapter,
+    model_id,
+    task_id,
+    trial_k,
+    results_dir,
+    vendor_dir,
+    thinking=None,
+    *,
+    retries=2,
+):
+    """Run a trial, retrying only infrastructure-shaped failures."""
+    max_attempts = max(1, int(retries) + 1)
+    last_manifest = None
+    last_verdict = None
+    for attempt in range(1, max_attempts + 1):
+        manifest, verdict = run_trial(
+            suite,
+            adapter,
+            model_id,
+            task_id,
+            trial_k,
+            results_dir,
+            vendor_dir,
+            thinking=thinking,
+            force=attempt > 1,
+            retry_attempt=attempt,
+            max_attempts=max_attempts,
+        )
+        last_manifest = manifest
+        last_verdict = verdict
+        if not _is_retryable_infra_failure(manifest, verdict):
+            return manifest, verdict
+        if attempt < max_attempts:
+            print(
+                f"[retry] infrastructure failure for {task_id}/trial-{trial_k}; "
+                f"retrying attempt {attempt + 1}/{max_attempts}"
+            )
+    return last_manifest, last_verdict
+
+
+class RunHeartbeat:
+    """Cell-level runner heartbeat for liveness-aware score views."""
+
+    filename = ".runner-heartbeat.json"
+
+    def __init__(
+        self,
+        *,
+        results_dir: Path,
+        model_id: str,
+        adapter_name: str,
+        suite_name: str,
+        run_id: str | None,
+        total_trials: int,
+        interval_seconds: float = 10.0,
+    ):
+        from harness.path_utils import encode_model_path
+
+        self.path = (
+            Path(results_dir)
+            / encode_model_path(model_id)
+            / adapter_name
+            / suite_name
+            / self.filename
+        )
+        now = datetime.now(timezone.utc).isoformat()
+        self.data = {
+            "state": "starting",
+            "pid": os.getpid(),
+            "ppid": os.getppid(),
+            "hostname": socket.gethostname(),
+            "started_at": now,
+            "updated_at": now,
+            "updated_at_epoch": time.time(),
+            "run_id": run_id,
+            "model": model_id,
+            "adapter": adapter_name,
+            "suite": suite_name,
+            "current_task": None,
+            "current_trial": None,
+            "completed_trials": 0,
+            "total_trials": total_trials,
+            "command": sys.argv,
+        }
+        self.interval_seconds = interval_seconds
+        self._lock = threading.Lock()
+        self._stop = threading.Event()
+        self._thread = threading.Thread(target=self._loop, daemon=True)
+
+    def start(self) -> None:
+        self.update(state="running")
+        self._thread.start()
+
+    def update(self, **fields) -> None:
+        with self._lock:
+            self.data.update(fields)
+            self.data["updated_at"] = datetime.now(timezone.utc).isoformat()
+            self.data["updated_at_epoch"] = time.time()
+            self._write_locked()
+
+    def finish(self, state: str, **fields) -> None:
+        self._stop.set()
+        self.update(state=state, **fields)
+        if self._thread.is_alive():
+            self._thread.join(timeout=1)
+
+    def _loop(self) -> None:
+        while not self._stop.wait(self.interval_seconds):
+            self.update()
+
+    def _write_locked(self) -> None:
+        self.path.parent.mkdir(parents=True, exist_ok=True)
+        temp_path = self.path.with_suffix(self.path.suffix + ".tmp")
+        temp_path.write_text(json.dumps(self.data, indent=2) + "\n")
+        temp_path.replace(self.path)
+
+
 def main():
     args = parse_args()
 
@@ -720,27 +881,61 @@ def main():
     print(f"Results dir: {args.results_dir}")
     print()
 
-    # Run trials
-    for task_id in task_ids:
-        print(f"── Task: {task_id} ──")
-        for k in range(1, args.k + 1):
-            trial_label = f"  Trial {k}/{args.k}"
-            print(f"{trial_label}...", end=" ", flush=True)
-            try:
-                manifest, verdict = run_with_tty_updates(
-                    lambda: run_trial(
-                        suite, adapter, args.model, task_id, k,
-                        args.results_dir, args.vendor_dir,
-                        thinking=getattr(args, "thinking", None),
-                    ),
-                    trial_label,
-                )
-                status = "✓" if verdict.get("passed") else "✗"
-                print(f"{status} ({manifest['timing'].get('wall_clock_seconds', 0):.1f}s)")
-            except Exception as e:
-                print(f"ERROR: {e}")
-        print()
+    total_trials = len(task_ids) * args.k
+    heartbeat = RunHeartbeat(
+        results_dir=args.results_dir,
+        model_id=args.model,
+        adapter_name=adapter.name,
+        suite_name=suite.name,
+        run_id=args.run_id,
+        total_trials=total_trials,
+    )
+    completed_trials = 0
+    heartbeat.start()
 
+    # Run trials
+    try:
+        for task_id in task_ids:
+            print(f"── Task: {task_id} ──")
+            for k in range(1, args.k + 1):
+                heartbeat.update(
+                    state="running",
+                    current_task=task_id,
+                    current_trial=k,
+                    completed_trials=completed_trials,
+                )
+                trial_label = f"  Trial {k}/{args.k}"
+                print(f"{trial_label}...", end=" ", flush=True)
+                try:
+                    manifest, verdict = run_with_tty_updates(
+                        lambda: run_trial_with_retries(
+                            suite, adapter, args.model, task_id, k,
+                            args.results_dir, args.vendor_dir,
+                            thinking=getattr(args, "thinking", None),
+                            retries=getattr(args, "retries", 2),
+                        ),
+                        trial_label,
+                    )
+                    completed_trials += 1
+                    heartbeat.update(completed_trials=completed_trials)
+                    status = "✓" if verdict.get("passed") else "✗"
+                    print(f"{status} ({manifest['timing'].get('wall_clock_seconds', 0):.1f}s)")
+                except Exception as e:
+                    print(f"ERROR: {e}")
+            print()
+    except BaseException:
+        heartbeat.finish(
+            "failed",
+            completed_trials=completed_trials,
+        )
+        raise
+
+    heartbeat.finish(
+        "complete",
+        current_task=None,
+        current_trial=None,
+        completed_trials=completed_trials,
+    )
     print("Done.")
 
 

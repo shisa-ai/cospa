@@ -92,8 +92,12 @@ def test_run_trial_accepts_str_paths():
         _make_aider_problem(vendor_dir)
         results_dir = Path(tmp) / "results"
 
-        with patch("subprocess.run") as mock_run:
-            mock_run.return_value = sp.CompletedProcess(
+        with patch("harness.adapters.pi_vanilla.run_command") as mock_adapter_run, \
+             patch("harness.suites.aider_polyglot.run_command") as mock_verify_run:
+            mock_adapter_run.return_value = sp.CompletedProcess(
+                args=[], returncode=0, stdout="ok", stderr=""
+            )
+            mock_verify_run.return_value = sp.CompletedProcess(
                 args=[], returncode=0, stdout="ok", stderr=""
             )
             manifest, verdict = run_trial(
@@ -139,6 +143,7 @@ def test_runner_main_uses_default_model_run_results_wrapper():
     import argparse
     from harness import runner as runner_mod
 
+    vendor_dir = Path(tempfile.mkdtemp())
     args = argparse.Namespace(
         suite="aider_polyglot",
         adapter="pi_vanilla",
@@ -147,20 +152,31 @@ def test_runner_main_uses_default_model_run_results_wrapper():
         k=1,
         results_dir=None,
         run_id="run-a",
-        vendor_dir=Path(tempfile.mkdtemp()),
+        vendor_dir=vendor_dir,
         config=Path("/tmp/c"),
         skip_reachability=True,
     )
     captured_results = []
 
-    def fake_run_trial(suite, adapter, model, task_id, trial_k, results_dir, vendor_dir, thinking=None):
+    def fake_run_trial(
+        suite,
+        adapter,
+        model,
+        task_id,
+        trial_k,
+        results_dir,
+        vendor_dir,
+        thinking=None,
+        **kwargs,
+    ):
         captured_results.append(Path(results_dir))
         return {"timing": {"wall_clock_seconds": 0}}, {"passed": True}
 
     with patch.object(runner_mod, "parse_args", return_value=args), \
          patch.object(runner_mod, "load_suite") as mock_suite, \
          patch.object(runner_mod, "load_adapter") as mock_adapter, \
-         patch.object(runner_mod, "run_trial", side_effect=fake_run_trial):
+         patch.object(runner_mod, "run_trial_with_retries", side_effect=fake_run_trial):
+        mock_suite.return_value.name = "aider_polyglot"
         mock_suite.return_value.get_task_ids.return_value = ["python/two-fer"]
         mock_adapter.return_value.name = "pi_vanilla"
         runner_mod.main()
@@ -168,6 +184,57 @@ def test_runner_main_uses_default_model_run_results_wrapper():
     assert captured_results == [
         PROJECT_ROOT / "results" / "runs" / "test%2Fmodel-run-a"
     ]
+
+
+def test_runner_main_writes_run_heartbeat():
+    """The runner should leave a cell-level heartbeat/status artifact."""
+    import argparse
+    import json
+    from harness import runner as runner_mod
+
+    with tempfile.TemporaryDirectory() as tmp:
+        tmp = Path(tmp)
+        results_dir = tmp / "results"
+        args = argparse.Namespace(
+            suite="aider_polyglot",
+            adapter="pi_vanilla",
+            model="test/model",
+            problems=1,
+            k=1,
+            results_dir=results_dir,
+            run_id=None,
+            vendor_dir=tmp / "vendor",
+            config=Path("/tmp/c"),
+            skip_reachability=True,
+        )
+
+        def fake_run_trial(suite, adapter, model, task_id, trial_k, results_dir, vendor_dir, thinking=None, **kwargs):
+            return {"timing": {"wall_clock_seconds": 0}}, {"passed": True}
+
+        with patch.object(runner_mod, "parse_args", return_value=args), \
+             patch.object(runner_mod, "load_suite") as mock_suite, \
+             patch.object(runner_mod, "load_adapter") as mock_adapter, \
+             patch.object(runner_mod, "run_trial_with_retries", side_effect=fake_run_trial):
+            mock_suite.return_value.name = "aider_polyglot"
+            mock_suite.return_value.get_task_ids.return_value = ["python/two-fer"]
+            mock_adapter.return_value.name = "pi_vanilla"
+            runner_mod.main()
+
+        heartbeat_path = (
+            results_dir
+            / "test%2Fmodel"
+            / "pi_vanilla"
+            / "aider_polyglot"
+            / ".runner-heartbeat.json"
+        )
+        heartbeat = json.loads(heartbeat_path.read_text())
+
+    assert heartbeat["state"] == "complete"
+    assert heartbeat["model"] == "test/model"
+    assert heartbeat["adapter"] == "pi_vanilla"
+    assert heartbeat["suite"] == "aider_polyglot"
+    assert heartbeat["completed_trials"] == 1
+    assert heartbeat["total_trials"] == 1
 
 
 def test_run_with_tty_updates_emits_heartbeat(monkeypatch):

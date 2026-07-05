@@ -28,6 +28,7 @@ sys.path.insert(0, str(PROJECT_ROOT))
 from harness.adapters.little_coder import LittleCoderAdapter
 from harness.adapters.little_coder_superpowers import LittleCoderSuperpowersAdapter
 from harness.adapters.pi_devstack import PiDevstackAdapter
+from harness.adapters.pi_devstack_superpowers import PiDevstackSuperpowersAdapter
 from harness.adapters.pi_superpowers import PiSuperpowersAdapter
 from harness.adapters.pi_vanilla import PiVanillaAdapter, AdapterResult
 from harness.suites.aider_polyglot import AiderPolyglotSuite
@@ -192,6 +193,7 @@ def test_all_comparable_adapters_pass_thinking_flag_when_configured():
     adapters = [
         PiVanillaAdapter(),
         PiDevstackAdapter(),
+        PiDevstackSuperpowersAdapter(),
         PiSuperpowersAdapter(),
         LittleCoderAdapter(),
         LittleCoderSuperpowersAdapter(),

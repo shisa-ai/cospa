@@ -359,6 +359,22 @@ class PiDevstackHarborAgent(_BasePiCliHarborAgent):
         return PiDevstackHarborAgent._agent_name
 
 
+class PiDevstackSuperpowersHarborAgent(_BasePiCliHarborAgent):
+    extra_args = (
+        "--no-skills",
+        "--skill",
+        _CONTAINER_BENCH_SKILLS[0],
+        "--skill",
+        _CONTAINER_BENCH_SKILLS[1],
+    )
+    include_bench_skills = True
+    _agent_name = "coding-eval-pi-devstack-superpowers"
+
+    @staticmethod
+    def name() -> str:
+        return PiDevstackSuperpowersHarborAgent._agent_name
+
+
 class PiSuperpowersHarborAgent(_BasePiCliHarborAgent):
     extra_args = (
         "--no-extensions",

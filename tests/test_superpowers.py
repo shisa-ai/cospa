@@ -24,6 +24,7 @@ sys.path.insert(0, str(PROJECT_ROOT))
 
 from harness.adapters.pi_superpowers import PiSuperpowersAdapter
 from harness.adapters.little_coder_superpowers import LittleCoderSuperpowersAdapter
+from harness.adapters import load_adapter
 
 
 # Skills that are interactive (require a human in the loop) and must be
@@ -119,3 +120,22 @@ def test_little_coder_superpowers_does_not_load_entire_user_skills_dir():
         assert not p.endswith(".pi/agent/skills"), (
             f"must not load entire user skills dir, got {p}"
         )
+
+
+def test_pi_devstack_superpowers_preserves_extensions_and_filters_skills():
+    """pi_devstack_superpowers keeps devstack extensions but filters skills."""
+    adapter = load_adapter("pi_devstack_superpowers")
+    with tempfile.TemporaryDirectory() as tmp:
+        cmd = _run_adapter(adapter, Path(tmp))
+
+    assert "--no-extensions" not in cmd, (
+        f"devstack superpowers must preserve normal extension discovery: {cmd}"
+    )
+    assert "--no-skills" in cmd, (
+        f"devstack superpowers must strip default skill discovery: {cmd}"
+    )
+    skill_paths = _skill_paths_in_cmd(cmd)
+    assert skill_paths, f"expected allowlisted bench skills in {cmd}"
+    for p in skill_paths:
+        basename = Path(p).name
+        assert basename in BENCH_SKILLS, f"unexpected skill {basename}: {cmd}"

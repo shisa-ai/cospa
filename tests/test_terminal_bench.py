@@ -250,6 +250,7 @@ def test_run_harbor_job_uses_custom_agent_for_each_adapter_family():
             for current_adapter in (
                 "pi_vanilla",
                 "pi_devstack",
+                "pi_devstack_superpowers",
                 "pi_superpowers",
                 "little_coder",
             ):
@@ -257,6 +258,10 @@ def test_run_harbor_job_uses_custom_agent_for_each_adapter_family():
 
     assert seen["pi_vanilla"] == "harness.harbor_agents:PiVanillaHarborAgent"
     assert seen["pi_devstack"] == "harness.harbor_agents:PiDevstackHarborAgent"
+    assert (
+        seen["pi_devstack_superpowers"]
+        == "harness.harbor_agents:PiDevstackSuperpowersHarborAgent"
+    )
     assert seen["pi_superpowers"] == "harness.harbor_agents:PiSuperpowersHarborAgent"
     assert seen["little_coder"] == "harness.harbor_agents:LittleCoderHarborAgent"
 
@@ -280,6 +285,7 @@ def test_run_harbor_job_uses_distinct_custom_agents_for_adapter_variants():
     adapters = (
         "pi_vanilla",
         "pi_devstack",
+        "pi_devstack_superpowers",
         "pi_superpowers",
         "little_coder",
         "little_coder_superpowers",

@@ -41,7 +41,15 @@ from harness.path_utils import encode_path_component
 def parse_args():
     parser = argparse.ArgumentParser(description="Run a single eval trial")
     parser.add_argument("--suite", required=True, help="Suite name (aider_polyglot, terminal_bench)")
-    parser.add_argument("--adapter", required=True, help="Adapter name (pi_vanilla, pi_devstack, little_coder)")
+    parser.add_argument(
+        "--adapter",
+        required=True,
+        help=(
+            "Adapter name (pi_vanilla, pi_devstack, "
+            "pi_devstack_superpowers, little_coder, "
+            "pi_superpowers, little_coder_superpowers)"
+        ),
+    )
     parser.add_argument("--model", required=True, help="Model ID (e.g. nvidia/nemotron-3-ultra-550b-a55b)")
     parser.add_argument("--problems", type=int, default=None, help="Number of problems to run (None = all)")
     parser.add_argument("--k", type=int, default=1, help="Number of trials per problem")

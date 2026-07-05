@@ -26,6 +26,7 @@ sys.path.insert(0, str(PROJECT_ROOT))
 from harness.adapters import load_adapter
 from harness.adapters.pi_vanilla import PiVanillaAdapter
 from harness.adapters.pi_devstack import PiDevstackAdapter
+from harness.adapters.pi_devstack_superpowers import PiDevstackSuperpowersAdapter
 from harness.adapters.little_coder import LittleCoderAdapter
 from harness.suites import load_suite
 from harness.suites.aider_polyglot import AiderPolyglotSuite
@@ -90,6 +91,11 @@ class TestAdapters:
         adapter = load_adapter("pi_devstack")
         assert isinstance(adapter, PiDevstackAdapter)
         assert adapter.name == "pi_devstack"
+
+    def test_load_adapter_pi_devstack_superpowers(self):
+        adapter = load_adapter("pi_devstack_superpowers")
+        assert isinstance(adapter, PiDevstackSuperpowersAdapter)
+        assert adapter.name == "pi_devstack_superpowers"
 
     def test_load_adapter_little_coder(self):
         adapter = load_adapter("little_coder")

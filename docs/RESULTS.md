@@ -22,7 +22,8 @@ turn in a small context).
 | `pi_vanilla` | `pi --no-extensions` — 4 tools, ~1K-token prompt | Floor. Minimal scaffold. |
 | `pi_devstack` | devstack pi profile (curated extensions + skills) | "Pi as we run it." Mid-scaffold. |
 | `little_coder` | little-coder launcher (pi + 20 ext + 30 skills) | Maximal targeted scaffold for small models. |
-| `pi_superpowers` | pi_vanilla + Superpowers skills (bench mode) | Ablation: does generic methodology help or hurt? |
+| `pi_superpowers` | pi_vanilla + Superpowers skills (bench mode) | Ablation: generic methodology without devstack extensions. |
+| `pi_devstack_superpowers` | pi_devstack extensions + Superpowers skills (bench mode) | Direct devstack + methodology ablation. |
 | `little_coder_superpowers` | little_coder + Superpowers skills (bench mode) | Ablation: same, for little-coder. |
 
 ## Results

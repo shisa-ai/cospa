@@ -107,6 +107,9 @@ class TerminalBenchSuite:
     AGENT_MAP = {
         "pi_vanilla": "harness.harbor_agents:PiVanillaHarborAgent",
         "pi_devstack": "harness.harbor_agents:PiDevstackHarborAgent",
+        "pi_devstack_superpowers": (
+            "harness.harbor_agents:PiDevstackSuperpowersHarborAgent"
+        ),
         "pi_superpowers": "harness.harbor_agents:PiSuperpowersHarborAgent",
         "little_coder": "harness.harbor_agents:LittleCoderHarborAgent",
         "little_coder_superpowers": (

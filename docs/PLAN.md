@@ -111,7 +111,9 @@ is what surrounds the model call.
 | `pi_vanilla` | `pi --no-extensions` — 4 tools, ~1K-token prompt | Floor. Minimal scaffold. |
 | `pi_devstack` | devstack pi profile (curated extensions + skills) | "Pi as we run it." Mid-scaffold. |
 | `little_coder` | little-coder launcher (pi + 20 ext + 30 skills) | Maximal targeted scaffold for small models. |
-| `*_superpowers` | above + Superpowers debugging/verification skills | Ablation: does generic methodology help or hurt? |
+| `pi_superpowers` | `pi_vanilla` + Superpowers debugging/verification skills | Ablation: does generic methodology help or hurt without devstack extensions? |
+| `pi_devstack_superpowers` | devstack extensions + Superpowers debugging/verification skills | Direct `pi_devstack` vs `pi_devstack` + Superpowers bench ablation. |
+| `little_coder_superpowers` | `little_coder` + Superpowers debugging/verification skills | Same Superpowers ablation for little-coder. |
 
 Prediction (worth testing): little_coder > pi_devstack > pi_vanilla on
 both suites, with the gap widest on the smallest models. Superpowers

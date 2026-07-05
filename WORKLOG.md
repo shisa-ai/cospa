@@ -197,3 +197,30 @@ Append-only development log for the `coding-eval` repository.
   wrong model answer.
 - Next: record structured token usage/pricing in runner manifests if pi or
   little-coder expose it through a machine-readable interface.
+
+## 2026-07-05 — add devstack Superpowers adapter
+
+- Context: the existing `pi_superpowers` arm is pi vanilla plus the
+  Superpowers bench skill subset. For a clean `pi_devstack` comparison we need
+  a distinct `pi_devstack_superpowers` arm rather than relabeling vanilla.
+- Changes:
+  - Added `pi_devstack_superpowers`, which preserves normal devstack extension
+    discovery, disables default skill discovery, and loads only the
+    non-interactive Superpowers bench skills.
+  - Registered a distinct Terminal-Bench Harbor agent for the new adapter so
+    Terminal-Bench does not collapse it to Harbor's built-in `pi` arm.
+  - Updated runner help and architecture/result docs to name the new adapter.
+- Evidence (RED -> GREEN):
+  - RED: new superpowers and Terminal-Bench invariant tests failed because
+    `pi_devstack_superpowers` was unknown and mapped to built-in `pi`.
+  - GREEN: focused adapter, thinking, and Terminal-Bench mapping tests passed.
+  - GREEN: `mamba run -n coding-eval python -m pytest -q` = 120 passed.
+  - GREEN: `bash tests/scripts/run_all.sh` = all shell tests passed
+    (`test_check_models`, `test_root_entrypoints`, `test_run_matrix`,
+    `test_setup`).
+- Decision: keep `pi_superpowers` as the existing vanilla+Superpowers arm and
+  add a new explicit devstack+Superpowers arm to avoid changing historical
+  semantics mid-run.
+- Next: launch Ornith high `pi_devstack_superpowers` and
+  `little_coder_superpowers` Aider Polyglot runs under the existing
+  resume-enabled run id.

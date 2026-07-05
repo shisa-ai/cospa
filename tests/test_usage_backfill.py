@@ -118,3 +118,20 @@ def test_backfill_results_does_not_overwrite_observed_usage_by_default():
     assert summary["skipped_observed"] == 1
     assert updated["token_usage"]["source"] == "manual"
     assert updated["token_usage"]["prompt_tokens"] == 1
+
+
+def test_backfill_results_with_relative_results_dir_matches_absolute_sessions(monkeypatch):
+    with tempfile.TemporaryDirectory() as tmp:
+        tmp = Path(tmp)
+        results_dir = tmp / "results"
+        sessions_root = tmp / "sessions"
+        trial_dir, manifest_path = _write_trial(results_dir)
+        _write_session(sessions_root, trial_dir / "workdir")
+        monkeypatch.chdir(tmp)
+
+        summary = backfill_results(Path("results"), sessions_root=sessions_root)
+        manifest = json.loads(manifest_path.read_text())
+
+    assert summary["observed"] == 1
+    assert manifest["token_usage"]["status"] == "observed"
+    assert manifest["token_usage"]["prompt_tokens"] == 100

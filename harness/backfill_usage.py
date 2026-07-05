@@ -152,7 +152,7 @@ def backfill_results(
     dry_run: bool = False,
 ) -> dict[str, int]:
     """Backfill every manifest under a results directory."""
-    results_dir = Path(results_dir)
+    results_dir = Path(results_dir).resolve()
     summary = {
         "scanned": 0,
         "updated": 0,

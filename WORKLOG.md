@@ -255,3 +255,21 @@ Append-only development log for the `coding-eval` repository.
   raw trace copy rather than relying on an uncorrelated proxy analytics DB.
 - Next: backfill the completed Ornith high Aider Polyglot runs and inspect
   the resulting verbose cost columns.
+
+## 2026-07-05 — normalize backfill result paths
+
+- Context: running `scripts/backfill-usage.py` with a relative
+  `--results-dir` scanned manifests correctly but missed pi sessions because
+  pi records absolute session `cwd` values.
+- Changes:
+  - `backfill_results()` now resolves the scan root before walking
+    manifests, so trial workdir paths match pi's session metadata.
+  - Added a regression test that invokes backfill from a relative
+    `results/` path against an absolute pi session trace.
+- Evidence (RED -> GREEN):
+  - RED: relative-results backfill test failed with `observed == 0`.
+  - GREEN: `mamba run -n coding-eval python -m pytest -q` = 128 passed.
+- Decision: keep the fix in backfill rather than telemetry lookup so runner
+  behavior for intentionally relative workdirs remains unchanged.
+- Next: rerun backfill on the Ornith high result wrapper to replace
+  unavailable placeholders with observed usage.

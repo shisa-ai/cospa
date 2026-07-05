@@ -21,6 +21,23 @@ THINKING_TOKEN_BUDGETS = {
     "xhigh": 12000,
 }
 
+MODEL_COST_KEYS = {
+    "input",
+    "output",
+    "cacheRead",
+    "cacheWrite",
+    "longContextInputThreshold",
+    "longContextInput",
+    "longContextCacheRead",
+    "longContextCacheWrite",
+    "longContextOutput",
+    "long_context_input_threshold",
+    "long_context_input",
+    "long_context_cache_read",
+    "long_context_cache_write",
+    "long_context_output",
+}
+
 
 def thinking_token_budget(thinking: str | None) -> int | None:
     """Return the local thinking-token budget for a named effort level."""
@@ -239,7 +256,7 @@ def _safe_model_metadata(model: dict) -> dict[str, Any]:
         metadata["cost"] = {
             key: value
             for key, value in cost.items()
-            if key in {"input", "output", "cacheRead", "cacheWrite"}
+            if key in MODEL_COST_KEYS
             and isinstance(value, (int, float))
             and not isinstance(value, bool)
         }

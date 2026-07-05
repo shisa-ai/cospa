@@ -522,3 +522,31 @@ Append-only development log for the `coding-eval` repository.
   required for aggregation.
 - Next: resume affected GLM jobs after confirming no live process owns the same
   run directory.
+
+## 2026-07-05 — price GPT-5.5 at API-equivalent rates
+
+- Context: the local `codex/gpt-5.5` provider reports zero-cost subscription
+  usage, but benchmark cost/intelligence comparisons should use direct API
+  equivalent pricing.
+- Changes:
+  - Added `codex/gpt-5.5` model metadata with OpenAI Standard API rates:
+    short-context `$5/$0.50/$30` per 1M input/cached/output tokens and
+    long-context `$10/$1/$45` above `272K` input tokens.
+  - Preserved long-context pricing fields in safe model metadata.
+  - Updated score estimation to choose long-context rates per trial and bill
+    reasoning tokens as output tokens.
+  - Backfilled existing GPT-5.5 smoke manifests so `./view` reports cost.
+- Evidence (RED -> GREEN):
+  - RED: long-context pricing fields were dropped from metadata and
+    long-context trials were charged at short-context rates.
+  - RED: reasoning-token cost test charged only visible output tokens.
+  - GREEN: pricing-focused tests passed.
+  - GREEN: `mamba run -n coding-eval python -m pytest -q` = 148 passed.
+  - GREEN: `bash tests/scripts/run_all.sh` = all shell tests passed.
+  - Operational check: clean GPT-5.5 smoke now shows `$1.32` total cost,
+    `$0.2648/task`, and `3.78 pass/$`.
+- Decision: leave `~/.pi/agent/models.json` unchanged because it contains
+  provider credentials and subscription-local stubs; repo config is the
+  benchmark pricing source of truth.
+- Next: use the same tier-aware path for any future model with context-based
+  API pricing.

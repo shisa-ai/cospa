@@ -302,6 +302,75 @@ def test_load_model_metadata_prefers_repo_pricing_over_zero_provider_config():
     assert metadata["max_tokens"] == 128000
 
 
+def test_load_model_metadata_preserves_long_context_pricing_tiers():
+    """GPT-5.5 API-equivalent pricing has short and long context rates."""
+    with tempfile.TemporaryDirectory() as tmp:
+        tmp = Path(tmp)
+        models_json = tmp / "models.json"
+        models_yaml = tmp / "models.yaml"
+        models_json.write_text(json.dumps({
+            "providers": {
+                "codex": {
+                    "baseUrl": "http://localhost:8989/backend-api",
+                    "apiKey": "secret",
+                    "models": [
+                        {
+                            "id": "gpt-5.5",
+                            "name": "GPT-5.5",
+                            "contextWindow": 1050000,
+                            "maxTokens": 128000,
+                            "reasoning": True,
+                            "cost": {
+                                "input": 0,
+                                "output": 0,
+                                "cacheRead": 0,
+                                "cacheWrite": 0,
+                            },
+                        }
+                    ],
+                }
+            }
+        }))
+        models_yaml.write_text(
+            "models:\n"
+            "  - id: codex/gpt-5.5\n"
+            "    name: GPT-5.5\n"
+            "    context_window: 1050000\n"
+            "    max_tokens: 128000\n"
+            "    reasoning: true\n"
+            "    cost:\n"
+            "      input: 5.0\n"
+            "      cacheRead: 0.5\n"
+            "      cacheWrite: 0\n"
+            "      output: 30.0\n"
+            "      longContextInputThreshold: 272000\n"
+            "      longContextInput: 10.0\n"
+            "      longContextCacheRead: 1.0\n"
+            "      longContextCacheWrite: 0\n"
+            "      longContextOutput: 45.0\n"
+            "    pricing_unit: usd_per_1m_tokens\n"
+        )
+
+        metadata = load_model_metadata(
+            "codex/gpt-5.5",
+            models_json_path=models_json,
+            models_config_path=models_yaml,
+        )
+
+    assert metadata["cost"] == {
+        "input": 5.0,
+        "cacheRead": 0.5,
+        "cacheWrite": 0,
+        "output": 30.0,
+        "longContextInputThreshold": 272000,
+        "longContextInput": 10.0,
+        "longContextCacheRead": 1.0,
+        "longContextCacheWrite": 0,
+        "longContextOutput": 45.0,
+    }
+    assert metadata["pricing_unit"] == "usd_per_1m_tokens"
+
+
 def test_run_trial_records_pi_session_usage_and_trace(monkeypatch):
     suite = AiderPolyglotSuite()
 

@@ -393,9 +393,9 @@ def test_get_scores_aggregates_token_usage_and_estimated_cost():
     assert row["cache_creation_tokens"] == 100_000
     assert row["reasoning_tokens"] == 125_000
     assert row["total_tokens"] == 1_500_000
-    assert row["estimated_cost_usd"] == 2.15
-    assert row["cost_per_completed_task_usd"] == 2.15
-    assert row["passed_tasks_per_usd"] == 1 / 2.15
+    assert row["estimated_cost_usd"] == 2.4
+    assert row["cost_per_completed_task_usd"] == 2.4
+    assert row["passed_tasks_per_usd"] == 1 / 2.4
     assert row["input_cost_per_million_usd"] == 1.0
     assert row["output_cost_per_million_usd"] == 2.0
 
@@ -473,6 +473,106 @@ def test_get_scores_estimates_when_direct_usage_cost_is_zero_with_pricing():
 
     assert round(scores[0]["estimated_cost_usd"], 2) == 6.06
     assert round(scores[0]["cost_per_completed_task_usd"], 2) == 6.06
+
+
+def test_get_scores_charges_reasoning_tokens_as_output():
+    """Reasoning tokens are billed at the model output-token rate."""
+    with tempfile.TemporaryDirectory() as tmp:
+        results_dir = Path(tmp) / "results"
+        model_id = "codex/gpt-5.5"
+        adapter = "pi_vanilla"
+        suite = "aider_polyglot"
+        task_id = "python/hello"
+        base = (
+            results_dir
+            / "runs"
+            / "priced-run"
+            / encode_model_path(model_id)
+            / adapter
+            / suite
+            / encode_task_path(task_id)
+        )
+        _write_trial(
+            base / "trial-1",
+            passed=True,
+            model_id=model_id,
+            task_id=task_id,
+            token_usage={
+                "prompt_tokens": 0,
+                "completion_tokens": 100_000,
+                "reasoning_tokens": 100_000,
+                "cost_usd": 0,
+            },
+            model_cost={"input": 5.0, "output": 30.0, "cacheRead": 0.5},
+        )
+
+        h, _ = _make_handler(results_dir)
+        scores = h.get_scores()
+
+    assert scores[0]["estimated_cost_usd"] == 6.0
+
+
+def test_get_scores_applies_long_context_pricing_per_trial():
+    """Long-context rates apply only to trials crossing the input threshold."""
+    with tempfile.TemporaryDirectory() as tmp:
+        results_dir = Path(tmp) / "results"
+        model_id = "codex/gpt-5.5"
+        adapter = "pi_vanilla"
+        suite = "aider_polyglot"
+        model_cost = {
+            "input": 5.0,
+            "output": 30.0,
+            "cacheRead": 0.5,
+            "longContextInputThreshold": 1000,
+            "longContextInput": 10.0,
+            "longContextOutput": 45.0,
+            "longContextCacheRead": 1.0,
+        }
+
+        for task_id, token_usage in [
+            (
+                "python/short",
+                {
+                    "prompt_tokens": 100,
+                    "cached_tokens": 100,
+                    "completion_tokens": 100,
+                    "cost_usd": 0,
+                },
+            ),
+            (
+                "python/long",
+                {
+                    "prompt_tokens": 900,
+                    "cached_tokens": 200,
+                    "completion_tokens": 100,
+                    "cost_usd": 0,
+                },
+            ),
+        ]:
+            base = (
+                results_dir
+                / "runs"
+                / "priced-run"
+                / encode_model_path(model_id)
+                / adapter
+                / suite
+                / encode_task_path(task_id)
+            )
+            _write_trial(
+                base / "trial-1",
+                passed=True,
+                model_id=model_id,
+                task_id=task_id,
+                token_usage=token_usage,
+                model_cost=model_cost,
+            )
+
+        h, _ = _make_handler(results_dir)
+        scores = h.get_scores()
+
+    row = scores[0]
+    assert round(row["estimated_cost_usd"], 8) == 0.01725
+    assert round(row["cost_per_completed_task_usd"], 8) == 0.008625
 
 
 def test_get_scores_does_not_mark_pricing_only_rows_as_costed():

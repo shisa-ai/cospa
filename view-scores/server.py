@@ -808,6 +808,10 @@ class ScoreHandler(SimpleHTTPRequestHandler):
     def _pricing_from_manifest(
         cls,
         manifest: dict,
+        *,
+        prompt_tokens: int | None = None,
+        cached_tokens: int = 0,
+        cache_creation_tokens: int = 0,
     ) -> tuple[float | None, float | None, float | None, float | None]:
         model = manifest.get("model", {})
         if not isinstance(model, dict):
@@ -861,6 +865,64 @@ class ScoreHandler(SimpleHTTPRequestHandler):
             "cache_write_per_1m",
             "cache_creation_per_1m",
         )
+        threshold = cls._numeric_value(
+            pricing,
+            "longContextInputThreshold",
+            "long_context_input_threshold",
+            "long_context_threshold",
+        )
+        if prompt_tokens is not None and threshold is not None:
+            input_token_count = (
+                int(prompt_tokens or 0)
+                + int(cached_tokens or 0)
+                + int(cache_creation_tokens or 0)
+            )
+            if input_token_count > threshold:
+                def first_present(*values):
+                    for value in values:
+                        if value is not None:
+                            return value
+                    return None
+
+                long_context = pricing.get("longContext") or pricing.get("long_context")
+                if not isinstance(long_context, dict):
+                    long_context = {}
+                input_per_million = first_present(
+                    cls._numeric_value(
+                        pricing,
+                        "longContextInput",
+                        "long_context_input",
+                    ),
+                    cls._numeric_value(long_context, "input"),
+                    input_per_million,
+                )
+                output_per_million = first_present(
+                    cls._numeric_value(
+                        pricing,
+                        "longContextOutput",
+                        "long_context_output",
+                    ),
+                    cls._numeric_value(long_context, "output"),
+                    output_per_million,
+                )
+                cache_read_per_million = first_present(
+                    cls._numeric_value(
+                        pricing,
+                        "longContextCacheRead",
+                        "long_context_cache_read",
+                    ),
+                    cls._numeric_value(long_context, "cacheRead", "cache_read"),
+                    cache_read_per_million,
+                )
+                cache_write_per_million = first_present(
+                    cls._numeric_value(
+                        pricing,
+                        "longContextCacheWrite",
+                        "long_context_cache_write",
+                    ),
+                    cls._numeric_value(long_context, "cacheWrite", "cache_write"),
+                    cache_write_per_million,
+                )
         return (
             input_per_million,
             output_per_million,
@@ -876,6 +938,7 @@ class ScoreHandler(SimpleHTTPRequestHandler):
         completion_tokens: int,
         cached_tokens: int = 0,
         cache_creation_tokens: int = 0,
+        reasoning_tokens: int = 0,
     ) -> float | None:
         usage = manifest.get("token_usage") or manifest.get("usage") or {}
         if isinstance(usage, dict):
@@ -893,6 +956,7 @@ class ScoreHandler(SimpleHTTPRequestHandler):
                     completion_tokens,
                     cached_tokens,
                     cache_creation_tokens,
+                    reasoning_tokens,
                 )
             )
             if direct_cost is not None and direct_cost > 0:
@@ -907,6 +971,7 @@ class ScoreHandler(SimpleHTTPRequestHandler):
                     completion_tokens,
                     cached_tokens,
                     cache_creation_tokens,
+                    reasoning_tokens,
                 )
             )
 
@@ -926,14 +991,20 @@ class ScoreHandler(SimpleHTTPRequestHandler):
             output_per_million,
             cache_read_per_million,
             cache_write_per_million,
-        ) = cls._pricing_from_manifest(manifest)
+        ) = cls._pricing_from_manifest(
+            manifest,
+            prompt_tokens=prompt_tokens,
+            cached_tokens=cached_tokens,
+            cache_creation_tokens=cache_creation_tokens,
+        )
         if not has_tokens:
             return None
         if input_per_million is None and output_per_million is None:
             return direct_cost
         if prompt_tokens and input_per_million is None:
             return direct_cost
-        if completion_tokens and output_per_million is None:
+        billed_output_tokens = completion_tokens + reasoning_tokens
+        if billed_output_tokens and output_per_million is None:
             return direct_cost
         if cached_tokens and cache_read_per_million is None:
             return direct_cost
@@ -942,7 +1013,7 @@ class ScoreHandler(SimpleHTTPRequestHandler):
 
         return (
             (prompt_tokens / 1_000_000) * (input_per_million or 0)
-            + (completion_tokens / 1_000_000) * (output_per_million or 0)
+            + (billed_output_tokens / 1_000_000) * (output_per_million or 0)
             + (cached_tokens / 1_000_000) * (cache_read_per_million or 0)
             + (cache_creation_tokens / 1_000_000) * (cache_write_per_million or 0)
         )
@@ -1015,16 +1086,6 @@ class ScoreHandler(SimpleHTTPRequestHandler):
             started_tasks.setdefault(key, set()).add(parts["task_id"])
             if trial is None:
                 continue
-            pricing = self._pricing_from_manifest(trial["manifest"])
-            if any(value is not None for value in pricing):
-                existing_pricing = grouped_pricing.get(key)
-                if existing_pricing is None:
-                    grouped_pricing[key] = pricing
-                else:
-                    grouped_pricing[key] = tuple(
-                        old if old is not None else new
-                        for old, new in zip(existing_pricing, pricing)
-                    )
             grouped_trials.setdefault(key, {}).setdefault(parts["task_id"], []).append(
                 trial["verdict"].get("passed", False)
             )
@@ -1034,6 +1095,21 @@ class ScoreHandler(SimpleHTTPRequestHandler):
                     float(seconds)
                 )
             token_usage = self._token_usage_from_manifest(trial["manifest"])
+            pricing = self._pricing_from_manifest(
+                trial["manifest"],
+                prompt_tokens=token_usage["prompt_tokens"],
+                cached_tokens=token_usage["cached_tokens"],
+                cache_creation_tokens=token_usage["cache_creation_tokens"],
+            )
+            if any(value is not None for value in pricing):
+                existing_pricing = grouped_pricing.get(key)
+                if existing_pricing is None:
+                    grouped_pricing[key] = pricing
+                else:
+                    grouped_pricing[key] = tuple(
+                        old if old is not None else new
+                        for old, new in zip(existing_pricing, pricing)
+                    )
             coverage = grouped_cost_coverage.setdefault(
                 key,
                 {"completed_trials": 0, "costed_trials": 0},
@@ -1064,6 +1140,7 @@ class ScoreHandler(SimpleHTTPRequestHandler):
                 token_usage["completion_tokens"],
                 token_usage["cached_tokens"],
                 token_usage["cache_creation_tokens"],
+                token_usage["reasoning_tokens"],
             )
             if estimated_cost is not None:
                 token_totals["estimated_cost_usd"] += estimated_cost

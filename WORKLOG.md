@@ -451,3 +451,30 @@ Append-only development log for the `coding-eval` repository.
   table/json/browser views can share the same invalidation behavior.
 - Next: add first-class run grouping or run-id display so historical probes
   and reruns do not contaminate model/adapter/suite cost comparisons.
+
+## 2026-07-05 — persist verifier crash verdicts
+
+- Context: two `pi_devstack_superpowers` trials had workdir/log output but no
+  `manifest.json` or `verdict.json`, leaving the row at `223/225`. The agent
+  had moved/renamed the workdir, causing verification to escape before durable
+  artifacts were written.
+- Changes:
+  - `run_trial()` now catches suite verifier exceptions and records a failed
+    verdict with `verifier_failed: true` plus a manifest error instead of
+    leaving an incomplete trial directory.
+  - Added regression coverage for verifier exceptions after adapter success.
+  - Re-ran the two incomplete `cpp/grade-school` and `cpp/sublist`
+    `pi_devstack_superpowers` trials under `ornith-high-20260704`, then
+    backfilled usage.
+- Evidence (RED -> GREEN):
+  - RED: the verifier-exception test raised `FileNotFoundError` and wrote no
+    artifacts.
+  - GREEN: `mamba run -n coding-eval python -m pytest tests/test_runner_failure.py -q`
+    = 3 passed.
+  - Operational check: `./view -v --filter ornith-high-20260704 --no-cache`
+    now shows `pi_devstack_superpowers` as complete with `91/225` and
+    `Costed 225/225`.
+- Decision: verifier crashes are scored as failed trials, not pending trials,
+  because the adapter already returned control to the harness.
+- Next: expose a small `./view` diagnostic for incomplete trial dirs if this
+  comes up again during long live runs.

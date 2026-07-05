@@ -618,7 +618,17 @@ def run_trial(suite, adapter, model_id, task_id, trial_k, results_dir, vendor_di
         suite, "verify_on_adapter_failure", False
     )
     if not adapter_failed or verify_on_failure:
-        verdict = suite.verify(task_data, workdir)
+        try:
+            verdict = suite.verify(task_data, workdir)
+        except Exception as e:
+            manifest["error"] = f"Verifier raised: {e}"
+            verdict = {
+                "passed": False,
+                "test_count": 0,
+                "grader_output": f"Verifier raised: {e}",
+                "exit_code": -1,
+                "verifier_failed": True,
+            }
     else:
         verdict = {
             "passed": False,

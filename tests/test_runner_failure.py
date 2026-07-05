@@ -35,6 +35,16 @@ class FakeFailingAdapter:
         return AdapterResult(returncode=1, error=None)
 
 
+class FakePassingAdapter:
+    """Adapter whose subprocess exits successfully."""
+
+    name = "fake_passing"
+    version = "test"
+
+    def run(self, task_data, workdir, log_file, stderr_file):
+        return AdapterResult(returncode=0, error=None)
+
+
 def _make_aider_problem(vendor_dir: Path):
     """Build a real-shaped polyglot-benchmark problem."""
     pdir = (
@@ -99,6 +109,46 @@ def test_nonzero_adapter_return_code_marks_failure_and_skips_verify(monkeypatch)
     assert manifest["exit_code"] == 1, (
         f"manifest.exit_code must be the adapter's nonzero rc, got {manifest['exit_code']}"
     )
+
+
+def test_verify_exception_records_failed_verdict_and_manifest(monkeypatch):
+    """Verifier crashes must produce durable failure artifacts."""
+    suite = AiderPolyglotSuite()
+    adapter = FakePassingAdapter()
+
+    def boom(task_data, workdir):
+        raise FileNotFoundError("workdir disappeared")
+
+    monkeypatch.setattr(suite, "verify", boom)
+
+    with tempfile.TemporaryDirectory() as tmp:
+        tmp = Path(tmp)
+        vendor_dir = tmp / "vendor"
+        vendor_dir.mkdir()
+        _make_aider_problem(vendor_dir)
+        results_dir = tmp / "results"
+
+        manifest, verdict = run_trial(
+            suite, adapter, "test/model", "python/two-fer", 1,
+            results_dir, vendor_dir,
+        )
+        trial_dir = (
+            results_dir
+            / "test%2Fmodel"
+            / "fake_passing"
+            / "aider_polyglot"
+            / "python%2Ftwo-fer"
+            / "trial-1"
+        )
+        manifest_exists = (trial_dir / "manifest.json").exists()
+        verdict_exists = (trial_dir / "verdict.json").exists()
+
+    assert verdict["passed"] is False
+    assert verdict["verifier_failed"] is True
+    assert "workdir disappeared" in verdict["grader_output"]
+    assert manifest["error"] == "Verifier raised: workdir disappeared"
+    assert manifest_exists
+    assert verdict_exists
 
 
 def test_zero_adapter_return_code_still_runs_verify():

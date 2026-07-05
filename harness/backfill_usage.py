@@ -29,7 +29,10 @@ def _parse_time(value: str | None) -> float | None:
 
 
 def _manifest_paths(results_dir: Path):
-    yield from results_dir.rglob("manifest.json")
+    for manifest_path in results_dir.rglob("manifest.json"):
+        trial_dir = manifest_path.parent
+        if re.fullmatch(r"trial-\d+", trial_dir.name):
+            yield manifest_path
 
 
 def _matches(path: Path, filters: tuple[str, ...], excludes: tuple[str, ...]) -> bool:
@@ -98,6 +101,12 @@ def backfill_manifest(
         manifest = json.loads(manifest_path.read_text())
     except (OSError, json.JSONDecodeError) as exc:
         return {"status": "error", "error": str(exc), "path": str(manifest_path)}
+    if not isinstance(manifest, dict):
+        return {
+            "status": "error",
+            "error": f"runner manifest must be a JSON object, got {type(manifest).__name__}",
+            "path": str(manifest_path),
+        }
 
     changed = False
     changed |= _merge_model_metadata(manifest)

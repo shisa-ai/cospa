@@ -135,3 +135,30 @@ def test_backfill_results_with_relative_results_dir_matches_absolute_sessions(mo
     assert summary["observed"] == 1
     assert manifest["token_usage"]["status"] == "observed"
     assert manifest["token_usage"]["prompt_tokens"] == 100
+
+
+def test_backfill_results_ignores_nested_non_trial_manifests():
+    """Harbor/task artifacts may contain unrelated manifest.json files."""
+    with tempfile.TemporaryDirectory() as tmp:
+        tmp = Path(tmp)
+        results_dir = tmp / "results"
+        sessions_root = tmp / "sessions"
+        trial_dir, manifest_path = _write_trial(results_dir)
+        _write_session(sessions_root, trial_dir / "workdir")
+        nested_manifest = (
+            trial_dir
+            / "jobs"
+            / "job-1"
+            / "workdir"
+            / "artifacts"
+            / "manifest.json"
+        )
+        nested_manifest.parent.mkdir(parents=True)
+        nested_manifest.write_text(json.dumps([{"not": "a runner manifest"}]))
+
+        summary = backfill_results(results_dir, sessions_root=sessions_root)
+        manifest = json.loads(manifest_path.read_text())
+
+    assert summary["scanned"] == 1
+    assert summary["errors"] == 0
+    assert manifest["token_usage"]["status"] == "observed"

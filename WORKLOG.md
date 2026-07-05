@@ -322,3 +322,26 @@ Append-only development log for the `coding-eval` repository.
   efficiency ratios until cost coverage is complete.
 - Next: continue using `scripts/backfill-usage.py --filter superpowers` to
   catch up the pre-patch live run, or wait and run it once after completion.
+
+## 2026-07-05 — make all-results usage backfill safe
+
+- Context: a full `scripts/backfill-usage.py --results-dir results` scan
+  crashed on a nested Harbor artifact named `manifest.json` that was not a
+  runner trial manifest.
+- Changes:
+  - Backfill discovery now only scans runner trial manifests at
+    `trial-N/manifest.json`.
+  - `backfill_manifest()` now reports non-object runner manifests as errors
+    instead of raising an `AttributeError`.
+  - Added regression coverage for nested non-trial manifests under
+    `trial-N/jobs/.../manifest.json`.
+- Evidence (RED -> GREEN):
+  - RED: full-scan regression test crashed on a list-shaped nested manifest.
+  - GREEN: `mamba run -n coding-eval python -m pytest -q` = 132 passed.
+  - GREEN: `bash tests/scripts/run_all.sh` = all shell tests passed
+    (`test_check_models`, `test_root_entrypoints`, `test_run_matrix`,
+    `test_setup`).
+- Decision: scope backfill to durable runner artifacts, not arbitrary
+  benchmark/container manifests that may exist inside trial job directories.
+- Next: run the unfiltered backfill over `results/` to catch every available
+  pi-backed trial.

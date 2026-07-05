@@ -88,6 +88,29 @@ def test_materialize_task_real_layout_copies_starter_and_tests():
         assert (workdir / "two_fer_test.py").exists(), list(workdir.iterdir())
 
 
+def test_materialize_task_skips_generated_build_artifacts():
+    """Vendored build caches must not poison fresh trial workdirs."""
+    suite = AiderPolyglotSuite()
+    with tempfile.TemporaryDirectory() as tmp:
+        vendor_dir = Path(tmp) / "vendor"
+        pdir = _make_real_polyglot_problem(
+            vendor_dir, "cpp", "bank-account",
+            instructions="# Bank Account\nImplement bank-account.",
+            starter="class bank_account {};",
+            test="int main() { return 0; }\n",
+        )
+        build_dir = pdir / "build"
+        build_dir.mkdir()
+        (build_dir / "CMakeCache.txt").write_text(
+            f"CMAKE_HOME_DIRECTORY:INTERNAL={pdir}\n"
+        )
+
+        workdir = Path(tmp) / "workdir"
+        suite.materialize_task("cpp/bank-account", workdir, vendor_dir)
+
+        assert not (workdir / "build").exists(), list(workdir.iterdir())
+
+
 def test_materialize_task_handles_dash_to_underscore_for_python():
     """python problem 'hello-world' starter is 'hello_world.py'."""
     suite = AiderPolyglotSuite()

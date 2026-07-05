@@ -478,3 +478,26 @@ Append-only development log for the `coding-eval` repository.
   because the adapter already returned control to the harness.
 - Next: expose a small `./view` diagnostic for incomplete trial dirs if this
   comes up again during long live runs.
+
+## 2026-07-05 — skip generated polyglot artifacts
+
+- Context: a `codex/gpt-5.5` high-thinking smoke exposed a false C++ failure:
+  the vendored `bank-account/build/CMakeCache.txt` was copied into the trial
+  workdir and still pointed at the vendor source directory.
+- Changes:
+  - `AiderPolyglotSuite.materialize_task()` now skips top-level generated
+    artifact directories such as `build`, `target`, `node_modules`, and common
+    cache dirs when copying a problem into a fresh workdir.
+  - Added regression coverage that fails when a stale vendored `build/`
+    directory reaches the workdir.
+- Evidence (RED -> GREEN):
+  - RED: `test_materialize_task_skips_generated_build_artifacts` copied
+    `build/` into the workdir.
+  - GREEN: `mamba run -n coding-eval python -m pytest tests/test_aider_polyglot.py -q`
+    = 14 passed.
+  - GREEN: `mamba run -n coding-eval python -m pytest -q` = 144 passed.
+  - GREEN: `bash tests/scripts/run_all.sh` = all shell tests passed.
+- Decision: keep the vendor tree intact and make materialization robust to
+  dirty external datasets.
+- Next: rerun the `codex/gpt-5.5` high smoke after the fix so the score is not
+  polluted by stale CMake state.

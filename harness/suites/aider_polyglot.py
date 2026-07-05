@@ -67,6 +67,14 @@ class AiderPolyglotSuite:
         "java": "java",
         "javascript": "js",
     }
+    GENERATED_ARTIFACT_DIRS = {
+        ".gradle",
+        ".pytest_cache",
+        "__pycache__",
+        "build",
+        "node_modules",
+        "target",
+    }
 
     def _problem_dir(self, vendor_dir: Path, language: str, problem: str) -> Path:
         """Locate the on-disk problem directory for a (language, problem)."""
@@ -141,6 +149,8 @@ class AiderPolyglotSuite:
         # language's test runner can find starter + tests + module files.
         for item in problem_dir.iterdir():
             if item.name == ".docs":
+                continue
+            if item.is_dir() and item.name in self.GENERATED_ARTIFACT_DIRS:
                 continue
             if item.is_dir():
                 shutil.copytree(item, workdir / item.name, dirs_exist_ok=True)

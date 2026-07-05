@@ -599,3 +599,33 @@ Append-only development log for the `coding-eval` repository.
   scanning only as a compatibility fallback for pre-heartbeat runners.
 - Next: resume stalled GLM runs under the new runner and clean orphaned
   subprocesses that no live runner owns.
+
+## 2026-07-06 — price results from repo rates at read time
+
+- Context: score costs depended on pi/little-coder session pricing from
+  `~/.pi/agent/models.json`, so the same token counts could get different
+  costs depending on the harness or local provider config.
+- Changes:
+  - `./view` now prices from repo `configs/models.yaml` rates first and uses
+    pi-reported `token_usage.cost_usd` only as a fallback when no rates exist.
+  - Added `--pricing-profile` support for named `cost_profiles` so old/new
+    price views can be selected without rewriting result manifests.
+  - Added repo cost entries for Ornith, Nemotron, and Stepfun.
+  - Preserved pi-computed session cost as `token_usage.cost_usd_pi` for audit.
+  - Included pricing config signature and selected profile in the viewer cache
+    key, so YAML price edits invalidate cached score rows.
+- Evidence (RED -> GREEN):
+  - RED: repo pricing did not override positive pi `cost_usd`, named pricing
+    profiles were unsupported, and pi cost was not preserved as
+    `cost_usd_pi`.
+  - GREEN: pricing/telemetry-focused tests passed.
+  - GREEN: `mamba run -n coding-eval python -m pytest -q` = 159 passed.
+  - GREEN: `bash tests/scripts/run_all.sh` = all shell tests passed.
+  - Operational check: cached-disabled `./view -v --all --filter
+    'ornith|qwen3.6|glm-5.2|nemotron|stepfun' --no-cache` reprices existing
+    manifests from repo rates without backfill.
+- Decision: keep `configs/models.yaml` as the single canonical rate table.
+  Manifests store raw usage and audit costs; score views compute opportunity
+  cost at read time.
+- Next: add named `cost_profiles` to `configs/models.yaml` when we need to
+  compare historical/current price schedules.

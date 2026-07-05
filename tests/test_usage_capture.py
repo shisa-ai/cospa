@@ -138,6 +138,7 @@ def test_summarize_pi_session_extracts_usage_cost_and_response_metadata():
     assert summary["reasoning_tokens"] == 16
     assert summary["total_tokens"] == 481
     assert summary["cost_usd"] == 0.0001417
+    assert summary["cost_usd_pi"] == 0.0001417
     assert summary["response_ids"] == ["chatcmpl-one", "chatcmpl-two"]
     assert summary["response_models"] == ["ornith-35b-fp8-block"]
     assert summary["models"] == ["Ornith-1.0-35B"]
@@ -407,6 +408,42 @@ def test_load_model_metadata_preserves_long_context_pricing_tiers():
     assert metadata["pricing_unit"] == "usd_per_1m_tokens"
 
 
+def test_load_model_metadata_selects_named_cost_profile():
+    """Named cost profiles allow old/new pricing without rewriting manifests."""
+    with tempfile.TemporaryDirectory() as tmp:
+        tmp = Path(tmp)
+        models_json = tmp / "models.json"
+        models_yaml = tmp / "models.yaml"
+        models_json.write_text(json.dumps({"providers": {}}))
+        models_yaml.write_text(
+            "models:\n"
+            "  - id: repo/profiled-model\n"
+            "    cost:\n"
+            "      input: 1.0\n"
+            "      output: 2.0\n"
+            "    cost_profiles:\n"
+            "      new:\n"
+            "        input: 10.0\n"
+            "        output: 20.0\n"
+            "        cacheRead: 1.0\n"
+            "    pricing_unit: usd_per_1m_tokens\n"
+        )
+
+        metadata = load_model_metadata(
+            "repo/profiled-model",
+            models_json_path=models_json,
+            models_config_path=models_yaml,
+            pricing_profile="new",
+        )
+
+    assert metadata["cost"] == {
+        "input": 10.0,
+        "output": 20.0,
+        "cacheRead": 1.0,
+    }
+    assert metadata["pricing_profile"] == "new"
+
+
 def test_run_trial_records_pi_session_usage_and_trace(monkeypatch):
     suite = AiderPolyglotSuite()
 
@@ -458,6 +495,7 @@ def test_run_trial_records_pi_session_usage_and_trace(monkeypatch):
         assert usage["prompt_tokens"] == 300
         assert usage["completion_tokens"] == 70
         assert usage["cost_usd"] == 0.0001417
+        assert usage["cost_usd_pi"] == 0.0001417
         assert usage["trace_files"] == ["out/pi_session.jsonl"]
         assert manifest["sampling"]["thinking_token_budget"] == 8192
         trace_path = (

@@ -317,6 +317,59 @@ def test_get_scores_cache_invalidates_when_trial_set_changes(monkeypatch):
     assert second[0]["passed_tasks"] == 1
 
 
+def test_get_scores_cache_invalidates_when_pricing_config_changes(monkeypatch):
+    """Price-at-read must not be hidden by the persistent score cache."""
+    with tempfile.TemporaryDirectory() as tmp:
+        tmp = Path(tmp)
+        results_dir = tmp / "results"
+        cache_path = tmp / "score-cache.json"
+        models_yaml = tmp / "models.yaml"
+        model_id = "repo/cache-priced"
+        base = (
+            results_dir
+            / "runs"
+            / "priced-run"
+            / encode_model_path(model_id)
+            / "pi_vanilla"
+            / "aider_polyglot"
+            / encode_task_path("python/hello")
+        )
+        _write_trial(
+            base / "trial-1",
+            passed=True,
+            model_id=model_id,
+            token_usage={
+                "prompt_tokens": 1_000_000,
+                "completion_tokens": 1_000_000,
+            },
+        )
+
+        h, server_mod = _make_handler(results_dir)
+        server_mod.DEFAULT_CACHE_PATH = cache_path
+        server_mod.DEFAULT_MODELS_CONFIG_PATH = models_yaml
+        models_yaml.write_text(
+            "models:\n"
+            "  - id: repo/cache-priced\n"
+            "    cost:\n"
+            "      input: 1.0\n"
+            "      output: 2.0\n"
+        )
+        first = h.get_scores()
+
+        models_yaml.write_text(
+            "models:\n"
+            "  - id: repo/cache-priced\n"
+            "    cost:\n"
+            "      input: 10.0\n"
+            "      output: 20.0\n"
+        )
+        h2 = server_mod.ScoreHandler.__new__(server_mod.ScoreHandler)
+        second = h2.get_scores()
+
+    assert first[0]["estimated_cost_usd"] == 3.0
+    assert second[0]["estimated_cost_usd"] == 30.0
+
+
 def test_trial_scanner_prunes_trial_children():
     """Nested benchmark files under workdir/out/jobs must not be scanned."""
     with tempfile.TemporaryDirectory() as tmp:
@@ -400,8 +453,8 @@ def test_get_scores_aggregates_token_usage_and_estimated_cost():
     assert row["output_cost_per_million_usd"] == 2.0
 
 
-def test_get_scores_prefers_direct_usage_cost():
-    """Provider-reported usage cost should beat local pricing estimates."""
+def test_get_scores_uses_direct_usage_cost_without_pricing():
+    """Provider-reported usage cost is fallback when no rates are configured."""
     with tempfile.TemporaryDirectory() as tmp:
         results_dir = Path(tmp) / "results"
         model_id = "priced/model"
@@ -427,7 +480,6 @@ def test_get_scores_prefers_direct_usage_cost():
                 "completion_tokens": 1_000_000,
                 "cost_usd": 0.1234,
             },
-            model_cost={"input": 100.0, "output": 100.0},
         )
 
         h, _ = _make_handler(results_dir)
@@ -435,6 +487,110 @@ def test_get_scores_prefers_direct_usage_cost():
 
     assert scores[0]["estimated_cost_usd"] == 0.1234
     assert scores[0]["cost_per_completed_task_usd"] == 0.1234
+
+
+def test_get_scores_repo_pricing_overrides_direct_usage_cost():
+    """Cospa pricing must come from repo rates, not pi-computed cost."""
+    with tempfile.TemporaryDirectory() as tmp:
+        tmp = Path(tmp)
+        results_dir = tmp / "results"
+        models_yaml = tmp / "models.yaml"
+        model_id = "repo/priced-model"
+        adapter = "pi_vanilla"
+        suite = "aider_polyglot"
+        task_id = "python/hello"
+        models_yaml.write_text(
+            "models:\n"
+            "  - id: repo/priced-model\n"
+            "    cost:\n"
+            "      input: 1.0\n"
+            "      output: 2.0\n"
+            "      cacheRead: 0.5\n"
+            "      cacheWrite: 0\n"
+            "    pricing_unit: usd_per_1m_tokens\n"
+        )
+        base = (
+            results_dir
+            / "runs"
+            / "priced-run"
+            / encode_model_path(model_id)
+            / adapter
+            / suite
+            / encode_task_path(task_id)
+        )
+        _write_trial(
+            base / "trial-1",
+            passed=True,
+            model_id=model_id,
+            task_id=task_id,
+            token_usage={
+                "prompt_tokens": 1_000_000,
+                "completion_tokens": 1_000_000,
+                "cached_tokens": 1_000_000,
+                "cost_usd": 999.0,
+            },
+        )
+
+        h, server_mod = _make_handler(results_dir)
+        server_mod.DEFAULT_MODELS_CONFIG_PATH = models_yaml
+        scores = h.get_scores()
+
+    assert scores[0]["estimated_cost_usd"] == 3.5
+    assert scores[0]["input_cost_per_million_usd"] == 1.0
+    assert scores[0]["output_cost_per_million_usd"] == 2.0
+    assert scores[0]["cost_per_completed_task_usd"] == 3.5
+
+
+def test_get_scores_uses_named_pricing_profile():
+    """Named cost profiles let the same raw results be viewed under new rates."""
+    with tempfile.TemporaryDirectory() as tmp:
+        tmp = Path(tmp)
+        results_dir = tmp / "results"
+        models_yaml = tmp / "models.yaml"
+        model_id = "repo/profiled-model"
+        adapter = "pi_vanilla"
+        suite = "aider_polyglot"
+        task_id = "python/hello"
+        models_yaml.write_text(
+            "models:\n"
+            "  - id: repo/profiled-model\n"
+            "    cost:\n"
+            "      input: 1.0\n"
+            "      output: 2.0\n"
+            "    cost_profiles:\n"
+            "      new:\n"
+            "        input: 10.0\n"
+            "        output: 20.0\n"
+            "    pricing_unit: usd_per_1m_tokens\n"
+        )
+        base = (
+            results_dir
+            / "runs"
+            / "profiled-run"
+            / encode_model_path(model_id)
+            / adapter
+            / suite
+            / encode_task_path(task_id)
+        )
+        _write_trial(
+            base / "trial-1",
+            passed=True,
+            model_id=model_id,
+            task_id=task_id,
+            token_usage={
+                "prompt_tokens": 1_000_000,
+                "completion_tokens": 1_000_000,
+            },
+        )
+
+        h, server_mod = _make_handler(results_dir)
+        server_mod.DEFAULT_MODELS_CONFIG_PATH = models_yaml
+        server_mod.DEFAULT_PRICING_PROFILE = "new"
+        scores = h.get_scores()
+
+    assert scores[0]["estimated_cost_usd"] == 30.0
+    assert scores[0]["input_cost_per_million_usd"] == 10.0
+    assert scores[0]["output_cost_per_million_usd"] == 20.0
 
 
 def test_get_scores_estimates_when_direct_usage_cost_is_zero_with_pricing():
@@ -479,7 +635,7 @@ def test_get_scores_charges_reasoning_tokens_as_output():
     """Reasoning tokens are billed at the model output-token rate."""
     with tempfile.TemporaryDirectory() as tmp:
         results_dir = Path(tmp) / "results"
-        model_id = "codex/gpt-5.5"
+        model_id = "priced/gpt-5.5"
         adapter = "pi_vanilla"
         suite = "aider_polyglot"
         task_id = "python/hello"
@@ -516,7 +672,7 @@ def test_get_scores_applies_long_context_pricing_per_trial():
     """Long-context rates apply only to trials crossing the input threshold."""
     with tempfile.TemporaryDirectory() as tmp:
         results_dir = Path(tmp) / "results"
-        model_id = "codex/gpt-5.5"
+        model_id = "priced/gpt-5.5"
         adapter = "pi_vanilla"
         suite = "aider_polyglot"
         model_cost = {

@@ -94,6 +94,7 @@ def _parse_models_yaml_fallback(text: str) -> list[dict]:
     models: list[dict] = []
     current: dict | None = None
     nested_key: str | None = None
+    nested_profile: str | None = None
 
     for raw_line in text.splitlines():
         line = raw_line.split("#", 1)[0].rstrip()
@@ -106,11 +107,13 @@ def _parse_models_yaml_fallback(text: str) -> list[dict]:
             current = {"id": _parse_simple_yaml_scalar(stripped.split(":", 1)[1])}
             models.append(current)
             nested_key = None
+            nested_profile = None
             continue
         if stripped.startswith("- "):
             current = {"id": _parse_simple_yaml_scalar(stripped[2:])}
             models.append(current)
             nested_key = None
+            nested_profile = None
             continue
         if current is None or ":" not in stripped:
             continue
@@ -118,6 +121,23 @@ def _parse_models_yaml_fallback(text: str) -> list[dict]:
         key, raw_value = stripped.split(":", 1)
         key = key.strip()
         raw_value = raw_value.strip()
+        if indent >= 8 and nested_key == "cost_profiles" and nested_profile:
+            profiles = current.setdefault(nested_key, {})
+            if isinstance(profiles, dict):
+                profile = profiles.setdefault(nested_profile, {})
+                if isinstance(profile, dict):
+                    profile[key] = _parse_simple_yaml_scalar(raw_value)
+            continue
+        if indent >= 6 and nested_key == "cost_profiles":
+            profiles = current.setdefault(nested_key, {})
+            if isinstance(profiles, dict):
+                if raw_value:
+                    profiles[key] = _parse_simple_yaml_scalar(raw_value)
+                    nested_profile = None
+                else:
+                    profiles[key] = {}
+                    nested_profile = key
+            continue
         if indent >= 6 and nested_key:
             nested = current.setdefault(nested_key, {})
             if isinstance(nested, dict):
@@ -126,9 +146,11 @@ def _parse_models_yaml_fallback(text: str) -> list[dict]:
         if raw_value:
             current[key] = _parse_simple_yaml_scalar(raw_value)
             nested_key = None
+            nested_profile = None
         else:
             current[key] = {}
             nested_key = key
+            nested_profile = None
 
     return models
 
@@ -174,12 +196,21 @@ def _candidate_model_values(model: dict) -> list[str]:
     return values
 
 
-def _match_model_entry(models: list[Any], model_id: str) -> dict | None:
+def _match_model_entry(
+    models: list[Any],
+    model_id: str,
+    *,
+    strict: bool = False,
+) -> dict | None:
     targets = _model_targets(model_id)
     for item in models:
         if not isinstance(item, dict):
             continue
         for value in _candidate_model_values(item):
+            if strict and value == model_id:
+                return item
+            if strict:
+                continue
             if value in targets or _normalize_model_id(value) in targets:
                 return item
     return None
@@ -190,6 +221,8 @@ def load_model_metadata(
     *,
     models_json_path: Path | str | None = None,
     models_config_path: Path | str | None = None,
+    pricing_profile: str | None = None,
+    strict_config_id: bool = False,
 ) -> dict:
     """Load safe model metadata from pi's models.json.
 
@@ -218,9 +251,16 @@ def load_model_metadata(
     if models_config_path is None:
         models_config_path = PROJECT_ROOT / "configs" / "models.yaml"
     models_config_path = Path(models_config_path)
-    config_model = _match_model_entry(_read_models_config(models_config_path), model_id)
+    config_model = _match_model_entry(
+        _read_models_config(models_config_path),
+        model_id,
+        strict=strict_config_id,
+    )
     if config_model is not None:
-        config_metadata = _safe_model_metadata(config_model)
+        config_metadata = _safe_model_metadata(
+            config_model,
+            pricing_profile=pricing_profile,
+        )
         if (
             config_model.get("id") == model_id
             and "model" not in config_model
@@ -232,7 +272,11 @@ def load_model_metadata(
     return metadata
 
 
-def _safe_model_metadata(model: dict) -> dict[str, Any]:
+def _safe_model_metadata(
+    model: dict,
+    *,
+    pricing_profile: str | None = None,
+) -> dict[str, Any]:
     metadata: dict[str, Any] = {}
     field_map = {
         "provider_config_model_id": ("id", "model", "modelId"),
@@ -251,7 +295,17 @@ def _safe_model_metadata(model: dict) -> dict[str, Any]:
     if isinstance(input_modalities, list):
         metadata["input_modalities"] = input_modalities
 
-    cost = model.get("cost") or model.get("pricing")
+    selected_profile = None
+    cost = None
+    if pricing_profile:
+        profiles = model.get("cost_profiles") or model.get("pricing_profiles")
+        if isinstance(profiles, dict):
+            profile_cost = profiles.get(pricing_profile)
+            if isinstance(profile_cost, dict):
+                cost = profile_cost
+                selected_profile = pricing_profile
+    if cost is None:
+        cost = model.get("cost") or model.get("pricing")
     if isinstance(cost, dict):
         metadata["cost"] = {
             key: value
@@ -261,6 +315,8 @@ def _safe_model_metadata(model: dict) -> dict[str, Any]:
             and not isinstance(value, bool)
         }
         metadata["pricing_unit"] = "usd_per_1m_tokens"
+        if selected_profile:
+            metadata["pricing_profile"] = selected_profile
 
     return metadata
 
@@ -374,6 +430,7 @@ def summarize_pi_session(session_file: Path | str) -> dict:
         "reasoning_tokens": 0,
         "total_tokens": 0,
         "cost_usd": 0.0,
+        "cost_usd_pi": 0.0,
     }
     response_ids: list[str] = []
     response_models: list[str] = []
@@ -435,9 +492,11 @@ def summarize_pi_session(session_file: Path | str) -> dict:
 
             cost = usage.get("cost")
             if isinstance(cost, dict):
-                totals["cost_usd"] += _numeric(cost, "total", "cost_usd", "total_cost_usd")
+                observed_cost = _numeric(cost, "total", "cost_usd", "total_cost_usd")
             else:
-                totals["cost_usd"] += _numeric(usage, "cost_usd", "total_cost_usd", "cost")
+                observed_cost = _numeric(usage, "cost_usd", "total_cost_usd", "cost")
+            totals["cost_usd"] += observed_cost
+            totals["cost_usd_pi"] += observed_cost
 
     status = "observed" if response_count else "unavailable"
     summary = {
@@ -456,6 +515,7 @@ def summarize_pi_session(session_file: Path | str) -> dict:
         "reasoning_tokens": totals["reasoning_tokens"],
         "total_tokens": totals["total_tokens"],
         "cost_usd": totals["cost_usd"],
+        "cost_usd_pi": totals["cost_usd_pi"],
         "response_ids": response_ids,
         "response_models": response_models,
         "models": models,
@@ -514,6 +574,7 @@ def _summarize_and_copy_pi_sessions(
         "reasoning_tokens": 0,
         "total_tokens": 0,
         "cost_usd": 0.0,
+        "cost_usd_pi": 0.0,
         "response_count": 0,
     }
     response_ids: list[str] = []
@@ -554,6 +615,7 @@ def _summarize_and_copy_pi_sessions(
         "reasoning_tokens": totals["reasoning_tokens"],
         "total_tokens": totals["total_tokens"],
         "cost_usd": totals["cost_usd"],
+        "cost_usd_pi": totals["cost_usd_pi"],
         "response_ids": response_ids,
         "response_models": response_models,
         "models": models,

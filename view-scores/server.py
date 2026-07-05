@@ -31,6 +31,8 @@ DEFAULT_INCLUDE_SMOKE = False
 DEFAULT_FILTERS: tuple[str, ...] = ()
 DEFAULT_EXCLUDES: tuple[str, ...] = ()
 DEFAULT_USE_CACHE = True
+DEFAULT_MODELS_CONFIG_PATH = PROJECT_ROOT / "configs" / "models.yaml"
+DEFAULT_PRICING_PROFILE = os.environ.get("CODING_EVAL_PRICING_PROFILE") or None
 DEFAULT_CACHE_PATH = Path(
     os.environ.get(
         "CODING_EVAL_VIEW_CACHE_PATH",
@@ -627,6 +629,8 @@ class ScoreHandler(SimpleHTTPRequestHandler):
             "excludes": list(excludes),
             "trials": signature,
             "heartbeats": heartbeat_signature,
+            "models_config": cls._file_signature(DEFAULT_MODELS_CONFIG_PATH),
+            "pricing_profile": DEFAULT_PRICING_PROFILE,
             "liveness_bucket": (
                 int(time.time() // RUN_HEARTBEAT_STALE_SECONDS)
                 if include_liveness_time_bucket
@@ -923,29 +927,22 @@ class ScoreHandler(SimpleHTTPRequestHandler):
             "total_tokens": total,
         }
 
+    @staticmethod
+    def _manifest_model_id(manifest: dict) -> str | None:
+        model = manifest.get("model", {})
+        if isinstance(model, dict) and isinstance(model.get("id"), str):
+            return model["id"]
+        return None
+
     @classmethod
-    def _pricing_from_manifest(
+    def _pricing_from_pricing_dict(
         cls,
-        manifest: dict,
+        pricing: dict,
         *,
         prompt_tokens: int | None = None,
         cached_tokens: int = 0,
         cache_creation_tokens: int = 0,
     ) -> tuple[float | None, float | None, float | None, float | None]:
-        model = manifest.get("model", {})
-        if not isinstance(model, dict):
-            model = {}
-
-        pricing = (
-            model.get("cost")
-            or model.get("pricing")
-            or manifest.get("cost")
-            or manifest.get("pricing")
-            or {}
-        )
-        if not isinstance(pricing, dict):
-            return None, None, None, None
-
         input_per_million = cls._numeric_value(
             pricing,
             "input",
@@ -1050,6 +1047,78 @@ class ScoreHandler(SimpleHTTPRequestHandler):
         )
 
     @classmethod
+    def _pricing_from_repo_config(
+        cls,
+        manifest: dict,
+        *,
+        prompt_tokens: int | None = None,
+        cached_tokens: int = 0,
+        cache_creation_tokens: int = 0,
+    ) -> tuple[float | None, float | None, float | None, float | None]:
+        model_id = cls._manifest_model_id(manifest)
+        if not model_id:
+            return None, None, None, None
+        try:
+            from harness.telemetry import load_model_metadata
+
+            metadata = load_model_metadata(
+                model_id,
+                models_json_path=Path("/nonexistent-coding-eval-models.json"),
+                models_config_path=DEFAULT_MODELS_CONFIG_PATH,
+                pricing_profile=DEFAULT_PRICING_PROFILE,
+                strict_config_id=True,
+            )
+        except Exception:
+            return None, None, None, None
+        pricing = metadata.get("cost")
+        if not isinstance(pricing, dict):
+            return None, None, None, None
+        return cls._pricing_from_pricing_dict(
+            pricing,
+            prompt_tokens=prompt_tokens,
+            cached_tokens=cached_tokens,
+            cache_creation_tokens=cache_creation_tokens,
+        )
+
+    @classmethod
+    def _pricing_from_manifest(
+        cls,
+        manifest: dict,
+        *,
+        prompt_tokens: int | None = None,
+        cached_tokens: int = 0,
+        cache_creation_tokens: int = 0,
+    ) -> tuple[float | None, float | None, float | None, float | None]:
+        repo_pricing = cls._pricing_from_repo_config(
+            manifest,
+            prompt_tokens=prompt_tokens,
+            cached_tokens=cached_tokens,
+            cache_creation_tokens=cache_creation_tokens,
+        )
+        if any(value is not None for value in repo_pricing):
+            return repo_pricing
+
+        model = manifest.get("model", {})
+        if not isinstance(model, dict):
+            model = {}
+
+        pricing = (
+            model.get("cost")
+            or model.get("pricing")
+            or manifest.get("cost")
+            or manifest.get("pricing")
+            or {}
+        )
+        if not isinstance(pricing, dict):
+            return None, None, None, None
+        return cls._pricing_from_pricing_dict(
+            pricing,
+            prompt_tokens=prompt_tokens,
+            cached_tokens=cached_tokens,
+            cache_creation_tokens=cache_creation_tokens,
+        )
+
+    @classmethod
     def _estimate_cost_usd(
         cls,
         manifest: dict,
@@ -1059,7 +1128,18 @@ class ScoreHandler(SimpleHTTPRequestHandler):
         cache_creation_tokens: int = 0,
         reasoning_tokens: int = 0,
     ) -> float | None:
+        has_tokens = any(
+            value > 0
+            for value in (
+                prompt_tokens,
+                completion_tokens,
+                cached_tokens,
+                cache_creation_tokens,
+                reasoning_tokens,
+            )
+        )
         usage = manifest.get("token_usage") or manifest.get("usage") or {}
+        direct_cost = None
         if isinstance(usage, dict):
             direct_cost = cls._numeric_value(
                 usage,
@@ -1068,42 +1148,15 @@ class ScoreHandler(SimpleHTTPRequestHandler):
                 "cost",
                 "total_cost",
             )
-            has_tokens = any(
-                value > 0
-                for value in (
-                    prompt_tokens,
-                    completion_tokens,
-                    cached_tokens,
-                    cache_creation_tokens,
-                    reasoning_tokens,
-                )
-            )
-            if direct_cost is not None and direct_cost > 0:
-                return direct_cost
-            if direct_cost is not None and not has_tokens:
-                return None
-        else:
-            has_tokens = any(
-                value > 0
-                for value in (
-                    prompt_tokens,
-                    completion_tokens,
-                    cached_tokens,
-                    cache_creation_tokens,
-                    reasoning_tokens,
-                )
-            )
 
-        direct_cost = cls._numeric_value(
+        manifest_direct_cost = cls._numeric_value(
             manifest,
             "cost_usd",
             "total_cost_usd",
             "estimated_cost_usd",
         )
-        if direct_cost is not None and direct_cost > 0:
-            return direct_cost
-        if direct_cost is not None and not has_tokens:
-            return None
+        if direct_cost is None:
+            direct_cost = manifest_direct_cost
 
         (
             input_per_million,
@@ -1117,18 +1170,20 @@ class ScoreHandler(SimpleHTTPRequestHandler):
             cache_creation_tokens=cache_creation_tokens,
         )
         if not has_tokens:
+            if direct_cost is not None and direct_cost > 0:
+                return direct_cost
             return None
         if input_per_million is None and output_per_million is None:
-            return direct_cost
+            return direct_cost if direct_cost is not None and direct_cost > 0 else None
         if prompt_tokens and input_per_million is None:
-            return direct_cost
+            return direct_cost if direct_cost is not None and direct_cost > 0 else None
         billed_output_tokens = completion_tokens + reasoning_tokens
         if billed_output_tokens and output_per_million is None:
-            return direct_cost
+            return direct_cost if direct_cost is not None and direct_cost > 0 else None
         if cached_tokens and cache_read_per_million is None:
-            return direct_cost
+            return direct_cost if direct_cost is not None and direct_cost > 0 else None
         if cache_creation_tokens and cache_write_per_million is None:
-            return direct_cost
+            return direct_cost if direct_cost is not None and direct_cost > 0 else None
 
         return (
             (prompt_tokens / 1_000_000) * (input_per_million or 0)
@@ -1519,7 +1574,7 @@ def _start_server(host: str, port: int) -> None:
 def main(argv: list[str] | None = None) -> int:
     """Run the score viewer CLI."""
     global RESULTS_DIR, DEFAULT_INCLUDE_SMOKE, DEFAULT_FILTERS, DEFAULT_EXCLUDES
-    global DEFAULT_USE_CACHE
+    global DEFAULT_USE_CACHE, DEFAULT_PRICING_PROFILE
 
     common = argparse.ArgumentParser(add_help=False)
     common.add_argument(
@@ -1557,6 +1612,14 @@ def main(argv: list[str] | None = None) -> int:
         action="store_false",
         default=True,
         help="Disable the persistent score cache",
+    )
+    common.add_argument(
+        "--pricing-profile",
+        default=None,
+        help=(
+            "Use cost_profiles.<name> from configs/models.yaml for pricing "
+            "(default: use each model's cost block)"
+        ),
     )
     parser = argparse.ArgumentParser(
         description="View coding-eval scores",
@@ -1608,6 +1671,7 @@ def main(argv: list[str] | None = None) -> int:
     DEFAULT_FILTERS = tuple(getattr(args, "filters", []) or [])
     DEFAULT_EXCLUDES = tuple(getattr(args, "excludes", []) or [])
     DEFAULT_USE_CACHE = getattr(args, "use_cache", True)
+    DEFAULT_PRICING_PROFILE = getattr(args, "pricing_profile", None)
 
     # Preserve the old direct-launch behavior: `python view-scores/server.py`
     # starts the web viewer. The root `./view` wrapper defaults to table mode.

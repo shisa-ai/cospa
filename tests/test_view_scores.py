@@ -305,6 +305,8 @@ def test_get_scores_aggregates_token_usage_and_estimated_cost():
     assert row["estimated_cost_usd"] == 2.15
     assert row["cost_per_completed_task_usd"] == 2.15
     assert row["passed_tasks_per_usd"] == 1 / 2.15
+    assert row["input_cost_per_million_usd"] == 1.0
+    assert row["output_cost_per_million_usd"] == 2.0
 
 
 def test_get_scores_prefers_direct_usage_cost():
@@ -568,6 +570,36 @@ def test_generate_html_renders_rows_without_keyerror():
     assert "<th>95% CI</th>" not in html
 
 
+def test_generate_html_includes_default_cost_efficiency_columns():
+    """The browser default table should include cost efficiency fields."""
+    with tempfile.TemporaryDirectory() as tmp:
+        results_dir = Path(tmp) / "results"
+        model_id = "priced/model"
+        base = (
+            results_dir
+            / "runs"
+            / "priced-run"
+            / encode_model_path(model_id)
+            / "pi_vanilla"
+            / "aider_polyglot"
+            / encode_task_path("python/hello")
+        )
+        _write_trial(
+            base / "trial-1",
+            passed=True,
+            model_id=model_id,
+            token_usage={"prompt_tokens": 1_000_000, "cost_usd": 0.1234},
+        )
+
+        h, _ = _make_handler(results_dir)
+        html = h.generate_html()
+
+    assert "<th>Cost</th>" in html
+    assert "<th>$/Task</th>" in html
+    assert "<th>Pass/$</th>" in html
+    assert "$0.1234" in html
+
+
 def test_generate_html_escapes_result_metadata_and_quotes_detail_links():
     """Viewer HTML must not render result metadata as executable markup.
 
@@ -653,6 +685,41 @@ def test_format_scores_terminal_uses_color_and_task_counts():
     assert "50.0%" in output
 
 
+def test_format_scores_terminal_default_includes_cost_efficiency():
+    """Default terminal rows should show cost, cost/task, and passed/$."""
+    import importlib.util
+
+    server_path = PROJECT_ROOT / "view-scores" / "server.py"
+    spec = importlib.util.spec_from_file_location("view_scores_server_cost_test", server_path)
+    server_mod = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(server_mod)
+
+    output = server_mod.format_scores_terminal(
+        [
+            {
+                "model": "local/ornith-1.0-35b",
+                "adapter": "pi_vanilla",
+                "suite": "aider_polyglot",
+                "pass_rate": 50.0,
+                "passed_tasks": 5,
+                "total_tasks": 10,
+                "estimated_cost_usd": 0.1234,
+                "cost_per_completed_task_usd": 0.01234,
+                "passed_tasks_per_usd": 40.5186,
+            }
+        ],
+        results_dir=Path("/tmp/results"),
+        color=False,
+    )
+
+    assert "Cost" in output
+    assert "$/Task" in output
+    assert "Pass/$" in output
+    assert "$0.1234" in output
+    assert "$0.0123" in output
+    assert "40.5" in output
+
+
 def test_format_scores_terminal_verbose_includes_status_and_timing():
     """Verbose table should surface runtime and ETA columns."""
     import importlib.util
@@ -680,6 +747,8 @@ def test_format_scores_terminal_verbose_includes_status_and_timing():
                 "completion_tokens": 500,
                 "total_tokens": 1500,
                 "estimated_cost_usd": 0.0123,
+                "input_cost_per_million_usd": 0.14,
+                "output_cost_per_million_usd": 1.04,
                 "estimated_remaining_seconds": 600,
             }
         ],
@@ -691,10 +760,14 @@ def test_format_scores_terminal_verbose_includes_status_and_timing():
     assert "Runtime" in output
     assert "Tok In" in output
     assert "Tok Out" in output
+    assert "$/M In" in output
+    assert "$/M Out" in output
     assert "Cost" in output
     assert "ETA" in output
     assert "running" in output
     assert "10m" in output
+    assert "$0.1400" in output
+    assert "$1.04" in output
     assert "$0.0123" in output
 
 

@@ -45,7 +45,8 @@ bash scripts/check-models.sh
 ./view serve
 ```
 
-`./view` prints a colored terminal table with `Score` and `Passed/Total`.
+`./view` prints a colored terminal table with `Score`, `Passed/Total`,
+total cost, cost per completed task, and passed tasks per dollar.
 `./view serve` starts the browser viewer at `http://localhost:8000`. Both read
 the `results/` tree cold and find named smoke-run wrappers such as
 `results/e2e-smoke-terminal-bench-20260704-1100/...`.
@@ -171,7 +172,8 @@ files stay clean; detailed adapter output is still written under each trial's
 Use the root viewer first:
 
 ```bash
-./view                    # colored terminal score table
+./view                    # colored terminal score/cost table
+./view -v                 # add status, timing, token counts, and $/M pricing
 ./view --show-ci          # add Wilson 95% CI when you need uncertainty bounds
 ./view json --pretty      # machine-readable rows
 ./view serve              # browser UI at http://localhost:8000

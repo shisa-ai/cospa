@@ -30,15 +30,15 @@ turn in a small context).
 
 ### Aider Polyglot
 
-| Model | Adapter | Pass Rate | 95% CI | Total | Passed |
-|---|---|---|---|---|---|
-| *Run the matrix to populate this table* | | | | | |
+| Model | Adapter | Score | Passed | Tasks | Cost | $/Task | Pass/$ |
+|---|---|---|---|---|---|---|---|
+| *Run the matrix to populate this table* | | | | | | | |
 
 ### Terminal-Bench
 
-| Model | Adapter | Pass Rate | 95% CI | Total | Passed |
-|---|---|---|---|---|---|
-| *Run the matrix to populate this table* | | | | | |
+| Model | Adapter | Score | Passed | Tasks | Cost | $/Task | Pass/$ |
+|---|---|---|---|---|---|---|---|
+| *Run the matrix to populate this table* | | | | | | | |
 
 ## Per-Model Findings
 

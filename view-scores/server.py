@@ -209,6 +209,8 @@ def format_scores_terminal(
             "Avg",
             "Tok In",
             "Tok Out",
+            "$/M In",
+            "$/M Out",
             "Reason",
             "Cached",
             "Cost",
@@ -217,7 +219,17 @@ def format_scores_terminal(
             "ETA",
         ]
     else:
-        headers = ["Model", "Adapter", "Suite", "Score", "Passed", "Tasks"]
+        headers = [
+            "Model",
+            "Adapter",
+            "Suite",
+            "Score",
+            "Passed",
+            "Tasks",
+            "Cost",
+            "$/Task",
+            "Pass/$",
+        ]
     if show_ci:
         headers.append("95% CI")
 
@@ -242,6 +254,8 @@ def format_scores_terminal(
                 _format_duration(score.get("mean_wall_clock_seconds")),
                 _format_tokens(score.get("prompt_tokens")),
                 _format_tokens(score.get("completion_tokens")),
+                _format_cost(score.get("input_cost_per_million_usd")),
+                _format_cost(score.get("output_cost_per_million_usd")),
                 _format_tokens(score.get("reasoning_tokens")),
                 _format_tokens(score.get("cached_tokens")),
                 _format_cost(score.get("estimated_cost_usd")),
@@ -257,6 +271,9 @@ def format_scores_terminal(
                 score_text,
                 f"{score['passed_tasks']}/{score['total_tasks']}",
                 str(score["total_tasks"]),
+                _format_cost(score.get("estimated_cost_usd")),
+                _format_cost(score.get("cost_per_completed_task_usd")),
+                _format_rate(score.get("passed_tasks_per_usd")),
             ]
         if show_ci:
             row.append(f"{score['ci_lower']:.1f}-{score['ci_upper']:.1f}%")
@@ -484,6 +501,9 @@ class ScoreHandler(SimpleHTTPRequestHandler):
                 <td class="{score_class}">{pass_rate:.1f}%</td>
                 <td>{score['passed_tasks']}/{score['total_tasks']}</td>
                 <td>{score['total_tasks']}</td>
+                <td>{html.escape(_format_cost(score.get("estimated_cost_usd")))}</td>
+                <td>{html.escape(_format_cost(score.get("cost_per_completed_task_usd")))}</td>
+                <td>{html.escape(_format_rate(score.get("passed_tasks_per_usd")))}</td>
                 <td><a href="{html.escape(details_href, quote=True)}">Details</a></td>
             </tr>
             """
@@ -522,6 +542,9 @@ class ScoreHandler(SimpleHTTPRequestHandler):
                 <th>Score</th>
                 <th>Passed</th>
                 <th>Tasks</th>
+                <th>Cost</th>
+                <th>$/Task</th>
+                <th>Pass/$</th>
                 <th>Details</th>
             </tr>
         </thead>
@@ -755,6 +778,7 @@ class ScoreHandler(SimpleHTTPRequestHandler):
         grouped_trials = {}
         grouped_times = {}
         grouped_tokens = {}
+        grouped_pricing = {}
         started_tasks = {}
         self._reset_warnings()
 
@@ -796,6 +820,16 @@ class ScoreHandler(SimpleHTTPRequestHandler):
             started_tasks.setdefault(key, set()).add(parts["task_id"])
             if trial is None:
                 continue
+            pricing = self._pricing_from_manifest(trial["manifest"])
+            if any(value is not None for value in pricing):
+                existing_pricing = grouped_pricing.get(key)
+                if existing_pricing is None:
+                    grouped_pricing[key] = pricing
+                else:
+                    grouped_pricing[key] = tuple(
+                        old if old is not None else new
+                        for old, new in zip(existing_pricing, pricing)
+                    )
             grouped_trials.setdefault(key, {}).setdefault(parts["task_id"], []).append(
                 trial["verdict"].get("passed", False)
             )
@@ -904,6 +938,15 @@ class ScoreHandler(SimpleHTTPRequestHandler):
                 if estimated_cost_usd and estimated_cost_usd > 0
                 else None
             )
+            (
+                input_cost_per_million_usd,
+                output_cost_per_million_usd,
+                cache_read_cost_per_million_usd,
+                cache_write_cost_per_million_usd,
+            ) = grouped_pricing.get(
+                (model_id, adapter_id, suite_id),
+                (None, None, None, None),
+            )
 
             # Calculate 95% CI (Wilson score interval approximation) at task level
             if total_tasks > 0:
@@ -947,6 +990,10 @@ class ScoreHandler(SimpleHTTPRequestHandler):
                 "estimated_cost_usd": estimated_cost_usd,
                 "cost_per_completed_task_usd": cost_per_completed_task_usd,
                 "passed_tasks_per_usd": passed_tasks_per_usd,
+                "input_cost_per_million_usd": input_cost_per_million_usd,
+                "output_cost_per_million_usd": output_cost_per_million_usd,
+                "cache_read_cost_per_million_usd": cache_read_cost_per_million_usd,
+                "cache_write_cost_per_million_usd": cache_write_cost_per_million_usd,
                 "method": "pass@k majority",
             })
 

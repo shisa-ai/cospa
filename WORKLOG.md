@@ -273,3 +273,28 @@ Append-only development log for the `coding-eval` repository.
   behavior for intentionally relative workdirs remains unchanged.
 - Next: rerun backfill on the Ornith high result wrapper to replace
   unavailable placeholders with observed usage.
+
+## 2026-07-05 — surface cost efficiency in default views
+
+- Context: token/cost data was present after usage backfill, but the default
+  terminal/browser score views still hid cost efficiency behind `-v` or JSON.
+- Changes:
+  - Default terminal and browser tables now show total cost, cost per
+    completed task, and passed tasks per dollar.
+  - Verbose terminal rows now keep input/output token counts and add input
+    and output dollars-per-million pricing columns.
+  - Score aggregation now exposes input/output/cache pricing fields from
+    manifest model metadata.
+  - Updated README and result docs to describe the new default/verbose table
+    shapes.
+- Evidence (RED -> GREEN):
+  - RED: viewer tests failed on missing default cost columns, missing browser
+    cost columns, and missing `$/M` verbose pricing fields.
+  - GREEN: `mamba run -n coding-eval python -m pytest -q` = 130 passed.
+  - GREEN: `bash tests/scripts/run_all.sh` = all shell tests passed
+    (`test_check_models`, `test_root_entrypoints`, `test_run_matrix`,
+    `test_setup`).
+- Decision: keep default rows focused on cost efficiency only; detailed token
+  and pricing columns stay behind `./view -v`.
+- Next: rerun superpowers usage backfill after the live sequential run
+  finishes so those rows get the same default cost columns.

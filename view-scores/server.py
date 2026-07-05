@@ -10,11 +10,14 @@ Usage:
 """
 
 import html
+import hashlib
 import json
+import os
 import sys
 import argparse
 import re
 import statistics
+import time
 from pathlib import Path
 from http.server import HTTPServer, SimpleHTTPRequestHandler
 from urllib.parse import urlparse, parse_qs, urlencode
@@ -27,6 +30,14 @@ ANSI_RE = re.compile(r"\033\[[0-9;]*m")
 DEFAULT_INCLUDE_SMOKE = False
 DEFAULT_FILTERS: tuple[str, ...] = ()
 DEFAULT_EXCLUDES: tuple[str, ...] = ()
+DEFAULT_USE_CACHE = True
+DEFAULT_CACHE_PATH = Path(
+    os.environ.get(
+        "CODING_EVAL_VIEW_CACHE_PATH",
+        PROJECT_ROOT / ".cache" / "view-scores.json",
+    )
+)
+SCORE_CACHE_VERSION = 2
 
 
 def _ansi(text: str, code: str, enabled: bool) -> str:
@@ -324,9 +335,16 @@ class ScoreHandler(SimpleHTTPRequestHandler):
         """Yield trial-* directories, including currently incomplete trials."""
         if not results_dir.exists():
             return
-        for trial_dir in results_dir.rglob("trial-*"):
-            if trial_dir.is_dir() and re.fullmatch(r"trial-\d+", trial_dir.name):
-                yield trial_dir
+        for current, dirnames, _filenames in os.walk(results_dir):
+            dirnames[:] = sorted(
+                name
+                for name in dirnames
+                if name not in {".cache", ".git", "__pycache__", ".pytest_cache"}
+            )
+            current_path = Path(current)
+            if re.fullmatch(r"trial-\d+", current_path.name):
+                yield current_path
+                dirnames[:] = []
 
     @staticmethod
     def _trial_parts(results_dir: Path, trial_dir: Path) -> dict | None:
@@ -429,6 +447,141 @@ class ScoreHandler(SimpleHTTPRequestHandler):
         except Exception:
             return None
         return {"trial_dir": trial_dir, "verdict": verdict, "manifest": manifest}
+
+    @staticmethod
+    def _file_signature(path: Path) -> tuple[bool, int, int]:
+        try:
+            stat = path.stat()
+            return True, stat.st_mtime_ns, stat.st_size
+        except OSError:
+            return False, 0, 0
+
+    @classmethod
+    def _visible_trial_entries(
+        cls,
+        results_dir: Path,
+        *,
+        include_smoke: bool,
+        filters: tuple[str, ...],
+        excludes: tuple[str, ...],
+    ) -> list[dict]:
+        entries = []
+        for trial_dir in cls._iter_started_trial_dirs(results_dir):
+            parts = cls._trial_parts(results_dir, trial_dir)
+            if parts is None:
+                search_text = str(trial_dir)
+                if filters and not _matches_any(filters, search_text):
+                    continue
+                if excludes and _matches_any(excludes, search_text):
+                    continue
+            elif not cls._trial_visible(
+                parts,
+                include_smoke=include_smoke,
+                filters=filters,
+                excludes=excludes,
+            ):
+                continue
+            entries.append({"trial_dir": trial_dir, "parts": parts})
+        return entries
+
+    @classmethod
+    def _cache_key(
+        cls,
+        results_dir: Path,
+        entries: list[dict],
+        *,
+        include_smoke: bool,
+        filters: tuple[str, ...],
+        excludes: tuple[str, ...],
+    ) -> str:
+        signature = []
+        for entry in entries:
+            trial_dir = entry["trial_dir"]
+            try:
+                rel_trial = trial_dir.relative_to(results_dir).as_posix()
+            except ValueError:
+                rel_trial = str(trial_dir)
+            signature.append({
+                "trial": rel_trial,
+                "manifest": cls._file_signature(trial_dir / "manifest.json"),
+                "verdict": cls._file_signature(trial_dir / "verdict.json"),
+            })
+        payload = {
+            "version": SCORE_CACHE_VERSION,
+            "results_dir": str(results_dir.resolve()),
+            "include_smoke": include_smoke,
+            "filters": list(filters),
+            "excludes": list(excludes),
+            "trials": signature,
+        }
+        encoded = json.dumps(payload, sort_keys=True, separators=(",", ":")).encode()
+        return hashlib.sha256(encoded).hexdigest()
+
+    @staticmethod
+    def _cache_enabled() -> bool:
+        disabled = os.environ.get("CODING_EVAL_VIEW_NO_CACHE", "").lower()
+        return DEFAULT_USE_CACHE and disabled not in {"1", "true", "yes"}
+
+    @staticmethod
+    def _read_score_cache() -> dict:
+        try:
+            data = json.loads(DEFAULT_CACHE_PATH.read_text())
+        except (OSError, json.JSONDecodeError):
+            return {"version": SCORE_CACHE_VERSION, "entries": {}}
+        if not isinstance(data, dict) or data.get("version") != SCORE_CACHE_VERSION:
+            return {"version": SCORE_CACHE_VERSION, "entries": {}}
+        entries = data.get("entries")
+        if not isinstance(entries, dict):
+            return {"version": SCORE_CACHE_VERSION, "entries": {}}
+        return {"version": SCORE_CACHE_VERSION, "entries": entries}
+
+    @staticmethod
+    def _write_score_cache(cache: dict) -> None:
+        try:
+            DEFAULT_CACHE_PATH.parent.mkdir(parents=True, exist_ok=True)
+            temp_path = DEFAULT_CACHE_PATH.with_suffix(DEFAULT_CACHE_PATH.suffix + ".tmp")
+            temp_path.write_text(json.dumps(cache, separators=(",", ":")) + "\n")
+            temp_path.replace(DEFAULT_CACHE_PATH)
+        except OSError:
+            return
+
+    def _get_cached_scores(self, cache_key: str) -> list[dict] | None:
+        if not self._cache_enabled():
+            return None
+        cache = self._read_score_cache()
+        entry = cache.get("entries", {}).get(cache_key)
+        if not isinstance(entry, dict):
+            return None
+        scores = entry.get("scores")
+        warnings = entry.get("warnings", [])
+        if not isinstance(scores, list) or not isinstance(warnings, list):
+            return None
+        self._warnings = warnings
+        return scores
+
+    def _store_cached_scores(self, cache_key: str, scores: list[dict]) -> None:
+        if not self._cache_enabled():
+            return
+        cache = self._read_score_cache()
+        entries = cache.setdefault("entries", {})
+        if not isinstance(entries, dict):
+            entries = {}
+            cache["entries"] = entries
+        entries[cache_key] = {
+            "created_at": time.time(),
+            "scores": scores,
+            "warnings": self.get_warnings(),
+        }
+        if len(entries) > 64:
+            oldest = sorted(
+                entries.items(),
+                key=lambda item: item[1].get("created_at", 0)
+                if isinstance(item[1], dict)
+                else 0,
+            )
+            for key, _entry in oldest[: len(entries) - 64]:
+                entries.pop(key, None)
+        self._write_score_cache(cache)
 
     def do_GET(self):
         """Handle GET requests."""
@@ -813,22 +966,32 @@ class ScoreHandler(SimpleHTTPRequestHandler):
         grouped_cost_coverage = {}
         started_tasks = {}
         self._reset_warnings()
+        trial_entries = self._visible_trial_entries(
+            RESULTS_DIR,
+            include_smoke=include_smoke,
+            filters=filters,
+            excludes=excludes,
+        )
+        cache_key = self._cache_key(
+            RESULTS_DIR,
+            trial_entries,
+            include_smoke=include_smoke,
+            filters=filters,
+            excludes=excludes,
+        )
+        cached_scores = self._get_cached_scores(cache_key)
+        if cached_scores is not None:
+            return cached_scores
 
-        for trial_dir in self._iter_started_trial_dirs(RESULTS_DIR):
-            parts = self._trial_parts(RESULTS_DIR, trial_dir)
+        for entry in trial_entries:
+            trial_dir = entry["trial_dir"]
+            parts = entry["parts"]
             if parts is None:
                 self._warn(
                     "malformed_result_path",
                     f"malformed result path skipped: unable to parse {trial_dir}",
                     trial_dir,
                 )
-                continue
-            if not self._trial_visible(
-                parts,
-                include_smoke=include_smoke,
-                filters=filters,
-                excludes=excludes,
-            ):
                 continue
             if not self._trial_parts_valid(parts):
                 continue
@@ -1053,6 +1216,7 @@ class ScoreHandler(SimpleHTTPRequestHandler):
                 "method": "pass@k majority",
             })
 
+        self._store_cached_scores(cache_key, scores)
         return scores
 
     def get_task_details(self, model: str, adapter: str, suite: str) -> dict:
@@ -1141,6 +1305,7 @@ def _start_server(host: str, port: int) -> None:
 def main(argv: list[str] | None = None) -> int:
     """Run the score viewer CLI."""
     global RESULTS_DIR, DEFAULT_INCLUDE_SMOKE, DEFAULT_FILTERS, DEFAULT_EXCLUDES
+    global DEFAULT_USE_CACHE
 
     common = argparse.ArgumentParser(add_help=False)
     common.add_argument(
@@ -1171,6 +1336,13 @@ def main(argv: list[str] | None = None) -> int:
         default=[],
         metavar="PATTERN",
         help="Exclude trials whose run/model/adapter/suite/task text matches PATTERN",
+    )
+    common.add_argument(
+        "--no-cache",
+        dest="use_cache",
+        action="store_false",
+        default=True,
+        help="Disable the persistent score cache",
     )
     parser = argparse.ArgumentParser(
         description="View coding-eval scores",
@@ -1221,6 +1393,7 @@ def main(argv: list[str] | None = None) -> int:
     DEFAULT_INCLUDE_SMOKE = getattr(args, "include_smoke", False)
     DEFAULT_FILTERS = tuple(getattr(args, "filters", []) or [])
     DEFAULT_EXCLUDES = tuple(getattr(args, "excludes", []) or [])
+    DEFAULT_USE_CACHE = getattr(args, "use_cache", True)
 
     # Preserve the old direct-launch behavior: `python view-scores/server.py`
     # starts the web viewer. The root `./view` wrapper defaults to table mode.

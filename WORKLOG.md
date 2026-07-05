@@ -423,3 +423,31 @@ Append-only development log for the `coding-eval` repository.
   observed tokens; missing usage remains unknown, not zero.
 - Next: add first-class run grouping or run-id display so historical probes
   and reruns do not contaminate model/adapter/suite cost comparisons.
+
+## 2026-07-05 — cache score view aggregation
+
+- Context: `./view --verbose` spent most of its time recursively walking the
+  full `results/` tree, including trial `workdir/`, `out/`, and Harbor `jobs/`
+  subtrees. A cProfile run showed ~13 seconds in `Path.rglob("trial-*")`.
+- Changes:
+  - Score scanning now uses a pruned `os.walk()` that yields `trial-N`
+    directories and does not descend into their child artifacts.
+  - `get_scores()` now persists score rows and warnings in
+    `.cache/view-scores.json`, keyed by result directory, filter options, and
+    manifest/verdict mtime+size signatures.
+  - Added `./view --no-cache` for debugging cold scans.
+  - `.cache/` is ignored by git.
+- Evidence (RED -> GREEN):
+  - RED: cache-reuse and scanner-pruning tests failed because cache hits still
+    reparsed trial JSON and nested `workdir/.../trial-*` paths were scanned.
+  - GREEN: focused cache/scanner tests passed.
+  - GREEN: `mamba run -n coding-eval python -m pytest -q` = 142 passed.
+  - GREEN: `bash tests/scripts/run_all.sh` = all shell tests passed
+    (`test_check_models`, `test_root_entrypoints`, `test_run_matrix`,
+    `test_setup`).
+  - Local timing after the fix: cold no-cache view ~0.40s, cache build ~0.28s,
+    cache hit ~0.18s.
+- Decision: cache the aggregated score rows, not formatted terminal output, so
+  table/json/browser views can share the same invalidation behavior.
+- Next: add first-class run grouping or run-id display so historical probes
+  and reruns do not contaminate model/adapter/suite cost comparisons.

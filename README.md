@@ -193,6 +193,7 @@ Use the root viewer first:
 ./view                    # colored terminal score/cost table
 ./view -v                 # add status, timing, token counts, and $/M pricing
 ./view --show-ci          # add Wilson 95% CI when you need uncertainty bounds
+./view --no-cache         # force a cold scan for debugging
 ./view json --pretty      # machine-readable rows
 ./view serve              # browser UI at http://localhost:8000
 ```
@@ -201,6 +202,11 @@ The default score is task-level pass@k majority. For tiny smoke runs, confidence
 intervals are deliberately not shown in the primary terminal/browser table
 because `1/1` and `5/5` runs produce wide bounds that obscure the useful
 operator signal.
+
+The terminal/API score view keeps a local cache at `.cache/view-scores.json`.
+The cache key includes the visible result set, each trial manifest/verdict
+mtime and size, and filter options, so completed trials and new run output
+invalidate automatically.
 
 ## Parallel Runs
 

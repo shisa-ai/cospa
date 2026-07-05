@@ -253,6 +253,97 @@ def test_get_scores_supports_filter_and_exclude_patterns():
     assert [row["adapter"] for row in run_filtered] == ["little_coder"]
 
 
+def test_get_scores_reuses_cache_without_reloading_trials(monkeypatch):
+    """A matching cache entry should avoid reparsing manifest/verdict JSON."""
+    with tempfile.TemporaryDirectory() as tmp:
+        tmp = Path(tmp)
+        results_dir = tmp / "results"
+        cache_path = tmp / "score-cache.json"
+        _write_single_row(results_dir)
+
+        h, server_mod = _make_handler(results_dir)
+        server_mod.DEFAULT_CACHE_PATH = cache_path
+        first = h.get_scores()
+
+        def fail_load_trial(_trial_dir):
+            raise AssertionError("cache hit should not reload trial JSON")
+
+        monkeypatch.setattr(
+            server_mod.ScoreHandler,
+            "_load_trial",
+            staticmethod(fail_load_trial),
+        )
+        h2 = server_mod.ScoreHandler.__new__(server_mod.ScoreHandler)
+        second = h2.get_scores()
+
+    assert second == first
+
+
+def test_get_scores_cache_invalidates_when_trial_set_changes(monkeypatch):
+    """Adding a new manifest/verdict pair must invalidate cached scores."""
+    with tempfile.TemporaryDirectory() as tmp:
+        tmp = Path(tmp)
+        results_dir = tmp / "results"
+        cache_path = tmp / "score-cache.json"
+        model_id, adapter, suite, _ = _write_single_row(
+            results_dir,
+            task_id="python/one",
+            passed=True,
+        )
+
+        h, server_mod = _make_handler(results_dir)
+        server_mod.DEFAULT_CACHE_PATH = cache_path
+        first = h.get_scores()
+
+        base = (
+            results_dir
+            / encode_model_path(model_id)
+            / adapter
+            / suite
+            / encode_task_path("python/two")
+        )
+        _write_trial(
+            base / "trial-1",
+            passed=False,
+            model_id=model_id,
+            task_id="python/two",
+        )
+
+        h2 = server_mod.ScoreHandler.__new__(server_mod.ScoreHandler)
+        second = h2.get_scores()
+
+    assert first[0]["total_tasks"] == 1
+    assert second[0]["total_tasks"] == 2
+    assert second[0]["passed_tasks"] == 1
+
+
+def test_trial_scanner_prunes_trial_children():
+    """Nested benchmark files under workdir/out/jobs must not be scanned."""
+    with tempfile.TemporaryDirectory() as tmp:
+        results_dir = Path(tmp) / "results"
+        model_id, adapter, suite, task_id = _write_single_row(results_dir)
+        outer = (
+            results_dir
+            / encode_model_path(model_id)
+            / adapter
+            / suite
+            / encode_task_path(task_id)
+            / "trial-1"
+        )
+        nested_trial = outer / "workdir" / "nested" / "trial-999"
+        _write_trial(
+            nested_trial,
+            passed=False,
+            model_id="nested/model",
+            task_id="nested/task",
+        )
+
+        h, server_mod = _make_handler(results_dir)
+        trial_dirs = list(server_mod.ScoreHandler._iter_started_trial_dirs(results_dir))
+
+    assert trial_dirs == [outer]
+
+
 def test_get_scores_aggregates_token_usage_and_estimated_cost():
     """Verbose rows should have token totals and best-effort USD cost."""
     with tempfile.TemporaryDirectory() as tmp:

@@ -19,6 +19,7 @@ sys.path.insert(0, str(PROJECT_ROOT))
 from harness.adapters.pi_vanilla import AdapterResult
 from harness.runner import run_trial
 from harness.telemetry import (
+    collect_harbor_pi_session_usage,
     collect_pi_session_usage,
     load_model_metadata,
     pi_session_dir_for_cwd,
@@ -167,6 +168,33 @@ def test_collect_pi_session_usage_copies_raw_trace_by_workdir():
         assert summary["status"] == "observed"
         assert summary["trace_files"] == ["out/pi_session.jsonl"]
         assert summary["prompt_tokens"] == 300
+
+
+def test_collect_harbor_pi_session_usage_copies_artifact_trace():
+    with tempfile.TemporaryDirectory() as tmp:
+        tmp = Path(tmp)
+        trial_dir = tmp / "trial-1"
+        jobs_dir = trial_dir / "jobs"
+        out_dir = trial_dir / "out"
+        session_file = (
+            jobs_dir
+            / "2026-07-05__10-00-00"
+            / "hello-world__abc123"
+            / "artifacts"
+            / "pi-sessions"
+            / "session.jsonl"
+        )
+        _write_jsonl(session_file, _session_events(Path("/terminal-bench/workdir")))
+
+        summary = collect_harbor_pi_session_usage(jobs_dir, out_dir)
+
+        copied_trace = out_dir / "pi_session.jsonl"
+        assert copied_trace.exists()
+        assert copied_trace.read_text() == session_file.read_text()
+        assert summary["status"] == "observed"
+        assert summary["trace_files"] == ["out/pi_session.jsonl"]
+        assert summary["prompt_tokens"] == 300
+        assert summary["completion_tokens"] == 70
 
 
 def test_load_model_metadata_resolves_limits_pricing_without_secrets():

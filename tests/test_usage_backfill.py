@@ -72,6 +72,44 @@ def _write_session(sessions_root: Path, workdir: Path) -> None:
     ]) + "\n")
 
 
+def _write_harbor_session(trial_dir: Path) -> None:
+    session_file = (
+        trial_dir
+        / "jobs"
+        / "2026-07-05__10-00-00"
+        / "hello-world__abc123"
+        / "artifacts"
+        / "pi-sessions"
+        / "session.jsonl"
+    )
+    session_file.parent.mkdir(parents=True)
+    session_file.write_text("\n".join([
+        json.dumps({
+            "type": "session",
+            "id": "session-harbor",
+            "timestamp": "2026-07-04T14:07:01Z",
+            "cwd": "/terminal-bench/workdir",
+        }),
+        json.dumps({
+            "type": "message",
+            "message": {
+                "provider": "local",
+                "model": "Ornith-1.0-35B",
+                "responseId": "chatcmpl-harbor",
+                "responseModel": "ornith-35b-fp8-block",
+                "usage": {
+                    "input": 400,
+                    "output": 125,
+                    "cacheRead": 75,
+                    "reasoning": 15,
+                    "totalTokens": 615,
+                    "cost": {"total": 0.004},
+                },
+            },
+        }),
+    ]) + "\n")
+
+
 def test_backfill_results_updates_manifest_and_copies_trace():
     with tempfile.TemporaryDirectory() as tmp:
         tmp = Path(tmp)
@@ -94,6 +132,28 @@ def test_backfill_results_updates_manifest_and_copies_trace():
     assert manifest["token_usage"]["cost_usd"] == 0.001
     assert manifest["model"]["served_model"] == "ornith-35b-fp8-block"
     assert manifest["sampling"]["thinking_token_budget"] == 8192
+    assert copied_trace_exists
+
+
+def test_backfill_results_updates_manifest_from_harbor_artifact_trace():
+    with tempfile.TemporaryDirectory() as tmp:
+        tmp = Path(tmp)
+        results_dir = tmp / "results"
+        sessions_root = tmp / "sessions"
+        trial_dir, manifest_path = _write_trial(results_dir)
+        _write_harbor_session(trial_dir)
+
+        summary = backfill_results(results_dir, sessions_root=sessions_root)
+        manifest = json.loads(manifest_path.read_text())
+        copied_trace_exists = (trial_dir / "out" / "pi_session.jsonl").exists()
+
+    assert summary["scanned"] == 1
+    assert summary["updated"] == 1
+    assert summary["observed"] == 1
+    assert manifest["token_usage"]["status"] == "observed"
+    assert manifest["token_usage"]["prompt_tokens"] == 400
+    assert manifest["token_usage"]["completion_tokens"] == 125
+    assert manifest["token_usage"]["cost_usd"] == 0.004
     assert copied_trace_exists
 
 

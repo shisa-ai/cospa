@@ -450,6 +450,110 @@ def summarize_pi_session(session_file: Path | str) -> dict:
     return summary
 
 
+def _relative_trace_file(target: Path, out_dir: Path) -> str:
+    try:
+        return str(target.relative_to(out_dir.parent))
+    except ValueError:
+        return str(target)
+
+
+def _summarize_and_copy_pi_sessions(
+    session_files: list[Path],
+    out_dir: Path,
+) -> dict:
+    valid_sessions: list[tuple[Path, dict]] = []
+    for session_file in session_files:
+        try:
+            summary = summarize_pi_session(session_file)
+        except OSError:
+            continue
+        if summary.get("status") == "observed":
+            valid_sessions.append((session_file, summary))
+
+    if not valid_sessions:
+        return {
+            "source": "pi-session-jsonl",
+            "status": "unavailable",
+            "reason": "no pi session trace with usage found",
+        }
+
+    out_dir.mkdir(parents=True, exist_ok=True)
+    trace_files: list[str] = []
+    for index, (session_file, _) in enumerate(valid_sessions, start=1):
+        if len(valid_sessions) == 1:
+            target = out_dir / "pi_session.jsonl"
+        else:
+            target = out_dir / "pi_sessions" / f"pi_session_{index}.jsonl"
+        target.parent.mkdir(parents=True, exist_ok=True)
+        if session_file.resolve() != target.resolve():
+            shutil.copy2(session_file, target)
+        trace_files.append(_relative_trace_file(target, out_dir))
+
+    totals = {
+        "prompt_tokens": 0,
+        "completion_tokens": 0,
+        "cached_tokens": 0,
+        "cache_creation_tokens": 0,
+        "reasoning_tokens": 0,
+        "total_tokens": 0,
+        "cost_usd": 0.0,
+        "response_count": 0,
+    }
+    response_ids: list[str] = []
+    response_models: list[str] = []
+    models: list[str] = []
+    providers: list[str] = []
+    session_ids: list[str] = []
+    thinking_levels: list[str] = []
+    original_paths: list[str] = []
+
+    for session_file, summary in valid_sessions:
+        original_paths.append(str(session_file))
+        _append_unique(session_ids, summary.get("session_id"))
+        _append_unique(thinking_levels, summary.get("thinking"))
+        for key in totals:
+            totals[key] += summary.get(key, 0) or 0
+        for value in summary.get("response_ids", []):
+            _append_unique(response_ids, value)
+        for value in summary.get("response_models", []):
+            _append_unique(response_models, value)
+        for value in summary.get("models", []):
+            _append_unique(models, value)
+        for value in summary.get("providers", []):
+            _append_unique(providers, value)
+
+    combined = {
+        "source": "pi-session-jsonl",
+        "status": "observed",
+        "response_count": totals["response_count"],
+        "prompt_tokens": totals["prompt_tokens"],
+        "input_tokens": totals["prompt_tokens"],
+        "completion_tokens": totals["completion_tokens"],
+        "output_tokens": totals["completion_tokens"],
+        "cached_tokens": totals["cached_tokens"],
+        "cache_read_tokens": totals["cached_tokens"],
+        "cache_creation_tokens": totals["cache_creation_tokens"],
+        "cache_write_tokens": totals["cache_creation_tokens"],
+        "reasoning_tokens": totals["reasoning_tokens"],
+        "total_tokens": totals["total_tokens"],
+        "cost_usd": totals["cost_usd"],
+        "response_ids": response_ids,
+        "response_models": response_models,
+        "models": models,
+        "providers": providers,
+        "session_ids": session_ids,
+        "original_session_paths": original_paths,
+        "trace_files": trace_files,
+    }
+    if len(session_ids) == 1:
+        combined["session_id"] = session_ids[0]
+    if len(thinking_levels) == 1:
+        combined["thinking"] = thinking_levels[0]
+    elif thinking_levels:
+        combined["thinking_levels"] = thinking_levels
+    return combined
+
+
 def collect_pi_session_usage(
     workdir: Path | str,
     out_dir: Path | str,
@@ -474,11 +578,34 @@ def collect_pi_session_usage(
             "reason": "no matching pi session trace found",
         }
 
-    out_dir.mkdir(parents=True, exist_ok=True)
-    target = out_dir / "pi_session.jsonl"
-    if session_file.resolve() != target.resolve():
-        shutil.copy2(session_file, target)
+    return _summarize_and_copy_pi_sessions([session_file], out_dir)
 
-    summary = summarize_pi_session(session_file)
-    summary["trace_files"] = ["out/pi_session.jsonl"]
-    return summary
+
+def find_harbor_pi_session_files(jobs_dir: Path | str) -> list[Path]:
+    """Find pi JSONL traces exported by Harbor agents into job artifacts."""
+    jobs_dir = Path(jobs_dir)
+    if not jobs_dir.exists():
+        return []
+
+    matches: list[tuple[float, Path]] = []
+    for session_file in jobs_dir.rglob("*.jsonl"):
+        if "pi-sessions" not in session_file.parts:
+            continue
+        if _session_header(session_file):
+            matches.append((session_file.stat().st_mtime, session_file))
+    return [path for _, path in sorted(matches)]
+
+
+def collect_harbor_pi_session_usage(
+    jobs_dir: Path | str,
+    out_dir: Path | str,
+) -> dict:
+    """Copy and summarize pi traces exported from Harbor job artifacts."""
+    session_files = find_harbor_pi_session_files(jobs_dir)
+    if not session_files:
+        return {
+            "source": "pi-session-jsonl",
+            "status": "unavailable",
+            "reason": "no Harbor pi session artifact found",
+        }
+    return _summarize_and_copy_pi_sessions(session_files, Path(out_dir))

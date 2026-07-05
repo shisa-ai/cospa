@@ -37,6 +37,7 @@ from harness.adapters import load_adapter
 from harness.suites import load_suite
 from harness.path_utils import encode_path_component
 from harness.telemetry import (
+    collect_harbor_pi_session_usage,
     collect_pi_session_usage,
     load_model_metadata,
     thinking_token_budget,
@@ -509,7 +510,11 @@ def run_trial(suite, adapter, model_id, task_id, trial_k, results_dir, vendor_di
     start_time = time.time()
     adapter_failed = False
     harbor_result = None
-    if hasattr(suite, "run_harbor_job") and getattr(suite, "name", "") == "terminal_bench":
+    is_terminal_bench = (
+        hasattr(suite, "run_harbor_job")
+        and getattr(suite, "name", "") == "terminal_bench"
+    )
+    if is_terminal_bench:
         jobs_dir = trial_dir / "jobs"
         jobs_dir.mkdir(exist_ok=True)
         try:
@@ -583,12 +588,22 @@ def run_trial(suite, adapter, model_id, task_id, trial_k, results_dir, vendor_di
             with open(log_file, "a") as f:
                 f.write(f"\n[ERROR] {e}\n")
 
-    session_usage = collect_pi_session_usage(
-        workdir,
-        out_dir,
-        start_time=start_time,
-        end_time=time.time(),
-    )
+    if is_terminal_bench:
+        session_usage = collect_harbor_pi_session_usage(trial_dir / "jobs", out_dir)
+        if session_usage.get("status") != "observed":
+            session_usage = collect_pi_session_usage(
+                workdir,
+                out_dir,
+                start_time=start_time,
+                end_time=time.time(),
+            )
+    else:
+        session_usage = collect_pi_session_usage(
+            workdir,
+            out_dir,
+            start_time=start_time,
+            end_time=time.time(),
+        )
     if session_usage.get("status") == "observed":
         manifest["token_usage"] = session_usage
         response_models = session_usage.get("response_models")

@@ -370,3 +370,31 @@ Append-only development log for the `coding-eval` repository.
   benchmark accounting metadata in the repo so results are reproducible.
 - Next: add Harbor artifact export for Terminal-Bench pi session traces so
   Terminal-Bench rows can receive the same token/cost coverage.
+
+## 2026-07-05 — capture Terminal-Bench usage traces
+
+- Context: Terminal-Bench executes agents inside Harbor/container
+  environments, so host-side `~/.pi/agent/sessions` lookup cannot recover
+  token/cost usage for real Terminal-Bench runs by itself.
+- Changes:
+  - Custom Harbor agents now wrap pi/little-coder execution and copy
+    `$HOME/.pi/agent/sessions/**/*.jsonl` into
+    `/logs/artifacts/pi-sessions` after each trial.
+  - Telemetry can summarize Harbor-exported pi JSONL artifacts, preserve the
+    raw trace under `out/`, and combine multiple exported traces if present.
+  - Runner and usage backfill now try Harbor job artifacts for
+    `terminal_bench` trials before falling back to host workdir sessions.
+  - README and PLAN docs now describe the Terminal-Bench trace export path.
+- Evidence (RED -> GREEN):
+  - RED: new tests failed because Harbor agent commands did not export
+    sessions, runner manifests stayed empty after fake Harbor traces, and
+    backfill reported Harbor artifact traces as unavailable.
+  - GREEN: `mamba run -n coding-eval python -m pytest -q` = 137 passed.
+  - GREEN: `bash tests/scripts/run_all.sh` = all shell tests passed
+    (`test_check_models`, `test_root_entrypoints`, `test_run_matrix`,
+    `test_setup`).
+- Decision: keep `out/pi_session.jsonl` as the normalized durable trace path
+  while treating Harbor `jobs/**/artifacts/pi-sessions/*.jsonl` as the
+  container export source.
+- Next: run a real Terminal-Bench probe before scaling the full suite and
+  confirm its verbose score row has complete `Costed` coverage.

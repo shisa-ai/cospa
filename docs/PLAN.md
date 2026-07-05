@@ -227,8 +227,11 @@ without re-running, and partial runs compose by directory union.
 Reproducibility levers we record but do not enforce: pi version,
 little-coder version, Harbor version, TB pin, mamba env hash, sampling
 params, model context/output limits, pricing, and observed token/cost
-usage. A run is "comparable" to another only if these match; the viewer
-flags mismatches in the comparison view.
+usage. For Terminal-Bench, the custom Harbor agents export container-side
+pi JSONL traces into Harbor artifacts so the runner/backfill can preserve
+the same raw response metadata under each trial's `out/` directory. A run
+is "comparable" to another only if these match; the viewer flags mismatches
+in the comparison view.
 
 ## 5. What we are explicitly NOT doing (v1)
 

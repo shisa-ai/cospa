@@ -114,6 +114,43 @@ def _thinking_args() -> list[str]:
     return ["--thinking", thinking] if thinking else []
 
 
+def _wrap_with_pi_session_export(
+    run_command: str,
+    *,
+    output_filename: str | None = None,
+) -> str:
+    """Run an agent command and export pi JSONL sessions as Harbor artifacts."""
+    if output_filename:
+        log_path = shlex.quote(f"/logs/agent/{output_filename}")
+        run_lines = [
+            f"{run_command} 2>&1 </dev/null | tee {log_path}",
+            "agent_status=${PIPESTATUS[0]}",
+        ]
+    else:
+        run_lines = [
+            run_command,
+            "agent_status=$?",
+        ]
+
+    script = "\n".join([
+        "set -o pipefail",
+        "agent_status=0",
+        *run_lines,
+        "export_dir=/logs/artifacts/pi-sessions",
+        "sessions_root=\"$HOME/.pi/agent/sessions\"",
+        "mkdir -p \"$export_dir\"",
+        "if [[ -d \"$sessions_root\" ]]; then",
+        "  find \"$sessions_root\" -type f -name '*.jsonl' -print0 | while IFS= read -r -d '' session_file; do",
+        "    rel=\"${session_file#${sessions_root}/}\"",
+        "    safe_rel=\"${rel//\\//__}\"",
+        "    cp \"$session_file\" \"$export_dir/$safe_rel\"",
+        "  done",
+        "fi",
+        "exit \"$agent_status\"",
+    ])
+    return f"bash -lc {shlex.quote(script)}"
+
+
 if _HARBOR_NATIVE:
 
     class _BasePiCliHarborAgent(BaseInstalledAgent):
@@ -273,10 +310,9 @@ EOF
             ]
             await self.exec_as_agent(
                 environment,
-                command=(
-                    ". ~/.nvm/nvm.sh; "
-                    f"{shlex.join(cmd)} "
-                    f"2>&1 </dev/null | tee /logs/agent/{self._output_filename}"
+                command=_wrap_with_pi_session_export(
+                    f". ~/.nvm/nvm.sh; {shlex.join(cmd)}",
+                    output_filename=self._output_filename,
                 ),
                 env=self._provider_env(),
             )
@@ -332,7 +368,7 @@ else:
             ]
             return [
                 TerminalCommand(
-                    command=shlex.join(cmd),
+                    command=_wrap_with_pi_session_export(shlex.join(cmd)),
                     min_timeout_sec=0.0,
                     max_timeout_sec=float("inf"),
                     block=True,

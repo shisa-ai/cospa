@@ -251,6 +251,9 @@ re-running, partial runs compose by directory union. Every run records
 model, adapter, sampling params, model limits/pricing when available, env
 hash, timing, and token/cost usage in `manifest.json`. pi-backed runs also
 copy the raw response trace to `out/pi_session.jsonl` for audit/backfill.
+Terminal-Bench agents first export container-side pi traces into Harbor job
+artifacts, then the runner/backfill copies those traces into the same
+`out/pi_session.jsonl` location.
 
 ## Benchmarks
 

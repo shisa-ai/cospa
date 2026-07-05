@@ -10,6 +10,7 @@ from pathlib import Path
 from typing import Any
 
 from harness.telemetry import (
+    collect_harbor_pi_session_usage,
     collect_pi_session_usage,
     load_model_metadata,
     thinking_token_budget,
@@ -128,6 +129,11 @@ def backfill_manifest(
         start_time=_parse_time(manifest.get("created_at")),
         end_time=_parse_time(manifest.get("run_end_time")),
     )
+    if usage.get("status") != "observed":
+        usage = collect_harbor_pi_session_usage(
+            trial_dir / "jobs",
+            trial_dir / "out",
+        )
     if usage.get("status") == "observed":
         manifest["token_usage"] = usage
         response_models = usage.get("response_models")

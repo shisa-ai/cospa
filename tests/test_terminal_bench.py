@@ -55,6 +55,35 @@ def _make_task_yaml_task(vendor_dir: Path, task_id="hello-world"):
     return task_dir
 
 
+def _write_pi_session_trace(path: Path, cwd: str = "/terminal-bench/workdir"):
+    path.parent.mkdir(parents=True)
+    path.write_text("\n".join([
+        json.dumps({
+            "type": "session",
+            "id": "session-terminal-bench",
+            "timestamp": "2026-07-05T10:00:00Z",
+            "cwd": cwd,
+        }),
+        json.dumps({
+            "type": "message",
+            "message": {
+                "provider": "local",
+                "model": "Ornith-1.0-35B",
+                "responseId": "chatcmpl-terminal-bench",
+                "responseModel": "ornith-35b-fp8-block",
+                "usage": {
+                    "input": 700,
+                    "output": 80,
+                    "cacheRead": 50,
+                    "reasoning": 10,
+                    "totalTokens": 840,
+                    "cost": {"total": 0.007},
+                },
+            },
+        }),
+    ]) + "\n")
+
+
 def test_materialize_task_reads_task_yaml_instruction():
     """materialize_task must extract the prompt from task.yaml `instruction`."""
     suite = TerminalBenchSuite()
@@ -470,6 +499,18 @@ def test_harbor_agent_cli_forwards_configured_thinking(monkeypatch):
     assert "--thinking high" in command, command
 
 
+def test_harbor_agent_cli_exports_pi_session_traces(monkeypatch):
+    """Terminal-Bench agents must persist pi JSONL traces as Harbor artifacts."""
+    harbor_agents = _import_harbor_agents_with_fake_terminal_bench(monkeypatch)
+
+    agent = harbor_agents.PiDevstackHarborAgent("local/ornith-1.0-35b")
+    command = agent._run_agent_commands("solve it")[0].command
+
+    assert "$HOME/.pi/agent/sessions" in command, command
+    assert "/logs/artifacts/pi-sessions" in command, command
+    assert "find" in command and "*.jsonl" in command, command
+
+
 def test_harbor_agent_cli_omits_thinking_when_unset(monkeypatch):
     """Default effort must remain provider/model default unless pinned."""
     harbor_agents = _import_harbor_agents_with_fake_terminal_bench(monkeypatch)
@@ -541,6 +582,58 @@ def test_runner_delegates_terminal_bench_to_harbor():
     )
     assert harbor_calls[0][0] == "hello-world"
     assert harbor_calls[0][1] == "nvidia/nemotron-3-ultra-550b-a55b"
+
+
+def test_runner_records_terminal_bench_harbor_usage_trace():
+    """Terminal-Bench trials should summarize pi traces exported by Harbor."""
+    from harness.runner import run_trial
+    from harness.adapters.pi_vanilla import PiVanillaAdapter
+
+    suite = TerminalBenchSuite()
+    adapter = PiVanillaAdapter()
+
+    def fake_harbor(self, task_id, model_id, adapter_name, workdir, jobs_dir,
+                    n_attempts=1, vendor_dir=None, thinking=None):
+        trial_dir = (
+            Path(jobs_dir)
+            / "2026-07-05__10-00-00"
+            / "hello-world__abc123"
+        )
+        _write_pi_session_trace(
+            trial_dir / "artifacts" / "pi-sessions" / "session.jsonl"
+        )
+        (trial_dir / "result.json").write_text(json.dumps({
+            "task_name": "hello-world",
+            "agent_result": {"output": "done"},
+            "verifier_result": {"rewards": {"reward": 1.0}},
+            "exception_info": None,
+        }))
+        return {"returncode": 0, "stdout": "", "stderr": ""}
+
+    with tempfile.TemporaryDirectory() as tmp:
+        tmp = Path(tmp)
+        vendor_dir = tmp / "vendor"
+        _make_task_yaml_task(vendor_dir, "hello-world")
+        results_dir = tmp / "results"
+
+        with patch.object(TerminalBenchSuite, "run_harbor_job", fake_harbor):
+            manifest, verdict = run_trial(
+                suite,
+                adapter,
+                "local/ornith-1.0-35b",
+                "hello-world",
+                1,
+                results_dir,
+                vendor_dir,
+            )
+
+    assert verdict["passed"] is True
+    usage = manifest["token_usage"]
+    assert usage["status"] == "observed"
+    assert usage["prompt_tokens"] == 700
+    assert usage["completion_tokens"] == 80
+    assert usage["cost_usd"] == 0.007
+    assert usage["trace_files"] == ["out/pi_session.jsonl"]
 
 
 def test_runner_delegates_terminal_bench_thinking_to_harbor():

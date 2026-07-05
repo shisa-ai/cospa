@@ -417,23 +417,24 @@ def run_trial(suite, adapter, model_id, task_id, trial_k, results_dir, vendor_di
     encoded_task = encode_task_path(task_id)
     trial_dir = Path(results_dir) / encoded_model / adapter.name / suite.name / encoded_task / f"trial-{trial_k}"
 
-    # Resume: if this trial already has a verdict, do not re-run it.
-    # Re-running a killed eval should fill gaps, not redo completed work.
+    # Resume: skip only fully durable completed trials. A killed run can leave
+    # partial artifacts (for example verdict.json without manifest.json); those
+    # need to be re-run so later aggregation has both files.
     verdict_path = trial_dir / "verdict.json"
-    if verdict_path.exists():
+    manifest_path = trial_dir / "manifest.json"
+    if verdict_path.exists() and manifest_path.exists():
         try:
             with open(verdict_path) as vf:
                 prior_verdict = json.load(vf)
-            prior_manifest_path = trial_dir / "manifest.json"
-            prior_manifest = None
-            if prior_manifest_path.exists():
-                with open(prior_manifest_path) as mf:
-                    prior_manifest = json.load(mf)
-            print(f"[resume] skip {model_id}/{adapter.name}/{suite.name}/{task_id}/trial-{trial_k} (verdict exists: passed={prior_verdict.get('passed')})")
+            with open(manifest_path) as mf:
+                prior_manifest = json.load(mf)
+            print(f"[resume] skip {model_id}/{adapter.name}/{suite.name}/{task_id}/trial-{trial_k} (artifacts complete: passed={prior_verdict.get('passed')})")
             return prior_manifest, prior_verdict
         except (json.JSONDecodeError, OSError):
-            # Corrupt verdict/manifest — fall through and re-run.
-            print(f"[resume] verdict exists but unreadable for {task_id}; re-running")
+            # Corrupt verdict/manifest: fall through and re-run.
+            print(f"[resume] existing artifacts unreadable for {task_id}; re-running")
+    elif verdict_path.exists() or manifest_path.exists():
+        print(f"[resume] incomplete artifacts for {task_id}; re-running")
 
     trial_dir.mkdir(parents=True, exist_ok=True)
 

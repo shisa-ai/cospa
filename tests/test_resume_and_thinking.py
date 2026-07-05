@@ -5,9 +5,10 @@ Two capabilities that the runner currently lacks but that the live
 full-20260704 eval needs:
 
 1. **Resume.** Re-running the same `(model, adapter, suite, task, k)`
-   with an existing `verdict.json` MUST skip the trial rather than
+   with existing durable artifacts MUST skip the trial rather than
    re-execute (and overwrite) it. Without this, restarting a killed
-   run wastes every trial already completed.
+   run wastes every trial already completed. A partial artifact set
+   (for example, verdict without manifest) MUST be rerun.
 
 2. **Configurable thinking/effort.** `pi_vanilla` MUST pass
    `--thinking <level>` when the runner is invoked with `--thinking`,
@@ -78,8 +79,9 @@ def test_run_trial_skips_when_verdict_already_exists():
     """RED: re-running a completed trial must NOT re-invoke the adapter.
 
     The trial_dir is deterministic in (results_dir, model, adapter, suite,
-    task, k). If `verdict.json` is already present, the second run_trial
-    call for the same key MUST return without calling the adapter again.
+    task, k). If `verdict.json` and `manifest.json` are already present,
+    the second run_trial call for the same key MUST return without calling
+    the adapter again.
     """
     suite = AiderPolyglotSuite()
     adapter = CountingAdapter()
@@ -114,6 +116,9 @@ def test_run_trial_skips_when_verdict_already_exists():
         assert (trial_dir / "verdict.json").exists(), (
             "test setup: first run must write verdict.json"
         )
+        assert (trial_dir / "manifest.json").exists(), (
+            "test setup: first run must write manifest.json"
+        )
 
         # Second run: same key. MUST skip — adapter must not run again.
         run_trial(
@@ -124,6 +129,48 @@ def test_run_trial_skips_when_verdict_already_exists():
             f"resume: adapter must NOT re-run when verdict.json exists; "
             f"got run_count={adapter.run_count}"
         )
+
+
+def test_run_trial_reruns_when_manifest_missing():
+    """Partial artifacts must not be treated as a resumable completed trial."""
+    suite = AiderPolyglotSuite()
+    adapter = CountingAdapter()
+
+    with tempfile.TemporaryDirectory() as tmp:
+        tmp = Path(tmp)
+        vendor_dir = tmp / "vendor"
+        vendor_dir.mkdir()
+        _make_aider_problem(vendor_dir)
+        results_dir = tmp / "results"
+
+        run_trial(
+            suite, adapter, "test/model", "python/two-fer", 1,
+            results_dir, vendor_dir,
+        )
+
+        from urllib.parse import quote
+        encoded_model = quote("test/model", safe="")
+        encoded_task = quote("python/two-fer", safe="")
+        trial_dir = (
+            results_dir
+            / encoded_model
+            / adapter.name
+            / suite.name
+            / encoded_task
+            / "trial-1"
+        )
+        (trial_dir / "manifest.json").unlink()
+
+        run_trial(
+            suite, adapter, "test/model", "python/two-fer", 1,
+            results_dir, vendor_dir,
+        )
+
+        assert adapter.run_count == 2, (
+            "resume: verdict-only partial trial must be rerun, got "
+            f"run_count={adapter.run_count}"
+        )
+        assert (trial_dir / "manifest.json").exists()
 
 
 def test_pi_vanilla_passes_thinking_flag_when_configured():

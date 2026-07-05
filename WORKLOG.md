@@ -501,3 +501,24 @@ Append-only development log for the `coding-eval` repository.
   dirty external datasets.
 - Next: rerun the `codex/gpt-5.5` high smoke after the fix so the score is not
   polluted by stale CMake state.
+
+## 2026-07-05 — require complete artifacts for resume
+
+- Context: a killed GLM/little_coder run left a partial trial with
+  `verdict.json` but no `manifest.json`. The resume check skipped on verdict
+  alone, so such a trial could stay unrepairable and break timing/cost views.
+- Changes:
+  - `run_trial()` now resumes only when both `verdict.json` and
+    `manifest.json` are present and readable.
+  - Partial or corrupt artifact sets are reported and rerun.
+  - Added regression coverage for the verdict-without-manifest case.
+- Evidence (RED -> GREEN):
+  - RED: `test_run_trial_reruns_when_manifest_missing` skipped a
+    verdict-only trial and left `run_count=1`.
+  - GREEN: `mamba run -n coding-eval python -m pytest tests/test_resume_and_thinking.py -q`
+    = 6 passed.
+- Decision: treat missing manifest as incomplete work, even when a verdict
+  exists, because the manifest carries timing, model, sampling, and usage data
+  required for aggregation.
+- Next: resume affected GLM jobs after confirming no live process owns the same
+  run directory.

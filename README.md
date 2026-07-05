@@ -1,4 +1,17 @@
-# coding-eval
+# cospa
+
+*The cost-performance benchmark for coding agents.*
+
+**Cospa** takes its name from the Japanese **コスパ** (*cospa*) — the
+common clipping of **コストパフォーマンス** ("cost performance"), a word
+used everywhere in Japanese product reviews, electronics shopping, and
+everyday decision-making to mean *value for money*: how much capability
+or quality you get per unit of cost. It is exactly the framing this
+project brings to coding-agent evaluation. Most leaderboards rank models
+by raw pass rate and treat cost as a footnote, if they report it at all.
+Cospa treats the two axes as equally first-class — **raw capability
+measured alongside what you pay for it** — so a result is only "good"
+when the capability-per-dollar is good.
 
 Clean-room harness for evaluating small/local coding models across agent
 harness variants on **Aider Polyglot** and **Terminal-Bench**. The harness

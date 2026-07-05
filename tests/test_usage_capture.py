@@ -302,6 +302,42 @@ def test_load_model_metadata_prefers_repo_pricing_over_zero_provider_config():
     assert metadata["max_tokens"] == 128000
 
 
+def test_load_model_metadata_has_qwen_36_repo_pricing():
+    """Qwen 3.6 27B pricing should come from the benchmark config."""
+    with tempfile.TemporaryDirectory() as tmp:
+        models_json = Path(tmp) / "models.json"
+        models_json.write_text(json.dumps({
+            "providers": {
+                "aiand": {
+                    "models": [
+                        {
+                            "id": "qwen/qwen3.6-27b",
+                            "cost": {
+                                "input": 0,
+                                "cacheRead": 0,
+                                "cacheWrite": 0,
+                                "output": 0,
+                            },
+                        }
+                    ],
+                }
+            }
+        }))
+
+        metadata = load_model_metadata(
+            "aiand/qwen/qwen3.6-27b",
+            models_json_path=models_json,
+        )
+
+    assert metadata["cost"] == {
+        "input": 0.30,
+        "cacheRead": 0.15,
+        "cacheWrite": 0,
+        "output": 2.40,
+    }
+    assert metadata["pricing_unit"] == "usd_per_1m_tokens"
+
+
 def test_load_model_metadata_preserves_long_context_pricing_tiers():
     """GPT-5.5 API-equivalent pricing has short and long context rates."""
     with tempfile.TemporaryDirectory() as tmp:

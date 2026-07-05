@@ -550,3 +550,23 @@ Append-only development log for the `coding-eval` repository.
   benchmark pricing source of truth.
 - Next: use the same tier-aware path for any future model with context-based
   API pricing.
+
+## 2026-07-06 — price Qwen 3.6 27B
+
+- Context: cost/intelligence comparisons need API-equivalent pricing for
+  `aiand/qwen/qwen3.6-27b`.
+- Changes:
+  - Added Qwen 3.6 27B pricing to `configs/models.yaml`: `$0.30/M` input,
+    `$0.15/M` cached input, and `$2.40/M` output.
+  - Added a metadata regression test that ensures repo pricing overrides a
+    zero-cost provider stub.
+- Evidence (RED -> GREEN):
+  - RED: `test_load_model_metadata_has_qwen_36_repo_pricing` loaded zero-cost
+    provider pricing because the repo config had no Qwen cost metadata.
+  - GREEN: `mamba run -n coding-eval python -m pytest tests/test_usage_capture.py -q`
+    = 8 passed.
+  - GREEN: `mamba run -n coding-eval python -m pytest -q` = 149 passed.
+  - GREEN: `bash tests/scripts/run_all.sh` = all shell tests passed.
+- Decision: keep pricing in repo config as the benchmark source of truth.
+- Next: backfill existing Qwen manifests if/when Qwen eval runs produce
+  observed token usage.

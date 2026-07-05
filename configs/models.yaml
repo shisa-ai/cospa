@@ -17,6 +17,13 @@ models:
     pricing_unit: usd_per_1m_tokens
   - id: nvidia/nemotron-3-ultra-550b-a55b
   - id: aiand/qwen/qwen3.6-27b
+    name: Qwen 3.6 27B
+    cost:
+      input: 0.30
+      cacheRead: 0.15
+      cacheWrite: 0
+      output: 2.40
+    pricing_unit: usd_per_1m_tokens
   - id: zai/glm-5.2
     name: GLM 5.2
     context_window: 1000000

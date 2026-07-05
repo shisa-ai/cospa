@@ -278,9 +278,17 @@ def test_get_scores_aggregates_token_usage_and_estimated_cost():
             token_usage={
                 "prompt_tokens": 1_000_000,
                 "completion_tokens": 500_000,
+                "cached_tokens": 250_000,
+                "cache_creation_tokens": 100_000,
+                "reasoning_tokens": 125_000,
                 "total_tokens": 1_500_000,
             },
-            model_cost={"input": 1.0, "output": 2.0},
+            model_cost={
+                "input": 1.0,
+                "output": 2.0,
+                "cacheRead": 0.5,
+                "cacheWrite": 0.25,
+            },
         )
 
         h, _ = _make_handler(results_dir)
@@ -290,8 +298,50 @@ def test_get_scores_aggregates_token_usage_and_estimated_cost():
     row = scores[0]
     assert row["prompt_tokens"] == 1_000_000
     assert row["completion_tokens"] == 500_000
+    assert row["cached_tokens"] == 250_000
+    assert row["cache_creation_tokens"] == 100_000
+    assert row["reasoning_tokens"] == 125_000
     assert row["total_tokens"] == 1_500_000
-    assert row["estimated_cost_usd"] == 2.0
+    assert row["estimated_cost_usd"] == 2.15
+    assert row["cost_per_completed_task_usd"] == 2.15
+    assert row["passed_tasks_per_usd"] == 1 / 2.15
+
+
+def test_get_scores_prefers_direct_usage_cost():
+    """Provider-reported usage cost should beat local pricing estimates."""
+    with tempfile.TemporaryDirectory() as tmp:
+        results_dir = Path(tmp) / "results"
+        model_id = "priced/model"
+        adapter = "pi_vanilla"
+        suite = "aider_polyglot"
+        task_id = "python/hello"
+        base = (
+            results_dir
+            / "runs"
+            / "priced-run"
+            / encode_model_path(model_id)
+            / adapter
+            / suite
+            / encode_task_path(task_id)
+        )
+        _write_trial(
+            base / "trial-1",
+            passed=True,
+            model_id=model_id,
+            task_id=task_id,
+            token_usage={
+                "prompt_tokens": 1_000_000,
+                "completion_tokens": 1_000_000,
+                "cost_usd": 0.1234,
+            },
+            model_cost={"input": 100.0, "output": 100.0},
+        )
+
+        h, _ = _make_handler(results_dir)
+        scores = h.get_scores()
+
+    assert scores[0]["estimated_cost_usd"] == 0.1234
+    assert scores[0]["cost_per_completed_task_usd"] == 0.1234
 
 
 def test_get_scores_ignores_pending_verdicts():

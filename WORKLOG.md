@@ -224,3 +224,34 @@ Append-only development log for the `coding-eval` repository.
 - Next: launch Ornith high `pi_devstack_superpowers` and
   `little_coder_superpowers` Aider Polyglot runs under the existing
   resume-enabled run id.
+
+## 2026-07-05 — capture usage and model metadata
+
+- Context: verbose score rows exposed token/cost columns, but existing
+  manifests carried empty `token_usage` and no model pricing/limits, so
+  cost/intelligence comparisons could not be computed.
+- Changes:
+  - Added telemetry helpers that resolve safe model metadata from pi
+    `models.json` without copying provider secrets into manifests.
+  - Runner manifests now record model limits/pricing, pinned thinking-token
+    budget, and pi JSONL-derived input/output/cache/reasoning token usage,
+    response metadata, and direct provider-reported cost when available.
+  - pi-backed trials now copy the raw response trace to
+    `out/pi_session.jsonl` so usage can be audited or backfilled.
+  - Added `scripts/backfill-usage.py` to update existing result manifests
+    from pi's session store without rerunning model trials.
+  - Viewer verbose rows now aggregate cached/reasoning tokens, direct cost,
+    cost per completed task, and passed tasks per dollar.
+  - Updated README and result/plan docs with the telemetry contract.
+- Evidence (RED -> GREEN):
+  - RED: usage capture/backfill/viewer tests failed on missing telemetry
+    modules or dropped cached/reasoning/cost fields.
+  - GREEN: `mamba run -n coding-eval python -m pytest -q` = 127 passed.
+  - GREEN: `bash tests/scripts/run_all.sh` = all shell tests passed
+    (`test_check_models`, `test_root_entrypoints`, `test_run_matrix`,
+    `test_setup`).
+- Decision: use pi's per-workdir JSONL session trace as the durable source
+  of truth for pi/little-coder usage, and store a manifest summary plus the
+  raw trace copy rather than relying on an uncorrelated proxy analytics DB.
+- Next: backfill the completed Ornith high Aider Polyglot runs and inspect
+  the resulting verbose cost columns.

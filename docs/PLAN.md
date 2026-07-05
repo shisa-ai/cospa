@@ -49,7 +49,11 @@ reorder — earlier items unblock later ones.
       by default. Explicit `--results-dir` remains an exact output root for
       intentional merges.
       Manifest records: model id + provider, adapter id + version,
-      sampling params, env hash, start/end time, token usage (if known).
+      model limits/pricing from pi config when available, sampling params
+      including pinned thinking effort/budget, env hash, start/end time,
+      and token/cost usage. pi-backed runs also preserve the raw pi JSONL
+      response trace under `out/` so usage can be audited or backfilled
+      without rerunning the model.
       This is the single load-bearing component of the harness.
 - [ ] **P6. Adapter: `pi_vanilla`.** Launches `pi --no-extensions -m <model>`
       in headless mode against a task workdir. The baseline — pi's four
@@ -193,7 +197,7 @@ parallel invocations do not race by default:
 ```
 results/runs/<encoded-model>-<run-id>/<encoded-model>/<adapter>/<suite>/<task_id>/trial-<k>/
 ├── manifest.json     # model, adapter, params, env hash, timing
-├── out/              # adapter stdout/stderr, session log
+├── out/              # adapter stdout/stderr, session log, pi_session.jsonl
 ├── workdir/          # final state of the task workdir (git diff vs initial)
 └── verdict.json      # suite-specific: pass/fail, test counts, grader output
 ```
@@ -208,7 +212,8 @@ without re-running, and partial runs compose by directory union.
 
 Reproducibility levers we record but do not enforce: pi version,
 little-coder version, Harbor version, TB pin, mamba env hash, sampling
-params. A run is "comparable" to another only if these match; the viewer
+params, model context/output limits, pricing, and observed token/cost
+usage. A run is "comparable" to another only if these match; the viewer
 flags mismatches in the comparison view.
 
 ## 5. What we are explicitly NOT doing (v1)

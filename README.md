@@ -228,7 +228,9 @@ For a full matrix with a stable wrapper name:
 
 Results are a pure directory tree — no database, re-scoreable without
 re-running, partial runs compose by directory union. Every run records
-model, adapter, sampling params, env hash, and timing in `manifest.json`.
+model, adapter, sampling params, model limits/pricing when available, env
+hash, timing, and token/cost usage in `manifest.json`. pi-backed runs also
+copy the raw response trace to `out/pi_session.jsonl` for audit/backfill.
 
 ## Benchmarks
 

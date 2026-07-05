@@ -105,6 +105,22 @@ def _format_cost(value: float | int | None) -> str:
     return f"${amount:,.2f}"
 
 
+def _format_rate(value: float | int | None) -> str:
+    if value is None:
+        return "-"
+    try:
+        amount = float(value)
+    except (TypeError, ValueError):
+        return "-"
+    if amount < 0:
+        return "-"
+    if amount >= 100:
+        return f"{amount:,.0f}"
+    if amount >= 10:
+        return f"{amount:,.1f}"
+    return f"{amount:,.2f}"
+
+
 def _matches_any(patterns: tuple[str, ...] | list[str], text: str) -> bool:
     for pattern in patterns:
         try:
@@ -193,7 +209,11 @@ def format_scores_terminal(
             "Avg",
             "Tok In",
             "Tok Out",
+            "Reason",
+            "Cached",
             "Cost",
+            "$/Task",
+            "Pass/$",
             "ETA",
         ]
     else:
@@ -222,7 +242,11 @@ def format_scores_terminal(
                 _format_duration(score.get("mean_wall_clock_seconds")),
                 _format_tokens(score.get("prompt_tokens")),
                 _format_tokens(score.get("completion_tokens")),
+                _format_tokens(score.get("reasoning_tokens")),
+                _format_tokens(score.get("cached_tokens")),
                 _format_cost(score.get("estimated_cost_usd")),
+                _format_cost(score.get("cost_per_completed_task_usd")),
+                _format_rate(score.get("passed_tasks_per_usd")),
                 _format_duration(score.get("estimated_remaining_seconds")),
             ]
         else:
@@ -560,21 +584,49 @@ class ScoreHandler(SimpleHTTPRequestHandler):
             "tokens_total",
             "total",
         )
+        cached_tokens = cls._numeric_value(
+            usage,
+            "cached_tokens",
+            "cache_read_tokens",
+            "cacheRead",
+            "cache_read",
+        )
+        cache_creation_tokens = cls._numeric_value(
+            usage,
+            "cache_creation_tokens",
+            "cache_write_tokens",
+            "cacheWrite",
+            "cache_write",
+        )
+        reasoning_tokens = cls._numeric_value(
+            usage,
+            "reasoning_tokens",
+            "reasoning",
+        )
 
         prompt = int(prompt_tokens or 0)
         completion = int(completion_tokens or 0)
+        cached = int(cached_tokens or 0)
+        cache_creation = int(cache_creation_tokens or 0)
+        reasoning = int(reasoning_tokens or 0)
         total = int(total_tokens or 0)
-        if not total and (prompt or completion):
-            total = prompt + completion
+        if not total and (prompt or completion or cached or cache_creation or reasoning):
+            total = prompt + completion + cached + cache_creation + reasoning
 
         return {
             "prompt_tokens": prompt,
             "completion_tokens": completion,
+            "cached_tokens": cached,
+            "cache_creation_tokens": cache_creation,
+            "reasoning_tokens": reasoning,
             "total_tokens": total,
         }
 
     @classmethod
-    def _pricing_from_manifest(cls, manifest: dict) -> tuple[float | None, float | None]:
+    def _pricing_from_manifest(
+        cls,
+        manifest: dict,
+    ) -> tuple[float | None, float | None, float | None, float | None]:
         model = manifest.get("model", {})
         if not isinstance(model, dict):
             model = {}
@@ -587,7 +639,7 @@ class ScoreHandler(SimpleHTTPRequestHandler):
             or {}
         )
         if not isinstance(pricing, dict):
-            return None, None
+            return None, None, None, None
 
         input_per_million = cls._numeric_value(
             pricing,
@@ -607,7 +659,32 @@ class ScoreHandler(SimpleHTTPRequestHandler):
             "output_per_1m",
             "completion_per_1m",
         )
-        return input_per_million, output_per_million
+        cache_read_per_million = cls._numeric_value(
+            pricing,
+            "cacheRead",
+            "cache_read",
+            "cached",
+            "cache_read_per_million",
+            "cached_per_million",
+            "cache_read_per_1m",
+            "cached_per_1m",
+        )
+        cache_write_per_million = cls._numeric_value(
+            pricing,
+            "cacheWrite",
+            "cache_write",
+            "cache_creation",
+            "cache_write_per_million",
+            "cache_creation_per_million",
+            "cache_write_per_1m",
+            "cache_creation_per_1m",
+        )
+        return (
+            input_per_million,
+            output_per_million,
+            cache_read_per_million,
+            cache_write_per_million,
+        )
 
     @classmethod
     def _estimate_cost_usd(
@@ -615,6 +692,8 @@ class ScoreHandler(SimpleHTTPRequestHandler):
         manifest: dict,
         prompt_tokens: int,
         completion_tokens: int,
+        cached_tokens: int = 0,
+        cache_creation_tokens: int = 0,
     ) -> float | None:
         usage = manifest.get("token_usage") or manifest.get("usage") or {}
         if isinstance(usage, dict):
@@ -637,17 +716,28 @@ class ScoreHandler(SimpleHTTPRequestHandler):
         if direct_cost is not None:
             return direct_cost
 
-        input_per_million, output_per_million = cls._pricing_from_manifest(manifest)
+        (
+            input_per_million,
+            output_per_million,
+            cache_read_per_million,
+            cache_write_per_million,
+        ) = cls._pricing_from_manifest(manifest)
         if input_per_million is None and output_per_million is None:
             return None
         if prompt_tokens and input_per_million is None:
             return None
         if completion_tokens and output_per_million is None:
             return None
+        if cached_tokens and cache_read_per_million is None:
+            return None
+        if cache_creation_tokens and cache_write_per_million is None:
+            return None
 
         return (
             (prompt_tokens / 1_000_000) * (input_per_million or 0)
             + (completion_tokens / 1_000_000) * (output_per_million or 0)
+            + (cached_tokens / 1_000_000) * (cache_read_per_million or 0)
+            + (cache_creation_tokens / 1_000_000) * (cache_write_per_million or 0)
         )
 
     def get_scores(
@@ -720,6 +810,9 @@ class ScoreHandler(SimpleHTTPRequestHandler):
                 {
                     "prompt_tokens": 0,
                     "completion_tokens": 0,
+                    "cached_tokens": 0,
+                    "cache_creation_tokens": 0,
+                    "reasoning_tokens": 0,
                     "total_tokens": 0,
                     "estimated_cost_usd": 0.0,
                     "has_estimated_cost": False,
@@ -727,11 +820,16 @@ class ScoreHandler(SimpleHTTPRequestHandler):
             )
             token_totals["prompt_tokens"] += token_usage["prompt_tokens"]
             token_totals["completion_tokens"] += token_usage["completion_tokens"]
+            token_totals["cached_tokens"] += token_usage["cached_tokens"]
+            token_totals["cache_creation_tokens"] += token_usage["cache_creation_tokens"]
+            token_totals["reasoning_tokens"] += token_usage["reasoning_tokens"]
             token_totals["total_tokens"] += token_usage["total_tokens"]
             estimated_cost = self._estimate_cost_usd(
                 trial["manifest"],
                 token_usage["prompt_tokens"],
                 token_usage["completion_tokens"],
+                token_usage["cached_tokens"],
+                token_usage["cache_creation_tokens"],
             )
             if estimated_cost is not None:
                 token_totals["estimated_cost_usd"] += estimated_cost
@@ -783,6 +881,9 @@ class ScoreHandler(SimpleHTTPRequestHandler):
                 {
                     "prompt_tokens": 0,
                     "completion_tokens": 0,
+                    "cached_tokens": 0,
+                    "cache_creation_tokens": 0,
+                    "reasoning_tokens": 0,
                     "total_tokens": 0,
                     "estimated_cost_usd": 0.0,
                     "has_estimated_cost": False,
@@ -791,6 +892,16 @@ class ScoreHandler(SimpleHTTPRequestHandler):
             estimated_cost_usd = (
                 token_totals["estimated_cost_usd"]
                 if token_totals["has_estimated_cost"]
+                else None
+            )
+            cost_per_completed_task_usd = (
+                estimated_cost_usd / total_tasks
+                if estimated_cost_usd is not None and total_tasks
+                else None
+            )
+            passed_tasks_per_usd = (
+                passed_tasks / estimated_cost_usd
+                if estimated_cost_usd and estimated_cost_usd > 0
                 else None
             )
 
@@ -829,8 +940,13 @@ class ScoreHandler(SimpleHTTPRequestHandler):
                 "estimated_remaining_seconds": estimated_remaining_seconds,
                 "prompt_tokens": token_totals["prompt_tokens"],
                 "completion_tokens": token_totals["completion_tokens"],
+                "cached_tokens": token_totals["cached_tokens"],
+                "cache_creation_tokens": token_totals["cache_creation_tokens"],
+                "reasoning_tokens": token_totals["reasoning_tokens"],
                 "total_tokens": token_totals["total_tokens"],
                 "estimated_cost_usd": estimated_cost_usd,
+                "cost_per_completed_task_usd": cost_per_completed_task_usd,
+                "passed_tasks_per_usd": passed_tasks_per_usd,
                 "method": "pass@k majority",
             })
 

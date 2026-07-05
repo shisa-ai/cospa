@@ -36,6 +36,11 @@ sys.path.insert(0, str(PROJECT_ROOT))
 from harness.adapters import load_adapter
 from harness.suites import load_suite
 from harness.path_utils import encode_path_component
+from harness.telemetry import (
+    collect_pi_session_usage,
+    load_model_metadata,
+    thinking_token_budget,
+)
 
 
 def parse_args():
@@ -274,7 +279,8 @@ def _manifest_sampling(task_data: dict) -> dict:
     task/env overrides when available and otherwise record a deliberate
     "server-default" marker.
     """
-    return {
+    thinking = task_data.get("thinking") or "default"
+    sampling = {
         "temperature": task_data.get("temperature")
         or os.environ.get("CODING_EVAL_TEMPERATURE")
         or "server-default",
@@ -287,8 +293,12 @@ def _manifest_sampling(task_data: dict) -> dict:
         # Thinking/effort level. "default" = no --thinking flag was passed
         # (model/provider default applies). Explicit levels come through as
         # off/minimal/low/medium/high/xhigh.
-        "thinking": task_data.get("thinking") or "default",
+        "thinking": thinking,
     }
+    budget = thinking_token_budget(thinking)
+    if budget is not None:
+        sampling["thinking_token_budget"] = budget
+    return sampling
 
 
 def _manifest_tool_call_parser(task_data: dict) -> str:
@@ -442,17 +452,21 @@ def run_trial(suite, adapter, model_id, task_id, trial_k, results_dir, vendor_di
     # Parse provider from model_id (e.g., "nvidia/nemotron-..." -> provider="nvidia")
     provider = model_id.split("/")[0] if "/" in model_id else "unknown"
 
+    model_metadata = load_model_metadata(model_id)
+    model_manifest = {
+        "id": model_id,
+        "provider": provider,
+        "served_model": (
+            task_data.get("served_model")
+            or os.environ.get("CODING_EVAL_SERVED_MODEL")
+            or model_id
+        ),
+    }
+    model_manifest.update(model_metadata)
+
     # Build manifest with all required fields
     manifest = {
-        "model": {
-            "id": model_id,
-            "provider": provider,
-            "served_model": (
-                task_data.get("served_model")
-                or os.environ.get("CODING_EVAL_SERVED_MODEL")
-                or model_id
-            ),
-        },
+        "model": model_manifest,
         "adapter": {
             "id": adapter.__class__.__name__,
             "version": getattr(adapter, "version", "unknown"),
@@ -568,6 +582,18 @@ def run_trial(suite, adapter, model_id, task_id, trial_k, results_dir, vendor_di
             # Write error to log
             with open(log_file, "a") as f:
                 f.write(f"\n[ERROR] {e}\n")
+
+    session_usage = collect_pi_session_usage(
+        workdir,
+        out_dir,
+        start_time=start_time,
+        end_time=time.time(),
+    )
+    if session_usage.get("status") == "observed":
+        manifest["token_usage"] = session_usage
+        response_models = session_usage.get("response_models")
+        if isinstance(response_models, list) and response_models:
+            manifest["model"]["served_model"] = response_models[-1]
 
     # Run the suite's verifier only if the adapter succeeded. A suite may
     # explicitly opt into post-failure verification by setting

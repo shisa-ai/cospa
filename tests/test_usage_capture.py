@@ -1,0 +1,280 @@
+"""
+Tests for model metadata and pi session usage capture.
+
+Cost/intelligence comparisons need more than pass/fail: manifests must carry
+model limits/pricing and actual per-trial token/cost usage. pi already writes
+JSONL session traces keyed by trial workdir, so the harness should summarize
+those traces and preserve the raw response metadata with the trial.
+"""
+
+import json
+import sys
+import tempfile
+from datetime import datetime, timezone
+from pathlib import Path
+
+PROJECT_ROOT = Path(__file__).resolve().parent.parent
+sys.path.insert(0, str(PROJECT_ROOT))
+
+from harness.adapters.pi_vanilla import AdapterResult
+from harness.runner import run_trial
+from harness.telemetry import (
+    collect_pi_session_usage,
+    load_model_metadata,
+    pi_session_dir_for_cwd,
+    summarize_pi_session,
+)
+from harness.suites.aider_polyglot import AiderPolyglotSuite
+
+
+def _write_jsonl(path: Path, events: list[dict]) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text("\n".join(json.dumps(event) for event in events) + "\n")
+
+
+def _session_events(cwd: Path) -> list[dict]:
+    return [
+        {
+            "type": "session",
+            "version": 3,
+            "id": "session-123",
+            "timestamp": "2026-07-04T14:07:07.921Z",
+            "cwd": str(cwd),
+        },
+        {
+            "type": "model_change",
+            "provider": "local",
+            "modelId": "Ornith-1.0-35B",
+        },
+        {
+            "type": "thinking_level_change",
+            "thinkingLevel": "high",
+        },
+        {
+            "type": "message",
+            "message": {
+                "role": "assistant",
+                "api": "openai-completions",
+                "provider": "local",
+                "model": "Ornith-1.0-35B",
+                "responseId": "chatcmpl-one",
+                "responseModel": "ornith-35b-fp8-block",
+                "usage": {
+                    "input": 100,
+                    "output": 20,
+                    "cacheRead": 30,
+                    "cacheWrite": 5,
+                    "reasoning": 7,
+                    "totalTokens": 162,
+                    "cost": {
+                        "input": 0.000014,
+                        "output": 0.0000208,
+                        "cacheRead": 0.0000042,
+                        "cacheWrite": 0.0000007,
+                        "total": 0.0000397,
+                    },
+                },
+            },
+        },
+        {
+            "type": "message",
+            "message": {
+                "role": "assistant",
+                "api": "openai-completions",
+                "provider": "local",
+                "model": "Ornith-1.0-35B",
+                "responseId": "chatcmpl-two",
+                "responseModel": "ornith-35b-fp8-block",
+                "usage": {
+                    "input": 200,
+                    "output": 50,
+                    "cacheRead": 60,
+                    "cacheWrite": 0,
+                    "reasoning": 9,
+                    "totalTokens": 319,
+                    "cost": {"total": 0.000102},
+                },
+            },
+        },
+    ]
+
+
+def _make_problem(vendor_dir: Path):
+    pdir = (
+        vendor_dir
+        / "polyglot-benchmark"
+        / "python"
+        / "exercises"
+        / "practice"
+        / "two-fer"
+    )
+    pdir.mkdir(parents=True)
+    (pdir / ".docs").mkdir()
+    (pdir / ".docs" / "instructions.md").write_text("Solve two-fer.")
+    (pdir / "two_fer.py").write_text("def two_fer(name=None):\n    pass\n")
+    (pdir / "two_fer_test.py").write_text(
+        "from two_fer import two_fer\n"
+        "def test_two_fer():\n"
+        "    assert two_fer() == 'One for you, one for me.'\n"
+    )
+
+
+def test_summarize_pi_session_extracts_usage_cost_and_response_metadata():
+    with tempfile.TemporaryDirectory() as tmp:
+        tmp = Path(tmp)
+        session_file = tmp / "session.jsonl"
+        _write_jsonl(session_file, _session_events(tmp / "workdir"))
+
+        summary = summarize_pi_session(session_file)
+
+    assert summary["status"] == "observed"
+    assert summary["source"] == "pi-session-jsonl"
+    assert summary["response_count"] == 2
+    assert summary["prompt_tokens"] == 300
+    assert summary["completion_tokens"] == 70
+    assert summary["cached_tokens"] == 90
+    assert summary["cache_creation_tokens"] == 5
+    assert summary["reasoning_tokens"] == 16
+    assert summary["total_tokens"] == 481
+    assert summary["cost_usd"] == 0.0001417
+    assert summary["response_ids"] == ["chatcmpl-one", "chatcmpl-two"]
+    assert summary["response_models"] == ["ornith-35b-fp8-block"]
+    assert summary["models"] == ["Ornith-1.0-35B"]
+    assert summary["thinking"] == "high"
+
+
+def test_collect_pi_session_usage_copies_raw_trace_by_workdir():
+    with tempfile.TemporaryDirectory() as tmp:
+        tmp = Path(tmp)
+        workdir = tmp / "results" / "trial-1" / "workdir"
+        out_dir = tmp / "results" / "trial-1" / "out"
+        sessions_root = tmp / "sessions"
+        session_dir = pi_session_dir_for_cwd(workdir, sessions_root=sessions_root)
+        session_file = session_dir / "2026-07-04T14-07-07Z_session.jsonl"
+        _write_jsonl(session_file, _session_events(workdir))
+
+        summary = collect_pi_session_usage(
+            workdir,
+            out_dir,
+            sessions_root=sessions_root,
+            start_time=datetime(2026, 7, 4, 14, 7, 0, tzinfo=timezone.utc).timestamp(),
+            end_time=datetime(2026, 7, 4, 14, 8, 0, tzinfo=timezone.utc).timestamp(),
+        )
+
+        copied_trace = out_dir / "pi_session.jsonl"
+        assert copied_trace.exists()
+        assert copied_trace.read_text() == session_file.read_text()
+        assert summary["status"] == "observed"
+        assert summary["trace_files"] == ["out/pi_session.jsonl"]
+        assert summary["prompt_tokens"] == 300
+
+
+def test_load_model_metadata_resolves_limits_pricing_without_secrets():
+    with tempfile.TemporaryDirectory() as tmp:
+        models_json = Path(tmp) / "models.json"
+        models_json.write_text(json.dumps({
+            "providers": {
+                "local": {
+                    "baseUrl": "http://localhost:8989/v1",
+                    "apiKey": "secret",
+                    "models": [
+                        {
+                            "id": "Ornith-1.0-35B",
+                            "name": "Ornith 1.0 35B",
+                            "reasoning": True,
+                            "input": ["text", "image"],
+                            "contextWindow": 262144,
+                            "maxTokens": 81920,
+                            "cost": {
+                                "input": 0.14,
+                                "output": 1.04,
+                                "cacheRead": 0.14,
+                                "cacheWrite": 0.14,
+                            },
+                        }
+                    ],
+                }
+            }
+        }))
+
+        metadata = load_model_metadata(
+            "local/ornith-1.0-35b",
+            models_json_path=models_json,
+        )
+
+    assert metadata["provider_config_model_id"] == "Ornith-1.0-35B"
+    assert metadata["name"] == "Ornith 1.0 35B"
+    assert metadata["context_window"] == 262144
+    assert metadata["max_tokens"] == 81920
+    assert metadata["reasoning"] is True
+    assert metadata["input_modalities"] == ["text", "image"]
+    assert metadata["cost"]["input"] == 0.14
+    assert metadata["pricing_unit"] == "usd_per_1m_tokens"
+    assert "apiKey" not in json.dumps(metadata)
+    assert "secret" not in json.dumps(metadata)
+
+
+def test_run_trial_records_pi_session_usage_and_trace(monkeypatch):
+    suite = AiderPolyglotSuite()
+
+    class SessionWritingAdapter:
+        name = "pi_vanilla"
+        version = "test"
+
+        def __init__(self, sessions_root: Path):
+            self.sessions_root = sessions_root
+
+        def run(self, task_data, workdir, log_file, stderr_file):
+            (workdir / "two_fer.py").write_text(
+                "def two_fer(name=None):\n"
+                "    return 'One for you, one for me.' if name is None else f'One for {name}, one for me.'\n"
+            )
+            session_dir = pi_session_dir_for_cwd(
+                workdir,
+                sessions_root=self.sessions_root,
+            )
+            _write_jsonl(
+                session_dir / "2026-07-04T14-07-07Z_session.jsonl",
+                _session_events(workdir),
+            )
+            return AdapterResult(returncode=0)
+
+    with tempfile.TemporaryDirectory() as tmp:
+        tmp = Path(tmp)
+        vendor_dir = tmp / "vendor"
+        vendor_dir.mkdir()
+        _make_problem(vendor_dir)
+        results_dir = tmp / "results"
+        sessions_root = tmp / "sessions"
+        monkeypatch.setenv("CODING_EVAL_PI_SESSIONS_DIR", str(sessions_root))
+
+        manifest, verdict = run_trial(
+            suite,
+            SessionWritingAdapter(sessions_root),
+            "local/ornith-1.0-35b",
+            "python/two-fer",
+            1,
+            results_dir,
+            vendor_dir,
+            thinking="high",
+        )
+
+        assert verdict["passed"] is True
+        usage = manifest["token_usage"]
+        assert usage["status"] == "observed"
+        assert usage["prompt_tokens"] == 300
+        assert usage["completion_tokens"] == 70
+        assert usage["cost_usd"] == 0.0001417
+        assert usage["trace_files"] == ["out/pi_session.jsonl"]
+        assert manifest["sampling"]["thinking_token_budget"] == 8192
+        trace_path = (
+            results_dir
+            / "local%2Fornith-1.0-35b"
+            / "pi_vanilla"
+            / "aider_polyglot"
+            / "python%2Ftwo-fer"
+            / "trial-1"
+            / "out"
+            / "pi_session.jsonl"
+        )
+        assert trace_path.exists()

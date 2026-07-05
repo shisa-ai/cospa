@@ -59,13 +59,19 @@ All adapters launch the model in headless mode (`--print`) and capture
 stdout/stderr. The harness records:
 
 - Model ID + provider
+- Provider model metadata when available: served model, context window,
+  max output tokens, input modalities, reasoning support, and per-million
+  token pricing
 - Adapter ID + version
-- Sampling params (if known)
+- Sampling params, including pinned thinking level and local thinking-token
+  budget when configured
 - Env hash (mamba env)
 - Pi version
 - Little-coder version
 - Wall-clock time
-- Token usage (if available)
+- Token usage and cost: input/output/cache-read/cache-write/reasoning tokens,
+  response count, response IDs/models, and direct provider-reported cost
+  when available
 - Exit code
 
 ### Results Layout
@@ -73,7 +79,7 @@ stdout/stderr. The harness records:
 ```
 results/<model>/<adapter>/<suite>/<task_id>/trial-<k>/
 ├── manifest.json     # model, adapter, params, env hash, timing
-├── out/              # adapter stdout/stderr, session log
+├── out/              # adapter stdout/stderr, session log, pi_session.jsonl
 ├── workdir/          # final state of the task workdir
 └── verdict.json      # suite-specific: pass/fail, test counts, grader output
 ```
@@ -85,7 +91,15 @@ re-running, partial runs compose by directory union.
 
 Reproducibility levers we record but do not enforce: pi version,
 little-coder version, Harbor version, TB pin, mamba env hash, sampling
-params. A run is "comparable" to another only if these match.
+params, model limits/pricing, and observed token/cost usage. A run is
+"comparable" to another only if these match.
+
+Existing pi-backed runs can be updated from pi's session store without
+rerunning:
+
+```bash
+scripts/backfill-usage.py --results-dir results/runs/<run-wrapper>
+```
 
 ## How to Run
 

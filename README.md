@@ -153,6 +153,11 @@ models:
   - id: hf/Qwen/Qwen2.5-Coder-7B-Instruct
 ```
 
+Entries may also include benchmark accounting metadata such as
+`context_window`, `max_tokens`, `reasoning`, and per-million-token `cost`.
+That repo metadata is used in manifests and usage backfill when the local pi
+provider config is missing pricing or carries a development stub.
+
 Verify and run:
 
 ```bash

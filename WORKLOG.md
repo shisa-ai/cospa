@@ -345,3 +345,28 @@ Append-only development log for the `coding-eval` repository.
   benchmark/container manifests that may exist inside trial job directories.
 - Next: run the unfiltered backfill over `results/` to catch every available
   pi-backed trial.
+
+## 2026-07-05 — record official GLM-5.2 pricing
+
+- Context: the local `zai/glm-5.2` pi provider entry carried zero token
+  prices, which would make cost/intelligence rows wrong even when usage
+  capture was complete.
+- Changes:
+  - `configs/models.yaml` now records the official Z.ai GLM-5.2 limits and
+    per-million-token prices: input 1.4, cached input 0.26, cache storage 0,
+    and output 4.4 USD.
+  - `load_model_metadata()` now merges optional repo model metadata over local
+    pi provider metadata, so manifests/backfill can correct incomplete local
+    accounting stubs without exposing provider secrets.
+  - README and PLAN docs now describe repo-backed model accounting metadata.
+- Evidence (RED -> GREEN):
+  - RED: metadata test failed because `load_model_metadata()` could not read
+    repo model pricing and returned the zero-priced provider stub.
+  - GREEN: `mamba run -n coding-eval python -m pytest -q` = 133 passed.
+  - GREEN: `bash tests/scripts/run_all.sh` = all shell tests passed
+    (`test_check_models`, `test_root_entrypoints`, `test_run_matrix`,
+    `test_setup`).
+- Decision: keep provider routing/auth in `~/.pi/agent/models.json`, but keep
+  benchmark accounting metadata in the repo so results are reproducible.
+- Next: add Harbor artifact export for Terminal-Bench pi session traces so
+  Terminal-Bench rows can receive the same token/cost coverage.

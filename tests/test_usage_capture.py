@@ -214,6 +214,66 @@ def test_load_model_metadata_resolves_limits_pricing_without_secrets():
     assert "secret" not in json.dumps(metadata)
 
 
+def test_load_model_metadata_prefers_repo_pricing_over_zero_provider_config():
+    """Official benchmark pricing should not inherit zero-priced provider stubs."""
+    with tempfile.TemporaryDirectory() as tmp:
+        tmp = Path(tmp)
+        models_json = tmp / "models.json"
+        models_yaml = tmp / "models.yaml"
+        models_json.write_text(json.dumps({
+            "providers": {
+                "zai": {
+                    "baseUrl": "https://api.z.ai/api/paas/v4",
+                    "apiKey": "secret",
+                    "models": [
+                        {
+                            "id": "glm-5.2",
+                            "name": "GLM 5.2",
+                            "contextWindow": 1000000,
+                            "maxTokens": 128000,
+                            "reasoning": True,
+                            "cost": {
+                                "input": 0,
+                                "output": 0,
+                                "cacheRead": 0,
+                                "cacheWrite": 0,
+                            },
+                        }
+                    ],
+                }
+            }
+        }))
+        models_yaml.write_text(
+            "models:\n"
+            "  - id: zai/glm-5.2\n"
+            "    context_window: 1000000\n"
+            "    max_tokens: 128000\n"
+            "    reasoning: true\n"
+            "    cost:\n"
+            "      input: 1.4\n"
+            "      cacheRead: 0.26\n"
+            "      cacheWrite: 0\n"
+            "      output: 4.4\n"
+            "    pricing_unit: usd_per_1m_tokens\n"
+        )
+
+        metadata = load_model_metadata(
+            "zai/glm-5.2",
+            models_json_path=models_json,
+            models_config_path=models_yaml,
+        )
+
+    assert metadata["cost"] == {
+        "input": 1.4,
+        "cacheRead": 0.26,
+        "cacheWrite": 0,
+        "output": 4.4,
+    }
+    assert metadata["pricing_unit"] == "usd_per_1m_tokens"
+    assert metadata["context_window"] == 1000000
+    assert metadata["max_tokens"] == 128000
+
+
 def test_run_trial_records_pi_session_usage_and_trace(monkeypatch):
     suite = AiderPolyglotSuite()
 

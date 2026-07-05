@@ -2,6 +2,16 @@ models:
   - id: nvidia/nemotron-3-ultra-550b-a55b
   - id: aiand/qwen/qwen3.6-27b
   - id: zai/glm-5.2
+    name: GLM 5.2
+    context_window: 1000000
+    max_tokens: 128000
+    reasoning: true
+    cost:
+      input: 1.4
+      cacheRead: 0.26
+      cacheWrite: 0
+      output: 4.4
+    pricing_unit: usd_per_1m_tokens
   - id: minimax/MiniMax-M3
   - id: minimax/MiniMax-M2.7
   - id: nvidia/stepfun-ai/step-3.7-flash

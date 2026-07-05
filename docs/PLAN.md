@@ -127,15 +127,29 @@ not a foregone conclusion.
 
 ## 2. Models
 
-Input, not output. We do not serve or configure models here. Models live
-in `~/.pi/agent/models.json` (already populated) and are surfaced to the
-harness via `configs/models.yaml`, which is just:
+Input, not output. We do not serve or configure models here. Runtime
+provider endpoints live in `~/.pi/agent/models.json` (already populated)
+and are surfaced to the harness via `configs/models.yaml`. Entries can be
+just an ID, or they can carry benchmark accounting metadata such as context
+limits and per-million-token pricing. Repo metadata overrides local provider
+stubs for manifest/backfill accounting, so cost/intelligence comparisons do
+not silently inherit zero-priced development configs.
 
 ```yaml
 models:
   - id: nvidia/nemotron-3-ultra-550b-a55b
   - id: aiand/qwen/qwen3.6-27b
   - id: zai/glm-5.2
+    name: GLM 5.2
+    context_window: 1000000
+    max_tokens: 128000
+    reasoning: true
+    cost:
+      input: 1.4
+      cacheRead: 0.26
+      cacheWrite: 0
+      output: 4.4
+    pricing_unit: usd_per_1m_tokens
   - id: minimax/MiniMax-M3
   - id: minimax/MiniMax-M2.7
   - id: nvidia/stepfun-ai/step-3.7-flash

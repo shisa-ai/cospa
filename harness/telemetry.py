@@ -10,6 +10,8 @@ from pathlib import Path
 from typing import Any
 
 
+PROJECT_ROOT = Path(__file__).resolve().parents[1]
+
 THINKING_TOKEN_BUDGETS = {
     "off": 0,
     "minimal": 256,
@@ -49,6 +51,98 @@ def _read_json(path: Path) -> dict | None:
         return None
 
 
+def _parse_simple_yaml_scalar(value: str) -> Any:
+    value = value.strip()
+    if value in {"true", "True"}:
+        return True
+    if value in {"false", "False"}:
+        return False
+    if value in {"null", "Null", "NULL", "~"}:
+        return None
+    if (
+        (value.startswith('"') and value.endswith('"'))
+        or (value.startswith("'") and value.endswith("'"))
+    ):
+        return value[1:-1]
+    try:
+        if "." in value:
+            return float(value)
+        return int(value)
+    except ValueError:
+        return value
+
+
+def _parse_models_yaml_fallback(text: str) -> list[dict]:
+    """Parse the simple configs/models.yaml shape without a YAML dependency."""
+    models: list[dict] = []
+    current: dict | None = None
+    nested_key: str | None = None
+
+    for raw_line in text.splitlines():
+        line = raw_line.split("#", 1)[0].rstrip()
+        if not line.strip():
+            continue
+        stripped = line.strip()
+        indent = len(line) - len(line.lstrip())
+
+        if stripped.startswith("- id:"):
+            current = {"id": _parse_simple_yaml_scalar(stripped.split(":", 1)[1])}
+            models.append(current)
+            nested_key = None
+            continue
+        if stripped.startswith("- "):
+            current = {"id": _parse_simple_yaml_scalar(stripped[2:])}
+            models.append(current)
+            nested_key = None
+            continue
+        if current is None or ":" not in stripped:
+            continue
+
+        key, raw_value = stripped.split(":", 1)
+        key = key.strip()
+        raw_value = raw_value.strip()
+        if indent >= 6 and nested_key:
+            nested = current.setdefault(nested_key, {})
+            if isinstance(nested, dict):
+                nested[key] = _parse_simple_yaml_scalar(raw_value)
+            continue
+        if raw_value:
+            current[key] = _parse_simple_yaml_scalar(raw_value)
+            nested_key = None
+        else:
+            current[key] = {}
+            nested_key = key
+
+    return models
+
+
+def _read_models_config(path: Path) -> list[dict]:
+    try:
+        text = path.read_text()
+    except OSError:
+        return []
+
+    try:
+        import yaml  # type: ignore
+
+        data = yaml.safe_load(text) or {}
+        raw_models = data.get("models", []) if isinstance(data, dict) else data
+        if isinstance(raw_models, list):
+            models = []
+            for item in raw_models:
+                if isinstance(item, dict):
+                    models.append(item)
+                elif isinstance(item, str):
+                    models.append({"id": item})
+            return models
+    except ImportError:
+        pass
+    except Exception:
+        return []
+
+    return _parse_models_yaml_fallback(text)
+
+
 def _candidate_model_values(model: dict) -> list[str]:
     values: list[str] = []
     for key in ("id", "name", "model", "modelId"):
@@ -78,6 +172,7 @@ def load_model_metadata(
     model_id: str,
     *,
     models_json_path: Path | str | None = None,
+    models_config_path: Path | str | None = None,
 ) -> dict:
     """Load safe model metadata from pi's models.json.
 
@@ -89,24 +184,38 @@ def load_model_metadata(
         models_json_path = Path(override) if override else Path.home() / ".pi" / "agent" / "models.json"
     models_json_path = Path(models_json_path)
 
+    metadata: dict[str, Any] = {}
+
     data = _read_json(models_json_path)
-    if not data:
-        return {}
+    if data:
+        provider = _provider_for_model(model_id)
+        providers = data.get("providers") if isinstance(data.get("providers"), dict) else data
+        provider_cfg = providers.get(provider) if provider and isinstance(providers, dict) else None
+        if isinstance(provider_cfg, dict):
+            raw_models = provider_cfg.get("models", [])
+            if isinstance(raw_models, list):
+                model = _match_model_entry(raw_models, model_id)
+                if model is not None:
+                    metadata.update(_safe_model_metadata(model))
 
-    provider = _provider_for_model(model_id)
-    providers = data.get("providers") if isinstance(data.get("providers"), dict) else data
-    provider_cfg = providers.get(provider) if provider and isinstance(providers, dict) else None
-    if not isinstance(provider_cfg, dict):
-        return {}
+    if models_config_path is None:
+        models_config_path = PROJECT_ROOT / "configs" / "models.yaml"
+    models_config_path = Path(models_config_path)
+    config_model = _match_model_entry(_read_models_config(models_config_path), model_id)
+    if config_model is not None:
+        config_metadata = _safe_model_metadata(config_model)
+        if (
+            config_model.get("id") == model_id
+            and "model" not in config_model
+            and "modelId" not in config_model
+        ):
+            config_metadata.pop("provider_config_model_id", None)
+        metadata.update(config_metadata)
 
-    raw_models = provider_cfg.get("models", [])
-    if not isinstance(raw_models, list):
-        return {}
+    return metadata
 
-    model = _match_model_entry(raw_models, model_id)
-    if model is None:
-        return {}
 
+def _safe_model_metadata(model: dict) -> dict[str, Any]:
     metadata: dict[str, Any] = {}
     field_map = {
         "provider_config_model_id": ("id", "model", "modelId"),

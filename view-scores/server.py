@@ -216,6 +216,8 @@ def format_scores_terminal(
             "Model",
             "Adapter",
             "Suite",
+            "Thinking",
+            "Provider",
             "Status",
             "Score",
             "Passed",
@@ -239,6 +241,8 @@ def format_scores_terminal(
             "Model",
             "Adapter",
             "Suite",
+            "Thinking",
+            "Provider",
             "Score",
             "Passed",
             "Tasks",
@@ -262,6 +266,8 @@ def format_scores_terminal(
                 str(score["model"]),
                 str(score["adapter"]),
                 str(score["suite"]),
+                str(score.get("thinking", "default")),
+                str(score.get("provider", "-")),
                 str(score.get("status", "complete")),
                 score_text,
                 f"{score['passed_tasks']}/{score['total_tasks']}",
@@ -289,6 +295,8 @@ def format_scores_terminal(
                 str(score["model"]),
                 str(score["adapter"]),
                 str(score["suite"]),
+                str(score.get("thinking", "default")),
+                str(score.get("provider", "-")),
                 score_text,
                 f"{score['passed_tasks']}/{score['total_tasks']}",
                 str(score["total_tasks"]),
@@ -1267,7 +1275,32 @@ class ScoreHandler(SimpleHTTPRequestHandler):
                     )
                     continue
 
-            key = (parts["model_id"], parts["adapter_id"], parts["suite_id"])
+            # Multi-dimensional grouping: the same (model, adapter, suite)
+            # can be run at multiple effort levels (thinking) and served by
+            # multiple providers (aiand quant vs local nvfp4 vs hosted).
+            # These MUST be part of the key or runs silently merge and
+            # corrupt each other's scores.
+            # When trial is None (pending/incomplete), we can't read the manifest
+            # so fall back to defaults — the trial won't be counted in scoring
+            # but the task will still be tracked in started_tasks.
+            if trial is not None:
+                manifest_model_block = trial["manifest"].get("model", {})
+                manifest_sampling_block = trial["manifest"].get("sampling", {})
+                thinking = manifest_sampling_block.get("thinking") or "default"
+                provider = (
+                    manifest_model_block.get("provider")
+                    or parts["model_id"].split("/")[0]
+                )
+            else:
+                thinking = "default"
+                provider = parts["model_id"].split("/")[0]
+            key = (
+                parts["model_id"],
+                parts["adapter_id"],
+                parts["suite_id"],
+                thinking,
+                provider,
+            )
             suite_dirs_by_key.setdefault(key, set()).add(parts["suite_dir"])
             run_paths_by_key.setdefault(key, set()).add(parts.get("run_path", ""))
             started_tasks.setdefault(key, set()).add(parts["task_id"])
@@ -1335,9 +1368,10 @@ class ScoreHandler(SimpleHTTPRequestHandler):
                 coverage["costed_trials"] += 1
 
         scores = []
-        for (model_id, adapter_id, suite_id), task_trials in sorted(
+        for (model_id, adapter_id, suite_id, thinking, provider), task_trials in sorted(
             grouped_trials.items()
         ):
+            key5 = (model_id, adapter_id, suite_id, thinking, provider)
             # Count tasks that passed (majority of trials)
             total_tasks = len(task_trials)
             passed_tasks = sum(
@@ -1348,7 +1382,7 @@ class ScoreHandler(SimpleHTTPRequestHandler):
             task_times = [
                 sum(trial_times)
                 for trial_times in grouped_times.get(
-                    (model_id, adapter_id, suite_id), {}
+                    key5, {}
                 ).values()
                 if trial_times
             ]
@@ -1358,13 +1392,13 @@ class ScoreHandler(SimpleHTTPRequestHandler):
             )
             median_wall_clock_seconds = statistics.median(task_times) if task_times else 0
             started_count = len(
-                started_tasks.get((model_id, adapter_id, suite_id), set())
+                started_tasks.get(key5, set())
                 | set(task_trials.keys())
             )
             expected_tasks = self._expected_task_count(suite_id, total_tasks)
             remaining_tasks = max(0, expected_tasks - total_tasks)
             incomplete_started_tasks = max(0, started_count - total_tasks)
-            key = (model_id, adapter_id, suite_id)
+            key = key5
             live_runner = self._cell_has_live_heartbeat(
                 suite_dirs_by_key.get(key, set())
             ) or any(
@@ -1390,7 +1424,7 @@ class ScoreHandler(SimpleHTTPRequestHandler):
                 else 0
             )
             token_totals = grouped_tokens.get(
-                (model_id, adapter_id, suite_id),
+                key5,
                 {
                     "prompt_tokens": 0,
                     "completion_tokens": 0,
@@ -1408,7 +1442,7 @@ class ScoreHandler(SimpleHTTPRequestHandler):
                 else None
             )
             coverage = grouped_cost_coverage.get(
-                (model_id, adapter_id, suite_id),
+                key5,
                 {"completed_trials": 0, "costed_trials": 0},
             )
             completed_trials = coverage["completed_trials"]
@@ -1438,7 +1472,7 @@ class ScoreHandler(SimpleHTTPRequestHandler):
                 cache_read_cost_per_million_usd,
                 cache_write_cost_per_million_usd,
             ) = grouped_pricing.get(
-                (model_id, adapter_id, suite_id),
+                key5,
                 (None, None, None, None),
             )
 
@@ -1459,6 +1493,11 @@ class ScoreHandler(SimpleHTTPRequestHandler):
                 "model": model_id,
                 "adapter": adapter_id,
                 "suite": suite_id,
+                # Multi-dimensional axes: the same (model, adapter, suite) can
+                # be served at multiple effort levels and by multiple providers.
+                # These let the viewer distinguish rows that would otherwise merge.
+                "thinking": thinking,
+                "provider": provider,
                 "score": pass_rate,
                 "pass_rate": pass_rate,
                 "ci_lower": ci_lower,

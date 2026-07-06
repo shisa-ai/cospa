@@ -675,3 +675,31 @@ Append-only development log for the `coding-eval` repository.
   because those represent real parse/counting ambiguity.
 - Next: avoid rewriting historical empty result shells unless they interfere
   with resume or score accounting.
+
+## 2026-07-07 — viewer: multi-dimensional grouping by thinking + provider
+
+- Context: qwen/pi_devstack_superpowers run at `--thinking high` was silently
+  merged with the default-effort run in `./view`, corrupting both scores.
+  Same model id served by different providers (aiand quant vs local nvfp4)
+  would conflate capability and cost differences.
+- Changes (`view-scores/server.py`):
+  - Grouping key extended from (model, adapter, suite) to
+    (model, adapter, suite, thinking, provider). Reads
+    manifest["sampling"]["thinking"] (default "default") and
+    manifest["model"]["provider"] (falls back to model_id prefix).
+  - Defensive: when trial is None (pending verdicts), uses defaults so
+    started_tasks tracking still works.
+  - "Thinking" and "Provider" columns added to both verbose and compact
+    table views, placed after Suite.
+- Evidence (RED -> GREEN):
+  - `tests/test_view_scores_grouping.py` (new): 3 tests covering
+    thinking-distinct rows, provider-distinct rows, and aggregation
+    across run dirs for same dimensions. All RED before, GREEN after.
+  - Full suite: 164 passed (was 161 — 3 new tests added).
+- Decision: thinking and provider are first-class axes because cospa's
+  thesis is capability-per-cost, and both axes reshape both capability
+  and cost (high effort takes longer / more tokens; different quants
+  produce different capability at different serving cost).
+- Live validation: `./view --verbose --no-cache` now shows separate rows
+  for qwen/devsup default (74.4%) vs high (77.8%), and ornith default
+  vs high across all adapters.

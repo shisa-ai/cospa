@@ -38,12 +38,56 @@ MODEL_COST_KEYS = {
     "long_context_output",
 }
 
+OPENAI_REASONING_EFFORT_PROVIDERS = {"codex", "openai"}
+
 
 def thinking_token_budget(thinking: str | None) -> int | None:
     """Return the local thinking-token budget for a named effort level."""
     if not thinking or thinking == "default":
         return None
     return THINKING_TOKEN_BUDGETS.get(str(thinking))
+
+
+def uses_openai_reasoning_effort(
+    model_id: str | None,
+    model_metadata: dict[str, Any] | None = None,
+) -> bool:
+    """Return whether `thinking` maps to OpenAI symbolic reasoning effort."""
+    if isinstance(model_metadata, dict):
+        source = model_metadata.get("reasoning_effort_source")
+        if source == "openai":
+            return True
+        if source:
+            return False
+
+    if not model_id:
+        return False
+    provider = _provider_for_model(model_id)
+    return provider in OPENAI_REASONING_EFFORT_PROVIDERS
+
+
+def thinking_sampling_metadata(
+    thinking: str | None,
+    *,
+    model_id: str | None = None,
+    model_metadata: dict[str, Any] | None = None,
+) -> dict[str, Any]:
+    """Return manifest sampling fields for a thinking/effort setting."""
+    level = str(thinking) if thinking else "default"
+    metadata: dict[str, Any] = {"thinking": level}
+    if level == "default":
+        return metadata
+
+    if uses_openai_reasoning_effort(model_id, model_metadata):
+        metadata["reasoning_effort"] = level
+        metadata["reasoning_effort_source"] = "openai"
+        return metadata
+
+    budget = thinking_token_budget(level)
+    if budget is not None:
+        metadata["thinking_token_budget"] = budget
+        metadata["thinking_token_budget_source"] = "coding-eval"
+    return metadata
 
 
 def _normalize_model_id(value: str) -> str:
@@ -284,6 +328,7 @@ def _safe_model_metadata(
         "context_window": ("contextWindow", "context_window"),
         "max_tokens": ("maxTokens", "max_tokens"),
         "reasoning": ("reasoning",),
+        "reasoning_effort_source": ("reasoning_effort_source",),
     }
     for output_key, input_keys in field_map.items():
         for input_key in input_keys:

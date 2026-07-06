@@ -13,7 +13,7 @@ from harness.telemetry import (
     collect_harbor_pi_session_usage,
     collect_pi_session_usage,
     load_model_metadata,
-    thinking_token_budget,
+    thinking_sampling_metadata,
 )
 
 
@@ -75,17 +75,37 @@ def _merge_model_metadata(manifest: dict) -> bool:
     return changed
 
 
-def _merge_thinking_budget(manifest: dict) -> bool:
+def _merge_thinking_metadata(manifest: dict) -> bool:
     sampling = manifest.get("sampling")
     if not isinstance(sampling, dict):
         return False
-    budget = thinking_token_budget(sampling.get("thinking"))
-    if budget is None:
-        return False
-    if sampling.get("thinking_token_budget") == budget:
-        return False
-    sampling["thinking_token_budget"] = budget
-    return True
+
+    model = manifest.get("model")
+    model_id = model.get("id") if isinstance(model, dict) else None
+    model_metadata = model if isinstance(model, dict) else None
+    desired = thinking_sampling_metadata(
+        sampling.get("thinking"),
+        model_id=model_id if isinstance(model_id, str) else None,
+        model_metadata=model_metadata,
+    )
+    managed_keys = {
+        "thinking",
+        "thinking_token_budget",
+        "thinking_token_budget_source",
+        "reasoning_effort",
+        "reasoning_effort_source",
+    }
+
+    changed = False
+    for key in managed_keys:
+        if key in desired:
+            if sampling.get(key) != desired[key]:
+                sampling[key] = desired[key]
+                changed = True
+        elif key in sampling:
+            del sampling[key]
+            changed = True
+    return changed
 
 
 def backfill_manifest(
@@ -111,7 +131,7 @@ def backfill_manifest(
 
     changed = False
     changed |= _merge_model_metadata(manifest)
-    changed |= _merge_thinking_budget(manifest)
+    changed |= _merge_thinking_metadata(manifest)
 
     if _usage_observed(manifest) and not overwrite:
         if changed and not dry_run:

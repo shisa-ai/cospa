@@ -313,3 +313,43 @@ def test_manifest_records_thinking_level():
         f"manifest.sampling.thinking must record 'high' when --thinking high; "
         f"got sampling={sampling}"
     )
+
+
+def test_codex_manifest_records_openai_reasoning_effort_without_local_budget():
+    """OpenAI/Codex effort levels are symbolic provider settings, not local budgets."""
+    suite = AiderPolyglotSuite()
+
+    class _OkAdapter:
+        name = "ok"
+        version = "test"
+
+        def run(self, task_data, workdir, log_file, stderr_file):
+            (workdir / "two_fer.py").write_text(
+                "def two_fer(name=None):\n"
+                "    if name is None:\n        return 'One for you, one for me.'\n"
+            )
+            return AdapterResult(returncode=0)
+
+    with tempfile.TemporaryDirectory() as tmp:
+        tmp = Path(tmp)
+        vendor_dir = tmp / "vendor"
+        vendor_dir.mkdir()
+        _make_aider_problem(vendor_dir)
+        results_dir = tmp / "results"
+
+        manifest, _ = run_trial(
+            suite,
+            _OkAdapter(),
+            "codex/gpt-5.5",
+            "python/two-fer",
+            1,
+            results_dir,
+            vendor_dir,
+            thinking="high",
+        )
+
+    sampling = manifest.get("sampling", {})
+    assert sampling.get("thinking") == "high"
+    assert sampling.get("reasoning_effort") == "high"
+    assert sampling.get("reasoning_effort_source") == "openai"
+    assert "thinking_token_budget" not in sampling, sampling

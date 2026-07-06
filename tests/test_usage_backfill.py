@@ -13,10 +13,15 @@ from harness.path_utils import encode_model_path, encode_task_path
 from harness.telemetry import pi_session_dir_for_cwd
 
 
-def _write_trial(results_dir: Path) -> tuple[Path, Path]:
+def _write_trial(
+    results_dir: Path,
+    *,
+    model_id: str = "local/ornith-1.0-35b",
+    provider: str = "local",
+) -> tuple[Path, Path]:
     trial_dir = (
         results_dir
-        / encode_model_path("local/ornith-1.0-35b")
+        / encode_model_path(model_id)
         / "pi_vanilla"
         / "aider_polyglot"
         / encode_task_path("python/two-fer")
@@ -26,9 +31,9 @@ def _write_trial(results_dir: Path) -> tuple[Path, Path]:
     (trial_dir / "out").mkdir()
     (trial_dir / "manifest.json").write_text(json.dumps({
         "model": {
-            "id": "local/ornith-1.0-35b",
-            "provider": "local",
-            "served_model": "local/ornith-1.0-35b",
+            "id": model_id,
+            "provider": provider,
+            "served_model": model_id,
         },
         "adapter": {"id": "PiVanillaAdapter", "version": "vanilla"},
         "suite": {"id": "AiderPolyglotSuite", "task_id": "python/two-fer"},
@@ -133,6 +138,32 @@ def test_backfill_results_updates_manifest_and_copies_trace():
     assert manifest["model"]["served_model"] == "ornith-35b-fp8-block"
     assert manifest["sampling"]["thinking_token_budget"] == 8192
     assert copied_trace_exists
+
+
+def test_backfill_results_uses_openai_reasoning_effort_for_codex():
+    with tempfile.TemporaryDirectory() as tmp:
+        tmp = Path(tmp)
+        results_dir = tmp / "results"
+        sessions_root = tmp / "sessions"
+        trial_dir, manifest_path = _write_trial(
+            results_dir,
+            model_id="codex/gpt-5.5",
+            provider="codex",
+        )
+        manifest = json.loads(manifest_path.read_text())
+        manifest["sampling"]["thinking_token_budget"] = 8192
+        manifest_path.write_text(json.dumps(manifest, indent=2))
+        _write_session(sessions_root, trial_dir / "workdir")
+
+        summary = backfill_results(results_dir, sessions_root=sessions_root)
+        manifest = json.loads(manifest_path.read_text())
+
+    assert summary["scanned"] == 1
+    assert summary["updated"] == 1
+    assert manifest["sampling"]["thinking"] == "high"
+    assert manifest["sampling"]["reasoning_effort"] == "high"
+    assert manifest["sampling"]["reasoning_effort_source"] == "openai"
+    assert "thinking_token_budget" not in manifest["sampling"]
 
 
 def test_backfill_results_updates_manifest_from_harbor_artifact_trace():

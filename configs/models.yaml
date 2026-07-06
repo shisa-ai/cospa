@@ -4,6 +4,7 @@ models:
     context_window: 1050000
     max_tokens: 128000
     reasoning: true
+    reasoning_effort_source: openai
     cost:
       input: 5.0
       cacheRead: 0.5

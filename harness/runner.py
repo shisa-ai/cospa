@@ -41,7 +41,7 @@ from harness.telemetry import (
     collect_harbor_pi_session_usage,
     collect_pi_session_usage,
     load_model_metadata,
-    thinking_token_budget,
+    thinking_sampling_metadata,
 )
 
 
@@ -285,7 +285,11 @@ def get_terminal_bench_pin(vendor_dir: Path) -> str:
         return "unknown"
 
 
-def _manifest_sampling(task_data: dict) -> dict:
+def _manifest_sampling(
+    task_data: dict,
+    *,
+    model_metadata: dict | None = None,
+) -> dict:
     """Return explicit sampling metadata for the manifest.
 
     The harness does not control server-side sampling for pi/little-coder
@@ -293,7 +297,6 @@ def _manifest_sampling(task_data: dict) -> dict:
     task/env overrides when available and otherwise record a deliberate
     "server-default" marker.
     """
-    thinking = task_data.get("thinking") or "default"
     sampling = {
         "temperature": task_data.get("temperature")
         or os.environ.get("CODING_EVAL_TEMPERATURE")
@@ -304,14 +307,14 @@ def _manifest_sampling(task_data: dict) -> dict:
         "max_tokens": task_data.get("max_tokens")
         or os.environ.get("CODING_EVAL_MAX_TOKENS")
         or "server-default",
-        # Thinking/effort level. "default" = no --thinking flag was passed
-        # (model/provider default applies). Explicit levels come through as
-        # off/minimal/low/medium/high/xhigh.
-        "thinking": thinking,
     }
-    budget = thinking_token_budget(thinking)
-    if budget is not None:
-        sampling["thinking_token_budget"] = budget
+    sampling.update(
+        thinking_sampling_metadata(
+            task_data.get("thinking"),
+            model_id=task_data.get("model_id"),
+            model_metadata=model_metadata,
+        )
+    )
     return sampling
 
 
@@ -504,7 +507,7 @@ def run_trial(
             "task_id": task_id,
         },
         "trial": trial_k,
-        "sampling": _manifest_sampling(task_data),
+        "sampling": _manifest_sampling(task_data, model_metadata=model_metadata),
         # Identifier for the tool-call parser/config the adapter uses.
         # pi/little-coder use their built-in tool-call handling; adapters may
         # override via task_data["tool_call_parser"].

@@ -629,3 +629,26 @@ Append-only development log for the `coding-eval` repository.
   cost at read time.
 - Next: add named `cost_profiles` to `configs/models.yaml` when we need to
   compare historical/current price schedules.
+
+## 2026-07-06 — preserve OpenAI reasoning effort as symbolic
+
+- Context: `codex/gpt-5.5` manifests recorded `thinking_token_budget: 8192`
+  for `--thinking high`, which implied a benchmark-local token cap instead of
+  OpenAI's symbolic reasoning-effort setting.
+- Changes:
+  - Added `reasoning_effort_source: openai` to the GPT-5.5 model metadata.
+  - Centralized thinking/effort sampling metadata in `harness.telemetry`.
+  - Runtime manifests now record Codex/OpenAI thinking as
+    `reasoning_effort` plus `reasoning_effort_source: openai`.
+  - Usage backfill removes stale local `thinking_token_budget` fields for
+    Codex/OpenAI manifests instead of re-adding them.
+- Evidence (RED -> GREEN):
+  - RED: Codex runtime/backfill tests failed because `reasoning_effort` was
+    absent and local numeric budgets were retained.
+  - GREEN: focused Codex runtime/backfill tests passed.
+  - GREEN: `mamba run -n coding-eval python -m pytest -q` = 161 passed.
+  - GREEN: `bash tests/scripts/run_all.sh` = all shell tests passed.
+- Decision: keep numeric `thinking_token_budget` only for non-OpenAI models
+  where cospa owns the local effort-to-budget mapping.
+- Next: run usage backfill on GPT-5.5 smoke manifests if we want the old
+  smoke artifacts normalized in place.

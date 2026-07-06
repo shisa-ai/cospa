@@ -652,3 +652,26 @@ Append-only development log for the `coding-eval` repository.
   where cospa owns the local effort-to-budget mapping.
 - Next: run usage backfill on GPT-5.5 smoke manifests if we want the old
   smoke artifacts normalized in place.
+
+## 2026-07-06 — suppress empty malformed trial-shell warnings
+
+- Context: `./view --verbose --no-cache` warned about legacy unencoded Qwen
+  trial paths that contained only `workdir/` and no durable manifest/verdict
+  artifacts. These empty shells were noise, not substantive result parse
+  failures.
+- Changes:
+  - Viewer path validation now warns on malformed result paths only when the
+    trial directory contains `manifest.json` or `verdict.json`.
+  - Empty malformed legacy trial shells are ignored and do not affect status
+    accounting.
+- Evidence (RED -> GREEN):
+  - RED: empty malformed trial-shell test failed because the viewer emitted an
+    `unknown adapter` warning.
+  - GREEN: targeted malformed-path viewer tests passed.
+  - GREEN: cached-disabled live `./view --verbose --no-cache` emitted no
+    malformed-path warnings for the current result tree.
+  - GREEN: `mamba run -n coding-eval python -m pytest -q` = 161 passed.
+- Decision: keep warnings for malformed paths that contain durable artifacts,
+  because those represent real parse/counting ambiguity.
+- Next: avoid rewriting historical empty result shells unless they interfere
+  with resume or score accounting.

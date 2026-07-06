@@ -908,8 +908,8 @@ def test_get_scores_warns_on_manifest_model_path_mismatch():
     assert "manifest model" in warnings[0]["message"]
 
 
-def test_get_scores_warns_and_skips_malformed_started_trial_dirs():
-    """Malformed legacy trial dirs must not affect status accounting."""
+def test_get_scores_ignores_empty_malformed_started_trial_dirs_without_warning():
+    """Empty malformed legacy trial shells must not affect status accounting."""
     with tempfile.TemporaryDirectory() as tmp:
         results_dir = Path(tmp) / "results"
         _write_single_row(
@@ -940,9 +940,7 @@ def test_get_scores_warns_and_skips_malformed_started_trial_dirs():
     assert len(scores) == 1, scores
     assert scores[0]["adapter"] == "pi_devstack"
     assert scores[0]["status"] == "complete"
-    assert len(warnings) == 1, warnings
-    assert warnings[0]["code"] == "malformed_result_path"
-    assert "unknown adapter" in warnings[0]["message"]
+    assert warnings == []
 
 
 def test_get_scores_marks_incomplete_without_live_runner_stalled(monkeypatch):

@@ -414,26 +414,35 @@ class ScoreHandler(SimpleHTTPRequestHandler):
         adapter = str(parts.get("adapter_id", ""))
         suite = str(parts.get("suite_id", ""))
         trial_dir = parts.get("trial_dir")
+        has_durable_artifact = (
+            isinstance(trial_dir, Path)
+            and (
+                (trial_dir / "manifest.json").exists()
+                or (trial_dir / "verdict.json").exists()
+            )
+        )
 
         if adapter not in _known_adapter_names():
-            self._warn(
-                "malformed_result_path",
-                (
-                    "malformed result path skipped: "
-                    f"unknown adapter {adapter!r} in {trial_dir}"
-                ),
-                trial_dir if isinstance(trial_dir, Path) else None,
-            )
+            if has_durable_artifact:
+                self._warn(
+                    "malformed_result_path",
+                    (
+                        "malformed result path skipped: "
+                        f"unknown adapter {adapter!r} in {trial_dir}"
+                    ),
+                    trial_dir if isinstance(trial_dir, Path) else None,
+                )
             return False
         if suite not in _known_suite_names():
-            self._warn(
-                "malformed_result_path",
-                (
-                    "malformed result path skipped: "
-                    f"unknown suite {suite!r} in {trial_dir}"
-                ),
-                trial_dir if isinstance(trial_dir, Path) else None,
-            )
+            if has_durable_artifact:
+                self._warn(
+                    "malformed_result_path",
+                    (
+                        "malformed result path skipped: "
+                        f"unknown suite {suite!r} in {trial_dir}"
+                    ),
+                    trial_dir if isinstance(trial_dir, Path) else None,
+                )
             return False
         return True
 

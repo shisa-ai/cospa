@@ -196,3 +196,59 @@ def test_viewer_groups_same_thinking_and_provider_across_run_dirs():
     assert row["total_tasks"] == 2, (
         f"both tasks should be counted; got {row['total_tasks']}"
     )
+
+
+def test_viewer_thinking_filter_returns_only_matching_rows():
+    """--thinking filter should only return rows at that level."""
+    with tempfile.TemporaryDirectory() as tmp:
+        results_dir = Path(tmp) / "results"
+        results_dir.mkdir()
+        _build_run(
+            results_dir, run_label="r1",
+            model_id="aiand/qwen/qwen3.6-27b", adapter="pi_devstack",
+            thinking="default", provider="aiand", passed=True,
+        )
+        _build_run(
+            results_dir, run_label="r2",
+            model_id="aiand/qwen/qwen3.6-27b", adapter="pi_devstack",
+            thinking="high", provider="aiand", passed=False,
+        )
+        _build_run(
+            results_dir, run_label="r3",
+            model_id="aiand/qwen/qwen3.6-27b", adapter="pi_devstack",
+            thinking="xhigh", provider="aiand", passed=False,
+        )
+        h, _ = _make_handler(results_dir)
+        high_only = h.get_scores(thinking_filter="high")
+        all_levels = h.get_scores(thinking_filter="all")
+        unfiltered = h.get_scores()
+    assert len(high_only) == 1, f"high filter: expected 1 row, got {len(high_only)}"
+    assert high_only[0]["thinking"] == "high"
+    assert len(all_levels) == 3, f"--thinking all should return all 3, got {len(all_levels)}"
+    assert len(unfiltered) == 3, f"no filter should return all 3, got {len(unfiltered)}"
+
+
+def test_viewer_provider_filter_returns_only_matching_rows():
+    """--provider filter should only return rows for that provider."""
+    with tempfile.TemporaryDirectory() as tmp:
+        results_dir = Path(tmp) / "results"
+        results_dir.mkdir()
+        _build_run(
+            results_dir, run_label="r1",
+            model_id="aiand/qwen/qwen3.6-27b", adapter="pi_devstack",
+            thinking="default", provider="aiand", passed=True,
+        )
+        _build_run(
+            results_dir, run_label="r2",
+            model_id="aiand/qwen/qwen3.6-27b", adapter="pi_devstack",
+            thinking="default", provider="local", passed=False,
+        )
+        h, _ = _make_handler(results_dir)
+        aiand_only = h.get_scores(provider_filter="aiand")
+        local_only = h.get_scores(provider_filter="local")
+        all_prov = h.get_scores(provider_filter="all")
+    assert len(aiand_only) == 1, f"aiand filter: expected 1, got {len(aiand_only)}"
+    assert aiand_only[0]["provider"] == "aiand"
+    assert len(local_only) == 1
+    assert local_only[0]["provider"] == "local"
+    assert len(all_prov) == 2

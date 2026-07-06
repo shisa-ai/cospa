@@ -596,6 +596,8 @@ class ScoreHandler(SimpleHTTPRequestHandler):
         include_smoke: bool,
         filters: tuple[str, ...],
         excludes: tuple[str, ...],
+        thinking_filter: str | None = None,
+        provider_filter: str | None = None,
     ) -> str:
         signature = []
         heartbeat_paths = set()
@@ -644,6 +646,8 @@ class ScoreHandler(SimpleHTTPRequestHandler):
             "include_smoke": include_smoke,
             "filters": list(filters),
             "excludes": list(excludes),
+            "thinking_filter": thinking_filter,
+            "provider_filter": provider_filter,
             "trials": signature,
             "heartbeats": heartbeat_signature,
             "models_config": cls._file_signature(DEFAULT_MODELS_CONFIG_PATH),
@@ -1215,6 +1219,8 @@ class ScoreHandler(SimpleHTTPRequestHandler):
         include_smoke: bool | None = None,
         filters: list[str] | tuple[str, ...] | None = None,
         excludes: list[str] | tuple[str, ...] | None = None,
+        thinking_filter: str | None = None,
+        provider_filter: str | None = None,
     ) -> list:
         """Get aggregated scores from results directory."""
         include_smoke = DEFAULT_INCLUDE_SMOKE if include_smoke is None else include_smoke
@@ -1242,6 +1248,8 @@ class ScoreHandler(SimpleHTTPRequestHandler):
             include_smoke=include_smoke,
             filters=filters,
             excludes=excludes,
+            thinking_filter=thinking_filter,
+            provider_filter=provider_filter,
         )
         cached_scores = self._get_cached_scores(cache_key)
         if cached_scores is not None:
@@ -1533,6 +1541,20 @@ class ScoreHandler(SimpleHTTPRequestHandler):
                 "method": "pass@k majority",
             })
 
+        # Apply dimensional filters (thinking, provider). These are
+        # first-class axes for cospa and are applied post-grouping so they
+        # don't interfere with path-text filters/excludes.
+        if thinking_filter and thinking_filter.lower() != "all":
+            scores = [
+                s for s in scores
+                if str(s.get("thinking", "default")).lower() == thinking_filter.lower()
+            ]
+        if provider_filter and provider_filter.lower() != "all":
+            scores = [
+                s for s in scores
+                if str(s.get("provider", "")).lower() == provider_filter.lower()
+            ]
+
         self._store_cached_scores(cache_key, scores)
         return scores
 
@@ -1662,6 +1684,28 @@ def main(argv: list[str] | None = None) -> int:
         help="Disable the persistent score cache",
     )
     common.add_argument(
+        "--thinking",
+        dest="thinking_filter",
+        default=None,
+        metavar="LEVEL",
+        help=(
+            "Only include rows at this thinking/effort level "
+            "(e.g. default, high, xhigh). Use --thinking all to include "
+            "every level (default)."
+        ),
+    )
+    common.add_argument(
+        "--provider",
+        dest="provider_filter",
+        default=None,
+        metavar="NAME",
+        help=(
+            "Only include rows served by this provider "
+            "(e.g. aiand, local, nvidia). Use --provider all to include "
+            "every provider (default)."
+        ),
+    )
+    common.add_argument(
         "--pricing-profile",
         default=None,
         help=(
@@ -1733,6 +1777,8 @@ def main(argv: list[str] | None = None) -> int:
             include_smoke=args.include_smoke,
             filters=args.filters,
             excludes=args.excludes,
+            thinking_filter=getattr(args, "thinking_filter", None),
+            provider_filter=getattr(args, "provider_filter", None),
         )
         warnings = handler.get_warnings()
         print(
@@ -1752,6 +1798,8 @@ def main(argv: list[str] | None = None) -> int:
             include_smoke=args.include_smoke,
             filters=args.filters,
             excludes=args.excludes,
+            thinking_filter=getattr(args, "thinking_filter", None),
+            provider_filter=getattr(args, "provider_filter", None),
         )
         warning_text = _format_warnings_terminal(handler.get_warnings())
         if warning_text:

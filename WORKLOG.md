@@ -703,3 +703,23 @@ Append-only development log for the `coding-eval` repository.
 - Live validation: `./view --verbose --no-cache` now shows separate rows
   for qwen/devsup default (74.4%) vs high (77.8%), and ornith default
   vs high across all adapters.
+
+## 2026-07-07 — viewer: --thinking and --provider dimensional filters
+
+- Context: with multi-dimensional grouping landed, users need to slice the
+  table by thinking level (e.g., compare only high-effort runs) and by
+  provider (e.g., aiand quant vs local nvfp4).
+- Changes (`view-scores/server.py`):
+  - New `--thinking LEVEL` and `--provider NAME` CLI flags (on common
+    parser; work for table, json, serve). Use `--thinking all` /
+    `--provider all` to explicitly disable filtering.
+  - `get_scores()` accepts `thinking_filter` and `provider_filter` kwargs;
+    applied post-grouping (don't interfere with path-text filters/excludes).
+  - Cache key extended to include thinking_filter and provider_filter so
+    filtered results don't poison the cache for unfiltered queries.
+- Evidence: 2 new tests in `tests/test_view_scores_grouping.py` (filter
+  returns matching rows; `all` and unset return everything). Full suite
+  166 passed.
+- Live verification: `./view --thinking high` correctly shows 6 high-effort
+  rows (including qwen/devsup-high at 76.2%); `./view --provider aiand`
+  shows only aiand-served runs.

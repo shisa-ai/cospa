@@ -527,8 +527,31 @@ class ScoreHandler(SimpleHTTPRequestHandler):
         adapter_id: str,
         suite_id: str,
         run_path: str = "",
+        *,
+        thinking: str | None = None,
     ) -> bool:
-        """Best-effort fallback for pre-heartbeat live runners."""
+        """Best-effort fallback for pre-heartbeat live runners.
+
+        Matches on (model, adapter, suite) plus, when available, --thinking
+        and --run-id so that a dead high-effort run is not mis-attributed to
+        a live default-effort runner for the same (model, adapter, suite).
+        """
+        # Derive expected run-id from the run_path (the leaf directory name
+        # of the results root for this run).
+        expected_run_id = None
+        if run_path:
+            from harness.path_utils import encode_model_path
+            # run_path is typically "<encoded_model>-<run_id>" — extract run_id
+            # by stripping the encoded model prefix.
+            leaf = Path(run_path).name
+            # The model id is URL-encoded in the path; find the run_id after
+            # the last occurrence of the encoded model separator.
+            # Example: "aiand%2Fqwen%2Fqwen3.6-27b-full-20260704-high"
+            #   -> run_id = "full-20260704-high"
+            # We match by looking for the encoded model id prefix.
+            enc_model = encode_model_path(model_id)
+            if leaf.startswith(enc_model + "-"):
+                expected_run_id = leaf[len(enc_model) + 1:]
         proc_root = Path("/proc")
         if not proc_root.exists():
             return False
@@ -548,6 +571,18 @@ class ScoreHandler(SimpleHTTPRequestHandler):
                 continue
             if cls._option_value(argv, "--suite") != suite_id:
                 continue
+            # Dimensional match: if we know the thinking level, the live
+            # process must be at that level too.
+            if thinking is not None:
+                proc_thinking = cls._option_value(argv, "--thinking") or "default"
+                if proc_thinking != thinking:
+                    continue
+            # Dimensional match: if we derived a run-id from the run_path,
+            # the live process must have the same --run-id.
+            if expected_run_id:
+                proc_run_id = cls._option_value(argv, "--run-id")
+                if proc_run_id != expected_run_id:
+                    continue
             return True
         return False
 
@@ -1415,6 +1450,7 @@ class ScoreHandler(SimpleHTTPRequestHandler):
                     adapter_id,
                     suite_id,
                     run_path,
+                    thinking=thinking,
                 )
                 for run_path in run_paths_by_key.get(key, {""})
             )

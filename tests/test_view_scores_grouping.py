@@ -252,3 +252,58 @@ def test_viewer_provider_filter_returns_only_matching_rows():
     assert len(local_only) == 1
     assert local_only[0]["provider"] == "local"
     assert len(all_prov) == 2
+
+
+def test_viewer_status_dead_higheffort_runner_not_marked_running_when_default_alive():
+    """RED: a dead high-effort runner must NOT show as 'running' just because
+    a default-effort runner for the same (model, adapter, suite) is alive.
+    The fallback _has_live_runner_process must also match --thinking and
+    --run-id, not just (model, adapter, suite)."""
+    with tempfile.TemporaryDirectory() as tmp:
+        results_dir = Path(tmp) / "results"
+        results_dir.mkdir()
+        # High-effort run: heartbeat says running but PID is dead
+        high_dir = (
+            results_dir / "full-high"
+            / encode_model_path("aiand/qwen/qwen3.6-27b")
+            / "pi_devstack" / "aider_polyglot"
+        )
+        _write_trial_v2(
+            high_dir / encode_task_path("python/hello") / "trial-1",
+            passed=True, model_id="aiand/qwen/qwen3.6-27b", adapter="pi_devstack",
+            thinking="high", provider="aiand",
+        )
+        # Heartbeat: state=running, but PID is bogus (dead)
+        import time as _time
+        (high_dir / ".runner-heartbeat.json").write_text(json.dumps({
+            "state": "running",
+            "pid": 999999,  # bogus — guaranteed not running
+            "ppid": 999999,
+            "hostname": "test",
+            "started_at": "2026-01-01T00:00:00+00:00",
+            "updated_at": _time.time(),  # fresh
+            "updated_at_epoch": _time.time(),
+            "run_id": "full-high",
+            "model": "aiand/qwen/qwen3.6-27b",
+            "adapter": "pi_devstack",
+            "suite": "aider_polyglot",
+            "thinking": "high",
+            "current_task": "python/hello",
+            "current_trial": 1,
+            "completed_trials": 1,
+            "total_trials": 225,
+            "command": ["runner.py", "--model", "aiand/qwen/qwen3.6-27b",
+                        "--adapter", "pi_devstack", "--suite", "aider_polyglot",
+                        "--thinking", "high", "--run-id", "full-high"],
+        }))
+        h, _ = _make_handler(results_dir)
+        scores = h.get_scores()
+    high_scores = [s for s in scores if s.get("thinking") == "high"]
+    assert len(high_scores) == 1, f"expected 1 high row, got {len(high_scores)}"
+    status = high_scores[0].get("status")
+    # PID is dead (999999) so this should NOT be "running" — it should be
+    # "partial" (1/225, no incomplete, no live process).
+    assert status != "running", (
+        f"dead high-effort runner must not show 'running'; got '{status}'. "
+        f"Fallback process match is probably ignoring --thinking/--run-id."
+    )

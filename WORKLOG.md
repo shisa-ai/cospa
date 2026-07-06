@@ -723,3 +723,22 @@ Append-only development log for the `coding-eval` repository.
 - Live verification: `./view --thinking high` correctly shows 6 high-effort
   rows (including qwen/devsup-high at 76.2%); `./view --provider aiand`
   shows only aiand-served runs.
+
+## 2026-07-07 — fix viewer status false-positive on dead high-effort runs
+
+- Context: killed aiand qwen high-effort run still displayed as "running"
+  because `_has_live_runner_process` fallback matched the alive
+  default-effort runner for the same (model, adapter, suite), ignoring
+  the thinking and run-id dimensions.
+- Changes (`view-scores/server.py`):
+  - `_has_live_runner_process` now also matches `--thinking` (when known)
+    and `--run-id` (derived from run_path leaf via encode_model_path),
+    so a dead run at one thinking level is not mis-attributed to a live
+    run at a different level.
+  - Caller in `get_scores` passes `thinking=thinking` to the fallback.
+- Evidence:
+  - Existing heartbeat-PID logic was already correct; only the fallback
+    was too loose.
+  - 1 new test in `tests/test_view_scores_grouping.py` (dead high-effort
+    runner not marked running when default is alive). Full suite 167 passed.
+  - Live: aiand qwen high now correctly shows "partial" (was "running").

@@ -970,7 +970,7 @@ def test_get_scores_marks_incomplete_without_live_runner_stalled(monkeypatch):
         monkeypatch.setattr(
             server_mod.ScoreHandler,
             "_has_live_runner_process",
-            classmethod(lambda cls, model, adapter, suite, run_path="": False),
+            classmethod(lambda cls, model, adapter, suite, run_path="", **kw: False),
         )
         scores = h.get_scores()
 
@@ -997,7 +997,7 @@ def test_get_scores_marks_partial_live_runner_running(monkeypatch):
         monkeypatch.setattr(
             server_mod.ScoreHandler,
             "_has_live_runner_process",
-            classmethod(lambda cls, model, adapter, suite, run_path="": True),
+            classmethod(lambda cls, model, adapter, suite, run_path="", **kw: True),
         )
         scores = h.get_scores()
 

@@ -197,8 +197,8 @@ def test_get_scores_reads_named_run_wrapper_tree():
     assert {task["task_id"] for task in details["tasks"]} == {task_id, task_id2}
 
 
-def test_get_scores_hides_smoke_runs_by_default_and_all_restores_them():
-    """Default terminal view should focus on real runs, with --all for smoke."""
+def test_get_scores_hides_smoke_and_probe_runs_by_default_and_all_restores_them():
+    """Default terminal view should focus on real runs, with --all for probes."""
     with tempfile.TemporaryDirectory() as tmp:
         results_dir = Path(tmp) / "results"
         _write_single_row(
@@ -206,6 +206,12 @@ def test_get_scores_hides_smoke_runs_by_default_and_all_restores_them():
             adapter="pi_vanilla",
             suite="terminal_bench",
             task_id="hello-world",
+        )
+        _write_single_row(
+            results_dir / "glm-probe2-20260704",
+            adapter="pi_superpowers",
+            suite="aider_polyglot",
+            task_id="python/probe",
         )
         _write_single_row(
             results_dir / "runs" / "ornith-high-20260704",
@@ -219,7 +225,11 @@ def test_get_scores_hides_smoke_runs_by_default_and_all_restores_them():
         all_scores = h.get_scores(include_smoke=True)
 
     assert {row["adapter"] for row in default_scores} == {"pi_devstack"}
-    assert {row["adapter"] for row in all_scores} == {"pi_vanilla", "pi_devstack"}
+    assert {row["adapter"] for row in all_scores} == {
+        "pi_devstack",
+        "pi_superpowers",
+        "pi_vanilla",
+    }
 
 
 def test_get_scores_supports_filter_and_exclude_patterns():
@@ -487,6 +497,70 @@ def test_get_scores_uses_direct_usage_cost_without_pricing():
 
     assert scores[0]["estimated_cost_usd"] == 0.1234
     assert scores[0]["cost_per_completed_task_usd"] == 0.1234
+
+
+def test_get_scores_counts_observed_zero_usage_as_costed():
+    """An observed no-call adapter failure has known $0 cost, not missing cost."""
+    with tempfile.TemporaryDirectory() as tmp:
+        results_dir = Path(tmp) / "results"
+        model_id = "priced/model"
+        adapter = "pi_devstack"
+        suite = "aider_polyglot"
+        model_cost = {"input": 1.0, "output": 2.0}
+
+        for task_id, passed, adapter_failed, token_usage in [
+            (
+                "python/charged",
+                True,
+                False,
+                {
+                    "status": "observed",
+                    "prompt_tokens": 1_000_000,
+                    "completion_tokens": 500_000,
+                },
+            ),
+            (
+                "python/no-call-failure",
+                False,
+                True,
+                {
+                    "status": "observed",
+                    "prompt_tokens": 0,
+                    "completion_tokens": 0,
+                    "total_tokens": 0,
+                    "cost_usd": 0.0,
+                },
+            ),
+        ]:
+            base = (
+                results_dir
+                / "runs"
+                / "priced-run"
+                / encode_model_path(model_id)
+                / adapter
+                / suite
+                / encode_task_path(task_id)
+            )
+            _write_trial(
+                base / "trial-1",
+                passed=passed,
+                exit_code=1 if adapter_failed else 0,
+                adapter_failed=adapter_failed,
+                model_id=model_id,
+                task_id=task_id,
+                token_usage=token_usage,
+                model_cost=model_cost,
+            )
+
+        h, _ = _make_handler(results_dir)
+        scores = h.get_scores()
+
+    row = scores[0]
+    assert row["estimated_cost_usd"] == 2.0
+    assert row["completed_trials"] == 2
+    assert row["costed_trials"] == 2
+    assert row["cost_per_completed_task_usd"] == 1.0
+    assert row["passed_tasks_per_usd"] == 0.5
 
 
 def test_get_scores_repo_pricing_overrides_direct_usage_cost():

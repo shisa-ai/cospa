@@ -546,7 +546,10 @@ class ScoreHandler(SimpleHTTPRequestHandler):
         excludes: tuple[str, ...],
     ) -> bool:
         run_path = str(parts.get("run_path", ""))
-        if not include_smoke and "smoke" in run_path.lower():
+        run_path_lower = run_path.lower()
+        if not include_smoke and (
+            "smoke" in run_path_lower or "probe" in run_path_lower
+        ):
             return False
         search_text = cls._trial_search_text(parts)
         if filters and not _matches_any(filters, search_text):
@@ -1363,8 +1366,14 @@ class ScoreHandler(SimpleHTTPRequestHandler):
             cache_creation_tokens=cache_creation_tokens,
         )
         if not has_tokens:
-            if direct_cost is not None and direct_cost > 0:
-                return direct_cost
+            if direct_cost is not None:
+                if direct_cost > 0:
+                    return direct_cost
+                usage_status = ""
+                if isinstance(usage, dict):
+                    usage_status = str(usage.get("status", "")).lower()
+                if direct_cost == 0 and usage_status == "observed":
+                    return 0.0
             return None
         if input_per_million is None and output_per_million is None:
             return direct_cost if direct_cost is not None and direct_cost > 0 else None

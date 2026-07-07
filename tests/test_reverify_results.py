@@ -9,7 +9,7 @@ PROJECT_ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(PROJECT_ROOT))
 
 from harness.path_utils import encode_model_path, encode_task_path
-from harness.reverify_results import reverify_results
+from harness.reverify_results import main, reverify_results
 
 
 def _write_python_trial(
@@ -17,15 +17,20 @@ def _write_python_trial(
     *,
     passed: bool,
     adapter_failed: bool = False,
+    model_id: str = "codex/gpt-5.5",
+    provider: str = "codex",
+    adapter: str = "pi_devstack",
+    run_id: str = "codex%2Fgpt-5.5-smoke",
+    task_id: str = "python/two-fer",
 ) -> Path:
     trial_dir = (
         results_dir
         / "runs"
-        / "codex%2Fgpt-5.5-smoke"
-        / encode_model_path("codex/gpt-5.5")
-        / "pi_devstack"
+        / run_id
+        / encode_model_path(model_id)
+        / adapter
         / "aider_polyglot"
-        / encode_task_path("python/two-fer")
+        / encode_task_path(task_id)
         / "trial-1"
     )
     workdir = trial_dir / "workdir"
@@ -40,9 +45,9 @@ def _write_python_trial(
         "    assert two_fer() == 'One for you, one for me.'\n"
     )
     (trial_dir / "manifest.json").write_text(json.dumps({
-        "model": {"id": "codex/gpt-5.5", "provider": "codex"},
+        "model": {"id": model_id, "provider": provider},
         "adapter": {"id": "PiDevstackAdapter", "version": "devstack"},
-        "suite": {"id": "AiderPolyglotSuite", "task_id": "python/two-fer"},
+        "suite": {"id": "AiderPolyglotSuite", "task_id": task_id},
         "trial": 1,
         "sampling": {"thinking": "medium"},
         "timing": {"wall_clock_seconds": 12.0},
@@ -110,3 +115,73 @@ def test_reverify_results_skips_adapter_failed_trials_by_default():
     assert summary["skipped_adapter_failed"] == 1
     assert summary["changed"] == 0
     assert stored["adapter_failed"] is True
+
+
+def test_reverify_results_reports_matched_run_cells():
+    with tempfile.TemporaryDirectory() as tmp:
+        results_dir = Path(tmp) / "results"
+        _write_python_trial(
+            results_dir,
+            passed=True,
+            model_id="zai/glm-5.2",
+            provider="zai",
+            adapter="pi_vanilla",
+            run_id="zai%2Fglm-5.2-full-20260704",
+        )
+        _write_python_trial(
+            results_dir,
+            passed=True,
+            model_id="zai/glm-5.2",
+            provider="zai",
+            adapter="pi_devstack",
+            run_id="zai%2Fglm-5.2-full-20260704",
+            task_id="python/hello-world",
+        )
+        _write_python_trial(
+            results_dir,
+            passed=True,
+            model_id="local/ornith-1.0-35b",
+            provider="local",
+            adapter="pi_vanilla",
+            run_id="local%2Fornith-1.0-35b-full-20260704",
+        )
+
+        summary = reverify_results(
+            results_dir,
+            suites=("aider_polyglot",),
+            filters=("glm-5\\.2",),
+        )
+
+    matched = summary["matched_runs"]
+    assert [row["adapter"] for row in matched] == ["pi_devstack", "pi_vanilla"]
+    assert {row["model"] for row in matched} == {"zai/glm-5.2"}
+    assert {row["run"] for row in matched} == {"runs/zai%2Fglm-5.2-full-20260704"}
+    assert all(row["trials"] == 1 for row in matched)
+
+
+def test_reverify_cli_prints_matched_runs(capsys):
+    with tempfile.TemporaryDirectory() as tmp:
+        results_dir = Path(tmp) / "results"
+        _write_python_trial(
+            results_dir,
+            passed=True,
+            model_id="zai/glm-5.2",
+            provider="zai",
+            adapter="pi_vanilla",
+            run_id="zai%2Fglm-5.2-full-20260704",
+        )
+
+        rc = main([
+            "--results-dir",
+            str(results_dir),
+            "--suite",
+            "aider_polyglot",
+            "--filter",
+            "glm-5\\.2",
+        ])
+
+    out = capsys.readouterr().out
+    assert rc == 0
+    assert "Matched runs:" in out
+    assert "runs/zai%2Fglm-5.2-full-20260704" in out
+    assert "zai/glm-5.2 | pi_vanilla | aider_polyglot" in out

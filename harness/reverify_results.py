@@ -10,7 +10,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
-from harness.path_utils import decode_task_path
+from harness.path_utils import decode_model_path, decode_task_path
 from harness.suites import load_suite
 
 
@@ -59,6 +59,55 @@ def _trial_suite_name(trial_dir: Path) -> str | None:
         return trial_dir.parent.parent.name
     except IndexError:
         return None
+
+
+def _matched_run_info(
+    results_dir: Path,
+    trial_dir: Path,
+    manifest: dict[str, Any] | None,
+) -> dict[str, str]:
+    task_dir = trial_dir.parent
+    suite_dir = task_dir.parent
+    adapter_dir = suite_dir.parent
+    model_dir = adapter_dir.parent
+    try:
+        run_parent = model_dir.parent.relative_to(results_dir)
+        run = "" if str(run_parent) == "." else run_parent.as_posix()
+    except ValueError:
+        run = ""
+
+    model = manifest.get("model") if isinstance(manifest, dict) else None
+    sampling = manifest.get("sampling") if isinstance(manifest, dict) else None
+    model_id = model.get("id") if isinstance(model, dict) else None
+    provider = model.get("provider") if isinstance(model, dict) else None
+    thinking = sampling.get("thinking") if isinstance(sampling, dict) else None
+
+    if not isinstance(model_id, str):
+        model_id = decode_model_path(model_dir.name)
+    if not isinstance(provider, str):
+        provider = model_id.split("/")[0] if "/" in model_id else "unknown"
+    if not isinstance(thinking, str) or not thinking:
+        thinking = "default"
+
+    return {
+        "run": run,
+        "model": model_id,
+        "adapter": adapter_dir.name,
+        "suite": suite_dir.name,
+        "thinking": thinking,
+        "provider": provider,
+    }
+
+
+def _matched_run_key(info: dict[str, str]) -> tuple[str, str, str, str, str, str]:
+    return (
+        info["run"],
+        info["model"],
+        info["adapter"],
+        info["suite"],
+        info["thinking"],
+        info["provider"],
+    )
 
 
 def _load_json(path: Path) -> dict[str, Any] | None:
@@ -211,6 +260,7 @@ def reverify_results(
     suite_filter = set(suites)
     summary: dict[str, Any] = {key: 0 for key in SUMMARY_KEYS}
     summary["changes"] = []
+    matched_runs: dict[tuple[str, str, str, str, str, str], dict[str, Any]] = {}
 
     for trial_dir in _iter_trial_dirs(results_dir):
         if limit is not None and summary["scanned"] >= limit:
@@ -222,6 +272,13 @@ def reverify_results(
         if suite_filter and suite_name not in suite_filter:
             summary["skipped_suite"] += 1
             continue
+
+        manifest = _load_json(trial_dir / "manifest.json")
+        run_info = _matched_run_info(results_dir, trial_dir, manifest)
+        run_key = _matched_run_key(run_info)
+        if run_key not in matched_runs:
+            matched_runs[run_key] = {**run_info, "trials": 0}
+        matched_runs[run_key]["trials"] += 1
 
         result = reverify_trial(
             trial_dir,
@@ -243,6 +300,9 @@ def reverify_results(
             summary[status] += 1
         else:
             summary["errors"] += 1
+    summary["matched_runs"] = [
+        matched_runs[key] for key in sorted(matched_runs)
+    ]
     return summary
 
 
@@ -288,6 +348,18 @@ def main(argv: list[str] | None = None) -> int:
     mode = "write" if args.write else "dry-run"
     print(f"Reverify results ({mode})")
     print(f"Results: {Path(args.results_dir).resolve()}")
+    print("Matched runs:")
+    if summary["matched_runs"]:
+        for run in summary["matched_runs"]:
+            run_name = run["run"] or "(root)"
+            print(
+                "- "
+                f"{run_name} | {run['model']} | {run['adapter']} | "
+                f"{run['suite']} | thinking={run['thinking']} | "
+                f"provider={run['provider']} | trials={run['trials']}"
+            )
+    else:
+        print("- none")
     for key in SUMMARY_KEYS:
         print(f"{key}: {summary[key]}")
     for change in summary["changes"]:

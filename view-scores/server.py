@@ -30,6 +30,7 @@ ANSI_RE = re.compile(r"\033\[[0-9;]*m")
 DEFAULT_INCLUDE_SMOKE = False
 DEFAULT_FILTERS: tuple[str, ...] = ()
 DEFAULT_EXCLUDES: tuple[str, ...] = ()
+DEFAULT_SORT_BY: tuple[str, ...] = ()
 DEFAULT_USE_CACHE = True
 DEFAULT_MODELS_CONFIG_PATH = PROJECT_ROOT / "configs" / "models.yaml"
 DEFAULT_PRICING_PROFILE = os.environ.get("CODING_EVAL_PRICING_PROFILE") or None
@@ -145,6 +146,142 @@ def _matches_any(patterns: tuple[str, ...] | list[str], text: str) -> bool:
             if pattern.lower() in text.lower():
                 return True
     return False
+
+
+SORT_ALIASES = {
+    "pass": "pass_rate",
+    "score": "pass_rate",
+    "pass_rate": "pass_rate",
+    "passed": "passed_tasks",
+    "passed_tasks": "passed_tasks",
+    "cost": "estimated_cost_usd",
+    "total_cost": "estimated_cost_usd",
+    "estimated_cost": "estimated_cost_usd",
+    "estimated_cost_usd": "estimated_cost_usd",
+    "task": "cost_per_completed_task_usd",
+    "cost_task": "cost_per_completed_task_usd",
+    "cost_per_task": "cost_per_completed_task_usd",
+    "cost_per_completed_task": "cost_per_completed_task_usd",
+    "cost_per_completed_task_usd": "cost_per_completed_task_usd",
+    "$/task": "cost_per_completed_task_usd",
+    "cospa": "passed_tasks_per_usd",
+    "pass_dollar": "passed_tasks_per_usd",
+    "pass_per_dollar": "passed_tasks_per_usd",
+    "passed_per_dollar": "passed_tasks_per_usd",
+    "passed_tasks_per_usd": "passed_tasks_per_usd",
+    "pass/$": "passed_tasks_per_usd",
+    "model": "model",
+    "adapter": "adapter",
+    "suite": "suite",
+    "thinking": "thinking",
+    "provider": "provider",
+    "status": "status",
+    "runtime": "total_wall_clock_seconds",
+    "total_wall_clock_seconds": "total_wall_clock_seconds",
+    "avg": "mean_wall_clock_seconds",
+    "mean_wall_clock_seconds": "mean_wall_clock_seconds",
+    "eta": "estimated_remaining_seconds",
+    "estimated_remaining_seconds": "estimated_remaining_seconds",
+}
+
+SORT_DEFAULT_DIRECTIONS = {
+    "pass_rate": "desc",
+    "passed_tasks": "desc",
+    "passed_tasks_per_usd": "desc",
+    "estimated_cost_usd": "asc",
+    "cost_per_completed_task_usd": "asc",
+    "total_wall_clock_seconds": "asc",
+    "mean_wall_clock_seconds": "asc",
+    "estimated_remaining_seconds": "asc",
+}
+
+
+def _normalize_sort_alias(value: str) -> str:
+    return value.strip().lower().replace(" ", "_").replace("-", "_")
+
+
+def _split_sort_specs(sort_by: str | list[str] | tuple[str, ...] | None) -> list[str]:
+    if not sort_by:
+        return []
+    raw_specs = [sort_by] if isinstance(sort_by, str) else list(sort_by)
+    specs: list[str] = []
+    for raw_spec in raw_specs:
+        specs.extend(
+            spec.strip()
+            for spec in str(raw_spec).split(",")
+            if spec.strip()
+        )
+    return specs
+
+
+def _parse_sort_spec(spec: str) -> tuple[str, str]:
+    direction = None
+    field = spec.strip()
+    if ":" in field:
+        field, suffix = field.rsplit(":", 1)
+        suffix = suffix.strip().lower()
+        if suffix not in {"asc", "desc"}:
+            raise ValueError(
+                f"unknown sort direction {suffix!r}; use asc or desc"
+            )
+        direction = suffix
+    if field.startswith("-"):
+        direction = "desc"
+        field = field[1:]
+    elif field.startswith("+"):
+        direction = "asc"
+        field = field[1:]
+
+    alias = _normalize_sort_alias(field)
+    field_name = SORT_ALIASES.get(alias)
+    if field_name is None:
+        allowed = ", ".join(sorted(set(SORT_ALIASES)))
+        raise ValueError(f"unknown sort field {field!r}; expected one of: {allowed}")
+    return field_name, direction or SORT_DEFAULT_DIRECTIONS.get(field_name, "asc")
+
+
+def _sort_component(row: dict, field: str, direction: str) -> tuple:
+    value = row.get(field)
+    if value is None:
+        return (1, 0, 0)
+    if isinstance(value, (int, float)) and not isinstance(value, bool):
+        amount = float(value)
+        if direction == "desc":
+            amount = -amount
+        return (0, 0, amount)
+    text = str(value).lower()
+    if direction == "desc":
+        return (0, 1, tuple(-ord(char) for char in text))
+    return (0, 1, text)
+
+
+def sort_scores(
+    scores: list[dict],
+    sort_by: str | list[str] | tuple[str, ...] | None,
+) -> list[dict]:
+    """Return scores sorted by terminal/table aliases.
+
+    Missing values sort last. Multiple comma-separated specs are supported,
+    e.g. ``pass,cost`` sorts by score first and total cost second.
+    """
+    specs = [_parse_sort_spec(spec) for spec in _split_sort_specs(sort_by)]
+    if not specs:
+        return list(scores)
+
+    def key(row: dict) -> tuple:
+        tie_breaker = (
+            str(row.get("model", "")),
+            str(row.get("adapter", "")),
+            str(row.get("suite", "")),
+            str(row.get("thinking", "")),
+            str(row.get("provider", "")),
+        )
+        return tuple(
+            _sort_component(row, field, direction)
+            for field, direction in specs
+        ) + tie_breaker
+
+    return sorted(scores, key=key)
 
 
 def _known_adapter_names() -> set[str]:
@@ -1256,11 +1393,13 @@ class ScoreHandler(SimpleHTTPRequestHandler):
         excludes: list[str] | tuple[str, ...] | None = None,
         thinking_filter: str | None = None,
         provider_filter: str | None = None,
+        sort_by: str | list[str] | tuple[str, ...] | None = None,
     ) -> list:
         """Get aggregated scores from results directory."""
         include_smoke = DEFAULT_INCLUDE_SMOKE if include_smoke is None else include_smoke
         filters = tuple(DEFAULT_FILTERS if filters is None else filters)
         excludes = tuple(DEFAULT_EXCLUDES if excludes is None else excludes)
+        sort_by = DEFAULT_SORT_BY if sort_by is None else sort_by
 
         grouped_trials = {}
         grouped_times = {}
@@ -1288,7 +1427,7 @@ class ScoreHandler(SimpleHTTPRequestHandler):
         )
         cached_scores = self._get_cached_scores(cache_key)
         if cached_scores is not None:
-            return cached_scores
+            return sort_scores(cached_scores, sort_by)
 
         for entry in trial_entries:
             trial_dir = entry["trial_dir"]
@@ -1592,7 +1731,7 @@ class ScoreHandler(SimpleHTTPRequestHandler):
             ]
 
         self._store_cached_scores(cache_key, scores)
-        return scores
+        return sort_scores(scores, sort_by)
 
     def get_task_details(self, model: str, adapter: str, suite: str) -> dict:
         """Get per-task details for a specific run.
@@ -1680,7 +1819,7 @@ def _start_server(host: str, port: int) -> None:
 def main(argv: list[str] | None = None) -> int:
     """Run the score viewer CLI."""
     global RESULTS_DIR, DEFAULT_INCLUDE_SMOKE, DEFAULT_FILTERS, DEFAULT_EXCLUDES
-    global DEFAULT_USE_CACHE, DEFAULT_PRICING_PROFILE
+    global DEFAULT_SORT_BY, DEFAULT_USE_CACHE, DEFAULT_PRICING_PROFILE
 
     common = argparse.ArgumentParser(add_help=False)
     common.add_argument(
@@ -1742,6 +1881,18 @@ def main(argv: list[str] | None = None) -> int:
         ),
     )
     common.add_argument(
+        "--sort",
+        dest="sort_by",
+        action="append",
+        default=[],
+        metavar="FIELD",
+        help=(
+            "Sort rows by FIELD. Common aliases: pass (score desc), "
+            "cost (total cost asc), task ($/task asc), cospa/pass-dollar "
+            "(Pass/$ desc). Supports comma lists and :asc/:desc overrides."
+        ),
+    )
+    common.add_argument(
         "--pricing-profile",
         default=None,
         help=(
@@ -1798,8 +1949,14 @@ def main(argv: list[str] | None = None) -> int:
     DEFAULT_INCLUDE_SMOKE = getattr(args, "include_smoke", False)
     DEFAULT_FILTERS = tuple(getattr(args, "filters", []) or [])
     DEFAULT_EXCLUDES = tuple(getattr(args, "excludes", []) or [])
+    DEFAULT_SORT_BY = tuple(getattr(args, "sort_by", []) or [])
     DEFAULT_USE_CACHE = getattr(args, "use_cache", True)
     DEFAULT_PRICING_PROFILE = getattr(args, "pricing_profile", None)
+    try:
+        sort_scores([], DEFAULT_SORT_BY)
+    except ValueError as exc:
+        print(f"Error: {exc}", file=sys.stderr)
+        return 2
 
     # Preserve the old direct-launch behavior: `python view-scores/server.py`
     # starts the web viewer. The root `./view` wrapper defaults to table mode.
@@ -1815,6 +1972,7 @@ def main(argv: list[str] | None = None) -> int:
             excludes=args.excludes,
             thinking_filter=getattr(args, "thinking_filter", None),
             provider_filter=getattr(args, "provider_filter", None),
+            sort_by=getattr(args, "sort_by", None),
         )
         warnings = handler.get_warnings()
         print(
@@ -1836,6 +1994,7 @@ def main(argv: list[str] | None = None) -> int:
             excludes=args.excludes,
             thinking_filter=getattr(args, "thinking_filter", None),
             provider_filter=getattr(args, "provider_filter", None),
+            sort_by=getattr(args, "sort_by", None),
         )
         warning_text = _format_warnings_terminal(handler.get_warnings())
         if warning_text:

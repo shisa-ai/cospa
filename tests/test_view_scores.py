@@ -1243,6 +1243,67 @@ def test_format_scores_terminal_default_includes_cost_efficiency():
     assert "40.5" in output
 
 
+def test_sort_scores_supports_score_cost_task_and_cospa_aliases():
+    """Score rows should support the main terminal table sort aliases."""
+    import importlib.util
+
+    server_path = PROJECT_ROOT / "view-scores" / "server.py"
+    spec = importlib.util.spec_from_file_location("view_scores_server_sort_test", server_path)
+    server_mod = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(server_mod)
+
+    rows = [
+        {
+            "model": "model-a",
+            "adapter": "pi_vanilla",
+            "suite": "aider_polyglot",
+            "pass_rate": 50.0,
+            "estimated_cost_usd": 4.0,
+            "cost_per_completed_task_usd": 2.0,
+            "passed_tasks_per_usd": 10.0,
+        },
+        {
+            "model": "model-b",
+            "adapter": "pi_vanilla",
+            "suite": "aider_polyglot",
+            "pass_rate": 90.0,
+            "estimated_cost_usd": 8.0,
+            "cost_per_completed_task_usd": 1.0,
+            "passed_tasks_per_usd": 5.0,
+        },
+        {
+            "model": "model-c",
+            "adapter": "pi_vanilla",
+            "suite": "aider_polyglot",
+            "pass_rate": 25.0,
+            "estimated_cost_usd": 1.0,
+            "cost_per_completed_task_usd": 4.0,
+            "passed_tasks_per_usd": 25.0,
+        },
+    ]
+
+    assert [row["model"] for row in server_mod.sort_scores(rows, "pass")] == [
+        "model-b",
+        "model-a",
+        "model-c",
+    ]
+    assert [row["model"] for row in server_mod.sort_scores(rows, "cost")] == [
+        "model-c",
+        "model-a",
+        "model-b",
+    ]
+    assert [row["model"] for row in server_mod.sort_scores(rows, "task")] == [
+        "model-b",
+        "model-a",
+        "model-c",
+    ]
+    assert [row["model"] for row in server_mod.sort_scores(rows, "cospa")] == [
+        "model-c",
+        "model-a",
+        "model-b",
+    ]
+
+
 def test_format_scores_terminal_verbose_includes_status_and_timing():
     """Verbose table should surface runtime and ETA columns."""
     import importlib.util
@@ -1321,6 +1382,45 @@ def test_root_view_entrypoint_prints_terminal_scores():
     assert "\x1b[" in result.stdout
     assert model_id in result.stdout
     assert "50.0%" in result.stdout
+
+
+def test_root_view_entrypoint_sorts_terminal_scores():
+    """./view --sort should order the terminal table by score aliases."""
+    with tempfile.TemporaryDirectory() as tmp:
+        results_dir = Path(tmp) / "results"
+        results_dir.mkdir()
+        suite = "aider_polyglot"
+        adapter = "pi_vanilla"
+
+        for model_id, passed in (("low/model", False), ("high/model", True)):
+            base = (
+                results_dir
+                / encode_model_path(model_id)
+                / adapter
+                / suite
+                / encode_task_path("python/hello")
+            )
+            _write_trial(
+                base / "trial-1",
+                passed=passed,
+                model_id=model_id,
+            )
+
+        result = subprocess.run(
+            [
+                str(PROJECT_ROOT / "view"),
+                "--results-dir",
+                str(results_dir),
+                "--sort",
+                "pass",
+                "--no-cache",
+            ],
+            capture_output=True,
+            text=True,
+        )
+
+    assert result.returncode == 0, result.stderr
+    assert result.stdout.index("high/model") < result.stdout.index("low/model")
 
 
 def test_root_view_entrypoint_supports_verbose_flag():

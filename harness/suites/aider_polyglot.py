@@ -15,10 +15,13 @@ full polyglot-benchmark dataset from https://github.com/Aider-AI/polyglot-benchm
 """
 
 import json
+import os
 import shlex
 import shutil
 import subprocess
+import tempfile
 import time
+import xml.etree.ElementTree as ET
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, Dict, List
@@ -175,15 +178,35 @@ class AiderPolyglotSuite:
         """
         language = task_data.get("language", "python")
         timeout = task_data.get("timeout", 300)  # 5 min default for tests
+        setup_cmds: list[list[str]] = []
+        run_in_temp_copy = False
+        env = self._verification_env()
 
         # Build test command based on language
         if language == "python":
-            cmd = ["python", "-m", "pytest", "-v", "--tb=short", "-x"]
+            test_files = sorted(
+                path.name
+                for pattern in ("*_test.py", "test_*.py")
+                for path in workdir.glob(pattern)
+            )
+            cmd = [
+                "python",
+                "-m",
+                "pytest",
+                "-v",
+                "--tb=short",
+                "-x",
+                *(test_files or ["."]),
+            ]
         elif language == "javascript" or language == "typescript":
             # Check for package.json and use npm/yarn
             pkg_file = workdir / "package.json"
             if pkg_file.exists():
+                setup_cmds.append(
+                    ["npm", "install", "--no-audit", "--no-fund", "--ignore-scripts"]
+                )
                 cmd = ["npm", "test"]
+                run_in_temp_copy = True
             else:
                 cmd = ["npx", "jest", "--verbose"]
         elif language == "go":
@@ -191,8 +214,10 @@ class AiderPolyglotSuite:
         elif language == "java":
             gradle_cmd = "./gradlew" if (workdir / "gradlew").exists() else "gradle"
             cmd = [gradle_cmd, "test", "--info"]
+            run_in_temp_copy = True
         elif language == "rust":
             cmd = ["cargo", "test", "--verbose"]
+            run_in_temp_copy = True
         elif language == "c" or language == "cpp":
             # Try cmake + build + test. Do not append a shell fallback such as
             # `|| echo ...`: that masks nonzero build/test exits as success.
@@ -251,32 +276,30 @@ class AiderPolyglotSuite:
                 "exit_code": -1,
             }
 
-        # Run tests
+        # Run tests. Some language toolchains either install large dependency
+        # trees or fail under deeply encoded result paths; run those from a
+        # short temp copy while keeping the model-authored workdir unchanged.
         try:
-            result = run_command(
+            if run_in_temp_copy:
+                with tempfile.TemporaryDirectory(
+                    prefix=f"coding-eval-{language}-"
+                ) as tmp:
+                    verify_dir = Path(tmp) / "workdir"
+                    self._copy_for_verification(workdir, verify_dir)
+                    return self._run_verifier_commands(
+                        setup_cmds,
+                        cmd,
+                        verify_dir,
+                        timeout=timeout,
+                        env=env,
+                    )
+            return self._run_verifier_commands(
+                setup_cmds,
                 cmd,
-                cwd=str(workdir),
-                capture_output=True,
-                text=True,
+                workdir,
                 timeout=timeout,
+                env=env,
             )
-
-            # Parse test results
-            test_count = self._count_tests(result.stdout + result.stderr)
-            passed = result.returncode == 0 and test_count > 0
-
-            # Store both stdout and stderr for diagnostics
-            grader_output = result.stdout
-            if result.stderr:
-                grader_output += "\n--- STDERR ---\n" + result.stderr
-
-            return {
-                "passed": passed,
-                "test_count": test_count,
-                "grader_output": grader_output,
-                "exit_code": result.returncode,
-            }
-
         except subprocess.TimeoutExpired:
             return {
                 "passed": False,
@@ -299,17 +322,117 @@ class AiderPolyglotSuite:
                 "exit_code": -1,
             }
 
-    def _count_tests(self, output: str) -> int:
+    @classmethod
+    def _run_verifier_commands(
+        cls,
+        setup_cmds: list[list[str]],
+        test_cmd: list[str],
+        workdir: Path,
+        *,
+        timeout: int,
+        env: dict[str, str],
+    ) -> Dict[str, Any]:
+        setup_output = ""
+        for setup_cmd in setup_cmds:
+            setup_result = run_command(
+                setup_cmd,
+                cwd=str(workdir),
+                capture_output=True,
+                text=True,
+                timeout=timeout,
+                env=env,
+            )
+            if setup_result.stdout:
+                setup_output += setup_result.stdout
+            if setup_result.stderr:
+                setup_output += "\n--- SETUP STDERR ---\n" + setup_result.stderr
+            if setup_result.returncode != 0:
+                return {
+                    "passed": False,
+                    "test_count": 0,
+                    "grader_output": setup_output,
+                    "exit_code": setup_result.returncode,
+                }
+
+        result = run_command(
+            test_cmd,
+            cwd=str(workdir),
+            capture_output=True,
+            text=True,
+            timeout=timeout,
+            env=env,
+        )
+
+        # Parse test results
+        test_output = (result.stdout or "") + (result.stderr or "")
+        test_count = cls._count_tests(test_output)
+        if test_count == 0:
+            test_count = cls._count_tests_from_artifacts(workdir)
+        passed = result.returncode == 0 and test_count > 0
+
+        # Store both stdout and stderr for diagnostics
+        grader_output = setup_output + (result.stdout or "")
+        if result.stderr:
+            grader_output += "\n--- STDERR ---\n" + result.stderr
+
+        return {
+            "passed": passed,
+            "test_count": test_count,
+            "grader_output": grader_output,
+            "exit_code": result.returncode,
+        }
+
+    @classmethod
+    def _copy_for_verification(cls, source: Path, dest: Path) -> None:
+        def ignore(_dir: str, names: list[str]) -> set[str]:
+            return set(names) & cls.GENERATED_ARTIFACT_DIRS
+
+        shutil.copytree(source, dest, ignore=ignore)
+
+    @staticmethod
+    def _verification_env() -> dict[str, str]:
+        env = os.environ.copy()
+        java_home = env.get("JAVA_HOME")
+        if java_home and not (Path(java_home) / "bin" / "java").exists():
+            env.pop("JAVA_HOME", None)
+        return env
+
+    @staticmethod
+    def _count_tests_from_artifacts(workdir: Path) -> int:
+        total = 0
+        for xml_file in workdir.glob("build/test-results/**/*.xml"):
+            try:
+                root = ET.parse(xml_file).getroot()
+            except ET.ParseError:
+                continue
+            try:
+                total += int(root.attrib.get("tests", 0))
+            except ValueError:
+                continue
+        return total
+
+    @staticmethod
+    def _count_tests(output: str) -> int:
         """Count number of tests from test output."""
         if not output:
             return 0
 
         import re
 
+        # Cargo can report several test binaries. Sum the executed passing tests
+        # so an initial "0 passed" lib/doc-test block does not mask real tests.
+        rust_counts = [
+            int(count)
+            for count in re.findall(r"test result:\s+ok\.\s+(\d+)\s+passed;", output)
+        ]
+        if rust_counts:
+            return sum(rust_counts)
+
         # Try to parse pytest-style output
-        match = re.search(r"(\d+) passed", output)
-        if match:
-            return int(match.group(1))
+        matches = [int(count) for count in re.findall(r"(\d+) passed", output)]
+        positive_matches = [count for count in matches if count > 0]
+        if positive_matches:
+            return sum(positive_matches)
 
         # Try to parse go test output
         match = re.findall(r"^--- PASS:", output, re.MULTILINE)

@@ -164,6 +164,53 @@ def test_count_tests_counts_real_language_runner_outputs(fixture_name, expected_
     assert suite._count_tests(output) == expected_count
 
 
+def test_count_tests_counts_later_rust_test_binary_when_first_has_zero_tests():
+    """Cargo may report a zero-test crate before the real exercise tests."""
+    suite = AiderPolyglotSuite()
+    output = """
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out;
+
+running 12 tests
+test accumulate_empty ... ok
+
+test result: ok. 1 passed; 0 failed; 11 ignored; 0 measured; 0 filtered out;
+"""
+
+    assert suite._count_tests(output) == 1
+
+
+def test_run_verifier_commands_counts_junit_xml_when_stdout_has_no_count():
+    """Gradle may only expose the number of executed tests in JUnit XML."""
+    with tempfile.TemporaryDirectory() as tmp:
+        workdir = Path(tmp)
+        xml_dir = workdir / "build" / "test-results" / "test"
+        xml_dir.mkdir(parents=True)
+        (xml_dir / "TEST-AffineCipherTest.xml").write_text(
+            '<testsuite name="AffineCipherTest" tests="16" skipped="15" '
+            'failures="0" errors="0"></testsuite>'
+        )
+
+        with patch("harness.suites.aider_polyglot.run_command") as mock_run:
+            mock_run.return_value = subprocess.CompletedProcess(
+                args=["./gradlew", "test"],
+                returncode=0,
+                stdout="BUILD SUCCESSFUL in 1s\n",
+                stderr="",
+            )
+            verdict = AiderPolyglotSuite._run_verifier_commands(
+                [],
+                ["./gradlew", "test"],
+                workdir,
+                timeout=1,
+                env={},
+            )
+
+    assert verdict["passed"] is True
+    assert verdict["test_count"] == 16
+
+
 def test_verify_cpp_command_does_not_mask_test_runner_failures():
     """The C++ verifier must preserve nonzero build/test exit codes."""
     suite = AiderPolyglotSuite()
@@ -235,3 +282,104 @@ def test_verify_java_prefers_checked_in_gradle_wrapper():
     assert mock_run.call_args[0][0][:2] == ["./gradlew", "test"]
     assert verdict["passed"] is True
     assert verdict["test_count"] == 3
+
+
+def test_verify_python_targets_copied_test_files():
+    """Python verification must not let the repo pyproject collect 0 tests."""
+    suite = AiderPolyglotSuite()
+
+    with tempfile.TemporaryDirectory() as tmp:
+        workdir = Path(tmp)
+        (workdir / "affine_cipher_test.py").write_text("def test_ok(): pass\n")
+        with patch("harness.suites.aider_polyglot.run_command") as mock_run:
+            mock_run.return_value = subprocess.CompletedProcess(
+                args=["python"],
+                returncode=0,
+                stdout="1 passed in 0.01s\n",
+                stderr="",
+            )
+            verdict = suite.verify({"language": "python", "timeout": 1}, workdir)
+
+    cmd = mock_run.call_args[0][0]
+    assert "affine_cipher_test.py" in cmd, cmd
+    assert verdict["passed"] is True
+    assert verdict["test_count"] == 1
+
+
+def test_verify_java_drops_invalid_java_home(monkeypatch):
+    """A stale host JAVA_HOME must not make every Java exercise fail."""
+    suite = AiderPolyglotSuite()
+    monkeypatch.setenv("JAVA_HOME", "/definitely/not/a/jdk")
+
+    with tempfile.TemporaryDirectory() as tmp:
+        workdir = Path(tmp)
+        (workdir / "gradlew").write_text("#!/usr/bin/env sh\n")
+        with patch("harness.suites.aider_polyglot.run_command") as mock_run:
+            mock_run.return_value = subprocess.CompletedProcess(
+                args=["./gradlew"],
+                returncode=0,
+                stdout="3 tests completed, 0 failed\n",
+                stderr="",
+            )
+            verdict = suite.verify({"language": "java", "timeout": 1}, workdir)
+
+    env = mock_run.call_args.kwargs["env"]
+    assert "JAVA_HOME" not in env
+    assert verdict["passed"] is True
+
+
+def test_verify_javascript_installs_exercise_dependencies_first():
+    """Jest exercises need their package.json devDependencies installed."""
+    suite = AiderPolyglotSuite()
+
+    with tempfile.TemporaryDirectory() as tmp:
+        workdir = Path(tmp)
+        (workdir / "package.json").write_text('{"scripts":{"test":"jest ./*"}}\n')
+        with patch("harness.suites.aider_polyglot.run_command") as mock_run:
+            mock_run.side_effect = [
+                subprocess.CompletedProcess(
+                    args=["npm", "install"],
+                    returncode=0,
+                    stdout="installed\n",
+                    stderr="",
+                ),
+                subprocess.CompletedProcess(
+                    args=["npm", "test"],
+                    returncode=0,
+                    stdout="Tests:       1 passed, 1 total\n",
+                    stderr="",
+                ),
+            ]
+            verdict = suite.verify({"language": "javascript", "timeout": 1}, workdir)
+
+    first_cmd = mock_run.call_args_list[0].args[0]
+    second_cmd = mock_run.call_args_list[1].args[0]
+    assert first_cmd[:2] == ["npm", "install"]
+    assert second_cmd == ["npm", "test"]
+    assert verdict["passed"] is True
+    assert verdict["test_count"] == 1
+
+
+def test_verify_rust_uses_short_temp_copy_for_cargo():
+    """Cargo/linker can fail under deeply encoded result paths."""
+    suite = AiderPolyglotSuite()
+
+    with tempfile.TemporaryDirectory() as tmp:
+        workdir = Path(tmp) / ("deep-" * 20)
+        workdir.mkdir(parents=True)
+        (workdir / "Cargo.toml").write_text("[package]\nname='x'\nversion='0.0.0'\nedition='2021'\n")
+        (workdir / "src").mkdir()
+        (workdir / "src" / "lib.rs").write_text("")
+        with patch("harness.suites.aider_polyglot.run_command") as mock_run:
+            mock_run.return_value = subprocess.CompletedProcess(
+                args=["cargo"],
+                returncode=0,
+                stdout="test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out;\n",
+                stderr="",
+            )
+            verdict = suite.verify({"language": "rust", "timeout": 1}, workdir)
+
+    cargo_cwd = Path(mock_run.call_args.kwargs["cwd"])
+    assert cargo_cwd != workdir
+    assert str(cargo_cwd).startswith("/tmp/")
+    assert verdict["passed"] is True

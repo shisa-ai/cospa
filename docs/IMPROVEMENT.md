@@ -133,7 +133,7 @@ hook that runs both:
 
 ```make
 test:
-	mamba run -n coding-eval python -m pytest -q
+	mamba run -n cospa python -m pytest -q
 	bash tests/scripts/run_all.sh
 ```
 

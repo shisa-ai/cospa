@@ -89,9 +89,9 @@ vendor/           # Vendored datasets (TB, Polyglot)
 
 ## Environments
 
-All Python code runs inside the `coding-eval` mamba environment
-(`python=3.12`). Use `mamba run -n coding-eval <cmd>` or
-`conda activate coding-eval` before invoking any harness script.
+All Python code runs inside the `cospa` mamba environment
+(`python=3.12`). Use `mamba run -n cospa <cmd>` or
+`conda activate cospa` before invoking any harness script.
 
 Terminal-Bench runs through Harbor and Docker. If your shell was opened before
 you were added to the `docker` group, use `sg docker -c '<command>'` or open a
@@ -163,7 +163,7 @@ Verify and run:
 ```bash
 bash scripts/check-models.sh
 
-mamba run -n coding-eval python harness/runner.py \
+mamba run -n cospa python harness/runner.py \
   --suite aider_polyglot \
   --adapter pi_vanilla \
   --model hf/Qwen/Qwen2.5-Coder-7B-Instruct \
@@ -218,7 +218,7 @@ model-prefixed run wrapper under `results/runs/`.
 You can provide a stable `--run-id` when you want a readable wrapper name:
 
 ```bash
-mamba run -n coding-eval python harness/runner.py \
+mamba run -n cospa python harness/runner.py \
   --suite aider_polyglot \
   --adapter pi_vanilla \
   --model local/ornith-1.0-35b \
@@ -226,7 +226,7 @@ mamba run -n coding-eval python harness/runner.py \
   --k 1 \
   --run-id smoke-pi-vanilla &
 
-mamba run -n coding-eval python harness/runner.py \
+mamba run -n cospa python harness/runner.py \
   --suite aider_polyglot \
   --adapter pi_devstack \
   --model local/ornith-1.0-35b \
@@ -268,7 +268,7 @@ artifacts, then the runner/backfill copies those traces into the same
 
 ## Current Verified State
 
-- Python tests: `mamba run -n coding-eval python -m pytest -q` reports
+- Python tests: `mamba run -n cospa python -m pytest -q` reports
   `100 passed`.
 - Shell harness: `bash tests/scripts/run_all.sh` reports `38` assertions
   passed.
@@ -284,3 +284,7 @@ artifacts, then the runner/backfill copies those traces into the same
   NVIDIA Nemotron `2/5`, and Zai GLM `4/5`.
 - Little-coder Ornith smoke run `little-coder-ornith-smoke-20260704T0550Z`
   completed with `little_coder`, `--problems 5`, `--k 1`: local Ornith `5/5`.
+
+## License
+
+Apache License 2.0. See `LICENSE`.

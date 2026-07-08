@@ -1,4 +1,4 @@
-# PLAN.md — coding-eval
+# PLAN.md — cospa
 
 > Clean-room harness for evaluating **small local coding models** across
 > **agent harness variants** on **Aider Polyglot** and **Terminal-Bench Core**.
@@ -9,9 +9,9 @@
 > **harness**, on the theory that scaffold–model fit dominates raw model quality
 > for small models (cf. *Honey, I Shrunk the Coding Agent*).
 
-All Python code runs inside the `coding-eval` mamba environment
-(`python=3.12`). Use `mamba run -n coding-eval <cmd>` or `conda activate
-coding-eval` before invoking any harness script. The setup script (P2)
+All Python code runs inside the `cospa` mamba environment
+(`python=3.12`). Use `mamba run -n cospa <cmd>` or `conda activate
+cospa` before invoking any harness script. The setup script (P2)
 verifies the env exists and is on the right version.
 
 ---
@@ -26,7 +26,7 @@ reorder — earlier items unblock later ones.
       for `results/` (keep one example), `node_modules/`, `.venv/`,
       `vendor/`. README stub.
 - [ ] **P2. Install script (`scripts/setup.sh`).** Verifies pi (≥ some
-      version), verifies the `coding-eval` mamba env (python=3.12) exists
+      version), verifies the `cospa` mamba env (python=3.12) exists
       and is active, installs Harbor (`uv tool install harbor`), clones
       Terminal-Bench (latest, `harbor-framework/terminal-bench`) and
       Aider Polyglot dataset under `vendor/`. **Does not** touch models

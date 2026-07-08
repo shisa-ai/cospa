@@ -1,6 +1,6 @@
-# coding-eval - Agent Guide
+# cospa - Agent Guide
 
-coding-eval is a multi-model, multi-adapter coding benchmark harness
+cospa is a multi-model, multi-adapter coding benchmark harness
 (Aider Polyglot, Terminal-Bench) with a runner, adapters, suites, a score
 viewer, and orchestration scripts. See `docs/PLAN.md` for architecture and
 roadmap and `docs/ORNITH-CODER-REVIEW.md` for the audit history.
@@ -136,7 +136,7 @@ discipline below.
 - **Concurrent appends.** If two agents append in the same window,
   resolve by keeping both entries ordered by timestamp; never drop a
   prior entry.
-- **Scope.** Log `coding-eval` development only (harness, adapters,
+- **Scope.** Log `cospa` development only (harness, adapters,
   suites, scripts, viewer, docs, audits). Do not log routine
   rebaselining of `results/` or vendoring churn in `vendor/`.
 
@@ -147,7 +147,7 @@ Run the narrowest tier for your change; escalate at milestone boundaries.
 | Scope | What to run |
 | --- | --- |
 | Docs / process | Re-read the changed file end-to-end; no test run needed. |
-| Code (harness, suites, adapters) | `mamba run -n coding-eval python -m pytest -q` |
+| Code (harness, suites, adapters) | `mamba run -n cospa python -m pytest -q` |
 | Shell scripts | `bash tests/scripts/run_all.sh` (also run via `tests/test_scripts.py`) |
 | Viewer | A viewer test in `tests/test_view_scores.py` against an encoded fixture tree |
 | Bug fix | The RED test you wrote, plus the full suite to catch regressions |

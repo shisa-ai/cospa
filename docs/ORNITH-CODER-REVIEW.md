@@ -17,7 +17,7 @@ Files:
 
 `subprocess.run` requires `stderr` to be `None`, an fd integer, `PIPE`, `STDOUT`, `DEVNULL`, or an open file-like object. Passing `stderr_file: Path` raises `AttributeError: 'PosixPath' object has no attribute 'fileno'` before the process launches. The adapters catch broad `Exception` and return `AdapterResult(returncode=-1)`, so the runner records a failure without the real error.
 
-I verified the exact behavior with Python 3.12 in `coding-eval`:
+I verified the exact behavior with Python 3.12 in `cospa`:
 
 ```text
 AttributeError: 'PosixPath' object has no attribute 'fileno'
@@ -170,7 +170,7 @@ Issues:
 - They do not cover Terminal-Bench behavior.
 - They do not cover `view-scores/server.py`.
 - They do not cover `scripts/check-models.sh` or `scripts/run-matrix.sh`.
-- There is no pytest collection config. `mamba run -n coding-eval python -m pytest -q` from repo root collects vendored benchmark tests and fails with 267 collection errors. Only `python -m pytest -q tests` passes.
+- There is no pytest collection config. `mamba run -n cospa python -m pytest -q` from repo root collects vendored benchmark tests and fails with 267 collection errors. Only `python -m pytest -q tests` passes.
 
 Impact: the headline "12 unit tests" does not protect the harness's load-bearing behavior.
 
@@ -210,16 +210,16 @@ Only stdout is stored in `grader_output`; stderr is discarded. Many test runners
 ```bash
 git status -sb
 git log --oneline -n 8
-mamba run -n coding-eval python -m pytest -q
-mamba run -n coding-eval python -m pytest -q tests
+mamba run -n cospa python -m pytest -q
+mamba run -n cospa python -m pytest -q tests
 pi --help
 little-coder --help
 pi -m test/model --offline --no-session --print hi
 little-coder -m test/model --offline --no-session --print hi
 harbor run --help
 bash scripts/check-models.sh
-mamba run -n coding-eval python -c "from harness.suites.terminal_bench import TerminalBenchSuite; print(len(TerminalBenchSuite().get_task_ids()))"
-mamba run -n coding-eval python -c "from harness.suites.aider_polyglot import AiderPolyglotSuite; print(AiderPolyglotSuite().get_task_ids())"
+mamba run -n cospa python -c "from harness.suites.terminal_bench import TerminalBenchSuite; print(len(TerminalBenchSuite().get_task_ids()))"
+mamba run -n cospa python -c "from harness.suites.aider_polyglot import AiderPolyglotSuite; print(AiderPolyglotSuite().get_task_ids())"
 ```
 
 Observed:
@@ -469,14 +469,14 @@ TypeError: unsupported operand type(s) for /: 'str' and 'str'
 Command:
 
 ```bash
-mamba run -n coding-eval python harness/runner.py \
+mamba run -n cospa python harness/runner.py \
   --suite aider_polyglot \
   --adapter pi_vanilla \
   --model test/model \
   --problems 1 \
   --k 1 \
   --vendor-dir vendor \
-  --results-dir /tmp/coding-eval-results-probe
+  --results-dir /tmp/cospa-results-probe
 ```
 
 ### Partial or Weak Fixes
@@ -502,7 +502,7 @@ get_terminal_bench_pin(Path('vendor')) -> unknown
 
 #### Tests improved but still miss the critical failures
 
-`mamba run -n coding-eval python -m pytest -q` now works and passes:
+`mamba run -n cospa python -m pytest -q` now works and passes:
 
 ```text
 24 passed in 0.06s
@@ -526,12 +526,12 @@ This is why the suite passes while blocker bugs remain.
 ```bash
 git status -sb
 git log --oneline -n 12
-mamba run -n coding-eval python -m pytest -q
-mamba run -n coding-eval python -c "from harness.suites.terminal_bench import TerminalBenchSuite; s=TerminalBenchSuite(); ids=s.get_task_ids(); print(len(ids)); print(ids[:5])"
-mamba run -n coding-eval python -c "from harness.suites.aider_polyglot import AiderPolyglotSuite; s=AiderPolyglotSuite(); ids=s.get_task_ids(); print(len(ids)); print(ids[:10])"
+mamba run -n cospa python -m pytest -q
+mamba run -n cospa python -c "from harness.suites.terminal_bench import TerminalBenchSuite; s=TerminalBenchSuite(); ids=s.get_task_ids(); print(len(ids)); print(ids[:5])"
+mamba run -n cospa python -c "from harness.suites.aider_polyglot import AiderPolyglotSuite; s=AiderPolyglotSuite(); ids=s.get_task_ids(); print(len(ids)); print(ids[:10])"
 bash scripts/run-matrix.sh
 bash scripts/check-models.sh
-mamba run -n coding-eval python harness/runner.py --suite aider_polyglot --adapter pi_vanilla --model test/model --problems 1 --k 1 --vendor-dir vendor --results-dir /tmp/coding-eval-results-probe
+mamba run -n cospa python harness/runner.py --suite aider_polyglot --adapter pi_vanilla --model test/model --problems 1 --k 1 --vendor-dir vendor --results-dir /tmp/cospa-results-probe
 ```
 
 Additional direct probes exercised `ScoreHandler`, `TerminalBenchSuite.materialize_task()`, `get_terminal_bench_pin()`, and a fake nonzero adapter return code through `run_trial()`.
@@ -559,14 +559,14 @@ until the test passed. No claim below is made without a covering test.
 ### Verification (commands run)
 
 ```bash
-mamba run -n coding-eval python -m pytest -q                              # 64 passed
+mamba run -n cospa python -m pytest -q                              # 64 passed
 bash tests/scripts/run_all.sh                                            # 11 shell assertions pass
-mamba run -n coding-eval python -c "from harness.suites.terminal_bench import TerminalBenchSuite; print(len(TerminalBenchSuite().get_task_ids(vendor_dir='vendor')))"  # 241
+mamba run -n cospa python -c "from harness.suites.terminal_bench import TerminalBenchSuite; print(len(TerminalBenchSuite().get_task_ids(vendor_dir='vendor')))"  # 241
 # (with polyglot-benchmark vendored)
-mamba run -n coding-eval python -c "from harness.suites.aider_polyglot import AiderPolyglotSuite; print(len(AiderPolyglotSuite().get_task_ids(vendor_dir='vendor')))"  # 225
+mamba run -n cospa python -c "from harness.suites.aider_polyglot import AiderPolyglotSuite; print(len(AiderPolyglotSuite().get_task_ids(vendor_dir='vendor')))"  # 225
 bash scripts/run-matrix.sh --models fake/m --adapters pi_vanilla --k 1   # no unbound-variable crash
 bash scripts/check-models.sh                                             # summarizes all models, exits 1
-mamba run -n coding-eval python harness/runner.py --suite aider_polyglot --adapter pi_vanilla --model fake/x --problems 1 --k 1 --vendor-dir /tmp/v  # aborts: unreachable
+mamba run -n cospa python harness/runner.py --suite aider_polyglot --adapter pi_vanilla --model fake/x --problems 1 --k 1 --vendor-dir /tmp/v  # aborts: unreachable
 ```
 
 ### Per-item resolution
@@ -652,9 +652,9 @@ Go tasks.
 Commands run in this checkout:
 
 ```bash
-mamba run -n coding-eval python -m pytest -q
+mamba run -n cospa python -m pytest -q
 bash tests/scripts/run_all.sh
-mamba run -n coding-eval python -c "from harness.suites.terminal_bench import TerminalBenchSuite; from harness.suites.aider_polyglot import AiderPolyglotSuite; print('tb', len(TerminalBenchSuite().get_task_ids(vendor_dir='vendor'))); print('poly', len(AiderPolyglotSuite().get_task_ids(vendor_dir='vendor')))"
+mamba run -n cospa python -c "from harness.suites.terminal_bench import TerminalBenchSuite; from harness.suites.aider_polyglot import AiderPolyglotSuite; print('tb', len(TerminalBenchSuite().get_task_ids(vendor_dir='vendor'))); print('poly', len(AiderPolyglotSuite().get_task_ids(vendor_dir='vendor')))"
 bash scripts/check-models.sh
 harbor run --help
 docker info
@@ -862,13 +862,13 @@ below.
 Commands run:
 
 ```bash
-mamba run -n coding-eval python -m pytest -q
+mamba run -n cospa python -m pytest -q
 bash tests/scripts/run_all.sh
-mamba run -n coding-eval python -c "from harness.suites.terminal_bench import TerminalBenchSuite; ... # captured Harbor commands"
-mamba run -n coding-eval python -c "from harness.suites.aider_polyglot import AiderPolyglotSuite; ... # Go output count"
-mamba run -n coding-eval python -c "from harness.runner import get_terminal_bench_pin; print(get_terminal_bench_pin(Path('vendor')))"
+mamba run -n cospa python -c "from harness.suites.terminal_bench import TerminalBenchSuite; ... # captured Harbor commands"
+mamba run -n cospa python -c "from harness.suites.aider_polyglot import AiderPolyglotSuite; ... # Go output count"
+mamba run -n cospa python -c "from harness.runner import get_terminal_bench_pin; print(get_terminal_bench_pin(Path('vendor')))"
 git clone https://github.com/Aider-AI/polyglot-benchmark.git vendor/polyglot-benchmark
-mamba run -n coding-eval python -c "from harness.suites.aider_polyglot import AiderPolyglotSuite; print(len(AiderPolyglotSuite().get_task_ids(vendor_dir='vendor')))"
+mamba run -n cospa python -c "from harness.suites.aider_polyglot import AiderPolyglotSuite; print(len(AiderPolyglotSuite().get_task_ids(vendor_dir='vendor')))"
 ```
 
 Observed:
@@ -950,7 +950,7 @@ A focused hardening pass found and fixed additional local code issues:
 Verification:
 
 ```bash
-mamba run -n coding-eval python -m pytest -q  # 81 passed
+mamba run -n cospa python -m pytest -q  # 81 passed
 bash tests/scripts/run_all.sh                 # 18 assertions passed
 ```
 
@@ -965,7 +965,7 @@ Command shape:
 
 ```bash
 CODING_EVAL_LOCAL_BASE_URL=http://172.17.0.1:18989/v1 sg docker -c \
-  'mamba run -n coding-eval python -c "from pathlib import Path; from harness.adapters import load_adapter; from harness.runner import run_trial; from harness.suites.terminal_bench import TerminalBenchSuite; results=Path(\"results/e2e-smoke-terminal-bench-20260704-1100\"); manifest, verdict = run_trial(TerminalBenchSuite(), load_adapter(\"pi_vanilla\"), \"local/ornith-1.0-35b\", \"hello-world\", 1, results, Path(\"vendor\")); print(manifest.get(\"exit_code\")); print(verdict)"'
+  'mamba run -n cospa python -c "from pathlib import Path; from harness.adapters import load_adapter; from harness.runner import run_trial; from harness.suites.terminal_bench import TerminalBenchSuite; results=Path(\"results/e2e-smoke-terminal-bench-20260704-1100\"); manifest, verdict = run_trial(TerminalBenchSuite(), load_adapter(\"pi_vanilla\"), \"local/ornith-1.0-35b\", \"hello-world\", 1, results, Path(\"vendor\")); print(manifest.get(\"exit_code\")); print(verdict)"'
 ```
 
 Observed:
@@ -981,7 +981,7 @@ Observed:
 - `TerminalBenchSuite.verify()` now ingests Harbor 0.16
   `jobs/<job>/<trial>/result.json` files, while preserving the older
   `score.json` fallback (`fixed (unit test + end-to-end)`).
-- Follow-up validation for this closure: `mamba run -n coding-eval python -m
+- Follow-up validation for this closure: `mamba run -n cospa python -m
   pytest -q` reports `83 passed`, and `bash tests/scripts/run_all.sh` reports
   `18` shell assertions passed.
 
@@ -1092,7 +1092,7 @@ zai/glm-5.2 | pi_vanilla | aider_polyglot | 4/5 passed
   `Passed/Total`. Wilson CI remains available through `./view --show-ci` and
   `/api/scores`, but it no longer dominates the default terminal/browser view
   for tiny smoke runs (`fixed (unit test)`).
-- Validation for this UX pass: `mamba run -n coding-eval python -m pytest -q`
+- Validation for this UX pass: `mamba run -n cospa python -m pytest -q`
   reports `98 passed`; `bash tests/scripts/run_all.sh` reports `35` shell
   assertions passed; py-compile of `view-scores/server.py` passes.
 
@@ -1114,6 +1114,6 @@ run-id: little-coder-ornith-smoke-20260704T0550Z
 local/ornith-1.0-35b | little_coder | aider_polyglot | 5/5 passed
 ```
 
-Validation for this little_coder pass: `mamba run -n coding-eval python -m
+Validation for this little_coder pass: `mamba run -n cospa python -m
 pytest -q` reports `100 passed`; `bash tests/scripts/run_all.sh` reports `38`
 shell assertions passed; py-compile of `harness/runner.py` passes.

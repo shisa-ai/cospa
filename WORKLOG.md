@@ -1,6 +1,6 @@
-# WORKLOG — coding-eval
+# WORKLOG — cospa
 
-Append-only development log for the `coding-eval` repository.
+Append-only development log for the `cospa` repository.
 
 ## Convention
 
@@ -24,7 +24,7 @@ Append-only development log for the `coding-eval` repository.
   sessions.
 - **Conflict resolution.** If two agents append concurrently, resolve by
   keeping both entries, ordering by timestamp; never drop a prior entry.
-- **Scope.** This log tracks development of `coding-eval` only (harness,
+- **Scope.** This log tracks development of `cospa` only (harness,
   adapters, suites, scripts, viewer, docs, audits). Do not log routine
   rebaselining of `results/` or vendoring churn in `vendor/`.
 
@@ -35,7 +35,7 @@ Append-only development log for the `coding-eval` repository.
 ## 2026-07-04 — establish append-only WORKLOG.md and AGENTS.md convention
 
 - Created `WORKLOG.md` at repo root as the append-only development log
-  for `coding-eval` (this repo only; no org-level shared log).
+  for `cospa` (this repo only; no org-level shared log).
 - Wired the convention into `AGENTS.md`: added it to Key Files, to the
   During Work flow (append when a unit is validated), to Git Discipline
   (commit the append in the same atomic unit), and to the high-conflict
@@ -44,7 +44,7 @@ Append-only development log for the `coding-eval` repository.
   evidence / decision / next-action bullets.
 - Enforcement: convention-only (no git hook, no CI guard). Upheld by
   review and commit discipline per AGENTS.md.
-- Scope: logs `coding-eval` dev only; excludes routine `results/`
+- Scope: logs `cospa` dev only; excludes routine `results/`
   rebaselining and `vendor/` churn.
 - Next: first real entry will be the next validated logical unit.
 
@@ -67,7 +67,7 @@ Append-only development log for the `coding-eval` repository.
 - Evidence (RED -> GREEN):
   - `tests/test_resume_and_thinking.py` (new): 4 tests, all passing.
     RED confirmed before impl on all 3 behavioral tests; GREEN after.
-  - Full suite: `mamba run -n coding-eval python -m pytest -q` = 104 passed.
+  - Full suite: `mamba run -n cospa python -m pytest -q` = 104 passed.
   - Updated `tests/test_cli_paths.py` fake_run_trial signature to match.
 - Decision: resume check lives in `run_trial` (not just `main()`) so direct
   callers get the same idempotency. `getattr(args, "thinking", None)` used
@@ -93,7 +93,7 @@ Append-only development log for the `coding-eval` repository.
   - RED: `tests/test_resume_and_thinking.py` failed on `pi_devstack` missing
     `--thinking`; `tests/scripts/test_run_matrix.sh` failed because
     `--thinking` was unknown.
-  - GREEN: `mamba run -n coding-eval python -m pytest -q` = 105 passed.
+  - GREEN: `mamba run -n cospa python -m pytest -q` = 105 passed.
   - GREEN: `bash tests/scripts/run_all.sh` = all shell tests passed
     (`test_check_models`, `test_root_entrypoints`, `test_run_matrix`,
     `test_setup`).
@@ -122,9 +122,9 @@ Append-only development log for the `coding-eval` repository.
 - Evidence (RED -> GREEN):
   - RED: token/cost focused viewer tests failed on missing `prompt_tokens`
     and missing `Tok In` verbose column.
-  - GREEN: `mamba run -n coding-eval python -m pytest -q tests/test_view_scores.py`
+  - GREEN: `mamba run -n cospa python -m pytest -q tests/test_view_scores.py`
     = 18 passed.
-  - GREEN: `mamba run -n coding-eval python -m pytest -q` = 110 passed.
+  - GREEN: `mamba run -n cospa python -m pytest -q` = 110 passed.
   - GREEN: `bash tests/scripts/run_all.sh` = all shell tests passed
     (`test_check_models`, `test_root_entrypoints`, `test_run_matrix`,
     `test_setup`).
@@ -155,9 +155,9 @@ Append-only development log for the `coding-eval` repository.
     `thinking=`, Harbor agent commands omitted `--thinking high`, and runner
     delegated `None`.
   - GREEN: focused Harbor thinking tests passed.
-  - GREEN: `mamba run -n coding-eval python -m pytest -q tests/test_terminal_bench.py tests/test_resume_and_thinking.py`
+  - GREEN: `mamba run -n cospa python -m pytest -q tests/test_terminal_bench.py tests/test_resume_and_thinking.py`
     = 21 passed.
-  - GREEN: `mamba run -n coding-eval python -m pytest -q` = 114 passed.
+  - GREEN: `mamba run -n cospa python -m pytest -q` = 114 passed.
   - GREEN: `bash tests/scripts/run_all.sh` = all shell tests passed
     (`test_check_models`, `test_root_entrypoints`, `test_run_matrix`,
     `test_setup`).
@@ -188,7 +188,7 @@ Append-only development log for the `coding-eval` repository.
 - Evidence (RED -> GREEN):
   - RED: malformed-result viewer tests failed on missing warning plumbing.
   - GREEN: focused malformed-result tests passed.
-  - GREEN: `mamba run -n coding-eval python -m pytest -q` = 118 passed.
+  - GREEN: `mamba run -n cospa python -m pytest -q` = 118 passed.
   - GREEN: `bash tests/scripts/run_all.sh` = all shell tests passed
     (`test_check_models`, `test_root_entrypoints`, `test_run_matrix`,
     `test_setup`).
@@ -214,7 +214,7 @@ Append-only development log for the `coding-eval` repository.
   - RED: new superpowers and Terminal-Bench invariant tests failed because
     `pi_devstack_superpowers` was unknown and mapped to built-in `pi`.
   - GREEN: focused adapter, thinking, and Terminal-Bench mapping tests passed.
-  - GREEN: `mamba run -n coding-eval python -m pytest -q` = 120 passed.
+  - GREEN: `mamba run -n cospa python -m pytest -q` = 120 passed.
   - GREEN: `bash tests/scripts/run_all.sh` = all shell tests passed
     (`test_check_models`, `test_root_entrypoints`, `test_run_matrix`,
     `test_setup`).
@@ -246,7 +246,7 @@ Append-only development log for the `coding-eval` repository.
 - Evidence (RED -> GREEN):
   - RED: usage capture/backfill/viewer tests failed on missing telemetry
     modules or dropped cached/reasoning/cost fields.
-  - GREEN: `mamba run -n coding-eval python -m pytest -q` = 127 passed.
+  - GREEN: `mamba run -n cospa python -m pytest -q` = 127 passed.
   - GREEN: `bash tests/scripts/run_all.sh` = all shell tests passed
     (`test_check_models`, `test_root_entrypoints`, `test_run_matrix`,
     `test_setup`).
@@ -268,7 +268,7 @@ Append-only development log for the `coding-eval` repository.
     `results/` path against an absolute pi session trace.
 - Evidence (RED -> GREEN):
   - RED: relative-results backfill test failed with `observed == 0`.
-  - GREEN: `mamba run -n coding-eval python -m pytest -q` = 128 passed.
+  - GREEN: `mamba run -n cospa python -m pytest -q` = 128 passed.
 - Decision: keep the fix in backfill rather than telemetry lookup so runner
   behavior for intentionally relative workdirs remains unchanged.
 - Next: rerun backfill on the Ornith high result wrapper to replace
@@ -290,7 +290,7 @@ Append-only development log for the `coding-eval` repository.
 - Evidence (RED -> GREEN):
   - RED: viewer tests failed on missing default cost columns, missing browser
     cost columns, and missing `$/M` verbose pricing fields.
-  - GREEN: `mamba run -n coding-eval python -m pytest -q` = 130 passed.
+  - GREEN: `mamba run -n cospa python -m pytest -q` = 130 passed.
   - GREEN: `bash tests/scripts/run_all.sh` = all shell tests passed
     (`test_check_models`, `test_root_entrypoints`, `test_run_matrix`,
     `test_setup`).
@@ -314,7 +314,7 @@ Append-only development log for the `coding-eval` repository.
 - Evidence (RED -> GREEN):
   - RED: viewer tests reproduced a row with 1 costed trial out of 2 completed
     trials and still-computed ratios.
-  - GREEN: `mamba run -n coding-eval python -m pytest -q` = 131 passed.
+  - GREEN: `mamba run -n cospa python -m pytest -q` = 131 passed.
   - GREEN: `bash tests/scripts/run_all.sh` = all shell tests passed
     (`test_check_models`, `test_root_entrypoints`, `test_run_matrix`,
     `test_setup`).
@@ -337,7 +337,7 @@ Append-only development log for the `coding-eval` repository.
     `trial-N/jobs/.../manifest.json`.
 - Evidence (RED -> GREEN):
   - RED: full-scan regression test crashed on a list-shaped nested manifest.
-  - GREEN: `mamba run -n coding-eval python -m pytest -q` = 132 passed.
+  - GREEN: `mamba run -n cospa python -m pytest -q` = 132 passed.
   - GREEN: `bash tests/scripts/run_all.sh` = all shell tests passed
     (`test_check_models`, `test_root_entrypoints`, `test_run_matrix`,
     `test_setup`).
@@ -362,7 +362,7 @@ Append-only development log for the `coding-eval` repository.
 - Evidence (RED -> GREEN):
   - RED: metadata test failed because `load_model_metadata()` could not read
     repo model pricing and returned the zero-priced provider stub.
-  - GREEN: `mamba run -n coding-eval python -m pytest -q` = 133 passed.
+  - GREEN: `mamba run -n cospa python -m pytest -q` = 133 passed.
   - GREEN: `bash tests/scripts/run_all.sh` = all shell tests passed
     (`test_check_models`, `test_root_entrypoints`, `test_run_matrix`,
     `test_setup`).
@@ -389,7 +389,7 @@ Append-only development log for the `coding-eval` repository.
   - RED: new tests failed because Harbor agent commands did not export
     sessions, runner manifests stayed empty after fake Harbor traces, and
     backfill reported Harbor artifact traces as unavailable.
-  - GREEN: `mamba run -n coding-eval python -m pytest -q` = 137 passed.
+  - GREEN: `mamba run -n cospa python -m pytest -q` = 137 passed.
   - GREEN: `bash tests/scripts/run_all.sh` = all shell tests passed
     (`test_check_models`, `test_root_entrypoints`, `test_run_matrix`,
     `test_setup`).
@@ -415,7 +415,7 @@ Append-only development log for the `coding-eval` repository.
 - Evidence (RED -> GREEN):
   - RED: new viewer tests reproduced `$0` GLM costs and `Costed 1/1` for a
     pricing-only row with no tokens.
-  - GREEN: `mamba run -n coding-eval python -m pytest -q` = 139 passed.
+  - GREEN: `mamba run -n cospa python -m pytest -q` = 139 passed.
   - GREEN: `bash tests/scripts/run_all.sh` = all shell tests passed
     (`test_check_models`, `test_root_entrypoints`, `test_run_matrix`,
     `test_setup`).
@@ -441,7 +441,7 @@ Append-only development log for the `coding-eval` repository.
   - RED: cache-reuse and scanner-pruning tests failed because cache hits still
     reparsed trial JSON and nested `workdir/.../trial-*` paths were scanned.
   - GREEN: focused cache/scanner tests passed.
-  - GREEN: `mamba run -n coding-eval python -m pytest -q` = 142 passed.
+  - GREEN: `mamba run -n cospa python -m pytest -q` = 142 passed.
   - GREEN: `bash tests/scripts/run_all.sh` = all shell tests passed
     (`test_check_models`, `test_root_entrypoints`, `test_run_matrix`,
     `test_setup`).
@@ -469,7 +469,7 @@ Append-only development log for the `coding-eval` repository.
 - Evidence (RED -> GREEN):
   - RED: the verifier-exception test raised `FileNotFoundError` and wrote no
     artifacts.
-  - GREEN: `mamba run -n coding-eval python -m pytest tests/test_runner_failure.py -q`
+  - GREEN: `mamba run -n cospa python -m pytest tests/test_runner_failure.py -q`
     = 3 passed.
   - Operational check: `./view -v --filter ornith-high-20260704 --no-cache`
     now shows `pi_devstack_superpowers` as complete with `91/225` and
@@ -493,9 +493,9 @@ Append-only development log for the `coding-eval` repository.
 - Evidence (RED -> GREEN):
   - RED: `test_materialize_task_skips_generated_build_artifacts` copied
     `build/` into the workdir.
-  - GREEN: `mamba run -n coding-eval python -m pytest tests/test_aider_polyglot.py -q`
+  - GREEN: `mamba run -n cospa python -m pytest tests/test_aider_polyglot.py -q`
     = 14 passed.
-  - GREEN: `mamba run -n coding-eval python -m pytest -q` = 144 passed.
+  - GREEN: `mamba run -n cospa python -m pytest -q` = 144 passed.
   - GREEN: `bash tests/scripts/run_all.sh` = all shell tests passed.
 - Decision: keep the vendor tree intact and make materialization robust to
   dirty external datasets.
@@ -515,7 +515,7 @@ Append-only development log for the `coding-eval` repository.
 - Evidence (RED -> GREEN):
   - RED: `test_run_trial_reruns_when_manifest_missing` skipped a
     verdict-only trial and left `run_count=1`.
-  - GREEN: `mamba run -n coding-eval python -m pytest tests/test_resume_and_thinking.py -q`
+  - GREEN: `mamba run -n cospa python -m pytest tests/test_resume_and_thinking.py -q`
     = 6 passed.
 - Decision: treat missing manifest as incomplete work, even when a verdict
   exists, because the manifest carries timing, model, sampling, and usage data
@@ -541,7 +541,7 @@ Append-only development log for the `coding-eval` repository.
     long-context trials were charged at short-context rates.
   - RED: reasoning-token cost test charged only visible output tokens.
   - GREEN: pricing-focused tests passed.
-  - GREEN: `mamba run -n coding-eval python -m pytest -q` = 148 passed.
+  - GREEN: `mamba run -n cospa python -m pytest -q` = 148 passed.
   - GREEN: `bash tests/scripts/run_all.sh` = all shell tests passed.
   - Operational check: clean GPT-5.5 smoke now shows `$1.32` total cost,
     `$0.2648/task`, and `3.78 pass/$`.
@@ -563,9 +563,9 @@ Append-only development log for the `coding-eval` repository.
 - Evidence (RED -> GREEN):
   - RED: `test_load_model_metadata_has_qwen_36_repo_pricing` loaded zero-cost
     provider pricing because the repo config had no Qwen cost metadata.
-  - GREEN: `mamba run -n coding-eval python -m pytest tests/test_usage_capture.py -q`
+  - GREEN: `mamba run -n cospa python -m pytest tests/test_usage_capture.py -q`
     = 8 passed.
-  - GREEN: `mamba run -n coding-eval python -m pytest -q` = 149 passed.
+  - GREEN: `mamba run -n cospa python -m pytest -q` = 149 passed.
   - GREEN: `bash tests/scripts/run_all.sh` = all shell tests passed.
 - Decision: keep pricing in repo config as the benchmark source of truth.
 - Next: backfill existing Qwen manifests if/when Qwen eval runs produce
@@ -590,7 +590,7 @@ Append-only development log for the `coding-eval` repository.
   - RED: stale incomplete trials were reported as `running`; retry and
     process-group cleanup entrypoints were missing.
   - GREEN: targeted liveness/retry/cleanup tests passed.
-  - GREEN: `mamba run -n coding-eval python -m pytest -q` = 155 passed.
+  - GREEN: `mamba run -n cospa python -m pytest -q` = 155 passed.
   - GREEN: `bash tests/scripts/run_all.sh` = all shell tests passed.
   - Operational check: cached-disabled `./view -v --all --filter
     'glm-5.2|qwen3.6' --no-cache` shows live Qwen rows as `running` and dead
@@ -619,7 +619,7 @@ Append-only development log for the `coding-eval` repository.
     profiles were unsupported, and pi cost was not preserved as
     `cost_usd_pi`.
   - GREEN: pricing/telemetry-focused tests passed.
-  - GREEN: `mamba run -n coding-eval python -m pytest -q` = 159 passed.
+  - GREEN: `mamba run -n cospa python -m pytest -q` = 159 passed.
   - GREEN: `bash tests/scripts/run_all.sh` = all shell tests passed.
   - Operational check: cached-disabled `./view -v --all --filter
     'ornith|qwen3.6|glm-5.2|nemotron|stepfun' --no-cache` reprices existing
@@ -646,7 +646,7 @@ Append-only development log for the `coding-eval` repository.
   - RED: Codex runtime/backfill tests failed because `reasoning_effort` was
     absent and local numeric budgets were retained.
   - GREEN: focused Codex runtime/backfill tests passed.
-  - GREEN: `mamba run -n coding-eval python -m pytest -q` = 161 passed.
+  - GREEN: `mamba run -n cospa python -m pytest -q` = 161 passed.
   - GREEN: `bash tests/scripts/run_all.sh` = all shell tests passed.
 - Decision: keep numeric `thinking_token_budget` only for non-OpenAI models
   where cospa owns the local effort-to-budget mapping.
@@ -670,7 +670,7 @@ Append-only development log for the `coding-eval` repository.
   - GREEN: targeted malformed-path viewer tests passed.
   - GREEN: cached-disabled live `./view --verbose --no-cache` emitted no
     malformed-path warnings for the current result tree.
-  - GREEN: `mamba run -n coding-eval python -m pytest -q` = 161 passed.
+  - GREEN: `mamba run -n cospa python -m pytest -q` = 161 passed.
 - Decision: keep warnings for malformed paths that contain durable artifacts,
   because those represent real parse/counting ambiguity.
 - Next: avoid rewriting historical empty result shells unless they interfere
@@ -742,3 +742,19 @@ Append-only development log for the `coding-eval` repository.
   - 1 new test in `tests/test_view_scores_grouping.py` (dead high-effort
     runner not marked running when default is alive). Full suite 167 passed.
   - Live: aiand qwen high now correctly shows "partial" (was "running").
+
+## 2026-07-07 — Fix Aider Polyglot verifier false failures
+- Context: GPT-5.5 medium showed a pathological language split
+  (`python/java/rust` at 0%) that did not match real workdir behavior.
+- Changes: Python verification now targets copied test files; Java and Rust
+  verify from short temp copies; Java drops stale invalid `JAVA_HOME`;
+  JavaScript installs exercise dependencies before `npm test`; verifier
+  parsing handles Rust multi-binary output and Gradle JUnit XML counts.
+- Evidence: focused RED tests for the confirmed failures now pass; real
+  GPT-5.5 artifacts for `python/affine-cipher`, `java/affine-cipher`,
+  `rust/accumulate`, and `javascript/alphametics` reverify as passing.
+  Full suite: `mamba run -n cospa python -m pytest -q` reports
+  173 passed.
+- Decision: do not rewrite historical verdicts automatically; existing
+  scores from runs verified before this fix should be treated as invalid
+  until reverified or rerun.

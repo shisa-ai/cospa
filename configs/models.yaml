@@ -1,15 +1,15 @@
 models:
-  - id: thinkingcap/thinkingcap-qwen36-27b-fp8
+  - id: local-vllm/thinkingcap-qwen36-27b-fp8
     name: ThinkingCap Qwen3.6 27B FP8 (direct vLLM)
     context_window: 262144
     max_tokens: 81920
     reasoning: true
     reasoning_effort_source: model-native-unbounded
     cost:
-      input: 0
-      cacheRead: 0
+      input: 0.30
+      cacheRead: 0.15
       cacheWrite: 0
-      output: 0
+      output: 2.40
     pricing_unit: usd_per_1m_tokens
   - id: codex/gpt-5.5
     name: GPT-5.5

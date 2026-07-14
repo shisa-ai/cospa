@@ -776,3 +776,17 @@ Append-only development log for the `cospa` repository.
   `pi_devstack`, `pi_devstack_superpowers`, `little_coder`, and
   `little_coder_superpowers`; add codex-pool budget translation if native
   reasoning becomes excessive.
+
+## 2026-07-15 — Rename the direct provider to local-vllm
+
+- Context: standardize the direct OpenAI-compatible provider prefix as
+  `local-vllm` instead of the model-specific `thinkingcap` name.
+- Decision: use `local-vllm/thinkingcap-qwen36-27b-fp8` and assign the same
+  benchmark-equivalent pricing as Qwen 3.6 27B: $0.30/M input, $0.15/M cache
+  read, and $2.40/M output.
+- Evidence: pi lists the canonical provider/model, the live runner
+  reachability probe succeeds, metadata resolves the expected prices, and
+  the focused reachability/usage test set passes (16 tests).
+- Operations: stopped the initial four-completed-task `thinkingcap/...`
+  smoke rather than mix provider IDs and prices. Its partial durable results
+  remain intact; restart under the canonical `local-vllm/...` identity.

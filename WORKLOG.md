@@ -758,3 +758,21 @@ Append-only development log for the `cospa` repository.
 - Decision: do not rewrite historical verdicts automatically; existing
   scores from runs verified before this fix should be treated as invalid
   until reverified or rerun.
+
+## 2026-07-15 — Register direct ThinkingCap vLLM model
+
+- Context: prepare a five-adapter Aider Polyglot smoke against
+  `thinkingcap-qwen36-27b-fp8` served directly by vLLM 0.23.0 at
+  `http://localhost:8001/v1`.
+- Decision: record the model as native, unbounded reasoning. Direct vLLM
+  accepts `thinking_token_budget`, but stock pi cannot map its symbolic
+  effort levels to that top-level field; no explicit harness thinking level
+  will be sent for this experiment.
+- Evidence: live `/v1/models`, `/version`, chat-completion, runner
+  reachability, and headless pi probes succeeded. Full validation:
+  `mamba run -n coding-eval python -m pytest -q` (181 passed) and
+  `bash tests/scripts/run_all.sh` (41 assertions passed).
+- Next action: run five Aider Polyglot problems at `k=1` with `pi_vanilla`,
+  `pi_devstack`, `pi_devstack_superpowers`, `little_coder`, and
+  `little_coder_superpowers`; add codex-pool budget translation if native
+  reasoning becomes excessive.

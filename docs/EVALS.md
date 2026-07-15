@@ -20,6 +20,14 @@ everything:
 | External leaderboard anchor | **Terminal-Bench Core 0.1.1 now**; Terminal-Bench 2.1 at milestones | Pin the official task revision and run sparingly, rather than sweeping every model x adapter cell |
 | New harness/trace discriminator | **SWE Atlas Test Writing + Codebase Q&A** | Harbor-native, cost-gated 12-task pilot, then a fixed 24-task internal screen |
 | Production tool-stack stress | **APEX-SWE Observability**, then Integration | Run after the cheaper Harbor-native pilot proves which adapters deserve the heavier environment |
+| Cross-suite trajectory review | **Normalized cospa events + AgentLens-style paired review** | Re-score the same adapter runs; do not buy another set of agent trajectories just to study traces |
+
+The much larger benchmark inventory reviewed below changes the _measurement
+layer_ more than the suite order. AgentLens supplies a useful trace-review
+pattern, SWE-Explore offers an isolated exploration diagnostic, and
+FeatureBench/RACE-bench expose feature-development gaps. None is a cheaper,
+cleaner replacement for the first SWE Atlas pilot once published token use,
+integration burden, and scorer dependencies are included.
 
 The immediate leaderboard fix is still to pin the existing Terminal-Bench
 integration to **`terminal-bench-core==0.1.1`**. That is the 80-task dataset
@@ -74,11 +82,28 @@ Terminal-Bench. Exact SWE Atlas leaderboard comparison requires the full
 workflow, the published judge, and `k=3`, so reserve it for a winning
 configuration rather than the adapter matrix.
 
+There is now a stronger external comparison target than the previous review
+credited: the **Artificial Analysis Coding Agent Index** combines DeepSWE (113
+tasks), Terminal-Bench v2 (84 compatible tasks), and SWE-Atlas-QnA (124 tasks),
+reports harness-specific scores plus tokens, cost, and wall time, and repeats
+all tasks three times. This independently supports SWE Atlas as a relevant
+harness discriminator. It does not make the index cheap: 321 tasks x `k=3` is
+963 trajectories, and SWE-Atlas-QnA alone is 372. Use those protocols only for
+a winning milestone configuration.
+
 ## Evidence labels
+
+Candidate discovery started from the user-supplied
+**[Agentic coding benchmark map — July 15, 2026](https://chatgpt.com/share/6a5786c0-00bc-83ee-816e-f61cf7bc4f7e)**.
+That broad secondary inventory is valuable for coverage, but it is not treated
+as primary evidence. Claims that affect the recommendation below were checked
+against benchmark papers, datasets, harnesses, or first-party leaderboards.
 
 Token and runtime figures are unusually easy to misread in agent benchmarks.
 This document uses these labels:
 
+- **Discovery inventory**: a secondary map used to find candidates, not to
+  establish a numerical claim.
 - **Measured here**: calculated from durable cospa results or the vendored
   dataset currently checked out.
 - **Published**: stated by the benchmark or model authors.
@@ -220,9 +245,26 @@ real-environment/skills evaluations. That is where this review concentrates.
 | [APEX-Agents](https://www.mercor.com/apex/apex-agents-leaderboard/) | Long-horizon investment banking, consulting, and law work. | 480 tasks in 33 worlds. | Explains its presence on Hy3/M3 cards, but it is not a coding benchmark. APEX-**SWE** is the relevant sibling. |
 | LiveCodeBench / BigCodeBench / HumanEval-style sets | Competitive programming or function generation without a persistent software environment. | Usually cheap, one-shot, and easy to score. | They do not exercise repository navigation, build/debug loops, or sustained tool use. Aider already supplies the more relevant version of this signal. |
 
+### High-impact additions from the broader benchmark map
+
+The full discovery map contains dozens of useful families. The following are
+the missing candidates most likely to alter a cospa decision; mirroring the
+entire catalog here would obscure rather than improve the run plan.
+
+| Capability gap | Strong candidate and primary evidence | Cost/trace implication | Decision for cospa |
+| --- | --- | --- | --- |
+| Fresh multilingual issue repair | **[SWE-bench Live MultiLang](https://github.com/microsoft/SWE-bench-Live)** has 743 tasks across six languages and 381 repositories as of its May 2026 release, with executable sandboxes and a public submission path. | Actual token/runtime use is **unknown**. The rolling full split improves freshness but complicates longitudinal comparison unless a release is pinned. | Best future freshness anchor, not a short harness screen. Evaluate a frozen release only after the current suite can afford another large issue-repair family. |
+| Complex feature implementation | **[FeatureBench](https://github.com/LiberCoders/FeatureBench)** has 200 Python tasks and an official 30-task Lite split with executable F2P/P2P grading and a public leaderboard. Its L1 gold solutions average 790 lines over 15.7 files. | Published Lite baselines average **2.6M--9.0M input tokens/task**, 13K--41K output, and permit up to 500 steps. One 30-task pass therefore implies an **estimated 78M--270M input tokens** before repetitions. | Best fixed feature-development milestone identified by the map, but “Lite” is not cheap enough for the routine adapter matrix. |
+| Feature planning and intermediate reasoning | **[RACE-bench](https://arxiv.org/abs/2603.26337)** provides 528 Python feature tasks and a 100-task Lite set, executable patch checks, and structured targets for intent, files, implementation tasks, and steps. | On Lite, published medians span 145K--3.49M tokens and 156--1,121 seconds per task depending on agent/model. Trace normalization and several reasoning metrics require a summarizer or judge. | Valuable when planning quality is the deployment question; too large and judge-dependent to displace SWE Atlas as the first screen. |
+| Full issue lifecycle | **[SWE-Cycle](https://github.com/tubehao/SWE-Cycle)** evaluates environment reconstruction, implementation, test generation, and a combined FullCycle over 489 filtered issues. It is implemented on Harbor. | FullCycle allows three hours per instance and uses an execution-capable LLM judge; the complete suite is intrinsically a milestone campaign. | Strong later autonomy benchmark. Do not confuse Harbor compatibility with low trajectory or verifier cost. |
+| Direct trajectory quality | **[AgentLens](https://github.com/agent-lens/agent-lens-bench)** combines formal checks with cited LLM reviews of instruction compliance, tool use, recovery, verification, and interaction quality. Its current public fold is 16 Java scenarios x two personas, or 32 trajectories. | Compact task count, but collection requires a headless JetBrains IDE, an LLM user simulator, and an LLM judge. Published token/runtime distributions are **unknown**. | Borrow its _evaluation pattern_ for existing cospa traces first. Integrating its Java/IDE fold is optional and should not block benchmark-native scoring. |
+| Repository exploration | **[SWE-Explore](https://github.com/Qiushao-E/SWE-Explore-Bench)** scores a top-five ranked list of code regions for 848 issues across ten languages, with line-level labels derived from successful trajectories. | The standard loop omits patch generation and is therefore structurally cheaper, but agent token/runtime distributions are **unknown**. It measures context selection, not coding completion. | Best candidate for a focused exploration A/B after trace normalization; keep its score separate from task success. |
+| Safe action boundaries | **[UnderSpecBench](https://arxiv.org/abs/2607.02294)** expands 69 DevOps task families into 2,208 intent/target/blast-radius variants and uses deterministic side-effect oracles for acted runs. | The complete matrix is large, but paired explicit/underspecified variants can isolate scaffold effects. Non-action disposition still uses an LLM judge. | High-value safety sidecar if cospa will gate autonomous DevOps actions; not a general coding score. |
+| Test generation compatibility | **[SWT-Bench Verified](https://swtbench.com/)** provides 433 human-verified Python issue-to-test tasks and an established leaderboard. | Current specialized systems are already near 87% and public aggregate token/runtime use is **unknown**. | Useful external test-generation anchor, but SWE Atlas Test Writing is less saturated, multilingual, and evaluates broader engineering rigor. |
+
 ## Trace-specific comparison
 
-"Best agentic traces" has at least four meanings, and the benchmarks optimize
+"Best agentic traces" has several meanings, and the benchmarks optimize
 different ones:
 
 | Need | Best choice | Reason |
@@ -230,6 +272,8 @@ different ones:
 | Richest production-behavior trace | **APEX-SWE** | The agent must combine shell/file work with services, telemetry, tickets/chat, implementation, and verification. Failures expose environment understanding and epistemic discipline, not only patch correctness. |
 | Cleanest next harness A/B in cospa | **SWE Atlas Q&A + Test Writing** | Harbor accepts interchangeable agents while keeping the task environment and grader fixed; a common single-shell action interface makes exploration, execution, and verification phases easier to compare. |
 | Best already-published coding trace corpus | **SWE-bench Pro** | Public full trajectories, Docent browsing, and independent cost/token/intent tooling exist. Reuse those artifacts; do not pay to regenerate all 731 tasks. |
+| Best direct trajectory evaluator to adapt | **AgentLens** | It pairs formal outcomes with evidence-citing reviews and side-by-side comparison. Its evaluator design is more portable to cospa than its current IDE-specific task fold. |
+| Best exploration-only diagnostic | **SWE-Explore** | Ranked line regions separate context retrieval from patch synthesis and expose whether one harness finds useful evidence earlier or with less noise. |
 | Best help-seeking trace | **HiL-Bench** | ASK-F1 directly scores whether the agent detects an unresolvable gap and asks a targeted question instead of silently assuming. |
 | Best pure MCP trace | **MCPMark** for objective state changes; **MCP-Atlas** for broad read-only discovery | Both isolate tool behavior, but neither is a substitute for repository engineering. |
 
@@ -239,6 +283,15 @@ diffs, test/build invocations, provider usage fields, compaction/cache events,
 and final verifier subchecks. Benchmark-native traces are otherwise too
 different to support fair claims such as "adapter A explores earlier" or
 "adapter B verifies more."
+
+Score mechanical trace facts first: time and tokens to first edit, files read
+before editing, test/build calls, repeated tool errors, recovery after failure,
+last-edit-to-final-verification distance, and whether the final verifier was
+actually run. Then apply a pinned, blinded, side-order-randomized pairwise judge
+to a small stratified sample for qualitative claims such as instruction
+compliance or epistemic discipline. Judge reviews must cite trace events, report
+judge cost and disagreement, and remain diagnostic; they must never override a
+benchmark's programmatic outcome.
 
 ## Harness-comparison and campaign policy
 
@@ -312,6 +365,24 @@ paper's $0.35--$1.90 per-task range does not expose tokens or wall time and does
 not include every model cospa will run. Twelve binary tasks have a worst-case
 95% margin around ±28 points; this phase qualifies infrastructure, cost, and
 large scaffold effects rather than ranking close systems.
+
+### Cross-cutting: paired trace review (no extra agent trajectories)
+
+Reuse every matched Phase A/B trajectory for a second, diagnostic report:
+
+- compute the mechanical event metrics above directly from normalized logs;
+- compare adapters only on identical task/model/provider blocks;
+- blind adapter names and randomize left/right order for a pinned pairwise judge
+  on a predeclared sample of passes, failures, and discordant outcomes;
+- retain cited reviews as artifacts and record judge model, prompt, tokens,
+  cost, and repeat agreement separately from agent usage;
+- keep benchmark pass/fail or rubric scores primary. A persuasive trace cannot
+  turn a failing artifact into a pass.
+
+This imports the useful part of AgentLens without paying for its separate
+headless-IDE/user-simulator collection loop. SWE-Explore can later add
+line-level exploration labels on its own tasks, but generic trace metrics should
+ship first because they apply to Aider, Terminal-Bench, SWE Atlas, and APEX.
 
 ### Phase B: routine screen (`swe_atlas_screen24`)
 
@@ -399,9 +470,18 @@ cost-aware signal that answers a concrete deployment question.
    absolute score; use paired task deltas and paired uncertainty/tests for
    adapter comparisons. Use full suites for close ranking claims.
 
-## Primary sources
+## Sources
 
-- [Artificial Analysis Coding Agent Index methodology](https://artificialanalysis.ai/methodology/coding-agents-benchmarking)
+- Discovery inventory (secondary): [Agentic coding benchmark map — July 15, 2026](https://chatgpt.com/share/6a5786c0-00bc-83ee-816e-f61cf7bc4f7e)
+- [Artificial Analysis Coding Agent Index](https://artificialanalysis.ai/agents/coding-agents) and [methodology](https://artificialanalysis.ai/methodology/coding-agents-benchmarking)
+- [AgentLens paper](https://arxiv.org/abs/2607.06624) and [harness](https://github.com/agent-lens/agent-lens-bench)
+- [SWE-Explore paper](https://arxiv.org/abs/2606.07297) and [harness](https://github.com/Qiushao-E/SWE-Explore-Bench)
+- [FeatureBench paper](https://arxiv.org/abs/2602.10975), [harness](https://github.com/LiberCoders/FeatureBench), and [public results](https://libercoders.github.io/FeatureBench/)
+- [RACE-bench](https://arxiv.org/abs/2603.26337)
+- [SWE-Cycle paper](https://arxiv.org/abs/2605.13139) and [Harbor-based harness](https://github.com/tubehao/SWE-Cycle)
+- [SWE-bench Live](https://github.com/microsoft/SWE-bench-Live)
+- [UnderSpecBench](https://arxiv.org/abs/2607.02294)
+- [SWT-Bench](https://swtbench.com/)
 - [APEX-SWE paper](https://arxiv.org/abs/2601.08806), [public data](https://huggingface.co/datasets/mercor/APEX-SWE), [launch](https://www.mercor.com/blog/introducing-apex-swe/), [harness](https://github.com/Mercor-Intelligence/apex-swe)
 - [FreshBrew paper](https://arxiv.org/abs/2510.04852), [harness and dataset](https://github.com/mrcabbage972/freshbrew)
 - [SWE Atlas paper](https://arxiv.org/abs/2605.08366), [harness](https://github.com/scaleapi/SWE-Atlas), [Q&A](https://labs.scale.com/leaderboard/sweatlas-qna), [Test Writing](https://labs.scale.com/leaderboard/sweatlas-tw), [Refactoring](https://labs.scale.com/leaderboard/sweatlas-refactoring)

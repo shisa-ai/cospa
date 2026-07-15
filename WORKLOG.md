@@ -931,3 +931,24 @@ Append-only development log for the `cospa` repository.
 - Validation: re-read `docs/EVALS.md` end to end and ran `git diff --check`.
 - Next action: select pilot IDs from upstream metadata before observing target
   model outcomes, then run one real model/adapter at k=1 under the cost gates.
+
+## 2026-07-15 — Reuse traces before adding more benchmark runs
+
+- Context: triage the user-supplied 60-plus-family agentic coding map against
+  cospa's signal-per-token, harness-comparison, and leaderboard requirements.
+- Evidence: checked the Artificial Analysis index and primary artifacts for
+  AgentLens, SWE-Explore, FeatureBench, RACE-bench, SWE-Cycle, SWE-bench Live,
+  UnderSpecBench, and SWT-Bench. FeatureBench Lite's published means imply
+  78M--270M input tokens for one 30-task pass; RACE-bench Lite reports
+  145K--3.49M tokens and 156--1,121 seconds per task depending on configuration.
+- Decision: retain SWE Atlas as the first controlled screen and APEX-SWE as the
+  production-stack stress test. Add an AgentLens-style mechanical and blinded
+  paired review over the same normalized cospa trajectories; treat AgentLens,
+  SWE-Explore, feature, lifecycle, and safety suites as targeted sidecars or
+  milestones rather than another routine Cartesian matrix.
+- Sources: cite the shared ChatGPT research map as a secondary discovery
+  inventory in `docs/EVALS.md`, while grounding decision-changing claims in
+  first-party papers, datasets, harnesses, and leaderboards.
+- Validation: re-read `docs/EVALS.md` end to end and ran `git diff --check`.
+- Next action: define the cross-adapter event schema and trace-review artifacts
+  before or alongside the 12-task SWE Atlas cost pilot.

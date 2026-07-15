@@ -44,6 +44,10 @@ EOF
 
 cat > "$BIN/git" <<'EOF'
 #!/usr/bin/env bash
+echo "$PWD|$*" >> "$GIT_LOG"
+if [[ "$*" == "rev-parse HEAD" ]]; then
+    echo "91e10457b5410f16c44364da1a34cb6de8c488a5"
+fi
 exit 0
 EOF
 
@@ -66,7 +70,8 @@ EOF
 chmod +x "$BIN/pi" "$BIN/mamba" "$BIN/harbor" "$BIN/git" "$BIN/npm"
 
 NPM_LOG="$TMP/npm.log"
-export NPM_LOG
+GIT_LOG="$TMP/git.log"
+export NPM_LOG GIT_LOG
 TEST_PATH="$BIN:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
 OUT=$(PATH="$TEST_PATH" bash "$PROJ/scripts/setup.sh" 2>&1)
 RC=$?
@@ -75,5 +80,11 @@ assert_exit 0 "$RC" "setup exits 0 when npm can install missing little-coder"
 assert_contains "install -g little-coder" "$(cat "$NPM_LOG" 2>/dev/null || true)" \
     "setup installs little-coder when missing"
 assert_contains "little-coder installed" "$OUT" "setup reports little-coder installation"
+assert_contains "fetch origin 91e10457b5410f16c44364da1a34cb6de8c488a5" \
+    "$(cat "$GIT_LOG")" "setup fetches the immutable Terminal-Bench Core 0.1.1 commit"
+assert_contains "checkout --detach 91e10457b5410f16c44364da1a34cb6de8c488a5" \
+    "$(cat "$GIT_LOG")" "setup checks out Terminal-Bench Core 0.1.1 detached"
+assert_not_contains "$PROJ/vendor/terminal-bench|pull --ff-only" "$(cat "$GIT_LOG")" \
+    "setup does not advance Terminal-Bench to mutable head"
 
 summary

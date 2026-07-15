@@ -952,3 +952,19 @@ Append-only development log for the `cospa` repository.
 - Validation: re-read `docs/EVALS.md` end to end and ran `git diff --check`.
 - Next action: define the cross-adapter event schema and trace-review artifacts
   before or alongside the 12-task SWE Atlas cost pilot.
+
+## 2026-07-15 — Pin Terminal-Bench Core to 0.1.1
+
+- Context: cospa previously discovered all 241 tasks from a mutable
+  `terminal-bench-core@head` checkout while describing the suite as the
+  leaderboard-compatible Core benchmark.
+- Decision: check in the official 80-task Core 0.1.1 manifest, pin setup to
+  upstream commit `91e10457b5410f16c44364da1a34cb6de8c488a5`, and refuse
+  task discovery from a partial or differently pinned real checkout.
+- Evidence: the RED tests proved discovery and manifest accounting selected
+  `head`; the pinned checkout now discovers exactly 80 unique task IDs and a
+  real vendored `task.yaml` materializes successfully.
+- Validation: `mamba run -n coding-eval python -m pytest -q` reports 182
+  passed; `bash tests/scripts/run_all.sh` passes all shell assertions.
+- Next action: integrate the pinned 12-task SWE Atlas Q&A + Test Writing pilot
+  through the same custom Harbor agents.

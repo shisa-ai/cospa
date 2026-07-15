@@ -2,7 +2,7 @@
 Terminal-Bench suite — Harbor-based evaluation.
 
 This suite delegates to Harbor for task execution and verification.
-It reads the Terminal-Bench registry to discover tasks, then launches
+It reads cospa's immutable Terminal-Bench Core 0.1.1 manifest, then launches
 Harbor jobs with the appropriate agent and model.
 
 Reference: vendor/terminal-bench/CLAUDE.md
@@ -93,9 +93,10 @@ class TerminalBenchSuite:
     """Terminal-Bench suite using Harbor for execution."""
 
     name = "terminal_bench"
-    version = "0.1"
+    version = "0.1.1"
     languages = ["python"]
-    task_count = 0
+    task_count = 80
+    manifest_path = PROJECT_ROOT / "configs" / "terminal_bench_core_0.1.1.json"
 
     # Harbor is the source of truth for Terminal-Bench scoring, so we want
     # verify() to run even if the (no-op) adapter returned nonzero — the
@@ -204,36 +205,64 @@ class TerminalBenchSuite:
                 env["CODING_EVAL_LOCAL_API_KEY"] = api_key
         return env
 
+    def _dataset_manifest(self) -> Dict[str, Any]:
+        """Load cospa's immutable Terminal-Bench Core dataset manifest."""
+        try:
+            with open(self.manifest_path) as f:
+                manifest = json.load(f)
+        except (OSError, json.JSONDecodeError):
+            return {}
+        return manifest if isinstance(manifest, dict) else {}
+
+    def _task_source_dir(self, vendor_dir: Path) -> Path | None:
+        manifest = self._dataset_manifest()
+        dataset_path = manifest.get("dataset_path")
+        if not isinstance(dataset_path, str) or not dataset_path:
+            return None
+        return Path(vendor_dir) / "terminal-bench" / dataset_path
+
+    def _vendor_is_pinned(self, vendor_dir: Path) -> bool:
+        """Reject a real git checkout that is not at the declared commit."""
+        manifest = self._dataset_manifest()
+        expected = manifest.get("commit_hash")
+        repo = Path(vendor_dir) / "terminal-bench"
+        if not expected or not (repo / ".git").exists():
+            # Unit fixtures are not git repositories; task-shape checks below
+            # still ensure the complete declared subset is present.
+            return True
+        try:
+            result = subprocess.run(
+                ["git", "-C", str(repo), "rev-parse", "HEAD"],
+                capture_output=True,
+                text=True,
+                timeout=5,
+            )
+        except Exception:
+            return False
+        return result.returncode == 0 and result.stdout.strip() == expected
+
     def get_task_ids(self, vendor_dir: Path = None) -> List[str]:
-        """Get all task IDs from Terminal-Bench registry or original-tasks directory."""
+        """Return the complete, immutable Terminal-Bench Core 0.1.1 subset."""
         if vendor_dir is None:
             vendor_dir = Path("vendor")
         vendor_dir = Path(vendor_dir)
-
-        registry_file = vendor_dir / "terminal-bench" / "registry.json"
-        if not registry_file.exists():
+        manifest = self._dataset_manifest()
+        task_ids = manifest.get("task_ids")
+        tasks_dir = self._task_source_dir(vendor_dir)
+        if (
+            not isinstance(task_ids, list)
+            or not task_ids
+            or tasks_dir is None
+            or not self._vendor_is_pinned(vendor_dir)
+        ):
             return []
 
-        with open(registry_file) as f:
-            registry = json.load(f)
-
-        # Registry is a list of dataset versions
-        task_ids = []
-        for entry in registry:
-            # Use the head version if available, otherwise use the latest
-            if entry.get("version") == "head" and entry.get("task_id_subset") is None:
-                # Head version with no subset = all tasks
-                # Discover tasks from the original-tasks directory
-                tasks_dir = vendor_dir / "terminal-bench" / "original-tasks"
-                if tasks_dir.exists():
-                    for task_dir in tasks_dir.iterdir():
-                        if task_dir.is_dir():
-                            task_ids.append(task_dir.name)
-                break
-            elif entry.get("task_id_subset"):
-                task_ids.extend(entry["task_id_subset"])
-
-        return sorted(set(task_ids))  # Deduplicate
+        normalized = sorted({str(task_id) for task_id in task_ids})
+        # Never silently run a partial/mismatched checkout under the 0.1.1
+        # label. setup.sh checks out the matching commit, which contains all 80.
+        if any(not (tasks_dir / task_id).is_dir() for task_id in normalized):
+            return []
+        return normalized
 
     def materialize_task(self, task_id: str, workdir: Path, vendor_dir: Path = None) -> Dict[str, Any]:
         """
@@ -255,8 +284,9 @@ class TerminalBenchSuite:
         scorer = ""
         task_meta: Dict[str, Any] = {}
 
-        original_task_dir = vendor_dir / "terminal-bench" / "original-tasks" / task_id
-        if original_task_dir.exists():
+        tasks_dir = self._task_source_dir(vendor_dir)
+        original_task_dir = tasks_dir / task_id if tasks_dir is not None else None
+        if original_task_dir is not None and original_task_dir.exists():
             if workdir.exists():
                 shutil.rmtree(workdir)
             workdir.mkdir(parents=True, exist_ok=True)
@@ -491,8 +521,8 @@ class TerminalBenchSuite:
         Run a Harbor job for a Terminal-Bench task.
 
         This is the primary execution path for Terminal-Bench tasks. It
-        delegates to `harbor run` with the agent, model, and dataset
-        resolved from the vendored registry.
+        delegates to `harbor run` with the agent, model, and pinned local
+        dataset task.
 
         Per `harbor run --help`:
           -k, --n-attempts   attempts per trial   (NOT -n, which is concurrency)
@@ -516,8 +546,9 @@ class TerminalBenchSuite:
         local_task_path = None
         if vendor_dir is not None:
             vendor_dir = Path(vendor_dir).resolve()
-            original_task = vendor_dir / "terminal-bench" / "original-tasks" / task_id
-            if original_task.exists():
+            tasks_dir = self._task_source_dir(vendor_dir)
+            original_task = tasks_dir / task_id if tasks_dir is not None else None
+            if original_task is not None and original_task.exists():
                 local_task_path = jobs_dir / f"_local_tasks_{time.time_ns()}"
                 migrate_cmd = [
                     "harbor",

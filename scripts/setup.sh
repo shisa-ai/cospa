@@ -111,22 +111,31 @@ else
     fi
 fi
 
-# ── 5. Clone Terminal-Bench ──────────────────────────────────────────────
+# ── 5. Clone Terminal-Bench Core 0.1.1 ──────────────────────────────────
 echo ""
-echo "── Checking Terminal-Bench ──"
+echo "── Checking Terminal-Bench Core 0.1.1 ──"
 TB_DIR="$VENDOR_DIR/terminal-bench"
+TB_REPO="https://github.com/harbor-framework/terminal-bench.git"
+TB_COMMIT="91e10457b5410f16c44364da1a34cb6de8c488a5"
 if [[ -d "$TB_DIR/.git" ]]; then
     log_ok "Terminal-Bench already cloned at $TB_DIR"
-    # Pull latest
-    cd "$TB_DIR"
-    git pull --ff-only || log_warn "Could not pull latest (may be detached HEAD)"
-    cd "$PROJECT_DIR"
 else
-    log_warn "Cloning Terminal-Bench (latest from harbor-framework)..."
+    log_warn "Cloning Terminal-Bench for the pinned Core 0.1.1 dataset..."
     mkdir -p "$VENDOR_DIR"
-    git clone https://github.com/harbor-framework/terminal-bench.git "$TB_DIR"
+    git clone "$TB_REPO" "$TB_DIR"
     log_ok "Terminal-Bench cloned to $TB_DIR"
 fi
+
+cd "$TB_DIR"
+git fetch origin "$TB_COMMIT"
+git checkout --detach "$TB_COMMIT"
+TB_ACTUAL_COMMIT=$(git rev-parse HEAD)
+cd "$PROJECT_DIR"
+if [[ "$TB_ACTUAL_COMMIT" != "$TB_COMMIT" ]]; then
+    log_err "Terminal-Bench checkout mismatch: expected $TB_COMMIT, got $TB_ACTUAL_COMMIT"
+    exit 1
+fi
+log_ok "Terminal-Bench pinned to Core 0.1.1 ($TB_COMMIT)"
 
 # ── 6. Clone Aider Polyglot dataset ──────────────────────────────────────
 echo ""

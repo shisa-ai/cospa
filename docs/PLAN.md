@@ -27,9 +27,9 @@ reorder — earlier items unblock later ones.
       `vendor/`. README stub.
 - [ ] **P2. Install script (`scripts/setup.sh`).** Verifies pi (≥ some
       version), verifies the `cospa` mamba env (python=3.12) exists
-      and is active, installs Harbor (`uv tool install harbor`), clones
-      Terminal-Bench (latest, `harbor-framework/terminal-bench`) and
-      Aider Polyglot dataset under `vendor/`. **Does not** touch models
+      and is active, installs Harbor (`uv tool install harbor`), checks out
+      Terminal-Bench Core 0.1.1 at commit `91e10457b5410f16c44364da1a34cb6de8c488a5`,
+      and clones Aider Polyglot under `vendor/`. **Does not** touch models
       or providers — model setup is a separate concern, by design.
 - [ ] **P3. Models check (`scripts/check-models.sh`).** Reads model IDs
       from a `configs/models.yaml` (or `~/.pi/agent/models.json`), pings
@@ -73,11 +73,10 @@ reorder — earlier items unblock later ones.
       one suite (Aider Polyglot), k=1 trial, **5 problems** only. Prove
       the manifest/verdict path works before scaling.
 - [ ] **P11. Suite: Terminal-Bench.** `harness/suites/terminal_bench.py`
-      wraps `harbor run` against `terminal-bench@latest` using
-      `--agent-import-path` per adapter. **Patch the Harbor `upload_dir`
-      bug first** (agent-created `/tests` dir → verifier paths at
-      `/tests/tests/test.sh`). Start with k=1 on a 5-task slice to
-      measure wall-clock before committing to full runs.
+      wraps `harbor run` against the checked-in 80-task
+      `terminal-bench-core==0.1.1` manifest and immutable upstream commit.
+      Each adapter uses a distinct custom Harbor agent. Start with k=1 on a
+      5-task slice to measure wall-clock before committing to full runs.
 - [ ] **P12. Score viewer (`view-scores/`).** Static HTML + a tiny
       `server.py` that walks `results/` and renders a table:
       rows = `(model, adapter, suite)`, cells = pass-rate with CI,
@@ -182,23 +181,19 @@ runner. Cheap signal; do this before any TB run.
 
 ### Terminal-Bench (P11, second)
 
-Latest from `harbor-framework/terminal-bench` — the canonical agentic
-eval. We use it via Harbor; Core is the subset we run first for cheap
-iteration, then graduate to the full suite if Core separates the
-harnesses cleanly.
+Terminal-Bench Core 0.1.1 is the canonical 80-task set behind the original
+leaderboard. Cospa runs it through Harbor as the immediate external anchor;
+Terminal-Bench 2.1 remains a separate milestone campaign.
 
-- Repo: https://github.com/harbor-framework/terminal-bench (latest)
-- Driven by Harbor: `harbor run -d terminal-bench@latest \
-  --agent-import-path <adapter> -m <model> -n <k>`.
-- Per-adapter `--agent-import-path`:
-  - `pi_vanilla`, `pi_devstack`, `*_superpowers` → adapter wraps the
-    `pi_terminal_bench:PiAgent` import with the right launch flags.
-  - `little_coder` → `benchmarks.harbor_adapter.little_coder_agent:LittleCoderAgent`
-    (from the little-coder repo, used as a library reference).
-- **Landmine:** Harbor `upload_dir` bug — if the agent creates `/tests`
-  during a task, the verifier's files land at `/tests/tests/test.sh` and
-  scoring silently breaks. Patch before any TB run; record the patch hash
-  in the manifest.
+- Repo: https://github.com/harbor-framework/terminal-bench
+- Dataset manifest: `configs/terminal_bench_core_0.1.1.json`.
+- Upstream pin: `91e10457b5410f16c44364da1a34cb6de8c488a5` on
+  `dataset/terminal-bench-core/v0.1.x`; setup checks it out detached and task
+  discovery refuses a partial or differently pinned real checkout.
+- Driven by Harbor with one local migrated task path per cospa trial and one
+  Harbor attempt per outer trial.
+- Every adapter maps to a distinct custom Harbor agent, preserving scaffold
+  identity inside the task container.
 - **Wall-clock probe first.** Before scaling, run k=1 on a 5-task slice,
   measure time, *then* decide k for the real matrix. TB on small models
   is slow; we don't want to discover a 40-hour run after launching it.

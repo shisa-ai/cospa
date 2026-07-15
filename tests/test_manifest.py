@@ -91,25 +91,15 @@ def test_env_hash_is_a_real_hash_not_executable_path():
     )
 
 
-def test_terminal_bench_pin_reads_commit_hash():
-    """get_terminal_bench_pin reads commit_hash (not pin) from registry.json."""
+def test_terminal_bench_pin_reads_checked_in_0_1_1_manifest():
+    """The runner records the immutable Core 0.1.1 dataset commit."""
     with tempfile.TemporaryDirectory() as tmp:
-        vendor = Path(tmp) / "vendor"
-        (vendor / "terminal-bench").mkdir(parents=True)
-        (vendor / "terminal-bench" / "registry.json").write_text(json.dumps([
-            {
-                "name": "terminal-bench-core",
-                "version": "head",
-                "commit_hash": "abc123def456",
-                "task_id_subset": None,
-            }
-        ]))
-        pin = get_terminal_bench_pin(vendor)
-    assert pin == "abc123def456", pin
+        pin = get_terminal_bench_pin(Path(tmp) / "vendor")
+    assert pin == "91e10457b5410f16c44364da1a34cb6de8c488a5", pin
 
 
-def test_terminal_bench_pin_resolves_symbolic_head_to_git_commit():
-    """A registry commit_hash of 'head' is not an immutable pin."""
+def test_terminal_bench_pin_ignores_mutable_vendored_head_registry():
+    """A vendored head registry must not override cospa's declared pin."""
     with tempfile.TemporaryDirectory() as tmp:
         vendor = Path(tmp) / "vendor"
         tb = vendor / "terminal-bench"
@@ -124,12 +114,10 @@ def test_terminal_bench_pin_resolves_symbolic_head_to_git_commit():
         ]))
 
         with patch("harness.runner.subprocess.run") as mock_run:
-            mock_run.return_value = sp.CompletedProcess(
-                args=["git"], returncode=0, stdout="abc123gitsha\n", stderr=""
-            )
             pin = get_terminal_bench_pin(vendor)
 
-    assert pin == "abc123gitsha", pin
+    assert pin == "91e10457b5410f16c44364da1a34cb6de8c488a5", pin
+    mock_run.assert_not_called()
 
 
 def test_manifest_env_hash_recorded():

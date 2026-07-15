@@ -145,7 +145,7 @@ def test_full_pipeline_runner_to_viewer_with_encoded_paths(tmp_path):
 
 def test_terminal_bench_materialize_against_real_vendored_task():
     """materialize_task must extract the prompt from a REAL task.yaml in vendor/."""
-    tb_root = PROJECT_ROOT / "vendor" / "terminal-bench" / "original-tasks"
+    tb_root = PROJECT_ROOT / "vendor" / "terminal-bench" / "tasks"
     if not tb_root.exists():
         import pytest
         pytest.skip("vendor/terminal-bench not present")

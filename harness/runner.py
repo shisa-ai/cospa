@@ -250,37 +250,17 @@ def get_harbor_version():
 
 
 def get_terminal_bench_pin(vendor_dir: Path) -> str:
-    """Get the Terminal-Bench pin/patch hash from the registry."""
-    registry_file = Path(vendor_dir) / "terminal-bench" / "registry.json"
-    if not registry_file.exists():
-        return "unknown"
+    """Return the checked-in Terminal-Bench Core 0.1.1 commit pin.
 
+    The upstream dataset commit predates registry.json, so the immutable
+    cospa manifest—not a mutable vendored head registry—is authoritative.
+    """
+    manifest_file = PROJECT_ROOT / "configs" / "terminal_bench_core_0.1.1.json"
     try:
-        with open(registry_file) as f:
-            registry = json.load(f)
-
-        # Look for the head version's commit hash. The registry uses
-        # `commit_hash` (not `pin`); fall back to `pin` for older schemas.
-        for entry in registry:
-            if entry.get("version") == "head":
-                pin = entry.get("commit_hash") or entry.get("pin") or "unknown"
-                if pin != "head":
-                    return pin
-
-                # The vendored registry currently uses the symbolic string
-                # "head". Resolve it to the actual local git commit so the
-                # manifest contains an immutable dataset pin.
-                result = subprocess.run(
-                    ["git", "-C", str(registry_file.parent), "rev-parse", "HEAD"],
-                    capture_output=True,
-                    text=True,
-                    timeout=5,
-                )
-                if result.returncode == 0 and result.stdout.strip():
-                    return result.stdout.strip()
-                return pin
-
-        return "unknown"
+        with open(manifest_file) as f:
+            manifest = json.load(f)
+        pin = manifest.get("commit_hash")
+        return str(pin) if pin else "unknown"
     except Exception:
         return "unknown"
 
@@ -504,6 +484,7 @@ def run_trial(
         },
         "suite": {
             "id": suite.__class__.__name__,
+            "version": getattr(suite, "version", "unknown"),
             "task_id": task_id,
         },
         "trial": trial_k,

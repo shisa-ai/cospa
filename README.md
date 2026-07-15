@@ -14,8 +14,8 @@ measured alongside what you pay for it** — so a result is only "good"
 when the capability-per-dollar is good.
 
 Clean-room harness for evaluating small/local coding models across agent
-harness variants on **Aider Polyglot** and **Terminal-Bench**. The harness
-does not serve models; it consumes provider definitions from `~/.pi/agent/models.json`
+harness variants on **Aider Polyglot** and **Terminal-Bench Core 0.1.1**. The
+harness does not serve models; it consumes provider definitions from `~/.pi/agent/models.json`
 and writes durable results under `results/`.
 
 ## What we're measuring
@@ -93,9 +93,11 @@ All Python code runs inside the `cospa` mamba environment
 (`python=3.12`). Use `mamba run -n cospa <cmd>` or
 `conda activate cospa` before invoking any harness script.
 
-Terminal-Bench runs through Harbor and Docker. If your shell was opened before
-you were added to the `docker` group, use `sg docker -c '<command>'` or open a
-new login shell before running Harbor-backed smoke tests.
+Terminal-Bench Core is pinned to the 80-task `0.1.1` release at upstream commit
+`91e10457b5410f16c44364da1a34cb6de8c488a5`; `scripts/setup.sh` checks out that
+commit detached. Runs go through Harbor and Docker. If your shell was opened
+before you were added to the `docker` group, use `sg docker -c '<command>'` or
+open a new login shell before running Harbor-backed smoke tests.
 
 ## Model Reachability
 
@@ -264,17 +266,17 @@ artifacts, then the runner/backfill copies those traces into the same
 ## Benchmarks
 
 - **Aider Polyglot** — 225 Exercism problems (C++, Go, Java, JS, Python, Rust). Cheap signal.
-- **Terminal-Bench** — canonical agentic eval via Harbor. Wall-clock probe first.
+- **Terminal-Bench Core 0.1.1** — pinned 80-task external anchor via Harbor. Wall-clock probe first.
 
 ## Current Verified State
 
-- Python tests: `mamba run -n cospa python -m pytest -q` reports
-  `100 passed`.
-- Shell harness: `bash tests/scripts/run_all.sh` reports `38` assertions
+- Python tests: `mamba run -n coding-eval python -m pytest -q` reports
+  `182 passed`.
+- Shell harness: `bash tests/scripts/run_all.sh` reports `44` assertions
   passed.
-- Setup now verifies `little-coder`, installs it with `npm install -g
-  little-coder` when absent, and warns if `little-coder --list-models` cannot
-  read provider config.
+- Setup pins Terminal-Bench Core 0.1.1 and verifies `little-coder`, installing
+  it with `npm install -g little-coder` when absent and warning if
+  `little-coder --list-models` cannot read provider config.
 - Terminal-Bench Docker smoke: `local/ornith-1.0-35b` + `pi_vanilla` +
   `hello-world` completed through Harbor 0.16 with `verifier_result.rewards.reward: 1.0`.
 - Smoke artifact:

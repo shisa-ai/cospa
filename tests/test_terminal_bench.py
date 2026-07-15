@@ -30,7 +30,7 @@ from harness.suites.terminal_bench import TerminalBenchSuite
 
 def _make_task_yaml_task(vendor_dir: Path, task_id="hello-world"):
     """Create a real-shaped Terminal-Bench task using task.yaml."""
-    task_dir = vendor_dir / "terminal-bench" / "original-tasks" / task_id
+    task_dir = vendor_dir / "terminal-bench" / "tasks" / task_id
     task_dir.mkdir(parents=True)
     (task_dir / "task.yaml").write_text(
         "# canary\n"
@@ -105,7 +105,7 @@ def test_materialize_task_does_not_raise_on_missing_optional_files():
     with tempfile.TemporaryDirectory() as tmp:
         tmp = Path(tmp)
         vendor_dir = tmp / "vendor"
-        task_dir = vendor_dir / "terminal-bench" / "original-tasks" / "minimal"
+        task_dir = vendor_dir / "terminal-bench" / "tasks" / "minimal"
         task_dir.mkdir(parents=True)
         (task_dir / "task.yaml").write_text("instruction: |-\n  Do the thing.\n")
 
@@ -522,22 +522,39 @@ def test_harbor_agent_cli_omits_thinking_when_unset(monkeypatch):
     assert "--thinking" not in command, command
 
 
-def test_get_terminal_bench_pin_reads_commit_hash():
-    """get_terminal_bench_pin must read commit_hash, not the nonexistent 'pin'."""
+def test_get_task_ids_uses_only_terminal_bench_core_0_1_1_subset():
+    """Discovery must use Core 0.1.1, never the mutable head entry."""
+    suite = TerminalBenchSuite()
+    with tempfile.TemporaryDirectory() as tmp:
+        vendor = Path(tmp) / "vendor"
+        tb_dir = vendor / "terminal-bench"
+        (tb_dir / "tasks" / "pinned-one").mkdir(parents=True)
+        (tb_dir / "tasks" / "pinned-two").mkdir(parents=True)
+        (tb_dir / "original-tasks" / "head-only").mkdir(parents=True)
+        manifest_path = Path(tmp) / "terminal-bench-core-0.1.1.json"
+        manifest_path.write_text(json.dumps({
+            "name": "terminal-bench-core",
+            "version": "0.1.1",
+            "dataset_path": "tasks",
+            "commit_hash": "91e10457b5410f16c44364da1a34cb6de8c488a5",
+            "task_ids": ["pinned-two", "pinned-one"],
+        }))
+        suite.manifest_path = manifest_path
+
+        task_ids = suite.get_task_ids(vendor)
+
+    assert suite.version == "0.1.1"
+    assert task_ids == ["pinned-one", "pinned-two"]
+    assert "head-only" not in task_ids
+
+
+def test_get_terminal_bench_pin_reads_0_1_1_commit_hash():
+    """The manifest pin must match Core 0.1.1, even when head comes first."""
     from harness.runner import get_terminal_bench_pin
     with tempfile.TemporaryDirectory() as tmp:
         vendor = Path(tmp) / "vendor"
-        (vendor / "terminal-bench").mkdir(parents=True)
-        (vendor / "terminal-bench" / "registry.json").write_text(json.dumps([
-            {
-                "name": "terminal-bench-core",
-                "version": "head",
-                "commit_hash": "abc123def",
-                "task_id_subset": None,
-            }
-        ]))
         pin = get_terminal_bench_pin(vendor)
-    assert pin == "abc123def", pin
+    assert pin == "91e10457b5410f16c44364da1a34cb6de8c488a5", pin
 
 
 def test_runner_delegates_terminal_bench_to_harbor():

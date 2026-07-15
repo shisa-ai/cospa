@@ -260,7 +260,7 @@ class TestSuites:
             assert task_ids == []
 
     def test_terminal_bench_materialize_task(self):
-        """Test that terminal_bench materializes tasks from original-tasks."""
+        """Test that terminal_bench materializes tasks from pinned tasks/."""
         suite = TerminalBenchSuite()
 
         with tempfile.TemporaryDirectory() as tmpdir:
@@ -268,8 +268,8 @@ class TestSuites:
             vendor_dir = tmpdir / "vendor"
             vendor_dir.mkdir()
 
-            # Create original-tasks directory
-            task_dir = vendor_dir / "terminal-bench" / "original-tasks" / "my-task"
+            # Create the pinned dataset task directory
+            task_dir = vendor_dir / "terminal-bench" / "tasks" / "my-task"
             task_dir.mkdir(parents=True)
             (task_dir / "instruction.md").write_text("Solve this task")
             (task_dir / "verifier.py").write_text("print('verified')")

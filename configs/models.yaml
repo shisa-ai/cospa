@@ -1,4 +1,16 @@
 models:
+  - id: bonsai/Ternary-Bonsai-27B-Q2_0.gguf
+    name: Ternary Bonsai 27B Q2_0 (local llama.cpp)
+    context_window: 262144
+    max_tokens: 81920
+    reasoning: true
+    reasoning_effort_source: model-native-server-cap-2048
+    cost:
+      input: 0
+      cacheRead: 0
+      cacheWrite: 0
+      output: 0
+    pricing_unit: usd_per_1m_tokens
   - id: local-vllm/thinkingcap-qwen36-27b-fp8
     name: ThinkingCap Qwen3.6 27B FP8 (direct vLLM)
     context_window: 262144

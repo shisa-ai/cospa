@@ -969,6 +969,29 @@ Append-only development log for the `cospa` repository.
 - Next action: integrate the pinned 12-task SWE Atlas Q&A + Test Writing pilot
   through the same custom Harbor agents.
 
+## 2026-07-15 — Register and smoke-test Ternary Bonsai 27B
+
+- Context: build PrismML's llama.cpp CUDA fork for SM120, serve the ternary
+  27B GGUF on physical GPU1, and expose it to cospa through pi's local provider
+  configuration.
+- Evidence: demo `cfd842af`, llama.cpp `62061f910`, and model repository
+  `20e435f5`; all 697 CUDA targets built for `120a`; the three selected GGUF
+  files matched their published SHA-256 metadata; health, model discovery, and
+  `check_model_reachable()` passed.
+- End-to-end: `pi_vanilla` solved the real `cpp/all-your-base` Aider Polyglot
+  task in 88.4 seconds and passed all 17 native grader assertions. The result
+  is under run id `bonsai-ternary-27b-smoke-20260715`.
+- Decision: add `bonsai/Ternary-Bonsai-27B-Q2_0.gguf` to the model matrix with
+  the live server's 262K context and explicit 2K server reasoning cap. Keep
+  DSpark disabled until it is evaluated as a separate configuration.
+- Validation: `./view --all --filter bonsai` reports 1/1. Full pytest reports
+  `178 passed, 1 skipped, 2 failed`; the failures are an all-skipped shell
+  fixture discovering the unrelated port-8080 service and a PyYAML newline
+  assertion, neither on the Bonsai/Aider path.
+- Next action: run a fixed six-language Polyglot sample with matched sampling
+  and reasoning settings before treating the one-task smoke as a quality
+  comparison.
+
 ## 2026-07-16 — Integrate the SWE Atlas pilot
 
 - Context: the evaluation review selected a 12-task SWE Atlas cost/reliability

@@ -143,6 +143,7 @@ not silently inherit zero-priced development configs.
 
 ```yaml
 models:
+  - id: bonsai/Ternary-Bonsai-27B-Q2_0.gguf
   - id: nvidia/nemotron-3-ultra-550b-a55b
   - id: aiand/qwen/qwen3.6-27b
   - id: zai/glm-5.2

@@ -877,3 +877,20 @@ Append-only development log for the `cospa` repository.
   stratified FreshBrew JDK-21 subset if APEX's service stack is too costly.
 - Next action: pin APEX-SWE task IDs and run one real model/adapter at k=1
   before implementing a full matrix integration.
+
+## 2026-07-15 — Document MiMo TP3 and PRO 6000 P2P tuning
+
+- Context: add mitomtuna's exact TP3 repack of the 2026-07-03 MiMo-V2.5
+  NVFP4 target and its matching DFlash drafter to the 3× PRO 6000 survey.
+- Evidence: HF API size (205.6 GB target + 3.0 GB drafter); safetensors
+  header inspection (full 191.6 GB padded routed-expert payload); reviewed
+  the included transform's duplication/zero-padding invariants and the card's
+  PRO 6000 validation (381.5 tok/s, 1.36M-token FP8 KV pool, 90K needle pass).
+- Decision: make MiMo TP3+DFlash the first 3-GPU agentic/Terminal-Bench
+  throughput experiment, while labeling all numbers card-reported and gating
+  the invasive driver/BIOS/NCCL P2P recipe on host-specific reproduction.
+- Validation: re-read `docs/MODELS.md` end-to-end and ran `git diff --check`;
+  this workspace has no `nvidia-smi`, so the P2P path is not locally verified.
+- Next action: on the GPU host, verify every pair with
+  `nvidia-smi topo -p2p r` and NCCL `via P2P` logs before comparing TP3
+  throughput or running the first cospa trial.

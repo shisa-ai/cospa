@@ -16,7 +16,8 @@ Caveats that apply throughout:
   cross-model TB comparisons are approximate.
 - No community 4-bit quant publishes quality deltas. Sanity-eval with
   cospa before trusting any of them at Ornith-beating levels.
-- Speed figures below are **bandwidth-model estimates**, not measurements.
+- Speed figures below are **bandwidth-model estimates** unless explicitly
+  labeled as card-reported measurements; none were measured by us.
 
 ## Baseline: Ornith-1.0-35B
 
@@ -121,6 +122,7 @@ fine, ≥ 0.95 often requires shrinking graph capture sizes or
 | DS V4 Flash native | 159.6 | ✗ | ✅ +13.2 | ✅ +17.0 | ✅ +22.8 | ✅ +99.6 | ✅ |
 | MiMo MXFP4 | 176.6 | ✗ | ❌ −3.8 | ⚠️ ±0 | ✅ +5.8 | ✅ +82.6 | ✅ |
 | MiMo NVFP4 (mitomtuna) | 183.5 | ✗ | ❌ | ❌ | ❌ −1.1 | ✅ +75.7 | ✅ |
+| MiMo NVFP4 TP3 repack (+ DFlash) | 205.6 (+3.0 draft) | ✗ | ❌ | ❌ | ❌ | ✅ +53.6 (+50.6) | ✅ +68.0 (+65.0) |
 | Hy3 MXFP4 (INCModel2) | 164.2 | ✗ | ✅ +8.6 | ✅ +12.4 | ✅ +18.2 | ✅ +95.0 | ✅ |
 | Hy3 NVFP4 (0xSero) | 169.6 | ✗ | ⚠️ +3.2 | ✅ +7.0 | ✅ +12.8 | ✅ +89.6 | ✅ |
 | Hy3 NVFP4 (kodelow) | 180.9 | ✗ | ❌ | ❌ | ⚠️ +1.5 | ✅ +78.3 | ✅ +92.7 |
@@ -136,13 +138,19 @@ share. MiMo on 2 GPUs is single-stream-only and graph-capture-constrained.
 ### 3-GPU notes
 
 A third GPU (288 GB) unlocks Hy3, MiMo NVFP4, M3-REAP25 comfortably and
-M3 NVFP4 marginally — but **TP=3 has divisibility problems**: MiMo/Hy3
-have 64 Q-heads (64 % 3 ≠ 0), M2.7's 8 KV heads must replicate, MLA
-latent replicates per rank. Options: pipeline-parallel (PP=3), expert
-parallel, or repos repacked for TP3 —
+M3 NVFP4 marginally — but **ordinary TP=3 has divisibility problems**:
+MiMo/Hy3 have 64 Q-heads (64 % 3 ≠ 0), M2.7's 8 KV heads must replicate,
+and MLA latent state replicates per rank.
+
+MiMo now has an exact TP3-specific answer:
 [mitomtuna/MiMo-V2.5-0703-NVFP4-TP3](https://huggingface.co/mitomtuna/MiMo-V2.5-0703-NVFP4-TP3)
-exists precisely for this. Expect worse scaling than 2-GPU TP either way
-(PCIe, odd sharding).
+duplicates KV heads and adds exactly-annihilated Q heads, then zero-pads
+MLP groups so every TP dimension divides by 3. It does not requantize or
+fine-tune, but padding grows the 183.5 GB source checkpoint to 205.6 GB
+(plus a 3.0 GB matching DFlash drafter). The card reports 0.75–0.86× of
+TP4 decode throughput on PRO 6000s, rather than the single-GPU-bandwidth
+ceiling of PP=3. See the measured path and PCIe P2P requirements below.
+Hy3 still needs PP=3, TP=2 plus a spare GPU, or a future equivalent repack.
 
 ## MiMo-V2.5 (Xiaomi, 310B-A15B)
 
@@ -157,12 +165,67 @@ Quant repos (headers verified 2026-07-15):
 | --- | --- | --- | --- | --- |
 | [chriswritescode/MiMo-V2.5-DFlash-MXFP4A16](https://huggingface.co/chriswritescode/MiMo-V2.5-DFlash-MXFP4A16) | **176.6 GB** | U8 160.9 GB (MXFP4, E8M0 scales embedded) | BF16 4.5 + FP8 2.9 GB | MTP FP8, vision/audio BF16 |
 | [mitomtuna/MiMo-V2.5-0703-NVFP4](https://huggingface.co/mitomtuna/MiMo-V2.5-0703-NVFP4) | 183.5 GB | U8 151.4 + FP8 scales 18.9 GB | FP8 2.9 + BF16 3.8 GB | MTP FP8, vision/audio BF16 |
+| [mitomtuna/MiMo-V2.5-0703-NVFP4-TP3](https://huggingface.co/mitomtuna/MiMo-V2.5-0703-NVFP4-TP3) | **205.6 GB** | Same quant values; group-aligned zero pad 2048 → 2304 | MXFP8; 64Q/{4,8}KV → 72Q/9KV | Exact TP3 repack; +3.0 GB matching DFlash drafter |
 | [shadowlilac/MiMo-V2.5-NVFP4](https://huggingface.co/shadowlilac/MiMo-V2.5-NVFP4) | 187.2 GB | U8 151.4 + FP8 scales 18.9 GB | all BF16 (9.5 GB) | MTP BF16 |
 
 Size floor: ~303B routed-expert params → 151.4 GB packed FP4 + block
 scales (÷16 FP8 = 18.9 GB NVFP4; ÷32 E8M0 ≈ 9.5 GB MXFP4).
 **~176–184 GB is the honest floor for 4-bit MiMo-V2.5** without pruning.
 On 2 GPUs only the MXFP4 repo fits, and only at 0.95 utilization.
+The TP3 repo is deliberately above that floor: exact zero-padding adds
+~22.1 GB so the formerly indivisible axes can shard evenly across 3 GPUs.
+
+### TP3 repack and the PRO 6000 PCIe P2P fast path
+
+The TP3 transform is unusually auditable: `transform_checkpoint.py` ships
+in the repo and preserves every original quant group byte-for-byte. Full
+attention becomes 64Q/4KV → 72Q/9KV; sliding-window attention becomes
+64Q/8KV → 72Q/9KV. Duplicated K/V heads are bit-identical, padded Q rows
+and matching output-projection columns are zero, and NVFP4/MXFP8 MLP pads
+are aligned to whole quant groups. The matching
+[MiMo-V2.5-DFlash-TP3](https://huggingface.co/mitomtuna/MiMo-V2.5-DFlash-TP3)
+uses the same exact transform against the updated 2026-07-03 target.
+
+Card-reported validation on RTX PRO 6000 Blackwell, using the uploader's
+custom vLLM image and production command:
+
+| Measurement | TP3 result | Interpretation |
+| --- | --- | --- |
+| DFlash short-context reasoning, 2,500 generated tokens | **381.5 tok/s**, accepted length 5.71/8 | TP4 comparison was 488.0 tok/s → TP3 retained 0.78× |
+| 90K needle test | pass | one long-context smoke, not a general quality eval |
+| FP8 KV, util 0.965, 1M max context | **1,358,484-token pool** (1.30× at 1M) | 7–12% faster decode at 128K+, but 30–50% slower cold long-context prefill |
+| BF16 KV, util 0.965, 524K max context | **668,489-token pool** (1.28× at 524K) | fastest cold prefill; half the KV capacity |
+
+These are serving microbenchmarks, not cospa results. `0.965` assumes three
+dedicated, otherwise-idle 96 GB cards; the card reports that `0.975` OOMs
+on a ~4.8 GiB initialization transient and recommends 0.93–0.95 when the
+GPUs are shared. FP8 KV requires a 2026-07-13-or-newer image; the card says
+older builds silently ignore the dtype flag. It is attractive for
+prefix-cached agent loops, but BF16 may win for workloads dominated by cold
+long-context prefill.
+
+The larger lesson applies beyond MiMo: **verify PCIe peer-to-peer before
+judging multi-card scaling**. The uploader reports that the PRO 6000 driver
+otherwise fell back from NCCL P2P to shared-memory copies. Their fast path
+used all of the following:
+
+- driver override `ForceP2P=0x11;GrdmaPciTopoCheckOverride=1;EnableResizableBar=1`;
+- BIOS Resizable BAR and Above-4G decoding enabled, with IOMMU disabled (or
+  ACS overridden);
+- `NCCL_P2P_LEVEL=SYS`, `NCCL_CUMEM_ENABLE=0`, and
+  `NCCL_CUMEM_HOST_ENABLE=0` for legacy CUDA IPC across PCIe roots;
+- plain NCCL via `--disable-custom-all-reduce` (vLLM custom all-reduce was
+  unstable or slower on this topology).
+
+Verify `nvidia-smi topo -p2p r` reports every pair as `OK` and
+`NCCL_DEBUG=INFO` reports `via P2P`, not `via SHM`. The driver/BIOS changes
+are invasive, topology- and version-sensitive, and require a reboot; they
+are card guidance, **not yet verified on our hosts**. Do not copy the older
+`RMForceP2PType`/`RMPcieP2PType` recipe: the card reports that it breaks
+cross-process cuMem IPC on NCCL ≥ 2.29. The published path also requires a
+custom container, `--trust-remote-code`, replicated multimodal encoders,
+and specific Triton/FlashInfer/b12x backends, so reproduce it as a pinned
+experiment before turning any setting into host policy.
 
 ### ⚠️ INVALID: gaber/* repos — do not use
 
@@ -385,6 +448,11 @@ with ~58–94K context — worth a cospa sanity eval against DS V4 Flash.
    ~150–190 tok/s, near-nil KV cost — and 2 replicas on this rig doubles
    cospa trial throughput.
 
-On 3 GPUs: **Hy3 (kodelow NVFP4, PP=3)** for max scores with the safest
-quant recipe, accepting ~42–50 tok/s single-stream — or keep DS V4 Flash
-on TP=2 and give GPU 3 to an Ornith replica for matrix throughput.
+On 3 GPUs: **MiMo-V2.5 TP3 + matching DFlash is now the first agentic/
+Terminal-Bench throughput experiment**: it preserves the promising MiMo
+target and has a card-reported 381.5 tok/s short-context validation result,
+but depends on invasive P2P host tuning and a custom early-stage serving
+stack. **Hy3 (kodelow NVFP4, PP=3)** remains the score-first SWE-Pro choice
+with a safer quant recipe, accepting ~42–50 tok/s single-stream. The simpler
+operational alternative is still DS V4 Flash on TP=2 plus an Ornith replica
+on GPU 3 for parallel matrix throughput.

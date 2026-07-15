@@ -186,12 +186,21 @@ uploads** (verified from safetensors headers, 2026-07-15):
 [AesSedai/MiMo-V2.5-GGUF](https://huggingface.co/AesSedai/MiMo-V2.5-GGUF)
 (imatrix quants, includes vision mmproj):
 
-| Quant | Size | Fits |
-| --- | --- | --- |
-| IQ3_S | **114.2 GB** | 2× easily (~65 GB spare); ~3.4 bpw quality risk |
-| IQ4_XS | 147.9 GB | 2× comfortably — closest to NVFP4 bpw |
-| Q4_K_M | 190.8 GB | 3× only |
-| Q5_K_M / Q8_0 | 229.1 / 330.1 GB | 3× / ✗ |
+| Quant | Size | BPW | PPL increase vs base | KLD | 2-GPU fit |
+| --- | --- | --- | --- | --- | --- |
+| IQ3_S | 106.31 GiB (114.2 GB) | 2.95 | +8.12% | 0.0924 | Easy, but substantial quality risk |
+| **IQ4_XS** | **137.75 GiB (147.9 GB)** | **3.82** | **+2.81%** | **0.0415** | **Comfortable; ~54 GiB raw headroom** |
+| Q4_K_M | 177.68 GiB (190.8 GB) | 4.93 | +1.45% | 0.0206 | Tight; only ~14 GiB raw headroom |
+| Q5_K_M | 213.39 GiB (229.1 GB) | 5.92 | +0.37% | 0.0148 | Does not fit |
+| Q8_0 | 306.66 GiB (329.3 GB) | 8.50 | +0.12% | 0.0120 | Does not fit |
+
+The repo's measured perplexity/KLD results make **IQ4_XS the practical
+2-GPU choice**. Q4_K_M may technically fit if both cards expose nearly
+their full nominal 96 GiB, but its ~14 GiB total margin must also hold KV,
+CUDA workspaces, and llama.cpp overhead; at 160K context, q8_0 KV alone
+can consume up to ~5 GB. That is a tight squeeze for a relatively modest
+quality improvement over IQ4_XS. Check the cards' actual free MiB before
+attempting it.
 
 llama.cpp sidesteps the two things that hurt MiMo elsewhere: no TP
 divisibility constraints (layer/row split across any GPU count) and no
@@ -219,8 +228,10 @@ tokens — directly attacks reasoning-model latency in agent loops);
 q8_0 KV both directions. Trade-offs on our rig: llama.cpp MoE decode
 won't match vLLM NVFP4 kernels on Blackwell (ballpark 70–110 tok/s for
 IQ3_S single-stream on 2× PRO 6000, layer-split), no MTP/DFlash support,
-and IQ3_S (~3.4 bpw) is below the ~4.25 bpw NVFP4 quality point — eval
-before trusting. IQ4_XS on 3 GPUs is the more defensible quality pick.
+and IQ3_S (2.95 bpw, +8.12% PPL in the repo's measurement) is well
+below the NVFP4 quality point — eval before trusting. **IQ4_XS on 2 GPUs**
+is the more defensible GGUF configuration; use a third GPU only if choosing
+Q5_K_M or if extra runtime/context headroom matters more than utilization.
 
 ## DFlash speculative decoding on Blackwell (template)
 

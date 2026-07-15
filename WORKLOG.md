@@ -851,3 +851,15 @@ Append-only development log for the `cospa` repository.
   agent serving; AEON-7 image is sm_121a-only (rebuild needed for
   sm_120); recipe implies several-hundred tok/s for A3B-class + DFlash
   on PRO 6000, relevant to Ornith (Qwen3.5-MoE lineage).
+
+## 2026-07-15 — Prefer MiMo IQ4_XS for the 2-GPU GGUF route
+
+- Context: AesSedai's published quant comparison provides measured BPW,
+  perplexity, and KLD values that sharpen the MiMo GGUF choice.
+- Evidence: IQ4_XS is 137.75 GiB at 3.82 BPW with +2.81% PPL and 0.0415
+  KLD; Q4_K_M is 177.68 GiB at 4.93 BPW with +1.45% PPL and 0.0206 KLD.
+- Decision: recommend IQ4_XS on 2 GPUs. Its ~54 GiB raw headroom is much
+  safer than Q4_K_M's ~14 GiB before KV, CUDA workspaces, and runtime
+  overhead; correct the prior contradictory 3-GPU IQ4_XS wording.
+- Next action: benchmark IQ4_XS quality and decode speed in cospa before
+  adopting it as the MiMo serving route.

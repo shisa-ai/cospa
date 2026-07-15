@@ -863,3 +863,17 @@ Append-only development log for the `cospa` repository.
   overhead; correct the prior contradictory 3-GPU IQ4_XS wording.
 - Next action: benchmark IQ4_XS quality and decode speed in cospa before
   adopting it as the MiMo serving route.
+
+## 2026-07-15 — Recommend a production-shaped coding-agent eval pilot
+
+- Context: Aider Polyglot is near ceiling for strong configurations, while
+  Terminal-Bench has no completed local cost baseline and its current head
+  expands to 241 tasks.
+- Evidence: measured current `./view` wall/token distributions; reviewed
+  official model cards and primary sources for APEX-SWE, FreshBrew, SWE
+  Atlas, DeepSWE, SWE-bench variants, and adjacent agent benchmarks.
+- Decision: pilot 10 fixed public APEX-SWE tasks, promote to a 20-task
+  screen only if it fits the runtime/telemetry/validity gates; use a
+  stratified FreshBrew JDK-21 subset if APEX's service stack is too costly.
+- Next action: pin APEX-SWE task IDs and run one real model/adapter at k=1
+  before implementing a full matrix integration.

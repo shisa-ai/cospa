@@ -432,8 +432,8 @@ modernization, not general software engineering.
 
 ## What not to add
 
-The intern's MMLU-Pro, GPQA, BBH, GSM8K, MATH, and tool-free HLE suggestions may
-be useful model sanity checks, but they miss this project's objective. They do
+MMLU-Pro, GPQA, BBH, GSM8K, MATH, and tool-free HLE may be useful model sanity
+checks, but they miss this project's objective. They do
 not require the model to inspect an unfamiliar repository, manipulate files,
 run builds/tests, recover from tool errors, or leave a working artifact. Adding
 them would improve breadth of academic reasoning measurement while leaving the

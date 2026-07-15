@@ -14,8 +14,9 @@ measured alongside what you pay for it** — so a result is only "good"
 when the capability-per-dollar is good.
 
 Clean-room harness for evaluating small/local coding models across agent
-harness variants on **Aider Polyglot** and **Terminal-Bench Core 0.1.1**. The
-harness does not serve models; it consumes provider definitions from `~/.pi/agent/models.json`
+harness variants on **Aider Polyglot**, **Terminal-Bench Core 0.1.1**, and the
+**SWE Atlas 12-task pilot**. The harness does not serve models; it consumes
+provider definitions from `~/.pi/agent/models.json`
 and writes durable results under `results/`.
 
 ## What we're measuring
@@ -78,13 +79,13 @@ intentionally provide a shared `--results-dir`.
 ```
 harness/          # Core runner + adapter + suite implementations
   adapters/       # pi_vanilla, pi_devstack, little_coder
-  suites/         # aider_polyglot, terminal_bench
+  suites/         # aider_polyglot, terminal_bench, swe_atlas_pilot12
   runner.py       # Single load-bearing component
 configs/          # models.yaml, suite configs
 scripts/          # setup.sh, check-models.sh
 results/          # Generated per-run (gitignored)
 view-scores/      # Score viewer (static HTML + server)
-vendor/           # Vendored datasets (TB, Polyglot)
+vendor/           # Vendored datasets (TB, SWE Atlas, Polyglot)
 ```
 
 ## Environments
@@ -94,10 +95,13 @@ All Python code runs inside the `cospa` mamba environment
 `conda activate cospa` before invoking any harness script.
 
 Terminal-Bench Core is pinned to the 80-task `0.1.1` release at upstream commit
-`91e10457b5410f16c44364da1a34cb6de8c488a5`; `scripts/setup.sh` checks out that
-commit detached. Runs go through Harbor and Docker. If your shell was opened
-before you were added to the `docker` group, use `sg docker -c '<command>'` or
-open a new login shell before running Harbor-backed smoke tests.
+`91e10457b5410f16c44364da1a34cb6de8c488a5`. SWE Atlas is pinned at
+`2cac47d64a9123d915b8f6f6f53763391920f574`, with the selected 12 task IDs and
+strata in `configs/swe_atlas_pilot12.json`. `scripts/setup.sh` checks out both
+commits detached. Their runs go through Harbor and Docker. If your shell was
+opened before you were added to the `docker` group, use
+`sg docker -c '<command>'` or open a new login shell before running
+Harbor-backed smoke tests.
 
 ## Model Reachability
 
@@ -173,12 +177,42 @@ mamba run -n cospa python harness/runner.py \
   --k 1
 ```
 
-The same model id can be used with `--suite terminal_bench`; the Harbor custom
-agent copies the selected provider config into the task container before it
-runs. The provider `baseUrl` still has to be reachable from inside Docker.
+The same model id can be used with `--suite terminal_bench` or
+`--suite swe_atlas_pilot12`; the Harbor custom agent copies the selected
+provider config into the task container before it runs. The provider `baseUrl`
+still has to be reachable from inside Docker.
 
 Use the same pattern for SGLang, llama.cpp, Ollama, or any other HF-serving
 stack as long as it exposes OpenAI-compatible chat completions.
+
+## Running the SWE Atlas pilot
+
+SWE Atlas uses its upstream programmatic checks plus a pinned rubric judge. Set
+judge credentials separately from the agent model credentials:
+
+```bash
+export SWE_ATLAS_JUDGE_API_KEY='<key>'
+export SWE_ATLAS_JUDGE_BASE_URL='https://judge.example/v1'
+
+./run \
+  --suite swe_atlas_pilot12 \
+  --adapters pi_vanilla \
+  --models local/ornith-1.0-35b \
+  --k 1 \
+  --run-id swe-atlas-pilot12-k1
+```
+
+The judge model is fixed to `anthropic/claude-opus-4-5-20251101`; changing only
+credentials or endpoint must still route that exact model. The suite refuses to
+start an agent without both judge values, preserving missing judge setup as an
+infrastructure failure rather than an ordinary zero. Test Writing verdicts keep
+rubric, manifest, and mutation subchecks; Q&A verdicts keep rubric coverage and
+aggregate score alongside the strict reward.
+
+This is a custom cost/reliability pilot, not a directly comparable leaderboard
+run. First run all 12 at `k=1`, inspect time, normalized agent usage, judge
+usage, and infrastructure failures against `docs/EVALS.md`, then promote to a
+matched `k=2`. Do not launch the full adapter matrix first.
 
 ## Runner Output
 
@@ -244,7 +278,8 @@ The score viewer recursively discovers those wrappers. Supplying
 use it only for intentional merges. Avoid running two processes against the
 same explicit output directory and same matrix cell, because that will race on
 `trial-<k>` files. Terminal-Bench runs also share Docker and model-serving
-capacity, so start with low concurrency and watch provider rate limits.
+capacity, and SWE Atlas also uses an external judge, so start with low
+concurrency and watch both provider and judge rate limits.
 
 For a full matrix with a stable wrapper name:
 
@@ -267,16 +302,21 @@ artifacts, then the runner/backfill copies those traces into the same
 
 - **Aider Polyglot** — 225 Exercism problems (C++, Go, Java, JS, Python, Rust). Cheap signal.
 - **Terminal-Bench Core 0.1.1** — pinned 80-task external anchor via Harbor. Wall-clock probe first.
+- **SWE Atlas pilot12** — eight Test Writing + four Codebase Q&A tasks, balanced across Go, Python, C, and TypeScript. Cost/reliability gate before `k=2`.
 
 ## Current Verified State
 
 - Python tests: `mamba run -n coding-eval python -m pytest -q` reports
-  `182 passed`.
-- Shell harness: `bash tests/scripts/run_all.sh` reports `44` assertions
+  `194 passed`.
+- Shell harness: `bash tests/scripts/run_all.sh` reports `47` assertions
   passed.
-- Setup pins Terminal-Bench Core 0.1.1 and verifies `little-coder`, installing
-  it with `npm install -g little-coder` when absent and warning if
-  `little-coder --list-models` cannot read provider config.
+- Setup pins Terminal-Bench Core 0.1.1 and SWE Atlas pilot12, then verifies
+  `little-coder`, installing it with `npm install -g little-coder` when absent
+  and warning if `little-coder --list-models` cannot read provider config.
+- SWE Atlas is `wired (unit test + real pinned artifact)`: all 12 public tasks
+  discover and materialize with the declared workflow/language strata. A real
+  rubric-scoring run still requires the pinned judge endpoint and is not yet
+  claimed as end-to-end verified.
 - Terminal-Bench Docker smoke: `local/ornith-1.0-35b` + `pi_vanilla` +
   `hello-world` completed through Harbor 0.16 with `verifier_result.rewards.reward: 1.0`.
 - Smoke artifact:

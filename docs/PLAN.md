@@ -1,7 +1,8 @@
 # PLAN.md — cospa
 
 > Clean-room harness for evaluating **small local coding models** across
-> **agent harness variants** on **Aider Polyglot** and **Terminal-Bench Core**.
+> **agent harness variants** on **Aider Polyglot**, **Terminal-Bench Core**, and
+> the pinned **SWE Atlas Q&A + Test Writing pilot**.
 >
 > Scope is deliberately narrow: no model serving, no vLLM/SGLang config, no
 > training. Models are an *input* (provider IDs in `models.json`); results are
@@ -28,7 +29,8 @@ reorder — earlier items unblock later ones.
 - [ ] **P2. Install script (`scripts/setup.sh`).** Verifies pi (≥ some
       version), verifies the `cospa` mamba env (python=3.12) exists
       and is active, installs Harbor (`uv tool install harbor`), checks out
-      Terminal-Bench Core 0.1.1 at commit `91e10457b5410f16c44364da1a34cb6de8c488a5`,
+      Terminal-Bench Core 0.1.1 at commit `91e10457b5410f16c44364da1a34cb6de8c488a5`
+      and SWE Atlas at `2cac47d64a9123d915b8f6f6f53763391920f574`,
       and clones Aider Polyglot under `vendor/`. **Does not** touch models
       or providers — model setup is a separate concern, by design.
 - [ ] **P3. Models check (`scripts/check-models.sh`).** Reads model IDs
@@ -77,6 +79,11 @@ reorder — earlier items unblock later ones.
       `terminal-bench-core==0.1.1` manifest and immutable upstream commit.
       Each adapter uses a distinct custom Harbor agent. Start with k=1 on a
       5-task slice to measure wall-clock before committing to full runs.
+- [ ] **P11b. Suite: SWE Atlas pilot12.**
+      `harness/suites/swe_atlas.py` runs a predeclared Harbor-native slice:
+      eight Test Writing and four Codebase Q&A tasks, with three total tasks
+      per Go/Python/C/TypeScript stratum. Preserve upstream verification,
+      pin the rubric judge, and qualify cost/reliability at k=1 before k=2.
 - [ ] **P12. Score viewer (`view-scores/`).** Static HTML + a tiny
       `server.py` that walks `results/` and renders a table:
       rows = `(model, adapter, suite)`, cells = pass-rate with CI,
@@ -198,6 +205,37 @@ Terminal-Bench 2.1 remains a separate milestone campaign.
   measure time, *then* decide k for the real matrix. TB on small models
   is slow; we don't want to discover a 40-hour run after launching it.
 
+### SWE Atlas pilot12 (P11b, third)
+
+The first new harness-discrimination suite is the cost/reliability pilot from
+`docs/EVALS.md`, not a full SWE Atlas leaderboard reproduction.
+
+- Upstream repository: https://github.com/scaleapi/SWE-Atlas at immutable
+  commit `2cac47d64a9123d915b8f6f6f53763391920f574`.
+- Pilot manifest: `configs/swe_atlas_pilot12.json`; exactly eight Test Writing
+  and four Codebase Q&A tasks, with two Test Writing plus one Q&A task in each
+  of Go, Python, C, and TypeScript. Q&A also spans onboarding, root-cause,
+  architecture, and security; Test Writing spans unit, integration, and
+  acceptance work.
+- Harbor execution: each task's upstream `task.toml`, prompt, environment,
+  tests, mutation patch, rubrics, and judge prompts are copied unchanged into
+  the trial workdir. The same distinct custom Harbor agents used by
+  Terminal-Bench preserve adapter identity.
+- Judge: fixed to `anthropic/claude-opus-4-5-20251101`; credentials come from
+  `SWE_ATLAS_JUDGE_API_KEY` and `SWE_ATLAS_JUDGE_BASE_URL`. Missing judge
+  setup fails before agent execution. The pinned upstream commit also pins the
+  judge prompts and rubrics.
+- Results: strict Harbor reward remains the headline. Test Writing additionally
+  preserves rubric, manifest, and mutation subchecks; Q&A preserves aggregate
+  rubric coverage. Manifests record workflow, language, repository/base commit,
+  upstream commit, and judge model.
+- Status: `wired (unit test + real pinned artifact)`. All 12 tasks discover and
+  materialize from the real checkout; a real rubric-scoring path is still
+  required before upgrading this to `fixed (end-to-end)`.
+- Campaign: one representative model with `pi_vanilla`, all 12 at k=1. Apply
+  the runtime/token/telemetry/infrastructure/difficulty gates in `docs/EVALS.md`
+  before a matched k=2 pass or any adapter expansion.
+
 ## 4. Reproducibility & results layout
 
 Every normal CLI invocation writes under a model-prefixed run wrapper, so
@@ -220,10 +258,11 @@ database. `view-scores/` (P12) reads it cold. This means we can re-score
 without re-running, and partial runs compose by directory union.
 
 Reproducibility levers we record but do not enforce: pi version,
-little-coder version, Harbor version, TB pin, mamba env hash, sampling
-params, model context/output limits, pricing, and observed token/cost
-usage. For Terminal-Bench, the custom Harbor agents export container-side
-pi JSONL traces into Harbor artifacts so the runner/backfill can preserve
+little-coder version, Harbor version, TB pin, SWE Atlas upstream/judge pins,
+mamba env hash, sampling params, model context/output limits, pricing, and
+observed token/cost usage. For Terminal-Bench, the custom Harbor agents export
+container-side pi JSONL traces into Harbor artifacts so the runner/backfill can
+preserve
 the same raw response metadata under each trial's `out/` directory. A run
 is "comparable" to another only if these match; the viewer flags mismatches
 in the comparison view.

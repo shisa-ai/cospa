@@ -4,3 +4,6 @@ python_files = ["test_*.py"]
 python_classes = ["Test*"]
 python_functions = ["test_*"]
 addopts = "-v"
+markers = [
+  "requires_vendor: exercises real external datasets and skips when absent",
+]

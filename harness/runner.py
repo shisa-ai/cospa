@@ -47,7 +47,11 @@ from harness.telemetry import (
 
 def parse_args():
     parser = argparse.ArgumentParser(description="Run a single eval trial")
-    parser.add_argument("--suite", required=True, help="Suite name (aider_polyglot, terminal_bench)")
+    parser.add_argument(
+        "--suite",
+        required=True,
+        help="Suite name (aider_polyglot, terminal_bench, swe_atlas_pilot12)",
+    )
     parser.add_argument(
         "--adapter",
         required=True,
@@ -475,18 +479,26 @@ def run_trial(
     }
     model_manifest.update(model_metadata)
 
-    # Build manifest with all required fields
+    # Build manifest with all required fields. Suites may add immutable
+    # dataset/evaluator pins and predeclared task strata.
+    suite_manifest = {
+        "id": suite.__class__.__name__,
+        "version": getattr(suite, "version", "unknown"),
+        "task_id": task_id,
+    }
+    manifest_metadata = getattr(suite, "manifest_metadata", None)
+    if callable(manifest_metadata):
+        extra_suite_metadata = manifest_metadata(task_data)
+        if isinstance(extra_suite_metadata, dict):
+            suite_manifest.update(extra_suite_metadata)
+
     manifest = {
         "model": model_manifest,
         "adapter": {
             "id": adapter.__class__.__name__,
             "version": getattr(adapter, "version", "unknown"),
         },
-        "suite": {
-            "id": suite.__class__.__name__,
-            "version": getattr(suite, "version", "unknown"),
-            "task_id": task_id,
-        },
+        "suite": suite_manifest,
         "trial": trial_k,
         "sampling": _manifest_sampling(task_data, model_metadata=model_metadata),
         # Identifier for the tool-call parser/config the adapter uses.
@@ -519,18 +531,14 @@ def run_trial(
     log_file = out_dir / "session.log"
     stderr_file = out_dir / "stderr.log"
 
-    # Terminal-Bench is Harbor-driven: the suite owns execution and scoring.
-    # The generic adapter path does not apply (there is no in-workdir prompt
-    # loop; Harbor runs the agent inside a container and scores via pytest).
-    # Suites that expose `run_harbor_job` take over here.
+    # Harbor-backed suites own execution and scoring. The generic adapter path
+    # does not apply because Harbor runs the selected custom agent inside the
+    # task environment and invokes the benchmark-native verifier.
     start_time = time.time()
     adapter_failed = False
     harbor_result = None
-    is_terminal_bench = (
-        hasattr(suite, "run_harbor_job")
-        and getattr(suite, "name", "") == "terminal_bench"
-    )
-    if is_terminal_bench:
+    is_harbor_suite = callable(getattr(suite, "run_harbor_job", None))
+    if is_harbor_suite:
         jobs_dir = trial_dir / "jobs"
         jobs_dir.mkdir(exist_ok=True)
         try:
@@ -604,7 +612,7 @@ def run_trial(
             with open(log_file, "a") as f:
                 f.write(f"\n[ERROR] {e}\n")
 
-    if is_terminal_bench:
+    if is_harbor_suite:
         session_usage = collect_harbor_pi_session_usage(trial_dir / "jobs", out_dir)
         if session_usage.get("status") != "observed":
             session_usage = collect_pi_session_usage(

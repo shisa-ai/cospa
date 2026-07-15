@@ -1,6 +1,6 @@
 # Coding-agent evaluation review
 
-_Last reviewed: 2026-07-15_
+_Last reviewed: 2026-07-16_
 
 ## Decision
 
@@ -29,12 +29,13 @@ FeatureBench/RACE-bench expose feature-development gaps. None is a cheaper,
 cleaner replacement for the first SWE Atlas pilot once published token use,
 integration burden, and scorer dependencies are included.
 
-The immediate leaderboard fix is still to pin the existing Terminal-Bench
-integration to **`terminal-bench-core==0.1.1`**. That is the 80-task dataset
-behind the official Terminal-Bench 1.0 leaderboard; cospa's current 241-task
-`@head` path is not comparable to that leaderboard or to Terminal-Bench 2.1.
-Terminal-Bench 2.1 is the more current 89-task milestone anchor, but its official
-submission protocol uses five attempts per task, or 445 trajectories.
+The immediate leaderboard fix is complete: the existing Terminal-Bench
+integration now pins **`terminal-bench-core==0.1.1`**, its official 80 task IDs,
+and upstream commit `91e10457b5410f16c44364da1a34cb6de8c488a5`. The former
+241-task `@head` path was not comparable to the Terminal-Bench 1.0 leaderboard
+or to Terminal-Bench 2.1. Terminal-Bench 2.1 is the more current 89-task
+milestone anchor, but its official submission protocol uses five attempts per
+task, or 445 trajectories.
 Benchmark-name overlap alone is not direct comparability; dataset revision,
 attempts, resources, model settings, and scaffold protocol must also match.
 
@@ -160,25 +161,23 @@ would not fill the missing capability gap.
 There are no complete Terminal-Bench rows in the current `./view` data, so
 actual cospa token and runtime use is **unknown**.
 
-There is also a versioning distinction that must be made explicit before a
-large run:
+The versioning distinction is now explicit:
 
-- the stable vendored `terminal-bench-core` registry entry `0.1.1` lists 80
-  tasks;
-- cospa currently resolves `terminal-bench-core@head` by enumerating all 241
-  directories in the vendored `original-tasks/` checkout at commit
-  `1a6ffa9674b571da0ed040c470cb40c4d85f9b9b`;
+- cospa's checked-in `terminal-bench-core` 0.1.1 manifest lists the official 80
+  tasks and setup checks out the matching upstream commit detached;
+- discovery refuses a partial checkout or a real git checkout at another
+  revision, rather than silently relabeling `head` as Core;
 - the newer official Terminal-Bench 2.1 is a separate 89-task benchmark.
 
-**Measured here**, the 241 head tasks have a median configured agent timeout of
-15 minutes. Their timeout ceilings sum to 125.9 serial hours; this is a ceiling,
-not an expected runtime. **Published**, the official Core 0.1.1 leaderboard has
-62 entries and currently tops out at 64.5%; the Terminal-Bench 2.1 leaderboard
-has 17 entries and currently tops out at 83.8%. Core is therefore both the
-cheaper immediate compatibility repair and less saturated, while 2.1 gives the
-more current model-card comparison at milestone cost. Before another TB run,
-pin the intended dataset version rather than treating "Core", head, and 2.1 as
-interchangeable.
+**Historical measurement here:** the former 241-task head checkout had a median
+configured agent timeout of 15 minutes and timeout ceilings summing to 125.9
+serial hours. That is a ceiling, not observed runtime, and it no longer defines
+cospa's Terminal-Bench suite. **Published**, the official Core 0.1.1 leaderboard
+has 62 entries and currently tops out at 64.5%; the Terminal-Bench 2.1
+leaderboard has 17 entries and currently tops out at 83.8%. Core is therefore
+the cheaper immediate anchor and less saturated, while 2.1 gives the more
+current model-card comparison at milestone cost. Do not treat Core, head, and
+2.1 as interchangeable.
 
 ## What recent coding-model releases actually report
 
@@ -333,6 +332,12 @@ claiming a precise rank.
 
 ### Phase A: cost and reliability pilot (`swe_atlas_pilot12`)
 
+**Implementation status:** the suite, 12-task strata manifest, upstream commit,
+and Opus 4.5 judge model are now pinned in cospa. Unit tests and the real public
+checkout cover discovery/materialization across every workflow and language;
+the rubric-scoring path remains `wired (unverified)` until run against the
+configured judge endpoint.
+
 Freeze 12 public SWE Atlas task IDs and the upstream commit in a checked-in
 manifest. Select by metadata before looking at target-model outcomes:
 
@@ -446,7 +451,7 @@ cost-aware signal that answers a concrete deployment question.
 ## Implementation requirements for any new suite
 
 1. **Pin task IDs and upstream revision.** Never let a `head` alias silently
-   change task count, as the current Terminal-Bench Core path can.
+   change task count, as the former Terminal-Bench Core path did.
 2. **Separate model and infrastructure failure.** Image pull, service startup,
    verifier, and missing-tool errors must not become ordinary zero scores.
 3. **Capture actual usage.** Store per-turn provider usage when available;

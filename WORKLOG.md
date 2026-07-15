@@ -968,3 +968,25 @@ Append-only development log for the `cospa` repository.
   passed; `bash tests/scripts/run_all.sh` passes all shell assertions.
 - Next action: integrate the pinned 12-task SWE Atlas Q&A + Test Writing pilot
   through the same custom Harbor agents.
+
+## 2026-07-16 — Integrate the SWE Atlas pilot
+
+- Context: the evaluation review selected a 12-task SWE Atlas cost/reliability
+  pilot as the first new harness discriminator before APEX-SWE.
+- Decision: freeze eight Test Writing and four Codebase Q&A tasks at upstream
+  commit `2cac47d64a9123d915b8f6f6f53763391920f574`, with two Test Writing
+  plus one Q&A task per Go, Python, C, and TypeScript stratum. Pin the rubric
+  judge to `anthropic/claude-opus-4-5-20251101` and fail preflight when its
+  credentials are absent.
+- Evidence: the RED test failed because `swe_atlas_pilot12` was not registered;
+  the real pinned checkout now discovers and materializes all 12 task prompts,
+  environments, graders, rubrics, and mutation artifacts. Unit coverage also
+  verifies k=3 forwarding, adapter delegation, pin rejection, and native Q&A /
+  Test Writing subcheck preservation.
+- Status: `wired (unit test + real pinned artifact)`. No matching Opus 4.5 judge
+  endpoint is configured in this environment, so rubric scoring is explicitly
+  not claimed as end-to-end verified.
+- Validation: `mamba run -n coding-eval python -m pytest -q` reports 194
+  passed; `bash tests/scripts/run_all.sh` reports 47 shell assertions passed.
+- Next action: configure the pinned judge endpoint and run all 12 with one
+  representative model, `pi_vanilla`, and k=1 before evaluating promotion.

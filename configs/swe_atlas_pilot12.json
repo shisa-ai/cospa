@@ -1,0 +1,135 @@
+{
+  "name": "swe_atlas_pilot12",
+  "version": "pilot12-v1",
+  "upstream": {
+    "repository": "https://github.com/scaleapi/SWE-Atlas.git",
+    "commit": "2cac47d64a9123d915b8f6f6f53763391920f574"
+  },
+  "judge": {
+    "model": "anthropic/claude-opus-4-5-20251101",
+    "api_key_env": "SWE_ATLAS_JUDGE_API_KEY",
+    "base_url_env": "SWE_ATLAS_JUDGE_BASE_URL"
+  },
+  "tasks": [
+    {
+      "id": "tw/task-6902ef3ab97fe23e2ad271ee",
+      "workflow": "test_writing",
+      "upstream_workflow": "tw",
+      "upstream_task_id": "task-6902ef3ab97fe23e2ad271ee",
+      "language": "typescript",
+      "test_level": "unit",
+      "repository": "Automattic/wp-calypso",
+      "base_commit": "be7e5cc641622d153040491fd5625c6cb83e12eb"
+    },
+    {
+      "id": "tw/task-6902ef3ab97fe23e2ad271f3",
+      "workflow": "test_writing",
+      "upstream_workflow": "tw",
+      "upstream_task_id": "task-6902ef3ab97fe23e2ad271f3",
+      "language": "typescript",
+      "test_level": "acceptance",
+      "repository": "Automattic/wp-calypso",
+      "base_commit": "be7e5cc641622d153040491fd5625c6cb83e12eb"
+    },
+    {
+      "id": "tw/task-6902ef3ab97fe23e2ad271f8",
+      "workflow": "test_writing",
+      "upstream_workflow": "tw",
+      "upstream_task_id": "task-6902ef3ab97fe23e2ad271f8",
+      "language": "python",
+      "test_level": "unit",
+      "repository": "secdev/scapy",
+      "base_commit": "0925ada485406684174d6f068dbd85c4154657b3"
+    },
+    {
+      "id": "tw/task-6902ef3ab97fe23e2ad2722c",
+      "workflow": "test_writing",
+      "upstream_workflow": "tw",
+      "upstream_task_id": "task-6902ef3ab97fe23e2ad2722c",
+      "language": "python",
+      "test_level": "acceptance",
+      "repository": "paperless-ngx/paperless-ngx",
+      "base_commit": "542221a38dff06361e07976452f9aea24d210542"
+    },
+    {
+      "id": "tw/task-6902ef3ab97fe23e2ad27239",
+      "workflow": "test_writing",
+      "upstream_workflow": "tw",
+      "upstream_task_id": "task-6902ef3ab97fe23e2ad27239",
+      "language": "c",
+      "test_level": "unit",
+      "repository": "kovidgoyal/kitty",
+      "base_commit": "815df1e210e0a9ab4622f5c7f2d6891d7dbeddf1"
+    },
+    {
+      "id": "tw/task-6902ef3ab97fe23e2ad27243",
+      "workflow": "test_writing",
+      "upstream_workflow": "tw",
+      "upstream_task_id": "task-6902ef3ab97fe23e2ad27243",
+      "language": "c",
+      "test_level": "integration",
+      "repository": "kovidgoyal/kitty",
+      "base_commit": "815df1e210e0a9ab4622f5c7f2d6891d7dbeddf1"
+    },
+    {
+      "id": "tw/task-6902ef3ab97fe23e2ad27283",
+      "workflow": "test_writing",
+      "upstream_workflow": "tw",
+      "upstream_task_id": "task-6902ef3ab97fe23e2ad27283",
+      "language": "go",
+      "test_level": "unit",
+      "repository": "drakkan/sftpgo",
+      "base_commit": "44634210287cb192f2a53147eafb84a33a96826b"
+    },
+    {
+      "id": "tw/task-6902ef3ab97fe23e2ad27207",
+      "workflow": "test_writing",
+      "upstream_workflow": "tw",
+      "upstream_task_id": "task-6902ef3ab97fe23e2ad27207",
+      "language": "go",
+      "test_level": "integration",
+      "repository": "grafana/k6",
+      "base_commit": "ddc3b0b1d23c128e34e2792fc9075f9126e32375"
+    },
+    {
+      "id": "qa/task-6905333b74f22949d97ba9a2",
+      "workflow": "codebase_qa",
+      "upstream_workflow": "qa",
+      "upstream_task_id": "task-6905333b74f22949d97ba9a2",
+      "language": "typescript",
+      "category": "Code Onboarding",
+      "repository": "Automattic/wp-calypso",
+      "base_commit": "be7e5cc641622d153040491fd5625c6cb83e12eb"
+    },
+    {
+      "id": "qa/task-6905333b74f22949d97ba9c5",
+      "workflow": "codebase_qa",
+      "upstream_workflow": "qa",
+      "upstream_task_id": "task-6905333b74f22949d97ba9c5",
+      "language": "python",
+      "category": "Root-cause analysis",
+      "repository": "secdev/scapy",
+      "base_commit": "0925ada485406684174d6f068dbd85c4154657b3"
+    },
+    {
+      "id": "qa/task-6905333b74f22949d97ba9e3",
+      "workflow": "codebase_qa",
+      "upstream_workflow": "qa",
+      "upstream_task_id": "task-6905333b74f22949d97ba9e3",
+      "language": "c",
+      "category": "Architecture & system design",
+      "repository": "kovidgoyal/kitty",
+      "base_commit": "815df1e210e0a9ab4622f5c7f2d6891d7dbeddf1"
+    },
+    {
+      "id": "qa/task-6905333b74f22949d97ba9c8",
+      "workflow": "codebase_qa",
+      "upstream_workflow": "qa",
+      "upstream_task_id": "task-6905333b74f22949d97ba9c8",
+      "language": "go",
+      "category": "Security",
+      "repository": "trufflesecurity/trufflehog",
+      "base_commit": "e42153d44a5e5c37c1bd0c70e074781e9edcb760"
+    }
+  ]
+}

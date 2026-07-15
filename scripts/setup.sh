@@ -137,7 +137,33 @@ if [[ "$TB_ACTUAL_COMMIT" != "$TB_COMMIT" ]]; then
 fi
 log_ok "Terminal-Bench pinned to Core 0.1.1 ($TB_COMMIT)"
 
-# ── 6. Clone Aider Polyglot dataset ──────────────────────────────────────
+# ── 6. Clone SWE Atlas pilot dataset ─────────────────────────────────────
+echo ""
+echo "── Checking SWE Atlas pilot ──"
+SWE_ATLAS_DIR="$VENDOR_DIR/swe-atlas"
+SWE_ATLAS_REPO="https://github.com/scaleapi/SWE-Atlas.git"
+SWE_ATLAS_COMMIT="2cac47d64a9123d915b8f6f6f53763391920f574"
+if [[ -d "$SWE_ATLAS_DIR/.git" ]]; then
+    log_ok "SWE Atlas already cloned at $SWE_ATLAS_DIR"
+else
+    log_warn "Cloning SWE Atlas for the pinned 12-task pilot..."
+    mkdir -p "$VENDOR_DIR"
+    git clone "$SWE_ATLAS_REPO" "$SWE_ATLAS_DIR"
+    log_ok "SWE Atlas cloned to $SWE_ATLAS_DIR"
+fi
+
+cd "$SWE_ATLAS_DIR"
+git fetch origin "$SWE_ATLAS_COMMIT"
+git checkout --detach "$SWE_ATLAS_COMMIT"
+SWE_ATLAS_ACTUAL_COMMIT=$(git rev-parse HEAD)
+cd "$PROJECT_DIR"
+if [[ "$SWE_ATLAS_ACTUAL_COMMIT" != "$SWE_ATLAS_COMMIT" ]]; then
+    log_err "SWE Atlas checkout mismatch: expected $SWE_ATLAS_COMMIT, got $SWE_ATLAS_ACTUAL_COMMIT"
+    exit 1
+fi
+log_ok "SWE Atlas pinned for pilot12 ($SWE_ATLAS_COMMIT)"
+
+# ── 7. Clone Aider Polyglot dataset ──────────────────────────────────────
 echo ""
 echo "── Checking Aider Polyglot dataset ──"
 POLY_DIR="$VENDOR_DIR/polyglot-benchmark"
@@ -169,6 +195,7 @@ echo "  Little: $LITTLE_CODER_VERSION"
 echo "  Python: $PY_VER (in coding-eval env)"
 echo "  Harbor: $(harbor --version 2>/dev/null || echo 'installed')"
 echo "  TB:     $TB_DIR"
+echo "  SWE Atlas: $SWE_ATLAS_DIR"
 echo "  Polyglot: $POLY_DIR"
 echo ""
 echo "Next: bash scripts/check-models.sh"

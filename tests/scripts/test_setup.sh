@@ -15,7 +15,7 @@ trap 'rm -rf "$TMP"' EXIT
 PROJ="$TMP/proj"
 BIN="$TMP/bin"
 mkdir -p "$PROJ/scripts" "$PROJ/vendor/terminal-bench/.git" \
-    "$PROJ/vendor/polyglot-benchmark/.git" "$BIN"
+    "$PROJ/vendor/swe-atlas/.git" "$PROJ/vendor/polyglot-benchmark/.git" "$BIN"
 cp "$PROJECT_DIR/scripts/setup.sh" "$PROJ/scripts/setup.sh"
 
 cat > "$BIN/pi" <<'EOF'
@@ -46,7 +46,11 @@ cat > "$BIN/git" <<'EOF'
 #!/usr/bin/env bash
 echo "$PWD|$*" >> "$GIT_LOG"
 if [[ "$*" == "rev-parse HEAD" ]]; then
-    echo "91e10457b5410f16c44364da1a34cb6de8c488a5"
+    if [[ "$PWD" == */swe-atlas ]]; then
+        echo "2cac47d64a9123d915b8f6f6f53763391920f574"
+    else
+        echo "91e10457b5410f16c44364da1a34cb6de8c488a5"
+    fi
 fi
 exit 0
 EOF
@@ -86,5 +90,11 @@ assert_contains "checkout --detach 91e10457b5410f16c44364da1a34cb6de8c488a5" \
     "$(cat "$GIT_LOG")" "setup checks out Terminal-Bench Core 0.1.1 detached"
 assert_not_contains "$PROJ/vendor/terminal-bench|pull --ff-only" "$(cat "$GIT_LOG")" \
     "setup does not advance Terminal-Bench to mutable head"
+assert_contains "fetch origin 2cac47d64a9123d915b8f6f6f53763391920f574" \
+    "$(cat "$GIT_LOG")" "setup fetches the immutable SWE Atlas pilot commit"
+assert_contains "checkout --detach 2cac47d64a9123d915b8f6f6f53763391920f574" \
+    "$(cat "$GIT_LOG")" "setup checks out SWE Atlas detached"
+assert_not_contains "$PROJ/vendor/swe-atlas|pull --ff-only" "$(cat "$GIT_LOG")" \
+    "setup does not advance SWE Atlas to mutable head"
 
 summary

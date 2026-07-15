@@ -11,64 +11,68 @@ signal is whether an agent can investigate a real system, use tools, distinguish
 assumptions from observed state, and complete production-shaped engineering
 work.
 
-Use a portfolio with three distinct roles instead of asking one suite to do
+Use a portfolio with distinct roles instead of asking one suite to do
 everything:
 
 | Role | Suite | Run policy |
 | --- | --- | --- |
 | Fast multilingual regression | Aider Polyglot | Small fixed slices during development; all 225 only for shortlisted configurations or releases |
 | External leaderboard anchor | **Terminal-Bench Core 0.1.1 now**; Terminal-Bench 2.1 at milestones | Pin the official task revision and run sparingly, rather than sweeping every model x adapter cell |
-| New production-engineering signal | **APEX-SWE public dev set** | Cost-gated 10-task pilot, then a fixed 20-task internal screen if it qualifies |
+| New harness/trace discriminator | **SWE Atlas Test Writing + Codebase Q&A** | Harbor-native, cost-gated 12-task pilot, then a fixed 24-task internal screen |
+| Production tool-stack stress | **APEX-SWE Observability**, then Integration | Run after the cheaper Harbor-native pilot proves which adapters deserve the heavier environment |
 
-The immediate leaderboard fix is to pin the existing Terminal-Bench integration
-to **`terminal-bench-core==0.1.1`**. That is the 80-task dataset behind the
-official Terminal-Bench 1.0 leaderboard; cospa's current 241-task `@head` path
-is not comparable to that leaderboard or to Terminal-Bench 2.1. Terminal-Bench
-2.1 is the more current 89-task milestone anchor, but it is not a cheap test:
-the official submission protocol uses five attempts per task, or 445
-trajectories. Benchmark-name overlap alone is not direct comparability; dataset
-revision, attempts, resources, model settings, and scaffold protocol must also
-match.
+The immediate leaderboard fix is still to pin the existing Terminal-Bench
+integration to **`terminal-bench-core==0.1.1`**. That is the 80-task dataset
+behind the official Terminal-Bench 1.0 leaderboard; cospa's current 241-task
+`@head` path is not comparable to that leaderboard or to Terminal-Bench 2.1.
+Terminal-Bench 2.1 is the more current 89-task milestone anchor, but its official
+submission protocol uses five attempts per task, or 445 trajectories.
+Benchmark-name overlap alone is not direct comparability; dataset revision,
+attempts, resources, model settings, and scaffold protocol must also match.
 
-The best _new_ content fit remains **APEX-SWE's 50-task public dev set**,
-especially its mix of cross-service integration and observability/debugging.
-Its main risk is cost: the authors publish a one-hour task timeout and episode
-counts, but not input/output-token or wall-time distributions. Therefore:
+After comparing the actual harnesses and trace artifacts, **APEX-SWE is no
+longer the unqualified first implementation**. It still has the richest
+production-shaped traces: multi-service discovery and integration, logs,
+dashboards, issue/chat context, code changes, and closed-loop verification. But
+SWE Atlas is the better first fit for cospa's specific job of comparing agent
+harnesses under a token/time budget:
 
-1. Implement a fixed **10-task APEX-SWE pilot**: five Integration tasks spanning
-   different services and five Observability tasks spanning Go, Python,
-   TypeScript, Java, and C++.
-2. Measure one model, one adapter, `k=1`, with the same manifest telemetry used
-   by `./view`.
-3. If the first pass clears the cost and infrastructure gates, rerun all ten
-   once with the same model/adapter. This yields `k=2` over the complete pilot,
-   not `k=3` on three hand-picked tasks.
-4. Promote to a fixed **20-task screening suite** only if both passes qualify.
-   Run the full public 50 only for milestones.
-5. If APEX-SWE exceeds either cost gate or has recurrent service-startup or
-   verifier failures, use a stratified **FreshBrew JDK-21** subset. Its
-   deterministic Maven gates and much shorter published successful trajectories
-   make it the safer paired-adapter fallback, although it covers only Java
-   modernization.
+- all 284 tasks and their Harbor-format environments are public, and the
+  reference runs already compare minimal and native scaffolds;
+- Test Writing and Q&A expose exploration, runtime analysis, test execution,
+  verification, and stopping behavior in a more normalized shell trajectory;
+- cospa already has Harbor agent adapters, whereas APEX uses separate custom
+  ReAct and Inspect loops for its Integration and Observability halves;
+- SWE Atlas publishes a cost/capability analysis ($0.35--$1.90 per task for
+  selected Q&A + Test Writing systems), while APEX publishes no token or cost
+  distribution and its Integration runs average 53.5 episodes with a one-hour
+  ceiling.
 
-**SWE-bench Verified Mini** is a legitimate optional second external anchor,
-not merely a benchmark to dismiss. It is a fixed random 50-task subset with a
-published HAL leaderboard. However, that leaderboard is paused, Python-only,
-and highly scaffold-dependent; published run costs range from $4.72 to
-$1,599.90 while its token and wall-time distributions remain unknown. Add it
-only when SWE-bench compatibility is worth another suite integration; pinned
-Terminal-Bench Core already fills the immediate anchor role.
+SWE Atlas is not automatically cheap: its leaderboard runs `k=3`, permits up to
+250 steps and six-hour sandboxes, and requires a pinned LLM rubric judge. The
+cost figures are model-specific dollars, not token or wall-time guarantees.
+That is why the recommendation is a measured 12-task pilot, not all 214 Q&A +
+Test Writing tasks.
 
-Use **DeepSWE** as a milestone/frontier suite, not the routine short suite. It
-is excellent and current, but its public leaderboard shows 46K--276K output
-tokens and 61--268 steps per task for recent systems. That is the opposite of a
-cheap screening run.
+APEX-SWE remains the best _second_ suite when the deployment question is
+"can this agent debug or integrate a production-like system?" Start with six
+Observability cases, one per public source repository. The hidden benchmark
+covers five languages, but the public Observability set is 15 Go and 10 Python
+cases, so the previously proposed five-language public slice is impossible.
+The public 50 is also a development set, not the hidden leaderboard: the paper
+reports public scores averaging 12.8 points higher and middle-rank changes. Use
+it for trace-rich stress testing, not cheap external comparison.
 
-This recommendation is about benchmark _shape_. A custom 10- or 20-task APEX
-slice has no external leaderboard and cannot supply one. The pilot measures
-cost and integration; the 20-task result is directional. External sanity comes
-from the pinned Terminal-Bench runs, while close model-ranking claims graduate
-to full suites.
+**SWE-bench Verified Mini** remains an optional second external anchor. It is a
+fixed random 50-task subset with a paused HAL leaderboard, but is Python-only
+and highly scaffold-dependent. **DeepSWE** remains a milestone/frontier suite:
+its public rows report 46K--276K output tokens and 61--268 steps per task.
+
+Custom SWE Atlas or APEX slices have no external leaderboard. The pilot measures
+cost, integration, and large harness effects; external sanity comes from pinned
+Terminal-Bench. Exact SWE Atlas leaderboard comparison requires the full
+workflow, the published judge, and `k=3`, so reserve it for a winning
+configuration rather than the adapter matrix.
 
 ## Evidence labels
 
@@ -78,6 +82,8 @@ This document uses these labels:
 - **Measured here**: calculated from durable cospa results or the vendored
   dataset currently checked out.
 - **Published**: stated by the benchmark or model authors.
+- **Public-trace reanalysis**: independently calculated from benchmark-released
+  trajectories; not a benchmark-author claim or a cospa measurement.
 - **Estimate**: an explicit extrapolation, never presented as observed data.
 - **Unknown**: the source does not publish the quantity. A model's context
   limit or per-task cap is not its actual usage.
@@ -179,9 +185,9 @@ real-environment/skills evaluations. That is where this review concentrates.
 
 | Benchmark | Tasks and coverage | Agent work and grading | Published usage / difficulty | Cospa fit |
 | --- | --- | --- | --- | --- |
-| **[APEX-SWE](https://www.mercor.com/apex/apex-swe-leaderboard/)** | 200 hidden cases, 50 public dev cases; split evenly between Integration and Observability. Observability covers Go, Python, TypeScript, Java, and C++; Integration spans PostgreSQL, LocalStack/AWS, Plane, CRM, e-commerce, mail, chat, and ticketing services. | Persistent shell, file tools, and MCP services. Integration builds end-to-end systems; Observability searches logs/chat/issues and patches real repositories. Program tests determine leaderboard pass/fail; rubrics provide secondary functional, robustness, and style scores. | One-hour task timeout. Published early systems average about 20--30 episodes on Integration, with a 76.8-episode GPT outlier. Actual tokens and wall-time distribution: **unknown**. Public-set scores were 10--40% in the paper and newer hidden-set leaders remain well below saturation. | **Best content match.** Exactly the production-shaped tool use missing from Aider. Public 50 is compact, but multi-service setup and unknown cost require a pilot. It is a public dev set, not a contamination-resistant held-out result; the paper shows rank shifts and score gaps up to 18 points versus the hidden set. |
-| **[FreshBrew](https://github.com/mrcabbage972/freshbrew)** | 228 real Maven/Java repositories; migrate JDK 8 projects to JDK 17 or 21. | Agent reads/writes files, repeatedly runs Maven verification, and may search documentation. Success requires compile + all original tests + no more than a 5-point test-coverage drop, limiting test/code deletion reward hacks. | Up to 100 steps. On successful migrations, published median steps were roughly 5 (DeepSeek-V3), 13 (GPT-4.1), and 17 (Gemini 2.5 Flash). Tokens and wall time: **unknown**. The best JDK-17 result was 52.3%; JDK 21 was harder. | **Best cost-shaped fallback.** Real repo/build loops and deterministic grading, likely shorter trajectories, but only Java/Maven and one task family. Use JDK 21 and stratify by project complexity. |
-| **[SWE Atlas](https://github.com/scaleapi/SWE-Atlas)** | 284 tasks: 124 Codebase Q&A, 90 Test Writing, 70 Refactoring across 18 repos. Q&A/TW use Go, Python, C, TypeScript; Refactoring adds C++ and JavaScript. | Runtime codebase investigation, mutation-tested test authoring, and behavior-preserving multi-file refactors. Combines deterministic checks with expert rubrics graded by an LLM judge. | Six-hour sandbox limit. Frontier scores remain about 40--55%. For Q&A + Test Writing, the paper reports roughly $0.35--$1.90 per task for selected frontier systems; input/output tokens and wall time are **unknown**. Refactors span 35--2,073 gold lines. | **Excellent engineering breadth, poor default cost fit.** Judge dependency and long trajectories make it a milestone suite or a carefully fixed 30-task sample, not the first cheap addition. |
+| **[SWE Atlas](https://github.com/scaleapi/SWE-Atlas)** | 284 public tasks: 124 Codebase Q&A, 90 Test Writing, 70 Refactoring across 18 repos. Q&A/TW use Go, Python, C, TypeScript; Refactoring adds C++ and JavaScript. | Runtime investigation, mutation-tested test authoring, and behavior-preserving multi-file refactors. Harbor-native; published mini-SWE-Agent baselines use one shell action per step. Deterministic checks are combined with expert rubrics graded by a pinned LLM judge. | `k=3`, 250-step agent configs and six-hour sandbox ceilings in published runs. Q&A + Test Writing cost about $0.35--$1.90/task for selected systems; actual tokens and wall time are **unknown**. Refactors span 35--2,073 gold lines. | **Best first cospa integration.** It directly measures scaffold-sensitive exploration and engineering rigor, reuses Harbor, and has better cost evidence than APEX. Pilot Q&A + Test Writing; reserve Refactoring and full `k=3` runs for milestones. |
+| **[APEX-SWE](https://www.mercor.com/apex/apex-swe-leaderboard/)** | 200 hidden cases, 50 public dev cases; split evenly between Integration and Observability. Hidden Observability covers five languages, but the public 25 are 15 Go and 10 Python tasks across six repos. Integration spans PostgreSQL, LocalStack/AWS, Plane, CRM, e-commerce, mail, chat, and ticketing services but typically produces Python scripts. | Persistent shell, file tools, and MCP services. Integration builds end-to-end systems; Observability searches logs/chat/issues and patches repositories. Program tests determine pass/fail. The two workflows ship separate custom ReAct and Inspect harnesses with detailed logs. | One-hour paper timeout; Integration averages 53.5 episodes overall (44.9 on success). Tokens, cost, and wall-time distribution: **unknown**. Public-dev scores average 12.8 points above hidden results. | **Richest production trace, second implementation.** Strongest observability/cross-service content and deterministic headline grading, but the service stack, narrow public-language coverage, and two custom loops add cost, flakiness, and adapter-porting work. Start with six Observability tasks after SWE Atlas. |
+| **[FreshBrew](https://github.com/mrcabbage972/freshbrew)** | 228 real Maven/Java repositories; migrate JDK 8 projects to JDK 17 or 21. | Agent reads/writes files, repeatedly runs Maven verification, and may search documentation. Success requires compile + all original tests + no more than a 5-point test-coverage drop, limiting test/code deletion reward hacks. | Up to 100 steps. On successful migrations, published median steps were roughly 5 (DeepSeek-V3), 13 (GPT-4.1), and 17 (Gemini 2.5 Flash). Tokens and wall time: **unknown**. The best JDK-17 result was 52.3%; JDK 21 was harder. | **Best deterministic fallback.** Real repo/build loops and likely shorter trajectories, but only Java/Maven and one task family. Use JDK 21 and stratify by project complexity. |
 | **[DeepSWE](https://deepswe.datacurve.ai/)** | 113 original tasks over 91 repositories in TypeScript, Go, Python, JavaScript, and Rust. | Long-horizon repository changes in isolated Harbor/Pier environments with implementation-agnostic program verifiers. | Current leaderboard rows report 46K--276K output tokens, 61--268 steps, and about $2.36--$26.40 per task. Scores span 12--73%, so it separates current systems well. Input tokens and wall time are **unknown**. | **Best milestone frontier benchmark, not cheap.** Its own CLI supports a deterministic 10-task sample seed, useful after integration, but tiny samples are noisy. |
 
 ### Established issue-resolution options
@@ -190,7 +196,7 @@ real-environment/skills evaluations. That is where this review concentrates.
 | --- | --- | --- | --- | --- |
 | [SWE-bench Verified](https://www.swebench.com/) | 500 human-validated tasks, Python, 12 repositories | Real GitHub issue repair, but current systems commonly score 70--88%; OpenAI and Anthropic now discuss contamination/memorization screening. | SWE-Effi shows how scaffold-dependent cost is: on its 50-task sample, published averages ranged from 34K to 8.1M input and 1.7K to 41K output tokens per task. | Do not add as the primary new signal. Python-only and increasingly saturated. |
 | [SWE-bench Verified Mini](https://hal.cs.princeton.edu/swebench_verified_mini) | Fixed random 50-task subset; HAL lists 33 evaluations across two scaffolds and 18 models | Inherits Verified's Python-only distribution and contamination risk; the paused leaderboard currently tops out at 72%. | HAL publishes traces and $4.72--$1,599.90 total run costs, demonstrating extreme scaffold/model variance, but not a stable token or wall-time summary. | **Optional second leaderboard anchor.** Useful when SWE compatibility matters, but redundant with pinned TB Core for the immediate portfolio and not proven cheap on cospa. |
-| [SWE-bench Pro](https://scaleapi.github.io/SWE-bench_Pro-os/) | 1,865 total; 731 public from 11 repos; Go, Python, JavaScript, TypeScript | Larger, multi-file, enterprise-shaped issue repair. Public leaderboard performance is lower than Verified, though current release claims have risen to roughly 50--62%. | Public trajectory data exists, but no current benchmark-wide input/output or wall-time distribution is published. Tasks may represent hours or days of human work. | High signal but far too large for a routine matrix. A small subset would compete with APEX-SWE while covering less novel work. |
+| [SWE-bench Pro](https://labs.scale.com/leaderboard/swe_bench_pro_public) | 1,865 total; 731 public from 11 repos; Go, Python, JavaScript, TypeScript | Large, multi-file issue repair with current public scores up to roughly 62%. It has the strongest public trajectory-analysis ecosystem here: 1,460 SWE-Agent runs, a Docent collection, and third-party trace tooling. | **Public-trace reanalysis** of 616 paired trajectories finds 2.80M--3.13M cumulative input, 7.1K--17.7K output, 64--78 model calls, and a 250-turn cap per task. A 731-task run therefore implies an estimated 2.0B--2.3B cumulative input tokens. Wall time is not recorded. | **Best existing trace corpus; wrong run budget.** Analyze the downloadable traces without rerunning it. A 50-task slice still implies roughly 140M--157M input tokens at those observed rates and has no standard leaderboard. |
 | [SWE-bench Multilingual](https://www.swebench.com/multilingual.html) | 300 tasks, 42 repos, C, C++, Go, Java, JS, TS, PHP, Ruby, Rust | Better language breadth; median gold patch is only 10 lines. Recent model cards report roughly 52--79%, so it is less saturated than Verified but still conventional issue repair. | Original baseline used a $2.50/task cap. Current input/output and runtime distributions are **unknown**. | Good release regression suite, but 300 tasks and small patches do not solve the short, production-engineering gap. |
 | [SWE-Effi](https://arxiv.org/abs/2509.09853) | A metrics framework demonstrated on a stratified 50-task Verified sample, not a new task set | Adds effectiveness under token, cost, CPU, and inference-time budgets and exposes expensive failures. | Publishes per-scaffold/model token and time data. | Adopt its _metrics_ in cospa; do not count it as an additional eval. |
 
@@ -198,6 +204,10 @@ real-environment/skills evaluations. That is where this review concentrates.
 
 | Benchmark | Scope | Published scale / usage | Why it is not the default next suite |
 | --- | --- | --- | --- |
+| [HiL-Bench](https://labs.scale.com/leaderboard/hil) | Selective escalation on 150 SWE-bench Pro-derived and 150 SQL tasks; 100 public tasks per domain. Each has 3--5 progressively discovered blockers and an `ask_human()` tool. | Main results use three modes and `k=3`; reproducing just the public SWE matrix is 900 trajectories. It saves JSON trajectories and reports ASK-F1 plus pass@3; actual token/runtime tables are not text-published, and the human simulator is a frozen Llama-3.3-70B. | **High-value later harness ablation, not the base coding score.** Uniquely measures whether a scaffold asks instead of guessing, but adds an oracle service and deliberately floors ordinary task success. Pilot only after general coding is qualified. |
+| [MCP-Atlas](https://github.com/scaleapi/mcp-atlas) | 1,000 tasks, 500 public, over 36 real MCP servers and 220 tools; about 22% use coding-category servers. | Usually 3--6 required calls with distractors; current harness allows 100 calls and 30 minutes. Raw conversations are logged, but tasks are read-only and final-answer claims are graded by an LLM judge. Tokens/runtime are **unknown**; current top score is about 88%. | **Tool-use sidecar, not coding.** Good for tool discovery, schemas, orchestration, and synthesis, but it does not leave a code patch or test an engineering artifact. |
+| [MCPMark Verified](https://github.com/eval-sys/mcpmark) | 127 programmatically verified stateful tasks across GitHub, Notion, filesystem, PostgreSQL, and Playwright; also offers 10 easy tasks per service. | Objective per-task verifiers and public trajectory logs make it cleaner than MCP-Atlas for a small tool-use smoke, but the current leader is at 92.9% and most tasks are not code engineering. | **Best optional MCP smoke.** A no-account filesystem/Postgres or easy slice may cheaply test tool plumbing, but keep its score separate from coding capability. |
+| [Toolathlon-Verified](https://github.com/hkust-nlp/Toolathlon) | 108 long-horizon tasks over 600+ tools with public trajectories. | Up to 90 minutes per task and substantial account/service setup; a public evaluation service reduces setup but not trajectory cost. | Excellent general-tool trace corpus, far too operationally heavy for the next cospa suite. |
 | [NL2Repo-Bench](https://github.com/multimodal-art-projection/NL2RepoBench) | Build complete Python libraries from an empty workspace and a requirements document; hidden upstream tests. | 104 tasks; initial specification averages 18.8K tokens; generated code is reported around 10K--50K tokens; strong agents average about 180 interaction turns and only a few repos fully pass. | Very high long-horizon signal, but clearly slower than the requested screen and Python-only. |
 | [LiveSQLBench CLI](https://livesqlbench.ai/) | Explore real PostgreSQL/SQLite databases and produce/execute SQL for BI and CRUD tasks. | 270 Base-Lite, 600 Base-Full, 480 Large. Large prompts average 84K tokens; model-base SQL averages 360 tokens. A baseline agent is capped at 20 steps. Current CLI-agent token/runtime data are **unknown**. | Potentially cheap, contamination-resistant tool-use signal, but mostly database querying rather than general code engineering. Worth a later data-agent suite. |
 | [SkillsBench](https://www.skillsbench.ai/) | Paired evaluation with/without procedural skill packages in containerized professional tasks. | 87 tasks across eight domains, only 16 software-engineering tasks; site plots range from roughly 4 to 60+ agent minutes/task depending on configuration. Tokens are **unknown**. | Designed to estimate skill lift, not raw coding capability. Valuable if cospa later evaluates its own skills as an axis. |
@@ -209,6 +219,26 @@ real-environment/skills evaluations. That is where this review concentrates.
 | [CyberGym](https://www.cybergym.io/cybergym/) | Reproduce real OSS-Fuzz vulnerabilities with executable PoCs against pre/post-patch code. | 1,507 tasks from 188 projects; up to 100 agent steps in the reported setup. Tokens/runtime are **unknown**. | Excellent security-agent benchmark, but huge and domain-specific. A small security slice could be valuable later. |
 | [APEX-Agents](https://www.mercor.com/apex/apex-agents-leaderboard/) | Long-horizon investment banking, consulting, and law work. | 480 tasks in 33 worlds. | Explains its presence on Hy3/M3 cards, but it is not a coding benchmark. APEX-**SWE** is the relevant sibling. |
 | LiveCodeBench / BigCodeBench / HumanEval-style sets | Competitive programming or function generation without a persistent software environment. | Usually cheap, one-shot, and easy to score. | They do not exercise repository navigation, build/debug loops, or sustained tool use. Aider already supplies the more relevant version of this signal. |
+
+## Trace-specific comparison
+
+"Best agentic traces" has at least four meanings, and the benchmarks optimize
+different ones:
+
+| Need | Best choice | Reason |
+| --- | --- | --- |
+| Richest production-behavior trace | **APEX-SWE** | The agent must combine shell/file work with services, telemetry, tickets/chat, implementation, and verification. Failures expose environment understanding and epistemic discipline, not only patch correctness. |
+| Cleanest next harness A/B in cospa | **SWE Atlas Q&A + Test Writing** | Harbor accepts interchangeable agents while keeping the task environment and grader fixed; a common single-shell action interface makes exploration, execution, and verification phases easier to compare. |
+| Best already-published coding trace corpus | **SWE-bench Pro** | Public full trajectories, Docent browsing, and independent cost/token/intent tooling exist. Reuse those artifacts; do not pay to regenerate all 731 tasks. |
+| Best help-seeking trace | **HiL-Bench** | ASK-F1 directly scores whether the agent detects an unresolvable gap and asks a targeted question instead of silently assuming. |
+| Best pure MCP trace | **MCPMark** for objective state changes; **MCP-Atlas** for broad read-only discovery | Both isolate tool behavior, but neither is a substitute for repository engineering. |
+
+For cospa, trace quality also requires a common event schema. Normalize every
+adapter into timestamped model turns, tool name/arguments/result size, file
+diffs, test/build invocations, provider usage fields, compaction/cache events,
+and final verifier subchecks. Benchmark-native traces are otherwise too
+different to support fair claims such as "adapter A explores earlier" or
+"adapter B verifies more."
 
 ## Harness-comparison and campaign policy
 
@@ -248,82 +278,86 @@ claiming a precise rank.
 
 ## Concrete short-suite design
 
-### Phase A: cost and reliability pilot (`apex_swe_pilot10`)
+### Phase A: cost and reliability pilot (`swe_atlas_pilot12`)
 
-Freeze ten public APEX-SWE task IDs in a checked-in manifest; do not randomly
-sample on every run.
+Freeze 12 public SWE Atlas task IDs and the upstream commit in a checked-in
+manifest. Select by metadata before looking at target-model outcomes:
 
-- **Integration (5):** one LocalStack/AWS task and four tasks chosen to cover
-  distinct business-service combinations (for example Plane, Medusa, Zammad,
-  mail/chat/CRM).
-- **Observability (5):** one task each in Go, Python, TypeScript, Java, and C++.
-- Preserve upstream prompts, environments, tests, and timeout semantics. A
-  "short" suite should reduce task count, not silently make each task easier.
-- Run one representative local model with `pi_vanilla`, `k=1` first. Do not
-  multiply by models/adapters until infrastructure is known-good.
-- If that pass qualifies, repeat all ten with the same model, provider, and
-  adapter. Diagnose every disagreement and every non-model failure before
-  freezing a screen.
+- **Test Writing (8):** two each in Go, Python, C, and TypeScript, with the set
+  covering unit, integration, and acceptance tests;
+- **Codebase Q&A (4):** one per language, collectively covering architecture,
+  root-cause analysis, onboarding, and security;
+- preserve the original prompts, images, test/mutation patches, rubrics, and
+  timeout semantics;
+- pin the rubric judge and judge prompt. Report the programmatic mutation
+  check separately from the LLM-graded manifest and rubric checks so a
+  deterministic submetric survives judge changes;
+- run one representative model with `pi_vanilla`, `k=1`, then repeat all 12
+  with the exact same configuration if the first pass qualifies.
 
 Promotion gates:
 
 | Gate | Requirement |
 | --- | --- |
-| Runtime | First-pass summed agent wall time <= 2 h for 10 tasks, and total setup + agent + verifier time <= 4 h; report median and p90 too |
-| Tokens | Default first-pass ceiling <= 10M normalized total API tokens over 10 tasks and p90 <= 2M/task; count non-overlapping input/cache/output/reasoning fields and report each separately |
-| Telemetry | >= 95% of trials have input, output, reasoning/cache, wall-time, and tool-call counts |
-| Infrastructure | <= 5% fail before the agent receives a valid task environment, with no task showing the same unexplained startup/verifier failure on both passes |
-| Difficulty | Pilot results show nontrivial task/subcheck variation; if binary score is 0% or >= 90%, run one deliberately stronger or smaller bracketing configuration before accepting or rejecting the suite |
-| Validity | Program verifier runs on a pristine task artifact; no mock-only success claim |
-| Reliability | Complete `k=2` over all ten tasks with the same matched configuration; report outcome flips rather than automatically deleting them |
+| Runtime | First-pass summed agent wall time <= 2 h and total setup + agent + verifier/judge time <= 4 h for 12 tasks; report median and p90 |
+| Tokens | Default first-pass ceiling <= 12M normalized agent tokens over 12 tasks and p90 <= 2M/task; record judge usage separately rather than charging it to the agent |
+| Telemetry | >= 95% of trials have non-overlapping input/cache/output/reasoning, wall-time, tool-call, file-diff, and verifier-subcheck fields |
+| Infrastructure | <= 5% fail before a valid task environment reaches the agent, with no repeated unexplained pristine-verifier failure |
+| Grading | Pin the judge; verify the deterministic checks and one real rubric-scoring path end to end |
+| Difficulty | Require nontrivial binary or subcheck variation; bracket a 0% or >= 90% result with one stronger or weaker configuration |
+| Reliability | Complete `k=2` on all 12 matched tasks and publish outcome flips rather than pruning them |
 
-The 10M gate is a campaign-design default, not a claim about published APEX
-usage. At a 1M-token mean, 20 tasks x four adapters x `k=1` is already 80M
-tokens; `k=2` doubles it. Tighten the gate if the intended matrix has more
-cells. A ten-task score has a worst-case 95% binomial margin around ±31
-percentage points. It is a systems/cost pilot, not a leaderboard.
+The 12M ceiling is a campaign gate, not a claim about SWE Atlas usage. The
+paper's $0.35--$1.90 per-task range does not expose tokens or wall time and does
+not include every model cospa will run. Twelve binary tasks have a worst-case
+95% margin around ±28 points; this phase qualifies infrastructure, cost, and
+large scaffold effects rather than ranking close systems.
 
-### Phase B: routine screen (`apex_swe_screen20`)
+### Phase B: routine screen (`swe_atlas_screen24`)
 
-If Phase A passes, freeze 20 public tasks, ten per workflow. Select them using
-published task metadata before looking at target-model outcomes, and document
-the selection seed/rule. Report:
+If Phase A passes, freeze 24 tasks: 16 Test Writing and eight Q&A, balanced by
+language and stratified by task category. Report:
 
-- binary task pass rate and Wilson interval;
-- mean deterministic correctness/subcheck score, when exposed by upstream;
-- Integration and Observability separately;
-- Observability by language, while clearly noting tiny cell sizes;
-- cumulative uncached input, cached input, cache creation, output, reasoning,
-  tool calls, and wall time;
-- infrastructure failures separately from model failures;
-- pass per million total tokens and pass per agent-hour, borrowing SWE-Effi's
-  resource-effectiveness perspective.
+- overall and per-workflow pass rate with Wilson intervals;
+- Test Writing LLM-graded manifest, programmatic mutation, mandatory-rubric,
+  and end-to-end pass rates;
+- Q&A rubric coverage as well as strict all-rubrics pass;
+- cumulative agent and judge usage, tool calls, wall time, file/test activity,
+  and infrastructure failures;
+- paired task deltas and an exact paired test/interval for adapter comparisons;
+- pass per million normalized agent tokens and pass per agent-hour.
 
-At 20 binary tasks the worst-case 95% margin is still about ±22 points. This is
-adequate for rejecting obvious weak configurations and finding large scaffold
-failures, not for declaring a two-point model win. For adapter comparisons,
-keep one model/provider fixed and report the paired discordant-task table plus a
-paired interval/test. Use the winning one or two adapters for broader model
-runs instead of expanding the full Cartesian product. Graduate close calls to
-all 50 public tasks.
+At 24 tasks the worst-case 95% margin remains about ±20 points. Use one model to
+select the winning one or two adapters, then compare models only on those
+adapters. A custom 24-task score is directional. A directly comparable SWE
+Atlas Test Writing leaderboard run requires all 90 tasks, the published judge,
+and `k=3` (270 trajectories); do that only for a winning milestone
+configuration.
 
-### Fallback: `freshbrew_jdk21_32`
+### Phase C: production stress (`apex_observability_6`)
 
-If APEX-SWE fails the runtime or token gate, exceeds 5% infrastructure
-failures, or repeats the same unexplained startup/verifier failure on both
-passes:
+After the Harbor-native screen is stable, add one public Observability task from
+each of APEX-SWE's six public source repositories: bor, gossamer,
+podman-compose, op-geth, git-bug, and paperless-ngx. The public set contains 15
+Go and 10 Python tasks; TypeScript, Java, and C++ exist only in the hidden set,
+so reports must not imply five-language public coverage. Inspect whether the
+winning adapter triangulates telemetry and verifies its hypotheses. Apply the
+same gates at half the Phase A campaign budget.
 
-- choose 32 FreshBrew projects, eight from each quartile of repository
-  complexity, before testing target models;
-- use the JDK-21 migration target;
-- preserve the compile, full-test, and coverage-drop gates;
-- track compile-only, test-pass, and full coverage-guard success as diagnostic
-  submetrics;
-- apply the same four-hour screening target and telemetry requirements.
+Only then consider a mixed `apex_swe_pilot10` by adding four Integration tasks
+across distinct service combinations. Do not merge its score with SWE Atlas:
+Integration uses a different custom loop, usually writes Python scripts, and
+stresses service orchestration more than repository engineering. The public dev
+set also does not reproduce the hidden APEX leaderboard.
 
-This fallback gives a clean, deterministic, project-level build/debug loop with
-much less environment breadth. Its limitation must remain in the suite name and
-reports: it measures Java modernization, not general software engineering.
+### Deterministic fallback: `freshbrew_jdk21_32`
+
+If SWE Atlas judge dependence or trajectory cost is unacceptable, choose 32
+FreshBrew projects, eight from each repository-complexity quartile, and preserve
+the JDK-21 compile, full-test, and coverage-drop gates. Track compile-only,
+test-pass, and full coverage-guard success under the same four-hour target. The
+suite name and reports must retain its limitation: this measures Java
+modernization, not general software engineering.
 
 ## What not to add
 
@@ -368,11 +402,15 @@ cost-aware signal that answers a concrete deployment question.
 ## Primary sources
 
 - [Artificial Analysis Coding Agent Index methodology](https://artificialanalysis.ai/methodology/coding-agents-benchmarking)
-- [APEX-SWE paper](https://arxiv.org/abs/2601.08806), [launch](https://www.mercor.com/blog/introducing-apex-swe/), [harness](https://github.com/Mercor-Intelligence/apex-swe)
+- [APEX-SWE paper](https://arxiv.org/abs/2601.08806), [public data](https://huggingface.co/datasets/mercor/APEX-SWE), [launch](https://www.mercor.com/blog/introducing-apex-swe/), [harness](https://github.com/Mercor-Intelligence/apex-swe)
 - [FreshBrew paper](https://arxiv.org/abs/2510.04852), [harness and dataset](https://github.com/mrcabbage972/freshbrew)
 - [SWE Atlas paper](https://arxiv.org/abs/2605.08366), [harness](https://github.com/scaleapi/SWE-Atlas), [Q&A](https://labs.scale.com/leaderboard/sweatlas-qna), [Test Writing](https://labs.scale.com/leaderboard/sweatlas-tw), [Refactoring](https://labs.scale.com/leaderboard/sweatlas-refactoring)
 - [DeepSWE leaderboard](https://deepswe.datacurve.ai/) and [harness](https://github.com/datacurve-ai/deep-swe)
-- [SWE-bench Multilingual](https://www.swebench.com/multilingual.html), [Verified Mini](https://hal.cs.princeton.edu/swebench_verified_mini), [SWE-bench Pro](https://scaleapi.github.io/SWE-bench_Pro-os/)
+- [SWE-bench Multilingual](https://www.swebench.com/multilingual.html), [Verified Mini](https://hal.cs.princeton.edu/swebench_verified_mini), [SWE-bench Pro public leaderboard](https://labs.scale.com/leaderboard/swe_bench_pro_public), and [public trace reanalysis](https://nilenso.github.io/swe-bench-pro-cost-token-time-analysis/)
+- [HiL-Bench paper and leaderboard](https://labs.scale.com/leaderboard/hil), [harness](https://github.com/hilbenchauthors/hil-bench)
+- [MCP-Atlas paper and leaderboard](https://labs.scale.com/leaderboard/mcp_atlas), [harness](https://github.com/scaleapi/mcp-atlas)
+- [MCPMark Verified](https://github.com/eval-sys/mcpmark)
+- [Toolathlon-Verified](https://github.com/hkust-nlp/Toolathlon)
 - [SWE-Effi](https://arxiv.org/abs/2509.09853)
 - [NL2Repo-Bench](https://arxiv.org/abs/2512.12730)
 - [LiveSQLBench](https://livesqlbench.ai/)

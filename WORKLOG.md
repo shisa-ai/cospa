@@ -910,3 +910,24 @@ Append-only development log for the `cospa` repository.
   paired comparisons, and cap the default first pass at 10M normalized tokens.
 - Next action: fix the current Terminal-Bench `@head` resolution before another
   large run, then execute the APEX cost pilot without a Cartesian matrix.
+
+## 2026-07-15 — Prefer SWE Atlas for harness-trace screening
+
+- Context: compare APEX-SWE with SWE-bench Pro, SWE Atlas, HiL-Bench,
+  MCP-Atlas, MCPMark, and Toolathlon specifically for trace signal per
+  integration effort, token, and wall-time budget.
+- Evidence: reviewed each primary paper, public dataset, and harness; SWE Atlas
+  is Harbor-native and publishes $0.35--$1.90/task Q&A + Test Writing cost
+  points, while APEX publishes a 53.5-episode Integration mean but no token or
+  cost distribution. Public SWE-bench Pro traces average 2.80M--3.13M
+  cumulative input tokens across 616 paired tasks in an independent reanalysis.
+- Correction: the APEX hidden Observability set spans five languages, but its
+  public 25-task tree contains 15 Go and 10 Python cases across six repos; the
+  previously proposed five-language public slice cannot be built.
+- Decision: pilot 12 SWE Atlas Q&A/Test Writing tasks first through Harbor;
+  retain six APEX Observability tasks as a second production-stack stress test,
+  and treat HiL/MCP evaluations as specialized sidecars rather than coding
+  scores.
+- Validation: re-read `docs/EVALS.md` end to end and ran `git diff --check`.
+- Next action: select pilot IDs from upstream metadata before observing target
+  model outcomes, then run one real model/adapter at k=1 under the cost gates.

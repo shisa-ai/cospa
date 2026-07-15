@@ -336,6 +336,49 @@ def test_all_comparable_adapters_use_trial_local_session_dir():
             assert max(len(part.encode()) for part in Path(cmd[idx + 1]).parts) <= 255
 
 
+def test_all_comparable_adapters_request_workspace_sandbox():
+    """Every Aider adapter must hide shared vendor and prior result trees."""
+    adapters = [
+        PiVanillaAdapter(),
+        PiDevstackAdapter(),
+        PiDevstackSuperpowersAdapter(),
+        PiSuperpowersAdapter(),
+        LittleCoderAdapter(),
+        LittleCoderSuperpowersAdapter(),
+    ]
+
+    for adapter in adapters:
+        captured_kwargs = {}
+
+        def fake_run(cmd, *args, **kwargs):
+            captured_kwargs.update(kwargs)
+
+            class _R:
+                returncode = 0
+
+            return _R()
+
+        with tempfile.TemporaryDirectory() as tmp:
+            workdir = Path(tmp)
+            with patch(f"{adapter.__class__.__module__}.run_command", fake_run):
+                adapter.run(
+                    task_data={
+                        "prompt": "do thing",
+                        "model_id": "test/model",
+                        "problem": "two-fer",
+                    },
+                    workdir=workdir,
+                    log_file=workdir / "out.log",
+                    stderr_file=workdir / "err.log",
+                )
+
+            assert captured_kwargs.get("sandbox_workdir") == workdir, (
+                f"{adapter.name} must request the agent workspace sandbox; "
+                f"got kwargs={captured_kwargs}"
+            )
+            assert captured_kwargs.get("sandbox_name") == "two-fer"
+
+
 def test_manifest_records_thinking_level():
     """RED: manifest['sampling']['thinking'] MUST record the configured level."""
     suite = AiderPolyglotSuite()

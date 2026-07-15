@@ -18,6 +18,7 @@ sys.path.insert(0, str(PROJECT_ROOT))
 
 from harness.adapters.pi_vanilla import AdapterResult
 from harness.runner import run_trial
+from harness.subprocess_utils import agent_sandbox_cwd
 from harness.telemetry import (
     collect_harbor_pi_session_usage,
     collect_pi_session_usage,
@@ -532,3 +533,56 @@ def test_run_trial_records_pi_session_usage_and_trace(monkeypatch):
             / "pi_session.jsonl"
         )
         assert trace_path.exists()
+
+
+def test_run_trial_collects_session_from_sandbox_cwd(monkeypatch):
+    """Sandboxed pi traces use a virtual cwd but still belong to the host trial."""
+    suite = AiderPolyglotSuite()
+
+    class SandboxedSessionAdapter:
+        name = "pi_vanilla"
+        version = "test"
+        uses_workspace_sandbox = True
+
+        def __init__(self, sessions_root: Path):
+            self.sessions_root = sessions_root
+
+        def run(self, task_data, workdir, log_file, stderr_file):
+            (workdir / "two_fer.py").write_text(
+                "def two_fer(name=None):\n"
+                "    return 'One for you, one for me.' if name is None else f'One for {name}, one for me.'\n"
+            )
+            virtual_cwd = agent_sandbox_cwd(workdir, "two-fer")
+            session_dir = pi_session_dir_for_cwd(
+                virtual_cwd,
+                sessions_root=self.sessions_root,
+            )
+            _write_jsonl(
+                session_dir / "2026-07-04T14-07-07Z_session.jsonl",
+                _session_events(virtual_cwd),
+            )
+            return AdapterResult(returncode=0)
+
+    with tempfile.TemporaryDirectory() as tmp:
+        tmp = Path(tmp)
+        vendor_dir = tmp / "vendor"
+        vendor_dir.mkdir()
+        _make_problem(vendor_dir)
+        results_dir = tmp / "results"
+        sessions_root = tmp / "sessions"
+        monkeypatch.setenv("CODING_EVAL_PI_SESSIONS_DIR", str(sessions_root))
+
+        manifest, verdict = run_trial(
+            suite,
+            SandboxedSessionAdapter(sessions_root),
+            "local/ornith-1.0-35b",
+            "python/two-fer",
+            1,
+            results_dir,
+            vendor_dir,
+            thinking="high",
+        )
+
+    assert verdict["passed"] is True
+    assert manifest["token_usage"]["status"] == "observed"
+    assert manifest["token_usage"]["prompt_tokens"] == 300

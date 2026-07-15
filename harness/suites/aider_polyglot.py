@@ -80,6 +80,7 @@ class AiderPolyglotSuite:
         "node_modules",
         "target",
     }
+    REFERENCE_ARTIFACT_DIRS = {".approaches", ".meta"}
 
     def _problem_dir(self, vendor_dir: Path, language: str, problem: str) -> Path:
         """Locate the on-disk problem directory for a (language, problem)."""
@@ -150,10 +151,26 @@ class AiderPolyglotSuite:
         if instr_file.exists():
             prompt = instr_file.read_text()
 
+        prompt = (
+            "# Benchmark execution context\n\n"
+            f"- Task ID: `{task_id}`\n"
+            f"- Required language: `{language}`\n"
+            "- Work only in the current working directory.\n"
+            "- Modify the provided starter implementation for the required "
+            "language and use the provided tests/build files.\n"
+            "- Do not inspect or modify files outside the current working "
+            "directory, including parent directories, vendor datasets, sibling "
+            "tasks, or previous results.\n"
+            "- Do not create a solution in another language.\n\n"
+            f"{prompt}"
+        )
+
         # Copy ALL files from the problem dir into the workdir root so the
         # language's test runner can find starter + tests + module files.
         for item in problem_dir.iterdir():
             if item.name == ".docs":
+                continue
+            if item.is_dir() and item.name in self.REFERENCE_ARTIFACT_DIRS:
                 continue
             if item.is_dir() and item.name in self.GENERATED_ARTIFACT_DIRS:
                 continue
@@ -222,13 +239,8 @@ class AiderPolyglotSuite:
             # Try cmake + build + test. Do not append a shell fallback such as
             # `|| echo ...`: that masks nonzero build/test exits as success.
             problem = task_data.get("problem")
-            source_dir = "."
-            if problem:
-                source_link = workdir / problem
-                if not source_link.exists():
-                    source_link.symlink_to(".", target_is_directory=True)
-                if (source_link / "CMakeLists.txt").exists():
-                    source_dir = problem
+            source_dir = problem or "."
+            run_in_temp_copy = True
             build_cmd = "cmake --build build"
             if problem:
                 build_cmd += f" --target {shlex.quote(f'test_{problem}')}"
@@ -286,6 +298,10 @@ class AiderPolyglotSuite:
                 ) as tmp:
                     verify_dir = Path(tmp) / "workdir"
                     self._copy_for_verification(workdir, verify_dir)
+                    if language in {"c", "cpp"} and task_data.get("problem"):
+                        source_link = verify_dir / task_data["problem"]
+                        if not source_link.exists():
+                            source_link.symlink_to(".", target_is_directory=True)
                     return self._run_verifier_commands(
                         setup_cmds,
                         cmd,
@@ -384,10 +400,21 @@ class AiderPolyglotSuite:
 
     @classmethod
     def _copy_for_verification(cls, source: Path, dest: Path) -> None:
+        source_root = source.resolve()
+        for path in source.rglob("*"):
+            if not path.is_symlink():
+                continue
+            try:
+                path.resolve().relative_to(source_root)
+            except ValueError as exc:
+                raise ValueError(
+                    f"Refusing symlink outside trial workdir: {path}"
+                ) from exc
+
         def ignore(_dir: str, names: list[str]) -> set[str]:
             return set(names) & cls.GENERATED_ARTIFACT_DIRS
 
-        shutil.copytree(source, dest, ignore=ignore)
+        shutil.copytree(source, dest, ignore=ignore, symlinks=True)
 
     @staticmethod
     def _verification_env() -> dict[str, str]:

@@ -95,6 +95,11 @@ All Python code runs inside the `cospa` mamba environment
 (`python=3.12`). Use `mamba run -n cospa <cmd>` or
 `conda activate cospa` before invoking any harness script.
 
+Aider Polyglot adapters require Linux bubblewrap (`bwrap`). Each trial gets a
+private writable workdir, `/tmp`, cache overlay, and pi session path; shared
+`vendor/`, `results/`, and prior pi sessions are hidden from the agent. The
+harness fails closed if bubblewrap is unavailable.
+
 Terminal-Bench Core is pinned to the 80-task `0.1.1` release at upstream commit
 `91e10457b5410f16c44364da1a34cb6de8c488a5`. SWE Atlas is pinned at
 `2cac47d64a9123d915b8f6f6f53763391920f574`, with the selected 12 task IDs and
@@ -308,6 +313,11 @@ copy the raw response trace to `out/pi_session.jsonl` for audit/backfill.
 Terminal-Bench agents first export container-side pi traces into Harbor job
 artifacts, then the runner/backfill copies those traces into the same
 `out/pi_session.jsonl` location.
+
+Aider results created before the 2026-07-16 isolation cutover may have exposed
+official `.meta` examples, `.approaches` guides, neighboring vendor exercises,
+prior results, or global pi sessions to the model. Keep those artifacts for
+audit, but do not treat their passes as clean evidence of independent solving.
 
 ## Benchmarks
 

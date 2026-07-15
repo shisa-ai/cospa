@@ -88,6 +88,72 @@ def test_materialize_task_real_layout_copies_starter_and_tests():
         assert (workdir / "two_fer_test.py").exists(), list(workdir.iterdir())
 
 
+@pytest.mark.parametrize(
+    "language",
+    ["cpp", "go", "java", "javascript", "python", "rust"],
+)
+def test_materialize_task_prompt_pins_language_and_workdir(language):
+    """Agents must not solve a sibling language or mutate shared datasets."""
+    suite = AiderPolyglotSuite()
+    with tempfile.TemporaryDirectory() as tmp:
+        vendor_dir = Path(tmp) / "vendor"
+        _make_real_polyglot_problem(
+            vendor_dir,
+            language,
+            "all-your-base",
+            instructions="# Instructions\nConvert between bases.",
+            starter="starter implementation\n",
+            test="exercise tests\n",
+        )
+        workdir = Path(tmp) / "workdir"
+        task = suite.materialize_task(
+            f"{language}/all-your-base", workdir, vendor_dir
+        )
+
+    prompt = task["prompt"]
+    assert f"Task ID: `{language}/all-your-base`" in prompt
+    assert f"Required language: `{language}`" in prompt
+    assert "Work only in the current working directory" in prompt
+    assert "Do not inspect or modify files outside" in prompt
+    assert "Do not create a solution in another language" in prompt
+    assert "# Instructions\nConvert between bases." in prompt
+
+
+@pytest.mark.parametrize(
+    "language",
+    ["cpp", "go", "java", "javascript", "python", "rust"],
+)
+def test_materialize_task_excludes_reference_solutions(language):
+    """Official examples and approach guides must not leak into trials."""
+    suite = AiderPolyglotSuite()
+    with tempfile.TemporaryDirectory() as tmp:
+        vendor_dir = Path(tmp) / "vendor"
+        problem_dir = _make_real_polyglot_problem(
+            vendor_dir,
+            language,
+            "all-your-base",
+            instructions="Convert between bases.",
+            starter="starter implementation\n",
+            test="exercise tests\n",
+        )
+        (problem_dir / ".meta").mkdir()
+        (problem_dir / ".meta" / "example.txt").write_text(
+            "official reference solution\n"
+        )
+        (problem_dir / ".approaches").mkdir()
+        (problem_dir / ".approaches" / "in-sequence.md").write_text(
+            "complete solution guide\n"
+        )
+
+        workdir = Path(tmp) / "workdir"
+        suite.materialize_task(
+            f"{language}/all-your-base", workdir, vendor_dir
+        )
+
+        assert not (workdir / ".meta").exists()
+        assert not (workdir / ".approaches").exists()
+
+
 def test_materialize_task_skips_generated_build_artifacts():
     """Vendored build caches must not poison fresh trial workdirs."""
     suite = AiderPolyglotSuite()
@@ -261,6 +327,89 @@ def test_verify_cpp_runs_exercism_cmake_test_target():
     assert "cmake --build build --target test_allergies" in shell_cmd, shell_cmd
     assert verdict["passed"] is True
     assert verdict["test_count"] == 3
+
+
+def test_verify_cpp_uses_clean_copy_without_agent_build_cache():
+    """A sandbox /mnt CMake cache must not poison host-side grading."""
+    suite = AiderPolyglotSuite()
+    captured = {}
+
+    def fake_run(cmd, **kwargs):
+        captured["cwd"] = Path(kwargs["cwd"])
+        captured["cache_visible"] = (
+            captured["cwd"] / "build" / "CMakeCache.txt"
+        ).exists()
+        return subprocess.CompletedProcess(
+            args=cmd,
+            returncode=0,
+            stdout="All tests passed (17 assertions in 1 test case)\n",
+            stderr="",
+        )
+
+    with tempfile.TemporaryDirectory() as tmp:
+        workdir = Path(tmp) / "workdir"
+        workdir.mkdir()
+        (workdir / "CMakeLists.txt").write_text(
+            "add_custom_target(test_all-your-base)\n"
+        )
+        (workdir / "all_your_base.cpp").write_text("// solution\n")
+        (workdir / "build").mkdir()
+        (workdir / "build" / "CMakeCache.txt").write_text(
+            "CMAKE_HOME_DIRECTORY:INTERNAL=/mnt\n"
+        )
+
+        with patch(
+            "harness.suites.aider_polyglot.run_command", side_effect=fake_run
+        ):
+            verdict = suite.verify(
+                {
+                    "language": "cpp",
+                    "problem": "all-your-base",
+                    "timeout": 1,
+                },
+                workdir,
+            )
+
+        assert captured["cwd"] != workdir
+        assert captured["cache_visible"] is False
+        assert verdict["passed"] is True
+
+
+def test_verify_cpp_rejects_symlinks_outside_trial():
+    """Host-side grading must not follow a guessed link into shared data."""
+    suite = AiderPolyglotSuite()
+
+    with tempfile.TemporaryDirectory() as tmp:
+        tmp = Path(tmp)
+        workdir = tmp / "workdir"
+        workdir.mkdir()
+        (workdir / "CMakeLists.txt").write_text(
+            "add_custom_target(test_all-your-base)\n"
+        )
+        reference_solution = tmp / "official-example.cpp"
+        reference_solution.write_text("// official solution\n")
+        (workdir / "all_your_base.cpp").symlink_to(reference_solution)
+
+        with patch(
+            "harness.suites.aider_polyglot.run_command",
+            return_value=subprocess.CompletedProcess(
+                args=[],
+                returncode=0,
+                stdout="All tests passed (17 assertions in 1 test case)\n",
+                stderr="",
+            ),
+        ):
+            verdict = suite.verify(
+                {
+                    "language": "cpp",
+                    "problem": "all-your-base",
+                    "timeout": 1,
+                },
+                workdir,
+            )
+
+    assert verdict["passed"] is False
+    assert "outside trial workdir" in verdict["grader_output"]
 
 
 def test_verify_java_prefers_checked_in_gradle_wrapper():

@@ -29,6 +29,7 @@ class PiDevstackSuperpowersAdapter:
 
     name = "pi_devstack_superpowers"
     version = "devstack-superpowers-bench"
+    uses_workspace_sandbox = True
 
     def run(
         self,
@@ -66,6 +67,8 @@ class PiDevstackSuperpowersAdapter:
                         stderr=stderr_f,
                         text=True,
                         timeout=task_data.get("timeout", 600),
+                        sandbox_workdir=workdir,
+                        sandbox_name=task_data.get("problem"),
                     )
 
             return AdapterResult(returncode=result.returncode)

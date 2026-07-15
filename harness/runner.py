@@ -37,6 +37,7 @@ sys.path.insert(0, str(PROJECT_ROOT))
 from harness.adapters import load_adapter
 from harness.suites import load_suite
 from harness.path_utils import encode_path_component
+from harness.subprocess_utils import agent_sandbox_cwd
 from harness.telemetry import (
     collect_harbor_pi_session_usage,
     collect_pi_session_usage,
@@ -632,8 +633,13 @@ def run_trial(
         # Preserve compatibility with custom/test adapters and artifacts from
         # before trial-local --session-dir was introduced.
         if session_usage.get("status") != "observed":
+            fallback_workdir = (
+                agent_sandbox_cwd(workdir, task_data.get("problem"))
+                if getattr(adapter, "uses_workspace_sandbox", False)
+                else workdir
+            )
             session_usage = collect_pi_session_usage(
-                workdir,
+                fallback_workdir,
                 out_dir,
                 start_time=start_time,
                 end_time=time.time(),

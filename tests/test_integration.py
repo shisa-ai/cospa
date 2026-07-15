@@ -20,6 +20,7 @@ PROJECT_ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(PROJECT_ROOT))
 
 from harness.adapters.pi_vanilla import PiVanillaAdapter
+from harness.subprocess_utils import agent_sandbox_cwd
 from harness.suites.aider_polyglot import AiderPolyglotSuite
 from harness.runner import run_trial
 
@@ -53,7 +54,9 @@ def test_adapter_runs_real_subprocess_and_writes_logs(monkeypatch):
     """
     with tempfile.TemporaryDirectory() as tmp:
         tmp = Path(tmp)
-        bindir = tmp / "bin"
+        workdir = tmp / "workdir"
+        workdir.mkdir()
+        bindir = workdir / "bin"
         bindir.mkdir()
         # Fake `pi` that prints argv to stdout, writes a sentinel to stderr,
         # and echoes the prompt back. Exits 0.
@@ -64,11 +67,13 @@ def test_adapter_runs_real_subprocess_and_writes_logs(monkeypatch):
             exit 0
         """)
 
-        # Put bindir first on PATH for the subprocess.
-        monkeypatch.setenv("PATH", f"{bindir}:{os.environ.get('PATH', '')}")
+        # The host workdir is mounted at its virtual sandbox cwd.
+        sandbox_cwd = agent_sandbox_cwd(workdir, "integration-task")
+        monkeypatch.setenv(
+            "PATH",
+            f"{sandbox_cwd / 'bin'}:{os.environ.get('PATH', '')}",
+        )
 
-        workdir = tmp / "workdir"
-        workdir.mkdir()
         (workdir / "starter.py").write_text("# starter")
         log_file = tmp / "session.log"
         stderr_file = tmp / "stderr.log"
@@ -77,6 +82,7 @@ def test_adapter_runs_real_subprocess_and_writes_logs(monkeypatch):
         task_data = {
             "model_id": "test/model",
             "prompt": "solve the problem",
+            "problem": "integration-task",
             "timeout": 30,
         }
 

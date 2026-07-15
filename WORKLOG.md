@@ -1014,6 +1014,29 @@ Append-only development log for the `cospa` repository.
 - Next action: configure the pinned judge endpoint and run all 12 with one
   representative model, `pi_vanilla`, and k=1 before evaluating promotion.
 
+## 2026-07-16 — Isolate Aider trials from reference solutions
+
+- Context: a Bonsai adapter comparison exposed two integrity failures: the
+  materializer copied official `.meta` examples and `.approaches` solution
+  guides, while agents could inspect neighboring vendor tasks, prior results,
+  and global pi session transcripts.
+- RED evidence: new six-language prompt/reference tests, the six-adapter
+  sandbox invariant, a real bubblewrap boundary check, sandbox telemetry, and
+  clean-copy C++ verification each failed on the corresponding old behavior.
+- GREEN evidence: the focused suite reports `56 passed, 1 skipped`; full
+  `mamba run -n cospa python -m pytest -q` reports `195 passed, 1 skipped, 2
+  failed`, with only the pre-existing port-8080 shell-fixture collision and
+  PyYAML newline assertion failing.
+- End-to-end: run id `bonsai-isolated-final-20260716` executed
+  `cpp/all-your-base` sequentially with `pi_vanilla`, `pi_devstack`,
+  `pi_devstack_superpowers`, `little_coder`, and
+  `little_coder_superpowers`; every arm passed all 17 native assertions.
+- Decision: treat 2026-07-16 as the Aider integrity cutover. Preserve older
+  artifacts for audit, but do not use pre-cutover passes as independent-solving
+  evidence. Require Linux bubblewrap and fail closed when it is unavailable.
+- Next action: rerun any historical model/adapter rows needed for comparison,
+  then expand the clean sample across all six Polyglot languages.
+
 ## 2026-07-16 — Keep benchmark pi session paths below NAME_MAX
 
 - Context: the full ThinkingCap run left `pi_devstack_superpowers` at 213/225

@@ -1143,3 +1143,28 @@ behaviorally equivalent to `pi_vanilla` except for an inert omission of
 
 Validation: `mamba run -n coding-eval python -m pytest -q` reports `198
 passed`; `bash tests/scripts/run_all.sh` reports `47` shell assertions passed.
+
+### Aider benchmark-integrity isolation follow-up
+
+A 2026-07-16 audit found that the Aider materializer copied official
+solution-bearing `.meta/example.*` files and `.approaches/` guides into trial
+workdirs. Agents could also read or write outside the active workdir, including
+neighboring exercises, prior `results/`, and global pi session transcripts.
+Pre-cutover grader passes remain durable observations, but they are not clean
+evidence that a model solved a task independently.
+
+The Aider path now excludes `.meta/` and `.approaches/` for all six supported
+languages, pins task ID/language/current-workdir constraints in the prompt, and
+runs every local adapter in a fail-closed bubblewrap sandbox. The sandbox hides
+shared datasets, prior results, and prior pi sessions; exposes only the active
+trial and its unique telemetry session as persistent writable paths; uses
+private overlays for pi/browser cache state; and keeps native tools plus model
+network access available. C++ verification uses a clean copy so an agent's
+sandbox-specific CMake cache cannot poison host-side grading.
+
+Status: `fixed (unit + integration + end-to-end)`. Evidence includes
+six-language prompt/materialization tests, an ablation invariant covering all
+six adapters, a real bubblewrap boundary test, sandbox-aware telemetry tests,
+and a post-cutover Bonsai `cpp/all-your-base` run in which all five requested
+adapters passed all 17 assertions. Full pytest reports `195 passed, 1 skipped,
+2 failed`; both failures predate and do not exercise this path.

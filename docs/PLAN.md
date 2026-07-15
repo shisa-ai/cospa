@@ -182,8 +182,16 @@ runner. Cheap signal; do this before any TB run.
 
 - Dataset: vendored at `vendor/aider-polyglot/` (clone the public repo).
 - Per-task: materialize the problem's starter files into a fresh workdir,
-  run the adapter with the problem statement as the initial prompt, then
-  run the existing test suite.
+  excluding solution-bearing `.meta/` examples and `.approaches/` guides.
+  Prefix the problem statement with the task ID, required language, and an
+  explicit current-workdir-only boundary, then run the existing test suite.
+- Isolation: all local Aider adapters run through bubblewrap. The host root is
+  read-only; shared `vendor/`, `results/`, and prior pi sessions are hidden;
+  only the active trial workdir and its unique telemetry session are persistent
+  writable binds.
+  Pi and browser caches use private overlays, `/tmp` is private, networking is
+  retained, and the virtual cwd preserves the exercise basename for native
+  build systems. This is a fail-closed Linux requirement: `bwrap` must exist.
 - Verdict: pass/fail per problem; partial credit possible per-language if
   tests are tiered (record raw pass count, derive binary for the headline).
 

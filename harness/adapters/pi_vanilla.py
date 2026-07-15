@@ -27,6 +27,7 @@ class PiVanillaAdapter:
 
     name = "pi_vanilla"
     version = "vanilla"
+    uses_workspace_sandbox = True
 
     def run(self, task_data: dict, workdir: Path, log_file: Path, stderr_file: Path) -> AdapterResult:
         """
@@ -70,6 +71,8 @@ class PiVanillaAdapter:
                         stderr=stderr_f,
                         text=True,
                         timeout=task_data.get("timeout", 600),  # 10 min default
+                        sandbox_workdir=workdir,
+                        sandbox_name=task_data.get("problem"),
                     )
 
             return AdapterResult(returncode=result.returncode)

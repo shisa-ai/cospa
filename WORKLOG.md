@@ -805,3 +805,20 @@ Append-only development log for the `cospa` repository.
   (159.6 GB native), MiMo-V2.5 MXFP4 (176.6 GB, tight); Hy3 and
   MiniMax M3 ruled out on fit/KV grounds.
 - Next action: cospa sanity-eval any quant before trusting vendor scores.
+
+## 2026-07-15 — Add speed model and GPU-fit matrix to docs/MODELS.md
+
+- Context: extend the candidate-model survey with decode-speed estimates,
+  attention-architecture properties, MTP/draft availability, and a
+  utilization (0.90/0.92/0.95) × GPU-count (1/2/3× 96 GB) fit matrix.
+- Evidence: bytes-per-token derived from stored dtypes in safetensors
+  headers (nvidia/MiniMax-M2.7-NVFP4, deepseek-ai/DeepSeek-V4-Flash,
+  MiMo quants); configs fetched for Ornith, M2.7, V4 Flash, MiMo.
+- Key findings: DS V4 Flash native repo is already 4-bit (I8 FP4 +
+  E8M0/32 scales, 159.6 GB) — prefer it over nvidia's larger NVFP4
+  rescale; nvidia M2.7 NVFP4 strips the 3 MTP modules (no spec decode);
+  Ornith is hybrid linear attention (30 linear + 10 full) explaining its
+  efficiency; MiMo NVFP4 (183.5 GB) exceeds 2×0.95 budget — only the
+  MXFP4 repo fits 2 GPUs, and only at 0.95.
+- Decision: 2-GPU recommendation reordered to DS V4 Flash > M2.7 >
+  MiMo MXFP4, Ornith baseline (can run 2 replicas).

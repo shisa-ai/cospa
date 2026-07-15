@@ -11,37 +11,64 @@ signal is whether an agent can investigate a real system, use tools, distinguish
 assumptions from observed state, and complete production-shaped engineering
 work.
 
-The best content fit is **APEX-SWE's 50-task public dev set**, especially its
-mix of cross-service integration and observability/debugging. Its main risk is
-cost: the authors publish a one-hour task timeout and episode counts, but not
-input/output-token or wall-time distributions. Therefore the recommendation is
-staged rather than an immediate full-suite commitment:
+Use a portfolio with three distinct roles instead of asking one suite to do
+everything:
+
+| Role | Suite | Run policy |
+| --- | --- | --- |
+| Fast multilingual regression | Aider Polyglot | Small fixed slices during development; all 225 only for shortlisted configurations or releases |
+| External leaderboard anchor | **Terminal-Bench Core 0.1.1 now**; Terminal-Bench 2.1 at milestones | Pin the official task revision and run sparingly, rather than sweeping every model x adapter cell |
+| New production-engineering signal | **APEX-SWE public dev set** | Cost-gated 10-task pilot, then a fixed 20-task internal screen if it qualifies |
+
+The immediate leaderboard fix is to pin the existing Terminal-Bench integration
+to **`terminal-bench-core==0.1.1`**. That is the 80-task dataset behind the
+official Terminal-Bench 1.0 leaderboard; cospa's current 241-task `@head` path
+is not comparable to that leaderboard or to Terminal-Bench 2.1. Terminal-Bench
+2.1 is the more current 89-task milestone anchor, but it is not a cheap test:
+the official submission protocol uses five attempts per task, or 445
+trajectories. Benchmark-name overlap alone is not direct comparability; dataset
+revision, attempts, resources, model settings, and scaffold protocol must also
+match.
+
+The best _new_ content fit remains **APEX-SWE's 50-task public dev set**,
+especially its mix of cross-service integration and observability/debugging.
+Its main risk is cost: the authors publish a one-hour task timeout and episode
+counts, but not input/output-token or wall-time distributions. Therefore:
 
 1. Implement a fixed **10-task APEX-SWE pilot**: five Integration tasks spanning
    different services and five Observability tasks spanning Go, Python,
    TypeScript, Java, and C++.
 2. Measure one model, one adapter, `k=1`, with the same manifest telemetry used
    by `./view`.
-3. If the pilot's summed agent wall time is at most two hours (so 20 tasks
-   plausibly fit a four-hour budget), infrastructure failures are at most 5%,
-   and target models land between roughly 10% and 70%, promote it to a fixed
-   **20-task screening suite** (10 + 10). Run the full public 50 only for
-   milestones.
-4. If APEX-SWE's multi-service environment is too slow or brittle, use a
-   stratified **FreshBrew JDK-21** subset as the fallback. It is narrower
-   (Java/Maven migration only) but has deterministic build, test, and
-   coverage-preservation gates and typically required far fewer agent steps in
-   its published study.
+3. If the first pass clears the cost and infrastructure gates, rerun all ten
+   once with the same model/adapter. This yields `k=2` over the complete pilot,
+   not `k=3` on three hand-picked tasks.
+4. Promote to a fixed **20-task screening suite** only if both passes qualify.
+   Run the full public 50 only for milestones.
+5. If APEX-SWE exceeds either cost gate or has recurrent service-startup or
+   verifier failures, use a stratified **FreshBrew JDK-21** subset. Its
+   deterministic Maven gates and much shorter published successful trajectories
+   make it the safer paired-adapter fallback, although it covers only Java
+   modernization.
+
+**SWE-bench Verified Mini** is a legitimate optional second external anchor,
+not merely a benchmark to dismiss. It is a fixed random 50-task subset with a
+published HAL leaderboard. However, that leaderboard is paused, Python-only,
+and highly scaffold-dependent; published run costs range from $4.72 to
+$1,599.90 while its token and wall-time distributions remain unknown. Add it
+only when SWE-bench compatibility is worth another suite integration; pinned
+Terminal-Bench Core already fills the immediate anchor role.
 
 Use **DeepSWE** as a milestone/frontier suite, not the routine short suite. It
 is excellent and current, but its public leaderboard shows 46K--276K output
 tokens and 61--268 steps per task for recent systems. That is the opposite of a
 cheap screening run.
 
-This recommendation is about benchmark _shape_. A 10-task pilot is too small
-for a stable leaderboard score; it exists to measure cost and integration. A
-20-task screening result is directional. Report Wilson intervals and use the
-full 50 before making close model-ranking claims.
+This recommendation is about benchmark _shape_. A custom 10- or 20-task APEX
+slice has no external leaderboard and cannot supply one. The pilot measures
+cost and integration; the 20-task result is directional. External sanity comes
+from the pinned Terminal-Bench runs, while close model-ranking claims graduate
+to full suites.
 
 ## Evidence labels
 
@@ -79,13 +106,18 @@ runs. Runtime is summed agent wall time, not elapsed matrix makespan.
 | local, high | `pi_devstack` | 94.2% | 6.57 h | 1.75 min | 267K | 5.44K |
 | local, high | `pi_devstack_superpowers` | 94.2% | 6.47 h | 1.72 min | 249K | 5.42K |
 
-Across all 23 complete Aider rows currently visible, summed wall time ranges
-from 2.76 to 14.39 hours and the viewer's reported non-cached prompt/input
-field ranges from 8K to 267K per task. Cached and reasoning usage is recorded
-separately where providers expose it, so low values are not automatically low
-total context traffic. That variation is the central cost lesson: **benchmark
-name and task count do not determine runtime or token usage; model, provider
-telemetry, and scaffold do**.
+Each complete Qwen row in the table consumes **46.0M--60.0M prompt/input
+tokens and 1.00M--1.22M output tokens** over 225 tasks. At that rate, a
+four-adapter full-suite sweep is an estimated 188M--245M total tokens before
+adding another model or `k>1`. Across all 23 complete Aider rows currently
+visible, summed wall time ranges from 2.76 to 14.39 hours and the viewer's
+reported non-cached prompt/input field ranges from 8K to 267K per task. Cached
+and reasoning usage is recorded separately where providers expose it, so low
+values are not automatically low total context traffic.
+
+That variation is the central cost lesson: **benchmark name and task count do
+not determine runtime or token usage; model, provider telemetry, and scaffold
+do**. Aider is cheap per task, but a naive Cartesian matrix is not cheap.
 
 The ceiling is real. Qwen configurations above cluster at 92--95%; complete
 GPT-5.5 runs score 96--99%. Aider should remain the cheap correctness and
@@ -109,10 +141,13 @@ large run:
 
 **Measured here**, the 241 head tasks have a median configured agent timeout of
 15 minutes. Their timeout ceilings sum to 125.9 serial hours; this is a ceiling,
-not an expected runtime. **Published**, Terminal-Bench 2.1 now reaches 89.5% on
-its leading system, so it is broad and still useful but is also becoming a
-ceiling metric at the frontier. Before another TB run, pin the intended dataset
-version rather than treating "Core", head, and 2.1 as interchangeable.
+not an expected runtime. **Published**, the official Core 0.1.1 leaderboard has
+62 entries and currently tops out at 64.5%; the Terminal-Bench 2.1 leaderboard
+has 17 entries and currently tops out at 83.8%. Core is therefore both the
+cheaper immediate compatibility repair and less saturated, while 2.1 gives the
+more current model-card comparison at milestone cost. Before another TB run,
+pin the intended dataset version rather than treating "Core", head, and 2.1 as
+interchangeable.
 
 ## What recent coding-model releases actually report
 
@@ -154,7 +189,7 @@ real-environment/skills evaluations. That is where this review concentrates.
 | Benchmark | Tasks / languages | Signal and saturation | Token/runtime evidence | Verdict |
 | --- | --- | --- | --- | --- |
 | [SWE-bench Verified](https://www.swebench.com/) | 500 human-validated tasks, Python, 12 repositories | Real GitHub issue repair, but current systems commonly score 70--88%; OpenAI and Anthropic now discuss contamination/memorization screening. | SWE-Effi shows how scaffold-dependent cost is: on its 50-task sample, published averages ranged from 34K to 8.1M input and 1.7K to 41K output tokens per task. | Do not add as the primary new signal. Python-only and increasingly saturated. |
-| [SWE-bench Verified Mini](https://hal.cs.princeton.edu/swebench_verified_mini) | Fixed random 50-task subset | Cheap relative to the full 500, but inherits the same task distribution and contamination risk. | HAL publishes cost and traces, not a stable cross-model token summary. | Useful compatibility smoke, not tougher or less saturated. |
+| [SWE-bench Verified Mini](https://hal.cs.princeton.edu/swebench_verified_mini) | Fixed random 50-task subset; HAL lists 33 evaluations across two scaffolds and 18 models | Inherits Verified's Python-only distribution and contamination risk; the paused leaderboard currently tops out at 72%. | HAL publishes traces and $4.72--$1,599.90 total run costs, demonstrating extreme scaffold/model variance, but not a stable token or wall-time summary. | **Optional second leaderboard anchor.** Useful when SWE compatibility matters, but redundant with pinned TB Core for the immediate portfolio and not proven cheap on cospa. |
 | [SWE-bench Pro](https://scaleapi.github.io/SWE-bench_Pro-os/) | 1,865 total; 731 public from 11 repos; Go, Python, JavaScript, TypeScript | Larger, multi-file, enterprise-shaped issue repair. Public leaderboard performance is lower than Verified, though current release claims have risen to roughly 50--62%. | Public trajectory data exists, but no current benchmark-wide input/output or wall-time distribution is published. Tasks may represent hours or days of human work. | High signal but far too large for a routine matrix. A small subset would compete with APEX-SWE while covering less novel work. |
 | [SWE-bench Multilingual](https://www.swebench.com/multilingual.html) | 300 tasks, 42 repos, C, C++, Go, Java, JS, TS, PHP, Ruby, Rust | Better language breadth; median gold patch is only 10 lines. Recent model cards report roughly 52--79%, so it is less saturated than Verified but still conventional issue repair. | Original baseline used a $2.50/task cap. Current input/output and runtime distributions are **unknown**. | Good release regression suite, but 300 tasks and small patches do not solve the short, production-engineering gap. |
 | [SWE-Effi](https://arxiv.org/abs/2509.09853) | A metrics framework demonstrated on a stratified 50-task Verified sample, not a new task set | Adds effectiveness under token, cost, CPU, and inference-time budgets and exposes expensive failures. | Publishes per-scaffold/model token and time data. | Adopt its _metrics_ in cospa; do not count it as an additional eval. |
@@ -175,9 +210,45 @@ real-environment/skills evaluations. That is where this review concentrates.
 | [APEX-Agents](https://www.mercor.com/apex/apex-agents-leaderboard/) | Long-horizon investment banking, consulting, and law work. | 480 tasks in 33 worlds. | Explains its presence on Hy3/M3 cards, but it is not a coding benchmark. APEX-**SWE** is the relevant sibling. |
 | LiveCodeBench / BigCodeBench / HumanEval-style sets | Competitive programming or function generation without a persistent software environment. | Usually cheap, one-shot, and easy to score. | They do not exercise repository navigation, build/debug loops, or sustained tool use. Aider already supplies the more relevant version of this signal. |
 
+## Harness-comparison and campaign policy
+
+Do not multiply every model by every adapter by every task and repetition. The
+campaign budget is approximately:
+
+```text
+tasks x models x adapters x k x mean tokens per trajectory
+```
+
+Use one representative model to compare adapters, then compare models with the
+winning one or two adapters. Predeclare a campaign-level token ceiling as well
+as a per-trajectory timeout. This matters even for Aider: one four-adapter Qwen
+sweep can already approach a quarter-billion tokens.
+
+For an adapter A/B block:
+
+- hold the exact model checkpoint, provider/endpoint, server configuration,
+  reasoning effort, sampling settings, context/output limits, task revision,
+  and verifier resources fixed;
+- run identical task IDs, preferably in randomized blocked order so provider or
+  service drift does not line up with one adapter;
+- report task-level discordant pairs and a paired interval or exact paired test;
+  Wilson intervals describe each absolute score but do not measure the paired
+  adapter delta;
+- separate setup/verifier reproducibility from model stochasticity. A repeated
+  service-startup or pristine-verifier failure is benchmark noise; a model that
+  passes once and fails once is not by itself proof that the task is flaky;
+- do not silently remove tasks merely because their model outcomes flip. Flag
+  them, investigate the trajectory, and exclude only under a predeclared
+  infrastructure/verifier rule. Outcome-based pruning would bias the screen.
+
+A 20-task paired comparison has more power than two unrelated 20-task scores,
+but it still resolves only large adapter effects. Keep the model/provider
+fixed, publish the paired task table, and graduate close calls rather than
+claiming a precise rank.
+
 ## Concrete short-suite design
 
-### Phase A: cost pilot (`apex_swe_pilot10`)
+### Phase A: cost and reliability pilot (`apex_swe_pilot10`)
 
 Freeze ten public APEX-SWE task IDs in a checked-in manifest; do not randomly
 sample on every run.
@@ -190,20 +261,27 @@ sample on every run.
   "short" suite should reduce task count, not silently make each task easier.
 - Run one representative local model with `pi_vanilla`, `k=1` first. Do not
   multiply by models/adapters until infrastructure is known-good.
+- If that pass qualifies, repeat all ten with the same model, provider, and
+  adapter. Diagnose every disagreement and every non-model failure before
+  freezing a screen.
 
 Promotion gates:
 
 | Gate | Requirement |
 | --- | --- |
-| Runtime | Summed agent wall time <= 2 h for 10 tasks, and total setup + agent + verifier time <= 4 h; report median and p90 too |
+| Runtime | First-pass summed agent wall time <= 2 h for 10 tasks, and total setup + agent + verifier time <= 4 h; report median and p90 too |
+| Tokens | Default first-pass ceiling <= 10M normalized total API tokens over 10 tasks and p90 <= 2M/task; count non-overlapping input/cache/output/reasoning fields and report each separately |
 | Telemetry | >= 95% of trials have input, output, reasoning/cache, wall-time, and tool-call counts |
-| Infrastructure | <= 5% fail before the agent receives a valid task environment |
-| Difficulty | Representative strong and small models do not both floor at 0% or ceiling above 90% |
+| Infrastructure | <= 5% fail before the agent receives a valid task environment, with no task showing the same unexplained startup/verifier failure on both passes |
+| Difficulty | Pilot results show nontrivial task/subcheck variation; if binary score is 0% or >= 90%, run one deliberately stronger or smaller bracketing configuration before accepting or rejecting the suite |
 | Validity | Program verifier runs on a pristine task artifact; no mock-only success claim |
-| Stability | Re-run three representative tasks at `k=3` before freezing the screen |
+| Reliability | Complete `k=2` over all ten tasks with the same matched configuration; report outcome flips rather than automatically deleting them |
 
-A ten-task score has a worst-case 95% binomial margin around ±31 percentage
-points. It is a systems/cost pilot, not a leaderboard.
+The 10M gate is a campaign-design default, not a claim about published APEX
+usage. At a 1M-token mean, 20 tasks x four adapters x `k=1` is already 80M
+tokens; `k=2` doubles it. Tighten the gate if the intended matrix has more
+cells. A ten-task score has a worst-case 95% binomial margin around ±31
+percentage points. It is a systems/cost pilot, not a leaderboard.
 
 ### Phase B: routine screen (`apex_swe_screen20`)
 
@@ -223,12 +301,17 @@ the selection seed/rule. Report:
 
 At 20 binary tasks the worst-case 95% margin is still about ±22 points. This is
 adequate for rejecting obvious weak configurations and finding large scaffold
-failures, not for declaring a two-point model win. Use paired task-level deltas
-when comparing adapters, and graduate close calls to all 50 public tasks.
+failures, not for declaring a two-point model win. For adapter comparisons,
+keep one model/provider fixed and report the paired discordant-task table plus a
+paired interval/test. Use the winning one or two adapters for broader model
+runs instead of expanding the full Cartesian product. Graduate close calls to
+all 50 public tasks.
 
 ### Fallback: `freshbrew_jdk21_32`
 
-If APEX-SWE fails the runtime or infrastructure gate:
+If APEX-SWE fails the runtime or token gate, exceeds 5% infrastructure
+failures, or repeats the same unexplained startup/verifier failure on both
+passes:
 
 - choose 32 FreshBrew projects, eight from each quartile of repository
   complexity, before testing target models;
@@ -275,8 +358,12 @@ cost-aware signal that answers a concrete deployment question.
 7. **Use cost gates.** Abort or quarantine trajectories that exceed a declared
    token/time budget, but report budget exhaustion separately from incorrect
    solutions.
-8. **Report uncertainty.** Always show task count and Wilson CI beside a short
-   suite score; use full suites for close ranking claims.
+8. **Match harness-comparison blocks.** Hold model, provider, server settings,
+   reasoning effort, sampling parameters, task revision, and resources fixed;
+   do not let a provider or effort change masquerade as an adapter effect.
+9. **Report the right uncertainty.** Show task count and Wilson CI for an
+   absolute score; use paired task deltas and paired uncertainty/tests for
+   adapter comparisons. Use full suites for close ranking claims.
 
 ## Primary sources
 
@@ -293,4 +380,5 @@ cost-aware signal that answers a concrete deployment question.
 - [ProgramBench](https://programbench.com/)
 - [KernelBench](https://github.com/ScalingIntelligence/KernelBench)
 - [CyberGym](https://www.cybergym.io/cybergym/)
-- [Terminal-Bench 2.1](https://www.tbench.ai/news/terminal-bench-2-1)
+- [Terminal-Bench Core 0.1.1 leaderboard](https://www.tbench.ai/leaderboard/terminal-bench/1.0) and [Terminal-Bench 2.1](https://www.tbench.ai/news/terminal-bench-2-1)
+- [SWE-bench Verified Mini leaderboard](https://hal.cs.princeton.edu/swebench_verified_mini)

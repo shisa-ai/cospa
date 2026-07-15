@@ -894,3 +894,19 @@ Append-only development log for the `cospa` repository.
 - Next action: on the GPU host, verify every pair with
   `nvidia-smi topo -p2p r` and NCCL `via P2P` logs before comparing TP3
   throughput or running the first cospa trial.
+
+## 2026-07-15 — Refine the coding-eval portfolio for paired harness tests
+
+- Context: review feedback correctly identified missing external-anchor and
+  paired-adapter guidance in the first eval survey.
+- Evidence: verified the official Terminal-Bench Core 0.1.1 and 2.1
+  leaderboards/protocols, the HAL Verified Mini page, and aggregate token use
+  in current `./view json` results.
+- Decision: pin existing Core 0.1.1 as the immediate 80-task leaderboard
+  anchor rather than treating 89-task, k=5 TB 2.1 as cheap; retain APEX-SWE
+  as the new cost-gated signal and Verified Mini as an optional second anchor.
+- Method: qualify all ten APEX pilot tasks at k=2, distinguish infrastructure
+  recurrence from model outcome flips, hold model/provider settings fixed for
+  paired comparisons, and cap the default first pass at 10M normalized tokens.
+- Next action: fix the current Terminal-Bench `@head` resolution before another
+  large run, then execute the APEX cost pilot without a Cartesian matrix.

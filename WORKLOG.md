@@ -837,3 +837,17 @@ Append-only development log for the `cospa` repository.
   horse (~103–138 tok/s, 58–94K ctx); MTP layer not clearly present in
   any quant; tencent/Hy3-FP8 (299.9 GB) exceeds even 3×0.95.
 - Next action: cospa sanity eval of INCModel2 MXFP4 vs DS V4 Flash.
+
+## 2026-07-15 — Document llama.cpp GGUF route and DFlash template in MODELS.md
+
+- Context: field-tested MiMo-V2.5 IQ3_S llama.cpp invocation (r/StrixHalo)
+  and AEON-7's Qwen3.6-35B-A3B NVFP4+DFlash setup as a Blackwell
+  speculative-decoding reference.
+- Evidence: AesSedai/MiMo-V2.5-GGUF sizes from HF API (IQ3_S 114.2 GB,
+  IQ4_XS 147.9 GB); AEON-7 README (GB10/sm_121a, 91.7 tok/s coding
+  single-stream, 40–58% acceptance at 16–32K ctx, vLLM PR #41703).
+- Key notes: GGUF sidesteps TP divisibility and utilization fractions;
+  --ctx-checkpoints/-cram and --reasoning-budget are worth stealing for
+  agent serving; AEON-7 image is sm_121a-only (rebuild needed for
+  sm_120); recipe implies several-hundred tok/s for A3B-class + DFlash
+  on PRO 6000, relevant to Ornith (Qwen3.5-MoE lineage).

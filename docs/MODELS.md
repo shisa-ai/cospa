@@ -181,6 +181,75 @@ uploads** (verified from safetensors headers, 2026-07-15):
   ~75% of expert weights missing from the single 133.8 GB shard.
 - `config.json` has no `quantization_config`.
 
+### llama.cpp / GGUF route for MiMo-V2.5
+
+[AesSedai/MiMo-V2.5-GGUF](https://huggingface.co/AesSedai/MiMo-V2.5-GGUF)
+(imatrix quants, includes vision mmproj):
+
+| Quant | Size | Fits |
+| --- | --- | --- |
+| IQ3_S | **114.2 GB** | 2× easily (~65 GB spare); ~3.4 bpw quality risk |
+| IQ4_XS | 147.9 GB | 2× comfortably — closest to NVFP4 bpw |
+| Q4_K_M | 190.8 GB | 3× only |
+| Q5_K_M / Q8_0 | 229.1 / 330.1 GB | 3× / ✗ |
+
+llama.cpp sidesteps the two things that hurt MiMo elsewhere: no TP
+divisibility constraints (layer/row split across any GPU count) and no
+utilization-fraction games. With q8_0 KV (halves MiMo's ≤60 KB/tok to
+≤30 KB), 160K context costs ≤ 5 GB — hence the `-c 160000` in this
+field-tested Strix Halo invocation
+([r/StrixHalo comment](https://www.reddit.com/r/StrixHalo/comments/1twtprv/comment/oprze80/)):
+
+```bash
+llama-server -m models/AesSedai/MiMo-V2.5-GGUF/MiMo-V2.5-IQ3_S-00001-of-00004.gguf \
+  --mmproj models/mmproj/mmproj-MiMo-V2.5-Q8_0.gguf \
+  -fa 1 --no-mmap -c 160000 --cache-type-k q8_0 --cache-type-v q8_0 \
+  -cram 5140 --ctx-checkpoints 128 --temp 0.6 --top-p 0.95 --top-k 20 \
+  --min-p 0.01 --jinja --fit off --parallel 1 -b 8192 -ub 2048 \
+  --reasoning-budget 3000 \
+  --reasoning-budget-message 'Thinking budget exceeded, answer now' \
+  --repeat-penalty 1.05 --repeat-last-n 128
+```
+
+Flags worth stealing for agentic serving: `--ctx-checkpoints` + `-cram`
+(hybrid-attention state checkpoints in host RAM → cheap prompt-prefix
+reuse across agent turns, important because SWA/linear layers can't
+rewind like plain KV); `--reasoning-budget 3000` (hard cap on thinking
+tokens — directly attacks reasoning-model latency in agent loops);
+q8_0 KV both directions. Trade-offs on our rig: llama.cpp MoE decode
+won't match vLLM NVFP4 kernels on Blackwell (ballpark 70–110 tok/s for
+IQ3_S single-stream on 2× PRO 6000, layer-split), no MTP/DFlash support,
+and IQ3_S (~3.4 bpw) is below the ~4.25 bpw NVFP4 quality point — eval
+before trusting. IQ4_XS on 3 GPUs is the more defensible quality pick.
+
+## DFlash speculative decoding on Blackwell (template)
+
+[AEON-7/Qwen3.6-35B-A3B-heretic-NVFP4-DFlash](https://github.com/AEON-7/Qwen3.6-35B-A3B-heretic-NVFP4-DFlash)
+is a working reference for the vLLM DFlash path on Blackwell-class
+hardware: Qwen3.6-35B-A3B NVFP4 (~22 GB) + z-lab's 905 MB 8-layer DFlash
+drafter, `num_speculative_tokens: 11`, served with
+`--speculative-config '{"method":"dflash",...}'` on vLLM v0.23.
+
+Reported on a **GB10 DGX Spark (sm_121a, ~273 GB/s unified memory)**:
+91.7 tok/s single-stream on coding, 120+ on math/reasoning, 40–58% draft
+acceptance holding at 16–32K context, ~740 tok/s aggregate at c=64.
+Getting ~92 tok/s coding from a ~273 GB/s box implies an effective ~4×
+uplift from acceptance — on a PRO 6000 (1.79 TB/s, 6.5× the bandwidth)
+the same recipe should land in the **several-hundred-tok/s** range
+single-stream for an A3B-class model.
+
+Caveats / relevance to us:
+- The published Docker image is **built for sm_121a only** — it will not
+  run on PRO 6000 (sm_120) without rebuilding vLLM; the recipe, not the
+  image, is what transfers. It also carries the prefix-cache-safe DFlash
+  fix (vLLM PR #41703) that matters for agent loops.
+- Direct application: the MiMo-V2.5 DFlash quants above use the same
+  vLLM `method: dflash` path — this repo is evidence the path works.
+- Ornith angle: Ornith-1.0-35B is Qwen3.5-MoE lineage with a nearly
+  identical shape to Qwen3.6-35B-A3B; if a z-lab-style drafter exists or
+  can be trained for it, Ornith's ~150–190 tok/s could plausibly double,
+  compounding the "2 replicas" advantage.
+
 ## MiniMax M2.7 (230B-A10B)
 
 [MiniMaxAI/MiniMax-M2.7](https://huggingface.co/MiniMaxAI/MiniMax-M2.7)

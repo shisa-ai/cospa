@@ -790,3 +790,18 @@ Append-only development log for the `cospa` repository.
 - Operations: stopped the initial four-completed-task `thinkingcap/...`
   smoke rather than mix provider IDs and prices. Its partial durable results
   remain intact; restart under the canonical `local-vllm/...` identity.
+
+## 2026-07-15 — Add docs/MODELS.md candidate-model research for 192 GB rig
+
+- Context: survey open-weight models that fit 2× RTX PRO 6000 (192 GB)
+  and might outperform Ornith-1.0-35B on agentic coding benchmarks.
+- Evidence: repo sizes from HF API `usedStorage`; quant compositions
+  verified by parsing safetensors headers via HTTP range requests (no
+  weight downloads); KV math from each model's `config.json`.
+- Key finding: gaber/MiMo-V2.5-NVFP4-* repos are broken (all-BF16
+  modelopt fake-quant intermediates, ~75% of expert weights missing) —
+  documented so we don't rediscover this later.
+- Decision: shortlist MiniMax M2.7 NVFP4 (139.9 GB), DeepSeek V4 Flash
+  (159.6 GB native), MiMo-V2.5 MXFP4 (176.6 GB, tight); Hy3 and
+  MiniMax M3 ruled out on fit/KV grounds.
+- Next action: cospa sanity-eval any quant before trusting vendor scores.

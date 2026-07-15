@@ -47,7 +47,7 @@ per decoded token.
 | MiMo-V2.5 | 310B-A15B | n/pub (Pro: 78.9) | **56.1** | — | **65.8** (2.0) |
 | MiniMax M2.7 | 230B-A10B | 78.0 | 56.2 | **76.5** | 57.0 (2.0) |
 | DeepSeek V4 Flash | 284B-A13B | **79.0** | — | — | 56.9 (2.0) |
-| Hy3 (3-GPU only) | 295B-A21B | 78.0 | 57.9 | — | n/pub |
+| Hy3 (see analysis) | 295B-A21B | 78.0 | 57.9 | — | n/pub |
 
 Reading: MiMo-V2.5 is the only one that (roughly) matches/beats Ornith on
 Terminal-Bench; M2.7 and V4 Flash beat it on SWE-bench-style tasks but
@@ -121,6 +121,8 @@ fine, ≥ 0.95 often requires shrinking graph capture sizes or
 | DS V4 Flash native | 159.6 | ✗ | ✅ +13.2 | ✅ +17.0 | ✅ +22.8 | ✅ +99.6 | ✅ |
 | MiMo MXFP4 | 176.6 | ✗ | ❌ −3.8 | ⚠️ ±0 | ✅ +5.8 | ✅ +82.6 | ✅ |
 | MiMo NVFP4 (mitomtuna) | 183.5 | ✗ | ❌ | ❌ | ❌ −1.1 | ✅ +75.7 | ✅ |
+| Hy3 MXFP4 (INCModel2) | 164.2 | ✗ | ✅ +8.6 | ✅ +12.4 | ✅ +18.2 | ✅ +95.0 | ✅ |
+| Hy3 NVFP4 (0xSero) | 169.6 | ✗ | ⚠️ +3.2 | ✅ +7.0 | ✅ +12.8 | ✅ +89.6 | ✅ |
 | Hy3 NVFP4 (kodelow) | 180.9 | ✗ | ❌ | ❌ | ⚠️ +1.5 | ✅ +78.3 | ✅ +92.7 |
 | MiniMax M3 NVFP4 | 250.1 | ✗ | ✗ | ✗ | ✗ | ⚠️ +9.1 | ✅ +23.5 |
 | M3 REAP25 | 187.0 | ✗ | ❌ | ❌ | ❌ | ✅ +72.2 | ✅ |
@@ -210,11 +212,78 @@ Highest SWE-V (79.0), cheapest KV (~24 KB/tok → ~420K tokens even at
 0.90 util), MTP included (est. 210–380 tok/s effective), fastest
 long-context prefill. The best *speed × score* package of the group.
 
+## Hy3 (Tencent, 295B-A21B) — the 3-GPU pick, and a 2-GPU dark horse
+
+[tencent/Hy3](https://huggingface.co/tencent/Hy3) — `hy_v3`, 80 layers,
+GQA 64 Q / 8 KV heads × 128, 192 routed experts top-8
+(`moe_intermediate` 1536 → 290B routed params) + shared expert, 1 nextn
+(MTP) layer, 262K context. Native BF16 = 597.6 GB;
+[tencent/Hy3-FP8](https://huggingface.co/tencent/Hy3-FP8) = 299.9 GB
+(doesn't fit even 3×0.95 = 273.6). Best scores of any candidate on
+SWE-Pro (57.9); **no published Terminal-Bench score**.
+
+### Parallelism / divisibility
+
+| Scheme | Divisible? | Notes |
+| --- | --- | --- |
+| TP=2 | ✅ 64/2 Q, 8/2 KV, 192/2 experts, 1536/2 FFN | standard vLLM path |
+| **TP=3** | ❌ **64 Q-heads % 3 ≠ 0** | vLLM/SGLang reject at startup; KV heads (8) would also replicate |
+| PP=3 | ✅ 80 layers → 27/27/26 | works today (`-tp 1 -pp 3`); single-stream decode capped at ~1-GPU bandwidth, but no allreduce tax and batching fills the pipeline |
+| EP across 3 | 192 % 3 = 0 ✓ but attention is still TP-bound | doesn't rescue TP=3 |
+| llama.cpp layer split | ✅ any GPU count | GGUFs exist incl. Tencent's own [AngelSlim/Hy3-GGUF](https://huggingface.co/AngelSlim/Hy3-GGUF); slower MoE decode, fallback only |
+| TP=4 | ✅ all dims | if a 4th GPU ever appears, Hy3 is clean |
+
+So on 3 GPUs the realistic serving mode is **PP=3**, not TP=3. The
+alternative use of a 3rd GPU: run Hy3 TP=2 with a small repo (below) and
+give GPU 3 to a second model (e.g. an Ornith replica) for cospa matrix
+throughput.
+
+### Available quants (headers verified 2026-07-15; all legit, full expert coverage)
+
+| Repo | Size | Experts | Attention | Dense/shared | Risk notes |
+| --- | --- | --- | --- | --- | --- |
+| [INCModel2/Hy3-MXFP4-Mixed-CT-AutoRound-Preview](https://huggingface.co/INCModel2/Hy3-MXFP4-Mixed-CT-AutoRound-Preview) | **164.2** | MXFP4 154.0 | **FP8** 6.1 | FP8 | best balance: FP8 attention, AutoRound-calibrated, "Preview" |
+| [0xSero/Hy3-299B-NVFP4](https://huggingface.co/0xSero/Hy3-299B-NVFP4) | 169.6 | NVFP4 145.0+18.1 | **FP4** 3.4 | FP4 | smallest NVFP4 but FP4 *attention* — highest quality risk |
+| [cyankiwi/Hy3-AWQ-NVFP4](https://huggingface.co/cyankiwi/Hy3-AWQ-NVFP4) | 177.5 | NVFP4 + 7.2 BF16 kept | FP4 3.7 | BF16 | AWQ-selected BF16 experts |
+| [kodelow/Hy3-NVFP4-W4A16](https://huggingface.co/kodelow/Hy3-NVFP4-W4A16) | 180.9 | NVFP4 145.0+18.1 | **BF16** 12.2 | BF16 | safest recipe, 3-GPU-only fit |
+| [r0b0tlab/Hy3-295B-NVFP4](https://huggingface.co/r0b0tlab/Hy3-295B-NVFP4) / [mmangkad](https://huggingface.co/mmangkad/Hy3-NVFP4) | 186.1 | NVFP4 | BF16-ish | — | 3-GPU only |
+| REAP-pruned ([sapidlabs 48e](https://huggingface.co/sapidlabs/Hy3-REAP-48e) 168.1, pipenetwork MLX) | 45–168 | pruned experts | — | — | no published post-prune scores; MLX ones are Mac-only |
+
+MTP caveat: the base model's 1 nextn layer (3.8B) is not clearly present
+in any of these quants (no distinct MTP tensors in headers) — assume **no
+self-speculative decode** until verified;
+[VictorEuler/Hy3-preview-mtp-drafter](https://huggingface.co/VictorEuler/Hy3-preview-mtp-drafter)
+exists but targets Hy3-*preview*.
+
+### KV and speed estimates
+
+KV: ~160 KB/token FP8 (80 all-global layers) — the most expensive of any
+candidate. Bytes/token (batch-1, from stored dtypes; routed active =
+8/192 of expert bytes ≈ 6.4–7.0 GB):
+
+| Repo | Bytes/token | 2× TP2 est. (45–60% MBU) | 3× PP3 est. (~1-GPU BW, 55–65%) |
+| --- | --- | --- | --- |
+| INCModel2 MXFP4 | ~15.6 GB | **103–138 tok/s** | 63–75 tok/s |
+| 0xSero NVFP4 | ~12.2 GB | 132–176 tok/s | 80–96 tok/s |
+| kodelow NVFP4 | ~23.4 GB | n/a (doesn't fit) | 42–50 tok/s |
+
+Context budgets (FP8 KV, minus ~3 GB activations):
+- **2× TP2, INCModel2 @0.92**: ~9.4 GB → ~58K tokens; @0.95 → ~94K.
+  Single-stream agentic only, but *it does fit* — Hy3 on 192 GB is not
+  dead, it just requires the smallest quant and modest context.
+- **3× PP3, kodelow @0.90**: ~74 GB → ~460K tokens aggregate; full 256K
+  single-stream with room for batch. This is the comfortable config.
+
+Verdict: on 3 GPUs Hy3 is the score leader (SWE-V 78 / SWE-Pro 57.9) and
+fits easily, but PP=3 caps single-stream decode at ~50–75 tok/s and the
+missing TB score + missing MTP are open questions. On 2 GPUs the
+INCModel2 MXFP4 repo makes it a legitimate dark horse at ~103–138 tok/s
+with ~58–94K context — worth a cospa sanity eval against DS V4 Flash.
+
 ## Ruled out (at 2 GPUs)
 
 | Model | Why |
 | --- | --- |
-| [tencent/Hy3](https://huggingface.co/tencent/Hy3) 295B-A21B | 4-bit = 180.9–186.1 GB **and** ~160 KB/tok KV (80 full-attn layers) → no context room on 192 GB. Viable on 3 GPUs. |
 | [nvidia/MiniMax-M3-NVFP4](https://huggingface.co/nvidia/MiniMax-M3-NVFP4) | 250.1 GB — 3 GPUs only, marginal at 0.90. |
 | [sparkarena/Minimax-M3-v0-NVFP4-REAP25](https://huggingface.co/sparkarena/Minimax-M3-v0-NVFP4-REAP25) | 187.0 GB — over 2-GPU budget at any utilization; no published post-prune scores. |
 | gaber/MiMo-V2.5-* | Broken uploads — see warning above. |
@@ -229,6 +298,13 @@ long-context prefill. The best *speed × score* package of the group.
 3. **MiMo-V2.5 MXFP4 (176.6 GB)** — only candidate to edge Ornith on
    Terminal-Bench, but needs 0.95 utilization, is single-stream, ~95–125
    tok/s, and the quant is community/unvalidated.
-4. **Ornith-1.0-35B** remains the value baseline: one GPU, top TB score,
+4. **Hy3 MXFP4 (INCModel2, 164.2 GB)** — dark horse: best SWE-Pro
+   (57.9), fits TP=2 at 0.90, ~103–138 tok/s, but only ~58–94K context
+   and an unvalidated preview quant. See the Hy3 section.
+5. **Ornith-1.0-35B** remains the value baseline: one GPU, top TB score,
    ~150–190 tok/s, near-nil KV cost — and 2 replicas on this rig doubles
    cospa trial throughput.
+
+On 3 GPUs: **Hy3 (kodelow NVFP4, PP=3)** for max scores with the safest
+quant recipe, accepting ~42–50 tok/s single-stream — or keep DS V4 Flash
+on TP=2 and give GPU 3 to an Ornith replica for matrix throughput.

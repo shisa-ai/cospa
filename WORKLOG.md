@@ -822,3 +822,18 @@ Append-only development log for the `cospa` repository.
   MXFP4 repo fits 2 GPUs, and only at 0.95.
 - Decision: 2-GPU recommendation reordered to DS V4 Flash > M2.7 >
   MiMo MXFP4, Ornith baseline (can run 2 replicas).
+
+## 2026-07-15 — Add Hy3 deep-dive (divisibility, quants, KV/speed) to MODELS.md
+
+- Context: evaluate Hy3 as the 3-GPU pick and check whether TP across
+  3× PRO 6000 is actually possible; enumerate all available quants.
+- Evidence: tencent/Hy3 config.json (64 Q / 8 KV heads, 192 experts,
+  80 layers, 1 nextn layer); safetensors-header decomposition of
+  kodelow, 0xSero, INCModel2, cyankiwi quants (all verified legit —
+  full 290B expert coverage, real packed FP4).
+- Key findings: TP=3 impossible (64 % 3 ≠ 0) — 3-GPU serving is PP=3
+  (~42–96 tok/s single-stream) or TP=2 + spare GPU; INCModel2 MXFP4
+  (164.2 GB, FP8 attention) fits 2× TP2 at 0.90 → Hy3 is a 2-GPU dark
+  horse (~103–138 tok/s, 58–94K ctx); MTP layer not clearly present in
+  any quant; tencent/Hy3-FP8 (299.9 GB) exceeds even 3×0.95.
+- Next action: cospa sanity eval of INCModel2 MXFP4 vs DS V4 Flash.

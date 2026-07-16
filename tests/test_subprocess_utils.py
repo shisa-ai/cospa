@@ -35,6 +35,50 @@ def _http_server():
         server.server_close()
 
 
+def test_node_installation_root_supports_fnm(monkeypatch, tmp_path):
+    """FNM's multishell shims must resolve to the mounted Node installation."""
+    fnm_versions = tmp_path / ".local" / "share" / "fnm" / "node-versions"
+    installation = fnm_versions / "v24.16.0" / "installation"
+    (installation / "bin").mkdir(parents=True)
+    node = installation / "bin" / "node"
+    node.write_text("fake node\n")
+    multishell = tmp_path / "run" / "fnm_multishell" / "bin"
+    multishell.mkdir(parents=True)
+    (multishell / "node").symlink_to(node)
+
+    monkeypatch.setattr(
+        subprocess_utils.shutil,
+        "which",
+        lambda name: str(multishell / "node") if name == "node" else None,
+    )
+    monkeypatch.setattr(
+        subprocess_utils, "_FNM_NODE_VERSIONS_ROOT", fnm_versions
+    )
+    monkeypatch.setenv("PATH", f"{multishell}:/usr/bin")
+
+    assert subprocess_utils._node_installation_root() == installation
+
+    workdir = tmp_path / "workdir"
+    sandbox_root = tmp_path / "sandbox"
+    workdir.mkdir()
+    sandbox_root.mkdir()
+    wrapped = subprocess_utils._sandbox_agent_command(
+        ["pi", "--version"],
+        workdir,
+        sandbox_root,
+        relay_socket=None,
+        model_url=None,
+    )
+    assert any(
+        wrapped[index : index + 3]
+        == ["--ro-bind", str(installation), str(installation)]
+        for index in range(len(wrapped) - 2)
+    )
+    path_at = wrapped.index("--setenv")
+    assert wrapped[path_at + 1] == "PATH"
+    assert wrapped[path_at + 2] == f"{installation / 'bin'}:/usr/bin"
+
+
 def test_run_command_timeout_kills_process_group(monkeypatch):
     """Timeout cleanup must target the whole process group, not one child."""
     proc = Mock()

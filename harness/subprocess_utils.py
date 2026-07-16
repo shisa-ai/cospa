@@ -26,6 +26,9 @@ _TERMINATION_CALLBACKS: set[Callable[[int], None]] = set()
 _TERMINATION_CALLBACKS_LOCK = threading.Lock()
 _PROJECT_ROOT = Path(__file__).resolve().parent.parent
 _NVM_ROOT = Path.home() / ".local" / "share" / "nvm"
+_FNM_NODE_VERSIONS_ROOT = (
+    Path.home() / ".local" / "share" / "fnm" / "node-versions"
+)
 
 
 def agent_sandbox_cwd(
@@ -155,15 +158,22 @@ def _append_dir_options(options: list[str], paths: Sequence[Path]) -> None:
                 existing.add(item)
 
 
-def _nvm_version_root() -> Path | None:
-    pi_executable = shutil.which("pi")
-    if not pi_executable:
+def _node_installation_root() -> Path | None:
+    """Return the selected NVM/FNM Node installation mounted for adapters."""
+    node_executable = shutil.which("node")
+    if not node_executable:
         return None
-    resolved = Path(pi_executable).resolve()
-    return next(
-        (parent for parent in resolved.parents if parent.parent == _NVM_ROOT),
-        None,
-    )
+    resolved = Path(node_executable).resolve()
+    if resolved.parent.name != "bin":
+        return None
+    installation = resolved.parent.parent
+    allowed_roots = (_NVM_ROOT, _FNM_NODE_VERSIONS_ROOT)
+    if not any(
+        installation == root or root in installation.parents
+        for root in allowed_roots
+    ):
+        return None
+    return installation
 
 
 def _sandbox_agent_command(
@@ -244,10 +254,29 @@ def _sandbox_agent_command(
             wrapped.extend(["--ro-bind", str(etc_path), str(etc_path)])
     wrapped.extend(["--ro-bind", str(hosts_file), "/etc/hosts"])
 
-    nvm_version = _nvm_version_root()
-    if nvm_version:
-        _append_dir_options(wrapped, [nvm_version])
-        wrapped.extend(["--ro-bind", str(nvm_version), str(nvm_version)])
+    node_installation = _node_installation_root()
+    if node_installation:
+        _append_dir_options(wrapped, [node_installation])
+        node_bin = str(node_installation / "bin")
+        selected_node = shutil.which("node")
+        selected_bin = str(Path(selected_node).parent) if selected_node else None
+        path_entries = os.environ.get("PATH", "").split(os.pathsep)
+        sandbox_path = [
+            node_bin if selected_bin and entry == selected_bin else entry
+            for entry in path_entries
+        ]
+        if node_bin not in sandbox_path:
+            sandbox_path.append(node_bin)
+        wrapped.extend(
+            [
+                "--ro-bind",
+                str(node_installation),
+                str(node_installation),
+                "--setenv",
+                "PATH",
+                os.pathsep.join(sandbox_path),
+            ]
+        )
 
     if endpoint:
         persisted_session_dir = explicit_session_dir or trial_session_dir

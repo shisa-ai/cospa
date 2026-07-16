@@ -1195,6 +1195,22 @@ Append-only development log for the `cospa` repository.
 - Next action: use only fresh run IDs whose manifests carry
   `aider-hermetic-v1`; keep both quarantine generations for forensic review.
 
+## 2026-07-17 — Expose FNM adapters inside the Aider sandbox
+
+- Context: the first fresh hermetic ThinkingCap canary exited 127 because the
+  empty-root namespace only recognized NVM while this host installs pi and
+  little-coder through FNM.
+- RED evidence: the real `cpp/all-your-base` canary reported `pi: command not
+  found`; the new FNM root test failed before the installation detector existed.
+- Decision: resolve the selected Node binary to its allowlisted NVM/FNM
+  installation, mount only that installation read-only, and replace its host
+  shim directory in `PATH` without shadowing task-local test executables.
+- Validation: the rerun canary reached the model and passed all 17 native C++
+  assertions; focused tests report 5 passed and full
+  `mamba run -n coding-eval python -m pytest -q` reports 238 passed.
+- Next action: persist the explicit pi session directory through Bubblewrap so
+  the same canary retains its JSONL trace and token/cost telemetry.
+
 ## 2026-07-22 — Add Laguna S 2.1 to the local model shortlist
 
 - Context: Poolside released Laguna S 2.1 after the original model survey; its

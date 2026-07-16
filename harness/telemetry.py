@@ -412,18 +412,27 @@ def find_pi_session_file(
     cwd: Path | str,
     *,
     sessions_root: Path | str | None = None,
+    session_dir: Path | str | None = None,
     start_time: float | None = None,
     end_time: float | None = None,
 ) -> Path | None:
-    """Find the pi JSONL session trace for a trial workdir."""
+    """Find the pi JSONL session trace for a trial workdir.
+
+    ``session_dir`` is the explicit directory passed to pi's ``--session-dir``.
+    When omitted, preserve compatibility with pi's default encoded-cwd layout.
+    """
     cwd_path = Path(cwd)
-    session_dir = pi_session_dir_for_cwd(cwd_path, sessions_root=sessions_root)
-    if not session_dir.exists():
+    resolved_session_dir = (
+        Path(session_dir)
+        if session_dir is not None
+        else pi_session_dir_for_cwd(cwd_path, sessions_root=sessions_root)
+    )
+    if not resolved_session_dir.exists():
         return None
 
     matches: list[tuple[float, Path]] = []
     fallback: list[tuple[float, Path]] = []
-    for session_file in session_dir.glob("*.jsonl"):
+    for session_file in resolved_session_dir.glob("*.jsonl"):
         header = _session_header(session_file)
         if not header or header.get("cwd") != str(cwd_path):
             continue
@@ -683,6 +692,7 @@ def collect_pi_session_usage(
     out_dir: Path | str,
     *,
     sessions_root: Path | str | None = None,
+    session_dir: Path | str | None = None,
     start_time: float | None = None,
     end_time: float | None = None,
 ) -> dict:
@@ -692,6 +702,7 @@ def collect_pi_session_usage(
     session_file = find_pi_session_file(
         workdir,
         sessions_root=sessions_root,
+        session_dir=session_dir,
         start_time=start_time,
         end_time=end_time,
     )

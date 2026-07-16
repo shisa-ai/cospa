@@ -281,6 +281,61 @@ def test_all_comparable_adapters_pass_thinking_flag_when_configured():
         )
 
 
+def test_all_comparable_adapters_use_trial_local_session_dir():
+    """Long result paths must not be flattened into a >255-byte session name."""
+    adapters = [
+        PiVanillaAdapter(),
+        PiDevstackAdapter(),
+        PiDevstackSuperpowersAdapter(),
+        PiSuperpowersAdapter(),
+        LittleCoderAdapter(),
+        LittleCoderSuperpowersAdapter(),
+    ]
+
+    for adapter in adapters:
+        captured_cmd = {}
+
+        def fake_run(cmd, *args, **kwargs):
+            captured_cmd["cmd"] = list(cmd)
+
+            class _R:
+                returncode = 0
+
+            return _R()
+
+        with tempfile.TemporaryDirectory() as tmp:
+            trial_dir = (
+                Path(tmp)
+                / ("model-" + "m" * 60)
+                / adapter.name
+                / "aider_polyglot"
+                / ("javascript%2F" + "parallel-letter-frequency")
+                / "trial-1"
+            )
+            out_dir = trial_dir / "out"
+            out_dir.mkdir(parents=True)
+            workdir = trial_dir / "workdir"
+            workdir.mkdir()
+            log_file = out_dir / "session.log"
+            stderr_file = out_dir / "stderr.log"
+
+            with patch(f"{adapter.__class__.__module__}.run_command", fake_run):
+                adapter.run(
+                    task_data={"prompt": "do thing", "model_id": "test/model"},
+                    workdir=workdir,
+                    log_file=log_file,
+                    stderr_file=stderr_file,
+                )
+
+            cmd = captured_cmd["cmd"]
+            assert "--session-dir" in cmd, (
+                f"{adapter.name} must use an explicit trial-local session dir; got {cmd}"
+            )
+            idx = cmd.index("--session-dir")
+            assert Path(cmd[idx + 1]) == out_dir / "pi-sessions"
+            assert max(len(part.encode()) for part in Path(cmd[idx + 1]).parts) <= 255
+
+
 def test_manifest_records_thinking_level():
     """RED: manifest['sampling']['thinking'] MUST record the configured level."""
     suite = AiderPolyglotSuite()

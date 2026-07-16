@@ -171,6 +171,29 @@ def test_collect_pi_session_usage_copies_raw_trace_by_workdir():
         assert summary["prompt_tokens"] == 300
 
 
+def test_collect_pi_session_usage_reads_explicit_trial_session_dir():
+    """--session-dir traces live directly in the supplied directory."""
+    with tempfile.TemporaryDirectory() as tmp:
+        tmp = Path(tmp)
+        workdir = tmp / "very" / "long" / "result" / "workdir"
+        out_dir = workdir.parent / "out"
+        session_dir = out_dir / "pi-sessions"
+        session_file = session_dir / "2026-07-04T14-07-07Z_session.jsonl"
+        _write_jsonl(session_file, _session_events(workdir))
+
+        summary = collect_pi_session_usage(
+            workdir,
+            out_dir,
+            session_dir=session_dir,
+            start_time=datetime(2026, 7, 4, 14, 7, 0, tzinfo=timezone.utc).timestamp(),
+            end_time=datetime(2026, 7, 4, 14, 8, 0, tzinfo=timezone.utc).timestamp(),
+        )
+
+        assert summary["status"] == "observed"
+        assert summary["prompt_tokens"] == 300
+        assert (out_dir / "pi_session.jsonl").read_text() == session_file.read_text()
+
+
 def test_collect_harbor_pi_session_usage_copies_artifact_trace():
     with tempfile.TemporaryDirectory() as tmp:
         tmp = Path(tmp)

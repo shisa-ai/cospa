@@ -990,3 +990,24 @@ Append-only development log for the `cospa` repository.
   passed; `bash tests/scripts/run_all.sh` reports 47 shell assertions passed.
 - Next action: configure the pinned judge endpoint and run all 12 with one
   representative model, `pi_vanilla`, and k=1 before evaluating promotion.
+
+## 2026-07-16 — Keep benchmark pi session paths below NAME_MAX
+
+- Context: the full ThinkingCap run left `pi_devstack_superpowers` at 213/225
+  because pi flattened deep trial workdirs into session-directory components
+  longer than Linux NAME_MAX (255 bytes). The viewer correctly surfaced the
+  missing trials as a stale/incomplete cell rather than a model failure.
+- Decision: every pi-backed adapter now passes a trial-local
+  `--session-dir <out>/pi-sessions`; telemetry reads that explicit directory
+  first and falls back to the legacy encoded-workdir location for old/custom
+  adapters.
+- Evidence: the RED adapter matrix reproduced commands without
+  `--session-dir`, and the RED telemetry test rejected explicit session
+  directories. Both are green, including a constructed deep result path whose
+  session-directory components remain within NAME_MAX.
+- Validation: `mamba run -n coding-eval python -m pytest -q` reports 196
+  passed; `bash tests/scripts/run_all.sh` reports 47 shell assertions passed;
+  `git diff --check` and Python compilation pass.
+- Next action: after the active `little_coder` cell, recover the 12 missing
+  `pi_devstack_superpowers` trials and let `little_coder_superpowers` start
+  with the fixed session path.

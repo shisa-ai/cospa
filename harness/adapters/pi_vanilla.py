@@ -11,6 +11,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Optional
 
+from harness.adapters.session_utils import trial_session_args
 from harness.subprocess_utils import run_command
 
 
@@ -49,6 +50,7 @@ class PiVanillaAdapter:
             "--print",
             "--model", task_data.get("model_id", "nvidia/nemotron-3-ultra-550b-a55b"),
         ]
+        cmd.extend(trial_session_args(log_file))
 
         # Optional thinking/effort level. When set, forward as `pi --thinking <level>`.
         # When unset, omit the flag entirely so pi/model defaults apply.

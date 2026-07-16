@@ -1,12 +1,38 @@
 import signal
 import shlex
 import subprocess
+import threading
+from contextlib import contextmanager
+from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from unittest.mock import Mock
 
 import pytest
 
 from harness import subprocess_utils
+
+
+class _OkHandler(BaseHTTPRequestHandler):
+    def do_GET(self):
+        self.send_response(200)
+        self.end_headers()
+        self.wfile.write(b"ok")
+
+    def log_message(self, format, *args):
+        return
+
+
+@contextmanager
+def _http_server():
+    server = ThreadingHTTPServer(("127.0.0.1", 0), _OkHandler)
+    thread = threading.Thread(target=server.serve_forever, daemon=True)
+    thread.start()
+    try:
+        yield server.server_address[1]
+    finally:
+        server.shutdown()
+        thread.join()
+        server.server_close()
 
 
 def test_run_command_timeout_kills_process_group(monkeypatch):
@@ -34,7 +60,7 @@ def test_run_command_timeout_kills_process_group(monkeypatch):
 
 
 def test_agent_sandbox_hides_shared_data_and_writes_trial(tmp_path):
-    """The real bubblewrap boundary must hide vendor/results, not just look right."""
+    """The real sandbox exposes only the trial and selected model endpoint."""
     sandbox_cwd = subprocess_utils.agent_sandbox_cwd(tmp_path, "all-your-base")
     sessions_root = Path.home() / ".pi" / "agent" / "sessions"
     prior_session = sessions_root / f"cospa-leak-probe-{tmp_path.name}"
@@ -43,28 +69,30 @@ def test_agent_sandbox_hides_shared_data_and_writes_trial(tmp_path):
     trial_session = sessions_root / f"--{encoded_cwd}--"
     project_root = Path(__file__).resolve().parents[1]
     pi_overlay_probe = Path.home() / ".pi" / f"cospa-overlay-{tmp_path.name}"
-    result = subprocess_utils.run_command(
-        [
-            "/bin/bash",
-            "-c",
-            (
-                f"test -z \"$(find {shlex.quote(str(project_root / 'vendor'))} -mindepth 1 "
-                "-print -quit)\" && "
-                f"test -z \"$(find {shlex.quote(str(project_root / 'results'))} -mindepth 1 "
-                "-print -quit)\" && "
-                f"test \"$PWD\" = {shlex.quote(str(sandbox_cwd))} && "
-                f"test ! -e {shlex.quote(str(prior_session))} && "
-                f"touch {shlex.quote(str(trial_session / 'sandbox-session-write'))} && "
-                f"touch {shlex.quote(str(pi_overlay_probe))} && "
-                "cache_probe=$HOME/.cache/cospa-sandbox-write-$$ && "
-                "touch \"$cache_probe\" && rm \"$cache_probe\" && "
-                "touch /tmp/cospa-sandbox-temp && "
-                "touch sandbox-write"
-            ),
-        ],
-        sandbox_workdir=tmp_path,
-        sandbox_name="all-your-base",
-    )
+    with _http_server() as allowed_port, _http_server() as blocked_port:
+        result = subprocess_utils.run_command(
+            [
+                "/bin/bash",
+                "-c",
+                (
+                    f"test ! -e {shlex.quote(str(project_root / 'README.md'))} && "
+                    "test ! -e /home/lhl/sm120-tuning/BONSAI.md && "
+                    f"test \"$PWD\" = {shlex.quote(str(sandbox_cwd))} && "
+                    f"test ! -e {shlex.quote(str(prior_session))} && "
+                    f"touch {shlex.quote(str(trial_session / 'sandbox-session-write'))} && "
+                    f"touch {shlex.quote(str(pi_overlay_probe))} && "
+                    f"curl -fsS http://127.0.0.1:{allowed_port}/health >/dev/null && "
+                    f"! curl -fsS --max-time 1 http://127.0.0.1:{blocked_port}/health >/dev/null 2>&1 && "
+                    "cache_probe=$HOME/.cache/cospa-sandbox-write-$$ && "
+                    "touch \"$cache_probe\" && rm \"$cache_probe\" && "
+                    "touch /tmp/cospa-sandbox-temp && "
+                    "touch sandbox-write"
+                ),
+            ],
+            sandbox_workdir=tmp_path,
+            sandbox_name="all-your-base",
+            sandbox_model_url=f"http://127.0.0.1:{allowed_port}/v1",
+        )
     prior_session.rmdir()
     (trial_session / "sandbox-session-write").unlink(missing_ok=True)
     trial_session.rmdir()
@@ -73,3 +101,27 @@ def test_agent_sandbox_hides_shared_data_and_writes_trial(tmp_path):
     assert not pi_overlay_probe.exists()
     assert sandbox_cwd.name == "all-your-base"
     assert (tmp_path / "sandbox-write").exists()
+
+
+def test_verifier_sandbox_has_no_model_or_public_network(tmp_path):
+    """Model-written code executed by a verifier stays hermetically isolated."""
+    project_root = Path(__file__).resolve().parents[1]
+    with _http_server() as blocked_port:
+        result = subprocess_utils.run_command(
+            [
+                "/bin/bash",
+                "-c",
+                (
+                    f"test ! -e {shlex.quote(str(project_root / 'README.md'))} && "
+                    f"! curl -fsS --max-time 1 http://127.0.0.1:{blocked_port}/ "
+                    ">/dev/null 2>&1 && "
+                    "touch verifier-write"
+                ),
+            ],
+            sandbox_workdir=tmp_path,
+            sandbox_name="verifier",
+            sandbox_model_access=False,
+        )
+
+    assert result.returncode == 0
+    assert (tmp_path / "verifier-write").exists()

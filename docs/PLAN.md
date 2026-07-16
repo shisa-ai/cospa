@@ -185,13 +185,18 @@ runner. Cheap signal; do this before any TB run.
   excluding solution-bearing `.meta/` examples and `.approaches/` guides.
   Prefix the problem statement with the task ID, required language, and an
   explicit current-workdir-only boundary, then run the existing test suite.
-- Isolation: all local Aider adapters run through bubblewrap. The host root is
-  read-only; shared `vendor/`, `results/`, and prior pi sessions are hidden;
-  only the active trial workdir and its unique telemetry session are persistent
-  writable binds.
-  Pi and browser caches use private overlays, `/tmp` is private, networking is
-  retained, and the virtual cwd preserves the exercise basename for native
-  build systems. This is a fail-closed Linux requirement: `bwrap` must exist.
+- Isolation: all local Aider adapters run through an empty-root bubblewrap
+  namespace. Its allowlist contains the active workdir, selected system and
+  language runtimes, the selected provider/model config, read-only scaffold
+  packages, disposable dependency/browser caches, and the trial's unique
+  telemetry session. Shared repositories, general home state, `vendor/`,
+  `results/`, and prior sessions are absent. The network namespace has no
+  public route; a host socat process and Unix socket expose only the configured
+  model endpoint. Model-written code is also verified inside a workdir-only,
+  no-network namespace. JavaScript, Java, and Rust dependencies are prefetched
+  before agent launch and consumed offline; Java uses JDK 21 for the vendored
+  Gradle 8.7 wrapper. This is a fail-closed Linux requirement: `bwrap` and
+  `socat` must exist.
 - Verdict: pass/fail per problem; partial credit possible per-language if
   tests are tiered (record raw pass count, derive binary for the headline).
 
@@ -213,6 +218,13 @@ Terminal-Bench 2.1 remains a separate milestone campaign.
   pi home, the `pi_devstack*` agents additionally mount a read-only, sanitized
   package-profile snapshot; distinct class names alone do not establish a
   distinct scaffold.
+- Network boundary: Harbor environment build and installed-agent setup may use
+  public network for images/packages. Migrated local tasks are patched so the
+  prompt-bearing `[agent]` phase uses `network_mode = "allowlist"` with only
+  the selected model hostname, also passed via `--allow-agent-host`. Registry
+  fallback is disabled because it cannot guarantee the patch. Host-loopback
+  model URLs require `CODING_EVAL_HARBOR_MODEL_BASE_URL` set to a
+  container-reachable relay address.
 - **Wall-clock probe first.** Before scaling, run k=1 on a 5-task slice,
   measure time, *then* decide k for the real matrix. TB on small models
   is slow; we don't want to discover a 40-hour run after launching it.

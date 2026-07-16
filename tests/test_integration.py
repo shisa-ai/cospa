@@ -81,6 +81,7 @@ def test_adapter_runs_real_subprocess_and_writes_logs(monkeypatch):
         adapter = PiVanillaAdapter()
         task_data = {
             "model_id": "test/model",
+            "model_base_url": "http://127.0.0.1:9/v1",
             "prompt": "solve the problem",
             "problem": "integration-task",
             "timeout": 30,
@@ -147,6 +148,79 @@ def test_full_pipeline_runner_to_viewer_with_encoded_paths(tmp_path):
                                  "pi_vanilla", "aider_polyglot")
     assert "error" not in details, details
     assert any(t["task_id"] == "python/two-fer" for t in details["tasks"]), details
+
+
+def test_runner_prefetches_dependencies_before_starting_agent(tmp_path):
+    """Network dependency preparation must happen outside the agent sandbox."""
+    suite = AiderPolyglotSuite()
+    adapter = PiVanillaAdapter()
+    vendor_dir = tmp_path / "vendor"
+    _make_problem(vendor_dir)
+    events = []
+
+    def prepare(task_data, workdir):
+        events.append(("prepare", task_data["language"], Path(workdir)))
+
+    def run_adapter(*args, **kwargs):
+        events.append(("adapter", None, None))
+        from harness.adapters.pi_vanilla import AdapterResult
+        return AdapterResult(returncode=0)
+
+    with patch.object(suite, "prepare_agent_dependencies", side_effect=prepare), \
+         patch.object(adapter, "run", side_effect=run_adapter), \
+         patch.object(
+             suite,
+             "verify",
+             return_value={
+                 "passed": True,
+                 "test_count": 1,
+                 "grader_output": "1 passed",
+                 "exit_code": 0,
+             },
+         ):
+        run_trial(
+            suite,
+            adapter,
+            "test/model",
+            "python/two-fer",
+            1,
+            tmp_path / "results",
+            vendor_dir,
+        )
+
+    assert [event[0] for event in events] == ["prepare", "adapter"]
+
+
+def test_runner_records_dependency_preparation_failure(tmp_path):
+    """A failed prefetch must leave durable retryable infrastructure output."""
+    suite = AiderPolyglotSuite()
+    adapter = PiVanillaAdapter()
+    vendor_dir = tmp_path / "vendor"
+    _make_problem(vendor_dir)
+    results_dir = tmp_path / "results"
+
+    with patch.object(
+        suite,
+        "prepare_agent_dependencies",
+        side_effect=RuntimeError("offline cache warmup failed"),
+    ), patch.object(adapter, "run") as run_adapter:
+        manifest, verdict = run_trial(
+            suite,
+            adapter,
+            "test/model",
+            "python/two-fer",
+            1,
+            results_dir,
+            vendor_dir,
+        )
+
+    run_adapter.assert_not_called()
+    assert manifest["exit_code"] == -1
+    assert "Dependency preparation failed" in manifest["error"]
+    assert verdict["adapter_failed"] is True
+    trial_dir = next(results_dir.rglob("trial-1"))
+    assert (trial_dir / "manifest.json").exists()
+    assert (trial_dir / "verdict.json").exists()
 
 
 def test_terminal_bench_materialize_against_real_vendored_task():

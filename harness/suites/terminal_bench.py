@@ -164,7 +164,12 @@ class TerminalBenchSuite:
         if not isinstance(provider_cfg, dict):
             provider_cfg = {}
 
-        base_url = provider_cfg.get("baseUrl") or provider_cfg.get("base_url")
+        harbor_base_url = os.environ.get("CODING_EVAL_HARBOR_MODEL_BASE_URL")
+        base_url = (
+            harbor_base_url
+            or provider_cfg.get("baseUrl")
+            or provider_cfg.get("base_url")
+        )
         api_key = provider_cfg.get("apiKey") or provider_cfg.get("api_key")
         api_key_env = (
             provider_cfg.get("apiKeyEnv")
@@ -175,7 +180,11 @@ class TerminalBenchSuite:
         if api_key_env and os.environ.get(api_key_env):
             api_key = os.environ[api_key_env]
         if provider_name == "local":
-            base_url = os.environ.get("CODING_EVAL_LOCAL_BASE_URL") or base_url
+            base_url = (
+                harbor_base_url
+                or os.environ.get("CODING_EVAL_LOCAL_BASE_URL")
+                or base_url
+            )
             api_key = os.environ.get("CODING_EVAL_LOCAL_API_KEY") or api_key
         if not base_url:
             return env
@@ -556,6 +565,52 @@ class TerminalBenchSuite:
             "pending": True,
         }
 
+    @staticmethod
+    def _set_agent_network_allowlist(task_root: Path, model_host: str) -> int:
+        """Restrict each migrated Harbor task's agent phase to the model host."""
+        task_files = list(Path(task_root).rglob("task.toml"))
+        for task_file in task_files:
+            lines = task_file.read_text().splitlines()
+            section_starts = []
+            for index, line in enumerate(lines):
+                match = re.fullmatch(r"\[([^]]+)]", line.strip())
+                if match and (
+                    match.group(1) == "agent"
+                    or match.group(1).endswith(".agent")
+                ):
+                    section_starts.append(index)
+            if not any(lines[index].strip() == "[agent]" for index in section_starts):
+                if lines and lines[-1].strip():
+                    lines.append("")
+                lines.extend(["[agent]", 'network_mode = "allowlist"'])
+                lines.append(f"allowed_hosts = {json.dumps([model_host])}")
+                section_starts.append(len(lines) - 3)
+            for section_start in reversed(section_starts):
+                section_end = next(
+                    (
+                        i
+                        for i in range(section_start + 1, len(lines))
+                        if lines[i].lstrip().startswith("[")
+                    ),
+                    len(lines),
+                )
+                body = [
+                    line
+                    for line in lines[section_start + 1 : section_end]
+                    if not re.match(
+                        r"^\s*(network_mode|allowed_hosts)\s*=", line
+                    )
+                ]
+                replacement = [
+                    lines[section_start],
+                    'network_mode = "allowlist"',
+                    f"allowed_hosts = {json.dumps([model_host])}",
+                    *body,
+                ]
+                lines[section_start:section_end] = replacement
+            task_file.write_text("\n".join(lines) + "\n")
+        return len(task_files)
+
     def run_harbor_job(
         self,
         task_id: str,
@@ -588,11 +643,42 @@ class TerminalBenchSuite:
         jobs_dir.mkdir(parents=True, exist_ok=True)
         harbor_env = self._harbor_env(model_id, thinking=thinking)
 
-        # Prefer the materialized local task when vendored data is present.
+        base_url = harbor_env.get("CODING_EVAL_PI_PROVIDER_BASE_URL")
+        if not base_url:
+            return {
+                "returncode": -1,
+                "stdout": "",
+                "stderr": (
+                    "Hermetic Terminal-Bench execution requires a model base "
+                    "URL. Configure the selected pi provider or set "
+                    "CODING_EVAL_HARBOR_MODEL_BASE_URL to a container-reachable "
+                    "endpoint."
+                ),
+            }
+
+        from urllib.parse import urlparse
+
+        model_host = urlparse(base_url).hostname
+        if not model_host:
+            return {
+                "returncode": -1,
+                "stdout": "",
+                "stderr": f"Invalid Harbor model base URL: {base_url!r}",
+            }
+        if model_host in {"127.0.0.1", "::1", "localhost"}:
+            return {
+                "returncode": -1,
+                "stdout": "",
+                "stderr": (
+                    "The Harbor agent cannot reach a host loopback model URL "
+                    f"({base_url}). Set CODING_EVAL_HARBOR_MODEL_BASE_URL to "
+                    "a container-reachable relay hostname or address."
+                ),
+            }
+
+        # Materialize a local task before applying the solving-phase policy.
         # This keeps smoke/regression runs independent of Harbor's remote task
         # registry and exercises the exact dataset checked out under vendor/.
-        registry_path = None
-        task_ref = None
         local_task_path = None
         if vendor_dir is not None:
             vendor_dir = Path(vendor_dir).resolve()
@@ -622,10 +708,27 @@ class TerminalBenchSuite:
                         "stdout": migrate_result.stdout,
                         "stderr": migrate_result.stderr,
                     }
-            reg = vendor_dir / "terminal-bench" / "registry.json"
-            if reg.exists() and local_task_path is None:
-                registry_path = reg.resolve()
-                task_ref = f"terminal-bench-core/{task_id}"
+        if local_task_path is None and list(workdir.rglob("task.toml")):
+            local_task_path = workdir
+        if local_task_path is None:
+            return {
+                "returncode": -1,
+                "stdout": "",
+                "stderr": (
+                    "Hermetic Terminal-Bench execution requires a local "
+                    "Harbor task containing task.toml; registry fallback is "
+                    "disabled because it would bypass the agent network policy."
+                ),
+            }
+        if self._set_agent_network_allowlist(local_task_path, model_host) == 0:
+            return {
+                "returncode": -1,
+                "stdout": "",
+                "stderr": (
+                    "Hermetic Terminal-Bench execution could not find task.toml "
+                    "after task migration."
+                ),
+            }
 
         cmd = [
             "harbor", "run",
@@ -633,19 +736,14 @@ class TerminalBenchSuite:
             "--model", model_id,
             "--n-attempts", str(n_attempts),
             "--jobs-dir", str(jobs_dir),
+            "--allow-agent-host", model_host,
             "--yes",
         ]
         devstack_mounts = self._devstack_mounts(adapter_name)
         if devstack_mounts:
             cmd += ["--mounts", json.dumps(devstack_mounts)]
 
-        if local_task_path is not None:
-            cmd += ["--path", str(local_task_path)]
-        elif registry_path is not None:
-            cmd += ["--registry-path", str(registry_path), "--task", task_ref]
-        else:
-            # Fallback: point Harbor at the task directory directly.
-            cmd += ["--path", str(workdir)]
+        cmd += ["--path", str(local_task_path)]
 
         try:
             result = run_command(

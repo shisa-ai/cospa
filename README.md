@@ -95,10 +95,20 @@ All Python code runs inside the `cospa` mamba environment
 (`python=3.12`). Use `mamba run -n cospa <cmd>` or
 `conda activate cospa` before invoking any harness script.
 
-Aider Polyglot adapters require Linux bubblewrap (`bwrap`). Each trial gets a
-private writable workdir, `/tmp`, cache overlay, and pi session path; shared
-`vendor/`, `results/`, and prior pi sessions are hidden from the agent. The
-harness fails closed if bubblewrap is unavailable.
+Aider Polyglot adapters require Linux bubblewrap (`bwrap`) and socat. Each
+trial gets an empty-root namespace containing only its writable workdir,
+selected system/language runtimes, a private pi config for the selected model,
+disposable dependency/browser caches, and its own telemetry session. Public
+networking is disabled; a Unix-socket relay exposes only the selected model
+endpoint. Shared repositories, `vendor/`, `results/`, other home-directory
+state, and prior pi sessions are absent. Model-written code is graded in a
+second workdir-only namespace with no network access. The harness fails closed
+if it cannot construct either boundary.
+
+Java exercises use the benchmark's Gradle 8.7 wrapper and require JDK 21 in the
+`cospa` environment (`mamba install -n cospa openjdk=21`). JavaScript, Java,
+and Rust dependencies are prefetched before the agent starts, then both agent
+and verifier use only the warmed read-only/disposable caches.
 
 Terminal-Bench Core is pinned to the 80-task `0.1.1` release at upstream commit
 `91e10457b5410f16c44364da1a34cb6de8c488a5`. SWE Atlas is pinned at
@@ -118,6 +128,11 @@ sanitized `settings.json`. For comparable long runs, use an immutable snapshot
 whose settings contain only the intended package sources and no auth/model
 files. Headless-incompatible resources can be disabled with pi package filters
 (for example, an extension that downloads a browser or assumes a TUI).
+
+Terminal-Bench image build and agent install retain public network access, but
+the prompt-bearing agent phase is patched to Harbor `allowlist` mode for only
+the model host. Runs fail closed unless a local migrated `task.toml` can carry
+that policy.
 
 ## Model Reachability
 
@@ -161,12 +176,19 @@ Add a provider to `~/.pi/agent/models.json`:
 }
 ```
 
-For Aider Polyglot, `http://127.0.0.1:8000/v1` is fine. For
-Terminal-Bench, the agent runs inside Docker, so use an address reachable from
-the task container instead. On Linux Docker that is usually the bridge gateway,
-for example `http://172.17.0.1:8000/v1`; on Docker Desktop,
-`http://host.docker.internal:8000/v1` is usually the right value. Keep the
-server bound to `0.0.0.0` when using those addresses.
+For Aider Polyglot, `http://127.0.0.1:8000/v1` is fine: the sandbox reaches it
+only through cospa's model relay. For Terminal-Bench, the agent runs inside
+Docker, so set a container-reachable override while keeping the normal host pi
+configuration unchanged:
+
+```bash
+export CODING_EVAL_HARBOR_MODEL_BASE_URL=http://172.17.0.1:8000/v1
+```
+
+On Linux Docker the bridge gateway is commonly `172.17.0.1`; on Docker Desktop,
+`host.docker.internal` is commonly appropriate. The server must listen on the
+corresponding host interface. Harbor adds this hostname to the agent-phase
+allowlist; URLs, ports, and paths are not themselves allowlist entries.
 
 Then add the model to `configs/models.yaml` with the provider prefix:
 
@@ -327,10 +349,11 @@ audit, but do not treat their passes as clean evidence of independent solving.
 
 ## Current Verified State
 
-- Python tests: `mamba run -n coding-eval python -m pytest -q` reports
-  `198 passed`.
-- Shell harness: `bash tests/scripts/run_all.sh` reports `47` assertions
-  passed.
+- Python tests: `mamba run -n cospa python -m pytest -q` reports `226 passed,
+  2 skipped, 2 failed`. The failures are the pre-existing port-8080 fixture
+  collision and PyYAML block-scalar newline assertion.
+- Shell harness: `bash tests/scripts/run_all.sh` reports `46` assertions passed
+  and the same port-8080 fixture collision.
 - Setup pins Terminal-Bench Core 0.1.1 and SWE Atlas pilot12, then verifies
   `little-coder`, installing it with `npm install -g little-coder` when absent
   and warning if `little-coder --list-models` cannot read provider config.

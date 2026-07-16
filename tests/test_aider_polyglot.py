@@ -177,6 +177,90 @@ def test_materialize_task_skips_generated_build_artifacts():
         assert not (workdir / "build").exists(), list(workdir.iterdir())
 
 
+@pytest.mark.parametrize(
+    ("language", "expected_prefix"),
+    [
+        ("cpp", None),
+        ("go", None),
+        ("python", None),
+        ("javascript", ["npm", "install"]),
+        ("java", ["./gradlew", "--no-daemon", "--init-script"]),
+        ("rust", ["cargo", "fetch"]),
+    ],
+)
+def test_prepare_agent_dependencies_prefetches_only_networked_toolchains(
+    language, expected_prefix
+):
+    """Networked language dependencies are fetched before agent isolation."""
+    suite = AiderPolyglotSuite()
+    with tempfile.TemporaryDirectory() as tmp:
+        workdir = Path(tmp)
+        if language == "javascript":
+            (workdir / "package.json").write_text('{"devDependencies": {}}\n')
+        if language == "java":
+            (workdir / "gradlew").write_text("#!/bin/sh\n")
+        if language == "rust":
+            (workdir / "Cargo.toml").write_text(
+                '[package]\nname="x"\nversion="0.1.0"\n'
+            )
+
+        with patch(
+            "harness.suites.aider_polyglot.run_command",
+            return_value=subprocess.CompletedProcess(
+                args=[], returncode=0, stdout="", stderr=""
+            ),
+        ) as mock_run:
+            suite.prepare_agent_dependencies({"language": language}, workdir)
+
+    if expected_prefix is None:
+        mock_run.assert_not_called()
+    else:
+        assert mock_run.call_args.args[0][: len(expected_prefix)] == expected_prefix
+
+
+@pytest.mark.parametrize(
+    ("language", "expected_flag"),
+    [("javascript", "--offline"), ("java", "--offline"), ("rust", "--offline")],
+)
+def test_networked_verifiers_run_offline_after_prefetch(language, expected_flag):
+    """Post-run verification must not need public package registries."""
+    suite = AiderPolyglotSuite()
+    with tempfile.TemporaryDirectory() as tmp:
+        workdir = Path(tmp)
+        if language == "javascript":
+            (workdir / "package.json").write_text(
+                '{"scripts":{"test":"true"}}\n'
+            )
+        elif language == "java":
+            gradlew = workdir / "gradlew"
+            gradlew.write_text("#!/bin/sh\n")
+            gradlew.chmod(0o755)
+        else:
+            (workdir / "Cargo.toml").write_text(
+                '[package]\nname="x"\nversion="0.1.0"\n'
+            )
+
+        with patch(
+            "harness.suites.aider_polyglot.run_command",
+            return_value=subprocess.CompletedProcess(
+                args=[], returncode=0, stdout="1 passed\n", stderr=""
+            ),
+        ) as mock_run:
+            suite.verify({"language": language, "timeout": 1}, workdir)
+
+    flattened = [
+        str(part)
+        for call in mock_run.call_args_list
+        for part in call.args[0]
+    ]
+    assert expected_flag in flattened
+    assert all(
+        call.kwargs["sandbox_model_access"] is False
+        and call.kwargs["sandbox_workdir"]
+        for call in mock_run.call_args_list
+    )
+
+
 def test_materialize_task_handles_dash_to_underscore_for_python():
     """python problem 'hello-world' starter is 'hello_world.py'."""
     suite = AiderPolyglotSuite()

@@ -69,6 +69,7 @@ class PiDevstackSuperpowersAdapter:
                         timeout=task_data.get("timeout", 600),
                         sandbox_workdir=workdir,
                         sandbox_name=task_data.get("problem"),
+                        sandbox_model_url=task_data.get("model_base_url"),
                     )
 
             return AdapterResult(returncode=result.returncode)

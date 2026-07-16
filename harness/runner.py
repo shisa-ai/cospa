@@ -37,7 +37,7 @@ sys.path.insert(0, str(PROJECT_ROOT))
 from harness.adapters import load_adapter
 from harness.suites import load_suite
 from harness.path_utils import encode_path_component
-from harness.subprocess_utils import agent_sandbox_cwd
+from harness.subprocess_utils import agent_sandbox_cwd, resolve_model_base_url
 from harness.telemetry import (
     collect_harbor_pi_session_usage,
     collect_pi_session_usage,
@@ -461,9 +461,11 @@ def run_trial(
 
     # Override model_id with the actual model from args
     task_data["model_id"] = model_id
+    task_data["model_base_url"] = resolve_model_base_url(model_id)
     # Propagate thinking/effort level so adapters can pass --thinking to pi.
     # None means "use the model/provider default" (no --thinking flag).
     task_data["thinking"] = thinking
+    prepare_dependencies = getattr(suite, "prepare_agent_dependencies", None)
 
     # Parse provider from model_id (e.g., "nvidia/nemotron-..." -> provider="nvidia")
     provider = model_id.split("/")[0] if "/" in model_id else "unknown"
@@ -539,7 +541,21 @@ def run_trial(
     adapter_failed = False
     harbor_result = None
     is_harbor_suite = callable(getattr(suite, "run_harbor_job", None))
-    if is_harbor_suite:
+    if callable(prepare_dependencies):
+        try:
+            prepare_dependencies(task_data, workdir)
+        except Exception as e:
+            manifest["exit_code"] = -1
+            manifest["timing"]["wall_clock_seconds"] = time.time() - start_time
+            manifest["run_end_time"] = datetime.now(timezone.utc).isoformat()
+            manifest["error"] = f"Dependency preparation failed: {e}"
+            adapter_failed = True
+            with open(stderr_file, "a") as f:
+                f.write(f"{manifest['error']}\n")
+
+    if adapter_failed:
+        pass
+    elif is_harbor_suite:
         jobs_dir = trial_dir / "jobs"
         jobs_dir.mkdir(exist_ok=True)
         try:

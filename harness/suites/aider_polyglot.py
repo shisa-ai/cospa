@@ -187,6 +187,65 @@ class AiderPolyglotSuite:
             "model_id": "nvidia/nemotron-3-ultra-550b-a55b",
         }
 
+    def prepare_agent_dependencies(
+        self, task_data: Dict[str, Any], workdir: Path
+    ) -> None:
+        """Fetch required language dependencies before network isolation."""
+        language = task_data.get("language")
+        command: list[str] | None = None
+        cleanup_path: Path | None = None
+        if language in {"javascript", "typescript"} and (
+            workdir / "package.json"
+        ).exists():
+            command = [
+                "npm",
+                "install",
+                "--no-audit",
+                "--no-fund",
+                "--ignore-scripts",
+            ]
+        elif language == "java" and (workdir / "gradlew").exists():
+            cleanup_path = workdir / ".cospa-resolve.gradle"
+            cleanup_path.write_text(
+                "allprojects {\n"
+                "  tasks.register('cospaResolveDependencies') {\n"
+                "    doLast {\n"
+                "      configurations.findAll { it.canBeResolved }.each { "
+                "it.resolve() }\n"
+                "    }\n"
+                "  }\n"
+                "}\n"
+            )
+            command = [
+                "./gradlew",
+                "--no-daemon",
+                "--init-script",
+                str(cleanup_path),
+                "cospaResolveDependencies",
+            ]
+        elif language == "rust" and (workdir / "Cargo.toml").exists():
+            command = ["cargo", "fetch"]
+        if command is None:
+            return
+
+        try:
+            result = run_command(
+                command,
+                cwd=str(workdir),
+                capture_output=True,
+                text=True,
+                timeout=600,
+                env=self._verification_env(),
+            )
+        finally:
+            if cleanup_path is not None:
+                cleanup_path.unlink(missing_ok=True)
+        if result.returncode != 0:
+            output = (result.stdout or "") + (result.stderr or "")
+            raise RuntimeError(
+                f"Dependency prefetch failed for {language}: {output[-2000:]}"
+            )
+
     def verify(self, task_data: Dict[str, Any], workdir: Path) -> Dict[str, Any]:
         """
         Verify the solution by running tests.
@@ -220,7 +279,14 @@ class AiderPolyglotSuite:
             pkg_file = workdir / "package.json"
             if pkg_file.exists():
                 setup_cmds.append(
-                    ["npm", "install", "--no-audit", "--no-fund", "--ignore-scripts"]
+                    [
+                        "npm",
+                        "install",
+                        "--offline",
+                        "--no-audit",
+                        "--no-fund",
+                        "--ignore-scripts",
+                    ]
                 )
                 cmd = ["npm", "test"]
                 run_in_temp_copy = True
@@ -230,10 +296,10 @@ class AiderPolyglotSuite:
             cmd = ["go", "test", "./...", "-v", "-timeout", "5m"]
         elif language == "java":
             gradle_cmd = "./gradlew" if (workdir / "gradlew").exists() else "gradle"
-            cmd = [gradle_cmd, "test", "--info"]
+            cmd = [gradle_cmd, "test", "--info", "--offline"]
             run_in_temp_copy = True
         elif language == "rust":
-            cmd = ["cargo", "test", "--verbose"]
+            cmd = ["cargo", "test", "--verbose", "--offline"]
             run_in_temp_copy = True
         elif language == "c" or language == "cpp":
             # Try cmake + build + test. Do not append a shell fallback such as
@@ -357,6 +423,9 @@ class AiderPolyglotSuite:
                 text=True,
                 timeout=timeout,
                 env=env,
+                sandbox_workdir=workdir,
+                sandbox_name="verifier",
+                sandbox_model_access=False,
             )
             if setup_result.stdout:
                 setup_output += setup_result.stdout
@@ -377,6 +446,9 @@ class AiderPolyglotSuite:
             text=True,
             timeout=timeout,
             env=env,
+            sandbox_workdir=workdir,
+            sandbox_name="verifier",
+            sandbox_model_access=False,
         )
 
         # Parse test results

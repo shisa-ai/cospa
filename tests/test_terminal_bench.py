@@ -18,6 +18,7 @@ import os
 import shutil
 import sys
 import tempfile
+import tomllib
 import types
 from pathlib import Path
 from unittest.mock import patch
@@ -84,6 +85,11 @@ def _write_pi_session_trace(path: Path, cwd: str = "/terminal-bench/workdir"):
     ]) + "\n")
 
 
+def _make_local_harbor_task(workdir: Path) -> None:
+    workdir.mkdir(parents=True, exist_ok=True)
+    (workdir / "task.toml").write_text('name = "test-task"\n')
+
+
 def test_materialize_task_reads_task_yaml_instruction():
     """materialize_task must extract the prompt from task.yaml `instruction`."""
     suite = TerminalBenchSuite()
@@ -124,7 +130,11 @@ def test_run_harbor_job_uses_correct_flags():
     def fake_run(cmd, **kwargs):
         if cmd[:3] == ["harbor", "task", "migrate"]:
             output_dir = Path(cmd[cmd.index("--output") + 1])
-            (output_dir / "hello-world").mkdir(parents=True)
+            migrated_task = output_dir / "hello-world"
+            migrated_task.mkdir(parents=True)
+            (migrated_task / "task.toml").write_text(
+                'name = "hello-world"\n'
+            )
             captured["migrate_cmd"] = list(cmd)
         elif cmd[:2] == ["harbor", "run"]:
             captured["cmd"] = list(cmd)
@@ -134,13 +144,23 @@ def test_run_harbor_job_uses_correct_flags():
                 captured["local_task_exists"] = (
                     local_path / "hello-world"
                 ).exists()
+                task_file = local_path / "hello-world" / "task.toml"
+                if task_file.exists():
+                    captured["task_config"] = tomllib.loads(
+                        task_file.read_text()
+                    )
         if "--path" in cmd:
             local_path = Path(cmd[cmd.index("--path") + 1])
             captured["local_task_exists"] = (local_path / "hello-world").exists()
         import subprocess as sp
         return sp.CompletedProcess(args=cmd, returncode=0, stdout="ok", stderr="")
 
-    with patch("harness.suites.terminal_bench.run_command", side_effect=fake_run) as mock:
+    with patch(
+        "harness.suites.terminal_bench.run_command", side_effect=fake_run
+    ), patch.dict(
+        os.environ,
+        {"CODING_EVAL_HARBOR_MODEL_BASE_URL": "http://model-relay:8013/v1"},
+    ):
         with tempfile.TemporaryDirectory() as tmp:
             tmp = Path(tmp)
             vendor_dir = tmp / "vendor"
@@ -194,8 +214,74 @@ def test_run_harbor_job_uses_correct_flags():
         captured["migrate_cmd"][captured["migrate_cmd"].index("--input") + 1]
     )
     assert migrate_input.name == "hello-world", captured["migrate_cmd"]
+    task_config = captured["task_config"]
+    assert task_config["agent"]["network_mode"] == "allowlist"
+    assert task_config["agent"]["allowed_hosts"] == ["model-relay"]
+    assert cmd[cmd.index("--allow-agent-host") + 1] == "model-relay"
 
     assert result["returncode"] == 0, result
+
+
+def test_terminal_bench_agent_phase_is_model_host_allowlisted(tmp_path):
+    """Harbor task setup may use network, but the solving phase may not."""
+    task_dir = tmp_path / "task"
+    task_dir.mkdir()
+    task_file = task_dir / "task.toml"
+    task_file.write_text(
+        'name = "terminal-bench/example"\n\n'
+        '[agent]\n'
+        'timeout_sec = 900\n\n'
+        '[steps.solve.agent]\n'
+        'network_mode = "public"\n'
+        'allowed_hosts = ["example.com"]\n'
+    )
+
+    TerminalBenchSuite._set_agent_network_allowlist(task_dir, "model-relay")
+
+    data = tomllib.loads(task_file.read_text())
+    assert data["agent"]["network_mode"] == "allowlist"
+    assert data["agent"]["allowed_hosts"] == ["model-relay"]
+    assert data["steps"]["solve"]["agent"]["network_mode"] == "allowlist"
+    assert data["steps"]["solve"]["agent"]["allowed_hosts"] == [
+        "model-relay"
+    ]
+
+
+def test_run_harbor_job_refuses_task_without_hermetic_policy(tmp_path):
+    """A registry/workdir fallback must not silently restore public egress."""
+    suite = TerminalBenchSuite()
+    workdir = tmp_path / "workdir"
+    workdir.mkdir()
+
+    with patch.dict(
+        os.environ,
+        {"CODING_EVAL_HARBOR_MODEL_BASE_URL": "http://model-relay:8013/v1"},
+    ), patch("harness.suites.terminal_bench.run_command") as run:
+        result = suite.run_harbor_job(
+            "hello-world",
+            "test/model",
+            "pi_vanilla",
+            workdir,
+            tmp_path / "jobs",
+        )
+
+    assert result["returncode"] == -1
+    assert "hermetic" in result["stderr"].lower()
+    run.assert_not_called()
+
+
+def test_harbor_env_accepts_container_reachable_model_override(monkeypatch):
+    """Loopback host endpoints need an explicit container-side URL."""
+    monkeypatch.setenv(
+        "CODING_EVAL_HARBOR_MODEL_BASE_URL", "http://model-relay:8013/v1"
+    )
+    monkeypatch.setenv("CODING_EVAL_LOCAL_BASE_URL", "http://127.0.0.1:8013/v1")
+
+    env = TerminalBenchSuite()._harbor_env("local/model")
+
+    assert env["CODING_EVAL_PI_PROVIDER_BASE_URL"] == (
+        "http://model-relay:8013/v1"
+    )
 
 
 def test_verify_reads_harbor_result_json_rewards():
@@ -271,10 +357,15 @@ def test_run_harbor_job_uses_custom_agent_for_each_adapter_family():
                 seen[current_adapter] = cmd[i + 1]
         return sp.CompletedProcess(args=cmd, returncode=0, stdout="", stderr="")
 
-    with patch("harness.suites.terminal_bench.run_command", side_effect=fake_run):
+    with patch(
+        "harness.suites.terminal_bench.run_command", side_effect=fake_run
+    ), patch.dict(
+        os.environ,
+        {"CODING_EVAL_HARBOR_MODEL_BASE_URL": "http://model-relay:8013/v1"},
+    ):
         with tempfile.TemporaryDirectory() as tmp:
             workdir = Path(tmp) / "w"
-            workdir.mkdir()
+            _make_local_harbor_task(workdir)
             jobs = Path(tmp) / "jobs"
             for current_adapter in (
                 "pi_vanilla",
@@ -319,10 +410,15 @@ def test_run_harbor_job_uses_distinct_custom_agents_for_adapter_variants():
         "little_coder",
         "little_coder_superpowers",
     )
-    with patch("harness.suites.terminal_bench.run_command", side_effect=fake_run):
+    with patch(
+        "harness.suites.terminal_bench.run_command", side_effect=fake_run
+    ), patch.dict(
+        os.environ,
+        {"CODING_EVAL_HARBOR_MODEL_BASE_URL": "http://model-relay:8013/v1"},
+    ):
         with tempfile.TemporaryDirectory() as tmp:
             workdir = Path(tmp) / "w"
-            workdir.mkdir()
+            _make_local_harbor_task(workdir)
             jobs = Path(tmp) / "jobs"
             for current_adapter in adapters:
                 suite.run_harbor_job("t", "test/model", current_adapter, workdir, jobs, 1)
@@ -354,11 +450,16 @@ def test_run_harbor_job_mounts_devstack_profile_only_for_devstack():
             "packages": ["npm:pi-context-prune@1.2.0"],
         }))
         workdir = tmp / "workdir"
-        workdir.mkdir()
+        _make_local_harbor_task(workdir)
 
         with patch.dict(
             os.environ,
-            {"CODING_EVAL_DEVSTACK_PROFILE_DIR": str(profile)},
+            {
+                "CODING_EVAL_DEVSTACK_PROFILE_DIR": str(profile),
+                "CODING_EVAL_HARBOR_MODEL_BASE_URL": (
+                    "http://model-relay:8013/v1"
+                ),
+            },
         ), patch(
             "harness.suites.terminal_bench.run_command",
             side_effect=fake_run,
@@ -414,10 +515,15 @@ def test_run_harbor_job_sets_pythonpath_for_custom_agent_import():
         captured["env"] = kwargs.get("env", {})
         return sp.CompletedProcess(args=cmd, returncode=0, stdout="", stderr="")
 
-    with patch("harness.suites.terminal_bench.run_command", side_effect=fake_run):
+    with patch(
+        "harness.suites.terminal_bench.run_command", side_effect=fake_run
+    ), patch.dict(
+        os.environ,
+        {"CODING_EVAL_HARBOR_MODEL_BASE_URL": "http://model-relay:8013/v1"},
+    ):
         with tempfile.TemporaryDirectory() as tmp:
             workdir = Path(tmp) / "w"
-            workdir.mkdir()
+            _make_local_harbor_task(workdir)
             suite.run_harbor_job(
                 "hello-world",
                 "test/model",
@@ -478,10 +584,15 @@ def test_run_harbor_job_exports_thinking_to_container_agent_env():
             captured["env"] = kwargs.get("env", {})
         return sp.CompletedProcess(args=cmd, returncode=0, stdout="", stderr="")
 
-    with patch("harness.suites.terminal_bench.run_command", side_effect=fake_run):
+    with patch(
+        "harness.suites.terminal_bench.run_command", side_effect=fake_run
+    ), patch.dict(
+        os.environ,
+        {"CODING_EVAL_HARBOR_MODEL_BASE_URL": "http://model-relay:8013/v1"},
+    ):
         with tempfile.TemporaryDirectory() as tmp:
             workdir = Path(tmp) / "w"
-            workdir.mkdir()
+            _make_local_harbor_task(workdir)
             suite.run_harbor_job(
                 "hello-world",
                 "test/model",

@@ -365,6 +365,7 @@ def test_all_comparable_adapters_request_workspace_sandbox():
                     task_data={
                         "prompt": "do thing",
                         "model_id": "test/model",
+                        "model_base_url": "http://127.0.0.1:8989/v1",
                         "problem": "two-fer",
                     },
                     workdir=workdir,
@@ -377,6 +378,9 @@ def test_all_comparable_adapters_request_workspace_sandbox():
                 f"got kwargs={captured_kwargs}"
             )
             assert captured_kwargs.get("sandbox_name") == "two-fer"
+            assert captured_kwargs.get("sandbox_model_url") == (
+                "http://127.0.0.1:8989/v1"
+            )
 
 
 def test_manifest_records_thinking_level():

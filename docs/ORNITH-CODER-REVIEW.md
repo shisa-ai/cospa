@@ -1168,3 +1168,31 @@ six adapters, a real bubblewrap boundary test, sandbox-aware telemetry tests,
 and a post-cutover Bonsai `cpp/all-your-base` run in which all five requested
 adapters passed all 17 assertions. Full pytest reports `195 passed, 1 skipped,
 2 failed`; both failures predate and do not exercise this path.
+
+### Hermetic execution boundary follow-up
+
+The first isolation cutover still mounted the host root read-only and retained
+general network access. It also graded model-written code directly on the host,
+which meant an implementation or build hook could regain access during the
+verifier phase.
+
+The Aider boundary is now an empty-root allowlist rather than a denylist. The
+agent receives only its workdir, selected runtimes/scaffold packages, private
+selected-model configuration and disposable caches. Its private network
+namespace has a single Unix-socket relay to the configured model endpoint.
+JavaScript, Java, and Rust dependencies are warmed before launch and all
+verification commands execute offline in a second workdir-only namespace.
+Real vendored JavaScript, Rust, Java, Python, and C++ artifacts reached their
+native test/build failures inside this boundary.
+
+Terminal-Bench remains container-owned. Cospa now patches each migrated local
+Harbor task so only the prompt-bearing agent phase uses a model-host allowlist,
+passes the same host through `--allow-agent-host`, and refuses registry or
+unmigrated workdir fallbacks. Image construction and installed-agent setup keep
+their required public network access. The new Terminal policy is `wired (unit
+test)`: Harbor and the Terminal-Bench vendor checkout are not present in this
+working environment for a fresh Docker-backed validation.
+
+A fresh Bonsai `pi_vanilla` run then solved `cpp/allergies` in 30.6 seconds and
+the isolated verifier passed all 50 native assertions. Aider's final boundary
+is therefore `fixed (unit + integration + real-artifact + end-to-end)`.

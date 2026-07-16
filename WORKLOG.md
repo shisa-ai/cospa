@@ -1092,3 +1092,27 @@ Append-only development log for the `cospa` repository.
 - Validation: re-read the report end to end and ran `git diff --check`.
 - Next action: quarantine contaminated scores, remove answer-bearing metadata
   during materialization, and rerun a matched sandboxed/no-network slice.
+
+## 2026-07-16 — Enforce hermetic benchmark execution
+
+- Context: the initial Aider cutover still exposed the read-only host root and
+  general network, while host-side verification executed model-written code.
+- RED evidence: real boundary tests could reach an unrelated local HTTP port;
+  verifier calls lacked isolation; Harbor could fall back to an unpatched
+  public-network task; and dependency warm-up exceptions left no durable trial.
+- GREEN evidence: focused isolation, adapter, suite, runner, and Harbor tests
+  report 78 passed and 1 skipped, apart from the pre-existing PyYAML newline
+  assertion. Real vendored JavaScript, Rust, Java, Python, and C++ toolchains
+  reached their expected starter-code test/build failures offline.
+- Decision: use empty-root filesystem allowlists, a selected-model Unix relay,
+  and no-network verifier namespaces for Aider. Prefetch only dependency-bearing
+  languages. Patch only Harbor's prompt-bearing agent phase to a model-host
+  allowlist and fail closed when a local task policy cannot be applied.
+- Environment: install OpenJDK 21 in the `cospa` mamba environment for the
+  vendored Gradle 8.7 wrappers.
+- End-to-end: Bonsai with `pi_vanilla` solved `cpp/allergies` through the final
+  boundary in 30.6 seconds; the isolated verifier passed all 50 assertions.
+- Post-rebase validation: `226 passed, 2 skipped, 2 failed`; the shell harness
+  reports 46 passed and one failure. Both failures are the pre-existing
+  port-8080 fixture collision and PyYAML newline assertion.
+- Next action: validate the new Harbor policy in a Docker-capable checkout.

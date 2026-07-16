@@ -103,6 +103,30 @@ def test_run_command_timeout_kills_process_group(monkeypatch):
     killpg.assert_called_with(12345, signal.SIGTERM)
 
 
+def test_agent_sandbox_persists_explicit_session_dir(tmp_path):
+    """The trial-local pi JSONL directory must survive the sandbox teardown."""
+    workdir = tmp_path / "workdir"
+    workdir.mkdir()
+    session_dir = tmp_path / "out" / "pi-sessions"
+
+    result = subprocess_utils.run_command(
+        [
+            "/bin/bash",
+            "-c",
+            'mkdir -p "$2" && printf trace > "$2/session.jsonl"',
+            "session-probe",
+            "--session-dir",
+            str(session_dir),
+        ],
+        sandbox_workdir=workdir,
+        sandbox_name="session-probe",
+        sandbox_model_access=False,
+    )
+
+    assert result.returncode == 0
+    assert (session_dir / "session.jsonl").read_text() == "trace"
+
+
 def test_agent_sandbox_hides_shared_data_and_writes_trial(tmp_path):
     """The real sandbox exposes only the trial and selected model endpoint."""
     sandbox_cwd = subprocess_utils.agent_sandbox_cwd(tmp_path, "all-your-base")

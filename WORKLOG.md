@@ -1211,6 +1211,23 @@ Append-only development log for the `cospa` repository.
 - Next action: persist the explicit pi session directory through Bubblewrap so
   the same canary retains its JSONL trace and token/cost telemetry.
 
+## 2026-07-17 — Persist hermetic Aider session telemetry
+
+- Context: after the FNM launch fix, the real canary passed grading but pi wrote
+  its explicit session directory only inside the ephemeral Bubblewrap root, so
+  the manifest had no trace, tokens, or cost.
+- RED evidence: the real canary had empty `token_usage`; the persistence test
+  found no host JSONL, and the runner wiring test could not match a persisted
+  trace whose header used the virtual sandbox cwd.
+- Decision: rewrite `--session-dir` to a private `/mnt` path, bind only its
+  trial-local host directory read/write, restrict repository mounts to explicit
+  `--skill` values, and match explicit sessions against the sandbox cwd.
+- Validation: the third real `cpp/all-your-base` canary passed all 17 assertions,
+  preserved both raw and copied JSONL traces, and recorded 31,820 tokens plus
+  $0.0123621 cost. Focused tests report 7 passed; full
+  `mamba run -n coding-eval python -m pytest -q` reports 240 passed.
+- Next action: resume this fresh run ID across all five adapters sequentially.
+
 ## 2026-07-22 — Add Laguna S 2.1 to the local model shortlist
 
 - Context: Poolside released Laguna S 2.1 after the original model survey; its

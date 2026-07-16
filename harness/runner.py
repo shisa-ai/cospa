@@ -937,8 +937,13 @@ def run_trial(
                 end_time=time.time(),
             )
     else:
+        session_workdir = (
+            agent_sandbox_cwd(workdir, task_data.get("problem"))
+            if getattr(adapter, "uses_workspace_sandbox", False)
+            else workdir
+        )
         session_usage = collect_pi_session_usage(
-            workdir,
+            session_workdir,
             out_dir,
             session_dir=out_dir / "pi-sessions",
             start_time=start_time,

@@ -154,11 +154,16 @@ def test_run_harbor_job_uses_local_task_custom_agent_and_pinned_judge(tmp_path):
     def fake_run(cmd, **kwargs):
         captured["cmd"] = list(cmd)
         captured["env"] = kwargs["env"]
+        local_path = Path(cmd[cmd.index("--path") + 1])
+        captured["task_config"] = tomllib.loads(
+            (local_path / "task.toml").read_text()
+        )
         return subprocess.CompletedProcess(cmd, 0, stdout="ok", stderr="")
 
     judge_env = {
         "SWE_ATLAS_JUDGE_API_KEY": "judge-secret",
         "SWE_ATLAS_JUDGE_BASE_URL": "https://judge.example/v1",
+        "CODING_EVAL_HARBOR_MODEL_BASE_URL": "http://model-relay:8013/v1",
     }
     with patch.dict(os.environ, judge_env, clear=False), patch(
         "harness.suites.swe_atlas.run_command", side_effect=fake_run
@@ -182,9 +187,62 @@ def test_run_harbor_job_uses_local_task_custom_agent_and_pinned_judge(tmp_path):
     assert cmd[cmd.index("--n-attempts") + 1] == "3"
     assert "migrate" not in cmd
     assert "--verifier-include-logs" in cmd
+    assert cmd[cmd.index("--allow-agent-host") + 1] == "model-relay"
+    task_config = captured["task_config"]
+    assert task_config["agent"]["network_mode"] == "allowlist"
+    assert task_config["agent"]["allowed_hosts"] == ["model-relay"]
+    assert task_config["verifier"]["network_mode"] == "allowlist"
+    assert task_config["verifier"]["allowed_hosts"] == ["judge.example"]
     assert captured["env"]["OPENAI_API_KEY"] == "judge-secret"
     assert captured["env"]["OPENAI_API_BASE"] == "https://judge.example/v1"
     assert captured["env"]["EVAL_MODEL"] == JUDGE_MODEL
+    assert captured["env"]["CODING_EVAL_CLEAN_AGENT_PROCESSES"] == "1"
+
+
+def test_swe_atlas_devstack_uses_sanitized_profile_mounts(tmp_path):
+    suite = load_suite("swe_atlas_pilot12")
+    vendor = _make_pilot_vendor(tmp_path, suite)
+    task_id = suite.get_task_ids(vendor)[0]
+    workdir = tmp_path / "workdir"
+    suite.materialize_task(task_id, workdir, vendor)
+    profile = tmp_path / "profile"
+    (profile / "npm").mkdir(parents=True)
+    (profile / "git").mkdir()
+    (profile / "settings.json").write_text("{}\n")
+    captured = {}
+
+    def fake_run(cmd, **kwargs):
+        captured["cmd"] = list(cmd)
+        return subprocess.CompletedProcess(cmd, 0, stdout="ok", stderr="")
+
+    with patch.dict(
+        os.environ,
+        {
+            "SWE_ATLAS_JUDGE_API_KEY": "judge-secret",
+            "SWE_ATLAS_JUDGE_BASE_URL": "https://judge.example/v1",
+            "CODING_EVAL_HARBOR_MODEL_BASE_URL": "http://model-relay:8013/v1",
+            "CODING_EVAL_DEVSTACK_PROFILE_DIR": str(profile),
+        },
+    ), patch("harness.suites.swe_atlas.run_command", side_effect=fake_run):
+        result = suite.run_harbor_job(
+            task_id,
+            "test/model",
+            "pi_devstack",
+            workdir,
+            tmp_path / "jobs",
+            vendor_dir=vendor,
+        )
+
+    assert result["returncode"] == 0
+    cmd = captured["cmd"]
+    assert "--mounts" in cmd
+    mounts = json.loads(cmd[cmd.index("--mounts") + 1])
+    assert {mount["target"] for mount in mounts} == {
+        "/opt/coding-eval-devstack/npm",
+        "/opt/coding-eval-devstack/git",
+        "/opt/coding-eval-devstack/settings.json",
+    }
+    assert all(mount["read_only"] for mount in mounts)
 
 
 def test_run_harbor_job_fails_before_agent_when_judge_credentials_are_missing(
@@ -211,6 +269,67 @@ def test_run_harbor_job_fails_before_agent_when_judge_credentials_are_missing(
     assert result["returncode"] == -1
     assert "judge" in result["stderr"].lower()
     mock_run.assert_not_called()
+
+
+def test_run_harbor_job_fails_before_agent_when_model_endpoint_is_missing(
+    tmp_path,
+):
+    suite = load_suite("swe_atlas_pilot12")
+    vendor = _make_pilot_vendor(tmp_path, suite)
+    task_id = suite.get_task_ids(vendor)[0]
+    workdir = tmp_path / "workdir"
+    suite.materialize_task(task_id, workdir, vendor)
+
+    with patch.dict(
+        os.environ,
+        {
+            "SWE_ATLAS_JUDGE_API_KEY": "judge-secret",
+            "SWE_ATLAS_JUDGE_BASE_URL": "https://judge.example/v1",
+        },
+        clear=True,
+    ), patch("harness.suites.swe_atlas.run_command") as mock_run:
+        result = suite.run_harbor_job(
+            task_id,
+            "test/model",
+            "pi_vanilla",
+            workdir,
+            tmp_path / "jobs",
+            vendor_dir=vendor,
+        )
+
+    assert result["returncode"] == -1
+    assert "model base url" in result["stderr"].lower()
+    mock_run.assert_not_called()
+
+
+def test_swe_atlas_rejects_ip_literal_network_allowlists(tmp_path):
+    suite = load_suite("swe_atlas_pilot12")
+    vendor = _make_pilot_vendor(tmp_path, suite)
+    task_id = suite.get_task_ids(vendor)[0]
+    workdir = tmp_path / "workdir"
+    suite.materialize_task(task_id, workdir, vendor)
+
+    with patch.dict(
+        os.environ,
+        {
+            "SWE_ATLAS_JUDGE_API_KEY": "judge-secret",
+            "SWE_ATLAS_JUDGE_BASE_URL": "https://judge.example/v1",
+            "CODING_EVAL_HARBOR_MODEL_BASE_URL": "http://172.17.0.1:18989/v1",
+        },
+    ), patch("harness.suites.swe_atlas.run_command") as run:
+        result = suite.run_harbor_job(
+            task_id,
+            "test/model",
+            "pi_vanilla",
+            workdir,
+            tmp_path / "jobs",
+            vendor_dir=vendor,
+        )
+
+    assert result["returncode"] == -1
+    assert "hostname" in result["stderr"].lower()
+    assert "ip" in result["stderr"].lower()
+    run.assert_not_called()
 
 
 def test_verify_preserves_test_writing_native_subchecks(tmp_path):

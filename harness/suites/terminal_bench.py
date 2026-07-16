@@ -10,6 +10,7 @@ Reference: vendor/terminal-bench/CLAUDE.md
 
 import ast
 import hashlib
+import ipaddress
 import json
 import os
 import re
@@ -503,6 +504,14 @@ class TerminalBenchSuite:
         )
         destination.chmod(0o755)
 
+    @staticmethod
+    def _is_ip_literal(host: str) -> bool:
+        try:
+            ipaddress.ip_address(host)
+        except ValueError:
+            return False
+        return True
+
     def _dataset_manifest(self) -> Dict[str, Any]:
         """Load cospa's immutable Terminal-Bench Core dataset manifest."""
         try:
@@ -805,8 +814,17 @@ class TerminalBenchSuite:
         }
 
     @staticmethod
-    def _set_agent_network_allowlist(task_root: Path, model_host: str) -> int:
-        """Restrict each migrated Harbor task's agent phase to the model host."""
+    def _set_phase_network_allowlist(
+        task_root: Path,
+        phase: str,
+        allowed_hosts: list[str],
+    ) -> int:
+        """Restrict a Harbor phase in every local task configuration."""
+        if phase not in {"agent", "verifier"}:
+            raise ValueError(f"Unsupported Harbor network phase: {phase}")
+        if not allowed_hosts:
+            raise ValueError(f"Harbor {phase} allowlist must not be empty")
+
         task_files = list(Path(task_root).rglob("task.toml"))
         for task_file in task_files:
             lines = task_file.read_text().splitlines()
@@ -814,15 +832,18 @@ class TerminalBenchSuite:
             for index, line in enumerate(lines):
                 match = re.fullmatch(r"\[([^]]+)]", line.strip())
                 if match and (
-                    match.group(1) == "agent"
-                    or match.group(1).endswith(".agent")
+                    match.group(1) == phase
+                    or match.group(1).endswith(f".{phase}")
                 ):
                     section_starts.append(index)
-            if not any(lines[index].strip() == "[agent]" for index in section_starts):
+            exact_header = f"[{phase}]"
+            if not any(
+                lines[index].strip() == exact_header for index in section_starts
+            ):
                 if lines and lines[-1].strip():
                     lines.append("")
-                lines.extend(["[agent]", 'network_mode = "allowlist"'])
-                lines.append(f"allowed_hosts = {json.dumps([model_host])}")
+                lines.extend([exact_header, 'network_mode = "allowlist"'])
+                lines.append(f"allowed_hosts = {json.dumps(allowed_hosts)}")
                 section_starts.append(len(lines) - 3)
             for section_start in reversed(section_starts):
                 section_end = next(
@@ -843,12 +864,68 @@ class TerminalBenchSuite:
                 replacement = [
                     lines[section_start],
                     'network_mode = "allowlist"',
-                    f"allowed_hosts = {json.dumps([model_host])}",
+                    f"allowed_hosts = {json.dumps(allowed_hosts)}",
                     *body,
                 ]
                 lines[section_start:section_end] = replacement
             task_file.write_text("\n".join(lines) + "\n")
         return len(task_files)
+
+    @classmethod
+    def _set_agent_network_allowlist(
+        cls,
+        task_root: Path,
+        model_host: str,
+    ) -> int:
+        """Restrict each migrated Harbor task's agent phase to the model host."""
+        return cls._set_phase_network_allowlist(
+            task_root,
+            "agent",
+            [model_host],
+        )
+
+    @staticmethod
+    def _main_service_has_explicit_networking(task_root: Path) -> bool:
+        """Detect Compose networking that bypasses Harbor's egress sidecar.
+
+        Harbor 0.16 deliberately respects task-authored ``network_mode`` and
+        ``networks`` entries. If the migrated ``main`` service has either, the
+        phase allowlist is not applied to the model's container. Refuse such a
+        task until it has a task-local, egress-controlled service topology.
+        """
+        compose_files = [
+            *Path(task_root).rglob("docker-compose.yaml"),
+            *Path(task_root).rglob("docker-compose.yml"),
+        ]
+        for compose_file in compose_files:
+            in_services = False
+            current_service: str | None = None
+            for raw_line in compose_file.read_text().splitlines():
+                line = raw_line.split("#", 1)[0].rstrip()
+                if not line.strip():
+                    continue
+                indent = len(line) - len(line.lstrip())
+                stripped = line.strip()
+                if indent == 0:
+                    in_services = stripped == "services:"
+                    current_service = None
+                    continue
+                if not in_services:
+                    continue
+                service_match = re.match(r"^\s{2}([^:\s]+)\s*:\s*(.*)$", line)
+                if service_match:
+                    current_service = service_match.group(1)
+                    inline = service_match.group(2)
+                    if current_service == "main" and re.search(
+                        r"\b(network_mode|networks)\b", inline
+                    ):
+                        return True
+                    continue
+                if current_service == "main" and indent == 4 and re.match(
+                    r"^(network_mode|networks)\s*:", stripped
+                ):
+                    return True
+        return False
 
     def run_harbor_job(
         self,
@@ -911,7 +988,17 @@ class TerminalBenchSuite:
                 "stderr": (
                     "The Harbor agent cannot reach a host loopback model URL "
                     f"({base_url}). Set CODING_EVAL_HARBOR_MODEL_BASE_URL to "
-                    "a container-reachable relay hostname or address."
+                    "a container-reachable relay hostname."
+                ),
+            }
+        if self._is_ip_literal(model_host):
+            return {
+                "returncode": -1,
+                "stdout": "",
+                "stderr": (
+                    "Hermetic Harbor execution requires a dedicated model "
+                    "relay hostname, not an IP literal whose allowlist would "
+                    "expose every port on that address."
                 ),
             }
 
@@ -979,6 +1066,16 @@ class TerminalBenchSuite:
                     "Hermetic Terminal-Bench execution requires a local "
                     "Harbor task containing task.toml; registry fallback is "
                     "disabled because it would bypass the agent network policy."
+                ),
+            }
+        if self._main_service_has_explicit_networking(local_task_path):
+            return {
+                "returncode": -1,
+                "stdout": "",
+                "stderr": (
+                    "Hermetic Terminal-Bench execution refused task-authored "
+                    "main-service networking because it bypasses Harbor's "
+                    "agent-phase egress controls."
                 ),
             }
         if self._set_agent_network_allowlist(local_task_path, model_host) == 0:

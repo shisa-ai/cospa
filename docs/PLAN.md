@@ -372,13 +372,25 @@ Terminal-Bench 2.1 remains a separate milestone campaign.
   public network for images/packages. Migrated local tasks are patched so the
   prompt-bearing `[agent]` phase uses `network_mode = "allowlist"` with only
   the selected model hostname, also passed via `--allow-agent-host`. Registry
-  fallback is disabled because it cannot guarantee the patch. Host-loopback
-  model URLs require `CODING_EVAL_HARBOR_MODEL_BASE_URL` set to a
-  container-reachable relay address.
+  fallback is disabled because it cannot guarantee the patch. A dedicated,
+  container-reachable relay **hostname** is required; loopback and IP literals
+  fail closed. Host-loopback model URLs require
+  `CODING_EVAL_HARBOR_MODEL_BASE_URL` set to a container-reachable relay
+  address. Migrated `main` services with explicit Compose networking also fail
+  closed because Harbor 0.16 otherwise leaves them outside its egress sidecar.
+- Integrity status: `partial (real adversarial probe)`. The verifier currently
+  retains public package/task network, at least 27 upstream solutions install
+  or download dependencies at agent time, and public-runtime tasks cannot be
+  solved under the model-only policy. A model-started watcher can also survive
+  the direct agent call and observe hidden tests when Harbor uploads them (see
+  `CODING_EVAL_CLEAN_AGENT_PROCESSES` in `harness/harbor_agents.py`). See
+  `docs/PROTECTION-AUDIT.md`; partition/prefetch the suite and isolate verifier
+  assets before interpreting a protected full-80 score.
 - **Measured gate.** The DS4 `pi_vanilla` Pareto20 completed in 17m24s at c=8:
   11 resolved, 7 incorrect, and 2 official agent-budget expirations, with no
   infrastructure/verifier failure. Add repetitions or full80 only after a
-  matched scaffold arm and the stability gate justify the cost.
+  matched scaffold arm and the stability gate justify the cost. Before scaling
+  further, run k=1 on a 5-task slice and measure wall time first.
 
 ### SWE Atlas pilot12 (P11b, preserved but deferred)
 
@@ -394,25 +406,35 @@ campaign budget goes first to executable-oracle suites.
   of Go, Python, C, and TypeScript. Q&A also spans onboarding, root-cause,
   architecture, and security; Test Writing spans unit, integration, and
   acceptance work.
-- Harbor execution: each task's upstream `task.toml`, prompt, environment,
-  tests, mutation patch, rubrics, and judge prompts are copied unchanged into
-  the trial workdir. The same distinct custom Harbor agents used by
-  Terminal-Bench preserve adapter identity.
+- Harbor execution: each task's upstream prompt, environment, tests, mutation
+  patch, rubrics, and judge prompts are copied into the trial workdir. Cospa
+  then patches only the task's phase network policy: model-host-only for the
+  agent and judge-host-only for the verifier. The same distinct custom Harbor
+  agents and sanitized devstack profile mounts used by Terminal-Bench preserve
+  adapter identity.
 - Judge: fixed to `anthropic/claude-opus-4-5-20251101`; credentials come from
   `SWE_ATLAS_JUDGE_API_KEY` and `SWE_ATLAS_JUDGE_BASE_URL`. Missing judge
-  setup fails before agent execution. The pinned upstream commit also pins the
-  judge prompts and rubrics.
+  setup fails before agent execution. The solving agent receives only its
+  selected provider credential, never the judge or unrelated provider/cloud
+  credentials. Solver-created processes are killed before hidden verifier
+  files are uploaded. The pinned upstream commit also pins the judge prompts
+  and rubrics.
 - Results: strict Harbor reward remains the headline. Test Writing additionally
   preserves rubric, manifest, and mutation subchecks; Q&A preserves aggregate
   rubric coverage. Manifests record workflow, language, repository/base commit,
   upstream commit, and judge model.
-- Status: `wired (unit test + real pinned artifact)`. All 12 tasks discover and
-  materialize from the real checkout; a real rubric-scoring path is still
-  required before upgrading this to `fixed (end-to-end)`.
+- Status: `wired (unit test + real pinned artifact)`. Q&A is `wired (unit +
+  integration + real pinned artifact)`; a real judge-backed run is still
+  required before upgrading this to `fixed (end-to-end)`. Test Writing
+  remains `partial`: its verifier intentionally executes model-authored tests
+  in the privileged container containing hidden rubrics and judge credentials.
+  Candidate-code isolation is required before claiming cheating protection.
+  See `docs/PROTECTION-AUDIT.md`.
 - Campaign: deferred. If judge-based diagnostics are explicitly restored,
-  start with one representative model using `pi_vanilla`, all 12 at k=1, and
-  apply the runtime/token/telemetry/infrastructure/difficulty gates in
-  `docs/EVALS.md` before a matched k=2 pass or adapter expansion.
+  start with one representative judge-backed Q&A model using `pi_vanilla` at
+  k=1 (add/use task selection rather than launching all 12), then apply the
+  runtime/token/telemetry/infrastructure/difficulty gates in `docs/EVALS.md`
+  before a matched k=2 pass or adapter expansion.
 
 ## 4. Reproducibility & results layout
 

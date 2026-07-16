@@ -427,6 +427,84 @@ def test_run_harbor_job_refuses_task_without_hermetic_policy(tmp_path):
     run.assert_not_called()
 
 
+def test_run_harbor_job_refuses_migrated_main_with_explicit_networking(
+    tmp_path,
+):
+    """Task-authored main networking bypasses Harbor's egress sidecar."""
+    suite = TerminalBenchSuite()
+    vendor_dir = tmp_path / "vendor"
+    _make_task_yaml_task(vendor_dir, "networked-task")
+    workdir = tmp_path / "workdir"
+    workdir.mkdir()
+    jobs_dir = tmp_path / "jobs"
+    harbor_run_called = False
+
+    def fake_run(cmd, **kwargs):
+        nonlocal harbor_run_called
+        if cmd[:3] == ["harbor", "task", "migrate"]:
+            output_dir = Path(cmd[cmd.index("--output") + 1])
+            migrated = output_dir / "networked-task"
+            (migrated / "environment").mkdir(parents=True)
+            (migrated / "task.toml").write_text('name = "networked-task"\n')
+            (migrated / "environment" / "docker-compose.yaml").write_text(
+                "services:\n"
+                "  main:\n"
+                "    image: task-image\n"
+                "    networks:\n"
+                "      - task-network\n"
+                "networks:\n"
+                "  task-network: {}\n"
+            )
+        elif cmd[:2] == ["harbor", "run"]:
+            harbor_run_called = True
+        import subprocess as sp
+        return sp.CompletedProcess(cmd, 0, stdout="", stderr="")
+
+    with patch.dict(
+        os.environ,
+        {"CODING_EVAL_HARBOR_MODEL_BASE_URL": "http://model-relay:8013/v1"},
+    ), patch(
+        "harness.suites.terminal_bench.run_command", side_effect=fake_run
+    ):
+        result = suite.run_harbor_job(
+            "networked-task",
+            "test/model",
+            "pi_vanilla",
+            workdir,
+            jobs_dir,
+            vendor_dir=vendor_dir,
+        )
+
+    assert result["returncode"] == -1
+    assert "network" in result["stderr"].lower()
+    assert "bypass" in result["stderr"].lower()
+    assert harbor_run_called is False
+
+
+def test_run_harbor_job_rejects_model_relay_ip_literal(tmp_path):
+    """An IP allowlist grants every port; require a dedicated relay hostname."""
+    suite = TerminalBenchSuite()
+    workdir = tmp_path / "workdir"
+    _make_local_harbor_task(workdir)
+
+    with patch.dict(
+        os.environ,
+        {"CODING_EVAL_HARBOR_MODEL_BASE_URL": "http://172.17.0.1:18989/v1"},
+    ), patch("harness.suites.terminal_bench.run_command") as run:
+        result = suite.run_harbor_job(
+            "hello-world",
+            "test/model",
+            "pi_vanilla",
+            workdir,
+            tmp_path / "jobs",
+        )
+
+    assert result["returncode"] == -1
+    assert "hostname" in result["stderr"].lower()
+    assert "ip" in result["stderr"].lower()
+    run.assert_not_called()
+
+
 def test_harbor_env_accepts_container_reachable_model_override(monkeypatch):
     """Loopback host endpoints need an explicit container-side URL."""
     monkeypatch.setenv(
@@ -1078,6 +1156,45 @@ def test_harbor_devstack_agents_install_mounted_profile(monkeypatch):
     assert 'ln -s "$profile_root/git" "$agent_dir/git"' in command
     assert 'cp "$profile_root/settings.json" "$agent_dir/settings.json"' in command
     assert "pi list" in command
+
+
+def test_harbor_agent_env_excludes_unselected_and_judge_credentials(monkeypatch):
+    """The solving model must receive only its selected provider credential."""
+    harbor_agents = _import_harbor_agents_with_fake_terminal_bench(monkeypatch)
+
+    with patch.dict(
+        os.environ,
+        {
+            "CODING_EVAL_PI_PROVIDER_API_KEY": "selected-key",
+            "CODING_EVAL_PI_PROVIDER_BASE_URL": "https://selected.example/v1",
+            "OPENAI_API_KEY": "judge-key",
+            "ANTHROPIC_API_KEY": "unselected-key",
+        },
+        clear=True,
+    ):
+        agent = harbor_agents.PiVanillaHarborAgent("test/model")
+        env = agent._env
+
+    assert env["CODING_EVAL_PI_PROVIDER_API_KEY"] == "selected-key"
+    assert env["CODING_EVAL_PI_PROVIDER_BASE_URL"] == (
+        "https://selected.example/v1"
+    )
+    assert "OPENAI_API_KEY" not in env
+    assert "ANTHROPIC_API_KEY" not in env
+
+
+def test_harbor_agent_cleanup_command_kills_only_post_snapshot_processes(
+    monkeypatch,
+):
+    """SWE Atlas can remove agent daemons before hidden tests are uploaded."""
+    harbor_agents = _import_harbor_agents_with_fake_terminal_bench(monkeypatch)
+
+    command = harbor_agents._new_process_cleanup_command({1, 7, 42})
+
+    assert " 1 7 42 " in command
+    assert "/proc/[0-9]*" in command
+    assert "kill -KILL" in command
+    assert "$$" in command and "PPid:" in command
 
 
 def test_harbor_agent_cli_forwards_configured_thinking(monkeypatch):

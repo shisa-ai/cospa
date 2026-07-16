@@ -1139,6 +1139,31 @@ Append-only development log for the `cospa` repository.
   the generated resume-safe commands to fill only the quarantined/missing
   slots before regenerating scores.
 
+## 2026-07-16 — Audit suite protection and network boundaries
+
+- Context: the Aider cutover was hermetic, but Terminal-Bench and SWE Atlas
+  still depended on Harbor phase semantics and had not received an adversarial
+  filesystem, credential, and required-network review.
+- Findings: SWE Atlas agents had public egress, inherited judge/unselected
+  provider credentials, omitted devstack mounts, and could leave a daemon to
+  observe later verifier files. Terminal-Bench restricted ordinary agent turns
+  but retained public verification, could be bypassed by explicit Compose
+  `main` networking, and cannot faithfully run at least 27 dependency-installing
+  official solutions under a model-only policy. A real Harbor watcher saw
+  hidden tests after the agent returned.
+- Decision: add model/judge phase allowlists, selected-credential-only agent
+  env, SWE Atlas daemon cleanup, IP-literal and explicit-Compose fail-closed
+  checks, and preserve an honest `partial` status where benchmark semantics
+  still conflict with isolation.
+- Evidence: RED/GREEN tests cover each protection; the real Aider boundary,
+  real Terminal `hello-world` path, real migrated Compose refusal, pinned SWE
+  task policy, adversarial Harbor watcher, and Docker process-cleanup probes
+  were exercised. Full pytest and shell-harness results are recorded in
+  `docs/PROTECTION-AUDIT.md`.
+- Next action: partition/prefetch Terminal-Bench and isolate its verifier;
+  isolate SWE Atlas candidate tests from hidden rubrics/judge credentials, then
+  run a judge-backed Q&A smoke.
+
 ## 2026-07-22 — Add Laguna S 2.1 to the local model shortlist
 
 - Context: Poolside released Laguna S 2.1 after the original model survey; its

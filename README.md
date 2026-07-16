@@ -164,7 +164,11 @@ files. Headless-incompatible resources can be disabled with pi package filters
 Terminal-Bench image build and agent install retain public network access, but
 the prompt-bearing agent phase is patched to Harbor `allowlist` mode for only
 the model host. Runs fail closed unless a local migrated `task.toml` can carry
-that policy.
+that policy, and also refuse explicit `main` Compose networking that bypasses
+Harbor's sidecar. This does **not** yet make the full 80-task campaign clean:
+public-runtime tasks conflict with model-only egress, and the shared verifier
+retains public network/hidden-test exposure. Read `docs/PROTECTION-AUDIT.md`
+before running or interpreting Terminal-Bench scores.
 
 ## Model Reachability
 
@@ -214,13 +218,16 @@ Docker, so set a container-reachable override while keeping the normal host pi
 configuration unchanged:
 
 ```bash
-export CODING_EVAL_HARBOR_MODEL_BASE_URL=http://172.17.0.1:8000/v1
+export CODING_EVAL_HARBOR_MODEL_BASE_URL=http://model-relay.internal:8000/v1
 ```
 
-On Linux Docker the bridge gateway is commonly `172.17.0.1`; on Docker Desktop,
-`host.docker.internal` is commonly appropriate. The server must listen on the
-corresponding host interface. Harbor adds this hostname to the agent-phase
-allowlist; URLs, ports, and paths are not themselves allowlist entries.
+The override must use a dedicated, container-resolvable relay **hostname**;
+loopback and IP-literal URLs fail closed. Do not point that hostname at a
+general Docker host gateway: Harbor's hostname policy is not port- or
+path-scoped, so every reachable service on the resolved address would enter the
+model's network boundary. Use a relay host/container that exposes only the
+selected model route. Harbor adds this hostname to the agent-phase allowlist;
+URLs, ports, and paths are not themselves allowlist entries.
 
 Then add the model to `configs/models.yaml` with the provider prefix:
 
@@ -271,6 +278,7 @@ export SWE_ATLAS_JUDGE_BASE_URL='https://judge.example/v1'
   --suite swe_atlas_pilot12 \
   --adapters pi_vanilla \
   --models local/ornith-1.0-35b \
+  --problems 1 \
   --k 1 \
   --run-id swe-atlas-pilot12-k1
 ```
@@ -283,9 +291,12 @@ rubric, manifest, and mutation subchecks; Q&A verdicts keep rubric coverage and
 aggregate score alongside the strict reward.
 
 This is a custom cost/reliability pilot, not a directly comparable leaderboard
-run. First run all 12 at `k=1`, inspect time, normalized agent usage, judge
-usage, and infrastructure failures against `docs/EVALS.md`, then promote to a
-matched `k=2`. Do not launch the full adapter matrix first.
+run. The sorted pilot begins with Q&A tasks, so `--problems 1` is the current
+single-Q&A smoke. Q&A still needs that judge-backed end-to-end evidence. Test
+Writing remains experimental because its trusted verifier executes
+model-authored tests beside hidden rubrics and judge credentials; do not call
+those scores cheating-protected until candidate-code isolation is implemented.
+See `docs/PROTECTION-AUDIT.md`. Do not launch the full adapter matrix first.
 
 ## Running the BigCodeBench-Hard pilot
 

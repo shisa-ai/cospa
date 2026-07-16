@@ -5,6 +5,7 @@ import os
 import shutil
 import subprocess
 from pathlib import Path
+from urllib.parse import urlparse
 from typing import Any, Dict, List
 
 from harness.subprocess_utils import run_command
@@ -150,6 +151,10 @@ class SweAtlasPilotSuite(TerminalBenchSuite):
             env["OPENAI_API_BASE"] = base_url
         if judge.get("model"):
             env["EVAL_MODEL"] = str(judge["model"])
+        # SWE Atlas tasks only need durable files/answers from the agent. Kill
+        # any solver-created daemons before Harbor uploads hidden verifier
+        # assets into the shared container.
+        env["CODING_EVAL_CLEAN_AGENT_PROCESSES"] = "1"
         return env
 
     @staticmethod
@@ -183,11 +188,77 @@ class SweAtlasPilotSuite(TerminalBenchSuite):
         config_error = self._judge_config_error(harbor_env)
         if config_error:
             return {"returncode": -1, "stdout": "", "stderr": config_error}
+
+        model_base_url = harbor_env.get("CODING_EVAL_PI_PROVIDER_BASE_URL")
+        if not model_base_url:
+            return {
+                "returncode": -1,
+                "stdout": "",
+                "stderr": (
+                    "Hermetic SWE Atlas execution requires a model base URL. "
+                    "Configure the selected pi provider or set "
+                    "CODING_EVAL_HARBOR_MODEL_BASE_URL."
+                ),
+            }
+        model_host = urlparse(model_base_url).hostname
+        judge_base_url = harbor_env.get("OPENAI_API_BASE")
+        judge_host = urlparse(judge_base_url or "").hostname
+        if not model_host or not judge_host:
+            return {
+                "returncode": -1,
+                "stdout": "",
+                "stderr": "Invalid SWE Atlas model or judge base URL",
+            }
+        loopback_hosts = {"127.0.0.1", "::1", "localhost"}
+        if model_host in loopback_hosts or judge_host in loopback_hosts:
+            return {
+                "returncode": -1,
+                "stdout": "",
+                "stderr": (
+                    "SWE Atlas model and judge endpoints must use "
+                    "container-reachable hostnames, not loopback addresses."
+                ),
+            }
+        if self._is_ip_literal(model_host) or self._is_ip_literal(judge_host):
+            return {
+                "returncode": -1,
+                "stdout": "",
+                "stderr": (
+                    "Hermetic SWE Atlas execution requires dedicated model "
+                    "and judge relay hostnames, not IP literals whose "
+                    "allowlists would expose every port on those addresses."
+                ),
+            }
         if not (workdir / "task.toml").is_file():
             return {
                 "returncode": -1,
                 "stdout": "",
                 "stderr": f"Missing materialized SWE Atlas task.toml in {workdir}",
+            }
+
+        if self._main_service_has_explicit_networking(workdir):
+            return {
+                "returncode": -1,
+                "stdout": "",
+                "stderr": (
+                    "Hermetic SWE Atlas execution refused task-authored "
+                    "main-service networking because it bypasses Harbor's "
+                    "agent-phase egress controls."
+                ),
+            }
+        if self._set_phase_network_allowlist(
+            workdir,
+            "agent",
+            [model_host],
+        ) == 0 or self._set_phase_network_allowlist(
+            workdir,
+            "verifier",
+            [judge_host],
+        ) == 0:
+            return {
+                "returncode": -1,
+                "stdout": "",
+                "stderr": "Could not apply SWE Atlas phase network policies",
             }
 
         cmd = [
@@ -201,12 +272,17 @@ class SweAtlasPilotSuite(TerminalBenchSuite):
             str(n_attempts),
             "--jobs-dir",
             str(jobs_dir),
+            "--allow-agent-host",
+            model_host,
             "--path",
             str(workdir),
             "--verifier-include-logs",
             "**/*",
             "--yes",
         ]
+        devstack_mounts = self._devstack_mounts(adapter_name)
+        if devstack_mounts:
+            cmd += ["--mounts", json.dumps(devstack_mounts)]
         try:
             result = run_command(
                 cmd,

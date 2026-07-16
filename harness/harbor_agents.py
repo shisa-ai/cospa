@@ -49,43 +49,6 @@ if not _HARBOR_NATIVE:
         from terminal_bench.terminal.models import TerminalCommand
 
 
-_PROVIDER_ENV_KEYS = (
-    "ANTHROPIC_API_KEY",
-    "ANTHROPIC_OAUTH_TOKEN",
-    "OPENAI_API_KEY",
-    "AZURE_OPENAI_API_KEY",
-    "AZURE_OPENAI_BASE_URL",
-    "AZURE_OPENAI_RESOURCE_NAME",
-    "AZURE_OPENAI_API_VERSION",
-    "AZURE_OPENAI_DEPLOYMENT_NAME_MAP",
-    "DEEPSEEK_API_KEY",
-    "NVIDIA_API_KEY",
-    "GEMINI_API_KEY",
-    "GROQ_API_KEY",
-    "CEREBRAS_API_KEY",
-    "XAI_API_KEY",
-    "FIREWORKS_API_KEY",
-    "TOGETHER_API_KEY",
-    "OPENROUTER_API_KEY",
-    "AI_GATEWAY_API_KEY",
-    "ZAI_API_KEY",
-    "ZAI_CODING_CN_API_KEY",
-    "MISTRAL_API_KEY",
-    "MINIMAX_API_KEY",
-    "MOONSHOT_API_KEY",
-    "OPENCODE_API_KEY",
-    "KIMI_API_KEY",
-    "CLOUDFLARE_API_KEY",
-    "CLOUDFLARE_ACCOUNT_ID",
-    "CLOUDFLARE_GATEWAY_ID",
-    "AWS_PROFILE",
-    "AWS_ACCESS_KEY_ID",
-    "AWS_SECRET_ACCESS_KEY",
-    "AWS_BEARER_TOKEN_BEDROCK",
-    "AWS_REGION",
-    "PI_OFFLINE",
-)
-
 _CODING_EVAL_AGENT_ENV_KEYS = (
     "CODING_EVAL_LOCAL_BASE_URL",
     "CODING_EVAL_LOCAL_API_KEY",
@@ -102,6 +65,7 @@ _CODING_EVAL_AGENT_ENV_KEYS = (
     "CODING_EVAL_PI_COMPAT",
     "CODING_EVAL_THINKING",
     "CODING_EVAL_REASONING_EFFORT",
+    "CODING_EVAL_CLEAN_AGENT_PROCESSES",
 )
 
 _CONTAINER_BENCH_SKILLS = superpowers_container_skill_paths()
@@ -166,6 +130,45 @@ def _resolve_pi_model_arg(
     if model_name.split("/", 1)[0] != provider_name:
         return model_name
     return f"{provider_name}/{model_id_env}"
+
+
+_PROCESS_SNAPSHOT_COMMAND = (
+    "for process in /proc/[0-9]*; do "
+    "printf '%s\\n' \"${process##*/}\"; "
+    "done"
+)
+
+
+def _new_process_cleanup_command(baseline_pids: set[int]) -> str:
+    """Return a root cleanup command for processes created by one agent run.
+
+    Harbor uploads hidden tests into the shared task container only after the
+    solving phase. A model can otherwise leave a watcher daemon behind and read
+    or mutate those tests. Preserve the pre-agent container processes and the
+    cleanup exec's own ancestor chain, then kill everything else in repeated
+    passes so newly forked children cannot race the cleanup.
+    """
+    baseline = " " + " ".join(str(pid) for pid in sorted(baseline_pids)) + " "
+    return rf'''
+baseline={shlex.quote(baseline)}
+keep="$baseline"
+pid=$$
+while [[ "$pid" =~ ^[0-9]+$ ]] && (( pid > 1 )); do
+  keep="$keep $pid "
+  pid=$(awk '/^PPid:/ {{ print $2 }}' "/proc/$pid/status" 2>/dev/null || echo 0)
+done
+for pass in 1 2 3; do
+  for process in /proc/[0-9]*; do
+    pid=${{process##*/}}
+    (( pid > 1 )) || continue
+    case "$keep" in
+      *" $pid "*) ;;
+      *) kill -KILL "$pid" 2>/dev/null || true ;;
+    esac
+  done
+  sleep 0.05
+done
+'''.strip()
 
 
 def _configured_thinking() -> str | None:
@@ -292,7 +295,7 @@ if _HARBOR_NATIVE:
         def _provider_env(self) -> dict[str, str]:
             return {
                 key: value
-                for key in (*_PROVIDER_ENV_KEYS, *_CODING_EVAL_AGENT_ENV_KEYS)
+                for key in _CODING_EVAL_AGENT_ENV_KEYS
                 if (value := os.environ.get(key))
             }
 
@@ -455,14 +458,37 @@ NODE
                 *_thinking_args(),
                 instruction,
             ]
-            await self.exec_as_agent(
-                environment,
-                command=_wrap_with_pi_session_export(
-                    f"{_RUNTIME_ACTIVATION_INLINE}; {shlex.join(cmd)}",
-                    output_filename=self._output_filename,
-                ),
-                env=self._provider_env(),
+            clean_agent_processes = (
+                os.environ.get("CODING_EVAL_CLEAN_AGENT_PROCESSES") == "1"
             )
+            baseline_pids: set[int] = set()
+            if clean_agent_processes:
+                snapshot = await self.exec_as_root(
+                    environment,
+                    command=_PROCESS_SNAPSHOT_COMMAND,
+                )
+                baseline_pids = {
+                    int(line)
+                    for line in (snapshot.stdout or "").splitlines()
+                    if line.strip().isdigit()
+                }
+                if not baseline_pids:
+                    raise RuntimeError("Could not snapshot pre-agent processes")
+            try:
+                await self.exec_as_agent(
+                    environment,
+                    command=_wrap_with_pi_session_export(
+                        f"{_RUNTIME_ACTIVATION_INLINE}; {shlex.join(cmd)}",
+                        output_filename=self._output_filename,
+                    ),
+                    env=self._provider_env(),
+                )
+            finally:
+                if baseline_pids:
+                    await self.exec_as_root(
+                        environment,
+                        command=_new_process_cleanup_command(baseline_pids),
+                    )
 
 
 else:
@@ -488,7 +514,7 @@ else:
         def _env(self) -> dict[str, str]:
             return {
                 key: value
-                for key in (*_PROVIDER_ENV_KEYS, *_CODING_EVAL_AGENT_ENV_KEYS)
+                for key in _CODING_EVAL_AGENT_ENV_KEYS
                 if (value := os.environ.get(key))
             }
 

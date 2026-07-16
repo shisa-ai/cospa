@@ -1220,6 +1220,38 @@ A fresh Bonsai `pi_vanilla` run then solved `cpp/allergies` in 30.6 seconds and
 the isolated verifier passed all 50 native assertions. Aider's final boundary
 is therefore `fixed (unit + integration + real-artifact + end-to-end)`.
 
+# Protection and network follow-up audit (2026-07-16)
+
+A suite-wide adversarial review refined the Harbor status and found several
+shape-correct but security-incomplete assumptions.
+
+- **Aider Polyglot:** remains `fixed (unit + integration + real-artifact +
+  end-to-end)`. The real Bubblewrap probe passed after the host's missing
+  `socat` prerequisite was installed. Model endpoint host/port/path handling
+  remains trusted and is documented explicitly.
+- **Terminal-Bench:** downgraded to `partial (real adversarial probe)`. The
+  direct agent call cannot see `/tests` or `/solution`, but a model-started
+  watcher survives and sees hidden tests during the shared-container verifier.
+  The verifier also has public egress, at least 27 official solutions need
+  agent-time installs/downloads, and several tasks inherently require external
+  data. A real `hello-world` trial exercised Harbor's egress sidecar and reached
+  native grading; a real migrated `simple-web-scraper` now fails closed because
+  its explicit `main` Compose network bypasses the sidecar.
+- **SWE Atlas Q&A:** upgraded from broad public wiring to `wired (unit +
+  integration + real pinned artifact)`. Agent and verifier phases are
+  restricted to the model and judge hostnames respectively; unrelated/judge
+  credentials are not forwarded to the solver; devstack mounts are preserved;
+  and solver daemons are killed before hidden verifier upload. A
+  judge-backed end-to-end run is still outstanding.
+- **SWE Atlas Test Writing:** remains `partial`. It inherits those phase and
+  credential fixes, but the trusted verifier deliberately executes
+  model-authored tests beside hidden rubrics and judge credentials. That code
+  needs a separate unprivileged container/namespace before the workflow can be
+  called cheating-protected.
+
+Full rationale, exact network requirements, evidence, and launch decisions are
+in `docs/PROTECTION-AUDIT.md`.
+
 ### Aider hidden-test contamination (2026-08-12 follow-up)
 
 The earlier isolation cutover excluded reference `.meta/.approaches` dirs but

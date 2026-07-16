@@ -23,6 +23,20 @@ if ! command -v {{ cli_command }} >/dev/null 2>&1; then
     npm install -g "$PKG"
 fi
 
+{% if include_devstack_profile %}
+profile_root=/opt/coding-eval-devstack
+agent_dir="$HOME/.pi/agent"
+test -d "$profile_root/npm"
+test -d "$profile_root/git"
+test -f "$profile_root/settings.json"
+mkdir -p "$agent_dir"
+rm -rf "$agent_dir/npm" "$agent_dir/git"
+ln -s "$profile_root/npm" "$agent_dir/npm"
+ln -s "$profile_root/git" "$agent_dir/git"
+cp "$profile_root/settings.json" "$agent_dir/settings.json"
+pi list
+{% endif %}
+
 {% if include_bench_skills %}
 mkdir -p /installed-agent/bench-skills/systematic-debugging
 cat >/installed-agent/bench-skills/systematic-debugging/SKILL.md <<'EOF'

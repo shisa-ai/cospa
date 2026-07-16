@@ -1117,3 +1117,29 @@ local/ornith-1.0-35b | little_coder | aider_polyglot | 5/5 passed
 Validation for this little_coder pass: `mamba run -n cospa python -m
 pytest -q` reports `100 passed`; `bash tests/scripts/run_all.sh` reports `38`
 shell assertions passed; py-compile of `harness/runner.py` passes.
+
+### Terminal-Bench devstack scaffold-fidelity closure
+
+A launch-readiness review found a deeper form of adapter collapse: Harbor used
+distinct custom agent class names, but each task container started with an
+empty pi home. `PiDevstackHarborAgent` therefore ran bare pi and was
+behaviorally equivalent to `pi_vanilla` except for an inert omission of
+`--no-extensions`.
+
+- `pi_devstack` and `pi_devstack_superpowers` now receive a read-only package
+  profile through Harbor's Docker mounts and activate its `npm/`, `git/`, and
+  sanitized `settings.json` under the container agent's pi home
+  (`fixed (unit test + end-to-end)`).
+- The first real smoke caught a shape-correct unit-test miss: Harbor 0.16 mount
+  entries must be Compose mount objects, not short-form strings. The regression
+  test now asserts the native object shape (`fixed (integration test)`).
+- A pinned profile snapshot disabled Camoufox (664 MB browser bootstrap) and
+  pi-zentui (headless stale-context crash) through package resource filters;
+  this preserves the intended headless benchmark scaffold and is recorded in
+  the profile manifest rather than silently mutating the workstation profile.
+- Docker-backed `hello-world` then passed with Ornith and `pi_devstack`; the
+  result is under
+  `results/e2e-smoke-terminal-bench-devstack-profile-v5-20260716T034155Z/`.
+
+Validation: `mamba run -n coding-eval python -m pytest -q` reports `198
+passed`; `bash tests/scripts/run_all.sh` reports `47` shell assertions passed.

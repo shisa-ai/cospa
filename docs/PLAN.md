@@ -200,7 +200,10 @@ Terminal-Bench 2.1 remains a separate milestone campaign.
 - Driven by Harbor with one local migrated task path per cospa trial and one
   Harbor attempt per outer trial.
 - Every adapter maps to a distinct custom Harbor agent, preserving scaffold
-  identity inside the task container.
+  identity inside the task container. Because Harbor containers have an empty
+  pi home, the `pi_devstack*` agents additionally mount a read-only, sanitized
+  package-profile snapshot; distinct class names alone do not establish a
+  distinct scaffold.
 - **Wall-clock probe first.** Before scaling, run k=1 on a 5-task slice,
   measure time, *then* decide k for the real matrix. TB on small models
   is slow; we don't want to discover a 40-hour run after launching it.

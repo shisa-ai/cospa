@@ -1011,3 +1011,21 @@ Append-only development log for the `cospa` repository.
 - Next action: after the active `little_coder` cell, recover the 12 missing
   `pi_devstack_superpowers` trials and let `little_coder_superpowers` start
   with the fixed session path.
+
+## 2026-07-16 — Preserve devstack identity inside Terminal-Bench
+
+- Context: distinct Harbor agent class names still collapsed `pi_devstack` to
+  bare pi because every task container started with an empty pi package home.
+- Decision: bind-mount a read-only, sanitized devstack package snapshot for the
+  two `pi_devstack*` arms, activate its npm/git caches and settings in the
+  container, and leave vanilla/little-coder arms unmounted.
+- Evidence: RED tests showed no mounts/profile setup. A real smoke then caught
+  Harbor 0.16 rejecting string mounts, followed by Camoufox's 664 MB bootstrap
+  and pi-zentui's headless stale-context crash; object-form mounts plus explicit
+  package filters produced a passing Ornith `pi_devstack` `hello-world` trial.
+- Validation: `mamba run -n coding-eval python -m pytest -q` reports 198
+  passed; `bash tests/scripts/run_all.sh` reports 47 shell assertions passed;
+  end-to-end artifact:
+  `results/e2e-smoke-terminal-bench-devstack-profile-v5-20260716T034155Z/`.
+- Next action: run the five-adapter, five-task Ornith Terminal-Bench pilot and
+  continue to all 80 tasks only if every pilot artifact is infrastructure-clean.

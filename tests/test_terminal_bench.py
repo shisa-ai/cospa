@@ -334,6 +334,76 @@ def test_run_harbor_job_uses_distinct_custom_agents_for_adapter_variants():
     assert "aider" not in seen.values(), seen
 
 
+def test_run_harbor_job_mounts_devstack_profile_only_for_devstack():
+    """Devstack Harbor arms must see the real package cache, unlike vanilla."""
+    suite = TerminalBenchSuite()
+    commands = {}
+
+    def fake_run(cmd, **kwargs):
+        import subprocess as sp
+        if cmd[:2] == ["harbor", "run"]:
+            commands[current_adapter] = list(cmd)
+        return sp.CompletedProcess(args=cmd, returncode=0, stdout="", stderr="")
+
+    with tempfile.TemporaryDirectory() as tmp:
+        tmp = Path(tmp)
+        profile = tmp / "profile"
+        (profile / "npm").mkdir(parents=True)
+        (profile / "git").mkdir()
+        (profile / "settings.json").write_text(json.dumps({
+            "packages": ["npm:pi-context-prune@1.2.0"],
+        }))
+        workdir = tmp / "workdir"
+        workdir.mkdir()
+
+        with patch.dict(
+            os.environ,
+            {"CODING_EVAL_DEVSTACK_PROFILE_DIR": str(profile)},
+        ), patch(
+            "harness.suites.terminal_bench.run_command",
+            side_effect=fake_run,
+        ):
+            for current_adapter in (
+                "pi_vanilla",
+                "pi_devstack",
+                "pi_devstack_superpowers",
+            ):
+                suite.run_harbor_job(
+                    "hello-world",
+                    "test/model",
+                    current_adapter,
+                    workdir,
+                    tmp / "jobs",
+                    1,
+                )
+
+    assert "--mounts" not in commands["pi_vanilla"]
+    for adapter in ("pi_devstack", "pi_devstack_superpowers"):
+        cmd = commands[adapter]
+        assert "--mounts" in cmd, cmd
+        mounts = json.loads(cmd[cmd.index("--mounts") + 1])
+        assert mounts == [
+            {
+                "type": "bind",
+                "source": str(profile.resolve() / "npm"),
+                "target": "/opt/coding-eval-devstack/npm",
+                "read_only": True,
+            },
+            {
+                "type": "bind",
+                "source": str(profile.resolve() / "git"),
+                "target": "/opt/coding-eval-devstack/git",
+                "read_only": True,
+            },
+            {
+                "type": "bind",
+                "source": str(profile.resolve() / "settings.json"),
+                "target": "/opt/coding-eval-devstack/settings.json",
+                "read_only": True,
+            },
+        ]
+
+
 def test_run_harbor_job_sets_pythonpath_for_custom_agent_import():
     """The Harbor subprocess must be able to import harness.* custom agents."""
     suite = TerminalBenchSuite()
@@ -486,6 +556,27 @@ def _import_harbor_agents_with_fake_terminal_bench(monkeypatch):
     monkeypatch.setitem(sys.modules, "terminal_bench.terminal.models", models_mod)
 
     return importlib.import_module("harness.harbor_agents")
+
+
+def test_harbor_devstack_agents_install_mounted_profile(monkeypatch):
+    """Devstack labels must install the mounted profile in the task container."""
+    harbor_agents = _import_harbor_agents_with_fake_terminal_bench(monkeypatch)
+
+    assert harbor_agents.PiVanillaHarborAgent.include_devstack_profile is False
+    assert harbor_agents.PiDevstackHarborAgent.include_devstack_profile is True
+    assert (
+        harbor_agents.PiDevstackSuperpowersHarborAgent.include_devstack_profile
+        is True
+    )
+    command = harbor_agents._devstack_profile_install_command()
+    assert "profile_root=/opt/coding-eval-devstack" in command
+    assert 'test -d "$profile_root/npm"' in command
+    assert 'test -d "$profile_root/git"' in command
+    assert 'test -f "$profile_root/settings.json"' in command
+    assert 'ln -s "$profile_root/npm" "$agent_dir/npm"' in command
+    assert 'ln -s "$profile_root/git" "$agent_dir/git"' in command
+    assert 'cp "$profile_root/settings.json" "$agent_dir/settings.json"' in command
+    assert "pi list" in command
 
 
 def test_harbor_agent_cli_forwards_configured_thinking(monkeypatch):

@@ -32,7 +32,8 @@ Harness variants, same agent loop, same model:
 | `pi_vanilla` | `pi --no-extensions` — 4 tools, ~1K-token prompt |
 | `pi_devstack` | devstack pi profile (curated extensions + skills) |
 | `little_coder` | little-coder launcher (pi + 20 ext + 30 skills) |
-| `pi_superpowers` | `pi` plus the benchmark-safe Superpowers skill subset |
+| `pi_superpowers` | vanilla pi plus the benchmark-safe Superpowers skill subset |
+| `pi_devstack_superpowers` | devstack extensions plus the same benchmark-safe skills |
 | `little_coder_superpowers` | `little-coder` plus the same benchmark-safe skills |
 
 ## Quick start
@@ -102,6 +103,16 @@ commits detached. Their runs go through Harbor and Docker. If your shell was
 opened before you were added to the `docker` group, use
 `sg docker -c '<command>'` or open a new login shell before running
 Harbor-backed smoke tests.
+
+Terminal-Bench task containers start with an empty pi home. For
+`pi_devstack` and `pi_devstack_superpowers`, the harness therefore bind-mounts
+a read-only devstack profile and activates its package cache before running the
+agent. The profile defaults to `~/.pi/agent`, or can be pinned with
+`CODING_EVAL_DEVSTACK_PROFILE_DIR`; it must contain `npm/`, `git/`, and a
+sanitized `settings.json`. For comparable long runs, use an immutable snapshot
+whose settings contain only the intended package sources and no auth/model
+files. Headless-incompatible resources can be disabled with pi package filters
+(for example, an extension that downloads a browser or assumes a TUI).
 
 ## Model Reachability
 
@@ -307,7 +318,7 @@ artifacts, then the runner/backfill copies those traces into the same
 ## Current Verified State
 
 - Python tests: `mamba run -n coding-eval python -m pytest -q` reports
-  `194 passed`.
+  `198 passed`.
 - Shell harness: `bash tests/scripts/run_all.sh` reports `47` assertions
   passed.
 - Setup pins Terminal-Bench Core 0.1.1 and SWE Atlas pilot12, then verifies
@@ -317,10 +328,11 @@ artifacts, then the runner/backfill copies those traces into the same
   discover and materialize with the declared workflow/language strata. A real
   rubric-scoring run still requires the pinned judge endpoint and is not yet
   claimed as end-to-end verified.
-- Terminal-Bench Docker smoke: `local/ornith-1.0-35b` + `pi_vanilla` +
-  `hello-world` completed through Harbor 0.16 with `verifier_result.rewards.reward: 1.0`.
-- Smoke artifact:
-  `results/e2e-smoke-terminal-bench-20260704-1100/local%2Fornith-1.0-35b/pi_vanilla/terminal_bench/hello-world/trial-1/`.
+- Terminal-Bench Docker smokes: `local/ornith-1.0-35b` + `hello-world`
+  passed through Harbor 0.16 with both `pi_vanilla` and the mounted,
+  sanitized `pi_devstack` profile.
+- Devstack smoke artifact:
+  `results/e2e-smoke-terminal-bench-devstack-profile-v5-20260716T034155Z/local%2Fornith-1.0-35b/pi_devstack/terminal_bench/hello-world/trial-1/`.
 - Provider Aider Polyglot smoke run `provider-smoke-20260704T023522Z`
   completed with `pi_vanilla`, `--problems 5`, `--k 1`: local Ornith `4/5`,
   NVIDIA Nemotron `2/5`, and Zai GLM `4/5`.

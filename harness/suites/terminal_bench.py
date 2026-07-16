@@ -107,6 +107,11 @@ class TerminalBenchSuite:
     # Map each harness adapter to a distinct custom Harbor agent. Using
     # Harbor's built-in `pi`/`aider` agents would collapse multiple benchmark
     # arms into the same execution path and invalidate the scaffold comparison.
+    DEVSTACK_ADAPTERS = frozenset({
+        "pi_devstack",
+        "pi_devstack_superpowers",
+    })
+
     AGENT_MAP = {
         "pi_vanilla": "harness.harbor_agents:PiVanillaHarborAgent",
         "pi_devstack": "harness.harbor_agents:PiDevstackHarborAgent",
@@ -204,6 +209,51 @@ class TerminalBenchSuite:
             if api_key:
                 env["CODING_EVAL_LOCAL_API_KEY"] = api_key
         return env
+
+    def _devstack_mounts(
+        self,
+        adapter_name: str,
+    ) -> list[dict[str, Any]]:
+        """Return read-only mounts for the canonical devstack package profile.
+
+        Harbor task containers start with an empty pi home. Merely omitting
+        ``--no-extensions`` therefore makes ``pi_devstack`` behaviorally the
+        same as vanilla. Mount the selected, sanitized package snapshot so the
+        custom Harbor agent can recreate normal pi package discovery without
+        exposing mutable host settings inside the benchmark container.
+        """
+        if adapter_name not in self.DEVSTACK_ADAPTERS:
+            return []
+
+        configured = os.environ.get("CODING_EVAL_DEVSTACK_PROFILE_DIR")
+        profile_dir = (
+            Path(configured).expanduser()
+            if configured
+            else Path.home() / ".pi" / "agent"
+        ).resolve()
+        sources = (
+            (profile_dir / "npm", "/opt/coding-eval-devstack/npm"),
+            (profile_dir / "git", "/opt/coding-eval-devstack/git"),
+            (
+                profile_dir / "settings.json",
+                "/opt/coding-eval-devstack/settings.json",
+            ),
+        )
+        missing = [str(source) for source, _ in sources if not source.exists()]
+        if missing:
+            raise FileNotFoundError(
+                "Terminal-Bench devstack profile is incomplete; missing: "
+                + ", ".join(missing)
+            )
+        return [
+            {
+                "type": "bind",
+                "source": str(source),
+                "target": target,
+                "read_only": True,
+            }
+            for source, target in sources
+        ]
 
     def _dataset_manifest(self) -> Dict[str, Any]:
         """Load cospa's immutable Terminal-Bench Core dataset manifest."""
@@ -585,6 +635,10 @@ class TerminalBenchSuite:
             "--jobs-dir", str(jobs_dir),
             "--yes",
         ]
+        devstack_mounts = self._devstack_mounts(adapter_name)
+        if devstack_mounts:
+            cmd += ["--mounts", json.dumps(devstack_mounts)]
+
         if local_task_path is not None:
             cmd += ["--path", str(local_task_path)]
         elif registry_path is not None:

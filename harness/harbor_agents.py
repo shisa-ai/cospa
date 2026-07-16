@@ -114,6 +114,25 @@ def _thinking_args() -> list[str]:
     return ["--thinking", thinking] if thinking else []
 
 
+def _devstack_profile_install_command() -> str:
+    """Install the read-only devstack package snapshot into the agent home."""
+    return r'''
+set -euo pipefail
+profile_root=/opt/coding-eval-devstack
+agent_dir="$HOME/.pi/agent"
+test -d "$profile_root/npm"
+test -d "$profile_root/git"
+test -f "$profile_root/settings.json"
+mkdir -p "$agent_dir"
+rm -rf "$agent_dir/npm" "$agent_dir/git"
+ln -s "$profile_root/npm" "$agent_dir/npm"
+ln -s "$profile_root/git" "$agent_dir/git"
+cp "$profile_root/settings.json" "$agent_dir/settings.json"
+. "$HOME/.nvm/nvm.sh"
+pi list
+'''.strip()
+
+
 def _wrap_with_pi_session_export(
     run_command: str,
     *,
@@ -158,6 +177,7 @@ if _HARBOR_NATIVE:
         npm_package = "@earendil-works/pi-coding-agent"
         extra_args: tuple[str, ...] = ()
         include_bench_skills = False
+        include_devstack_profile = False
         _agent_name = "coding-eval-pi"
         _output_filename = "coding-eval-agent.txt"
 
@@ -238,6 +258,17 @@ NODE
 """
             await self.exec_as_agent(environment, command=command, env=env)
 
+        async def _install_devstack_profile(
+            self,
+            environment: BaseEnvironment,
+        ) -> None:
+            if not self.include_devstack_profile:
+                return
+            await self.exec_as_agent(
+                environment,
+                command=_devstack_profile_install_command(),
+            )
+
         async def _install_bench_skills(self, environment: BaseEnvironment) -> None:
             if not self.include_bench_skills:
                 return
@@ -288,6 +319,7 @@ EOF
                     f"{shlex.quote(self.cli_command)} --version"
                 ),
             )
+            await self._install_devstack_profile(environment)
             await self._install_bench_skills(environment)
             await self._write_local_pi_config(environment)
 
@@ -325,6 +357,7 @@ else:
         npm_package = "@earendil-works/pi-coding-agent"
         extra_args: tuple[str, ...] = ()
         include_bench_skills = False
+        include_devstack_profile = False
         _agent_name = "coding-eval-pi"
 
         @staticmethod
@@ -354,6 +387,7 @@ else:
                 "cli_command": self.cli_command,
                 "npm_package": self.npm_package,
                 "include_bench_skills": self.include_bench_skills,
+                "include_devstack_profile": self.include_devstack_profile,
             }
 
         def _run_agent_commands(self, instruction: str) -> list[TerminalCommand]:
@@ -388,6 +422,7 @@ class PiVanillaHarborAgent(_BasePiCliHarborAgent):
 
 class PiDevstackHarborAgent(_BasePiCliHarborAgent):
     extra_args = ()
+    include_devstack_profile = True
     _agent_name = "coding-eval-pi-devstack"
 
     @staticmethod
@@ -396,6 +431,7 @@ class PiDevstackHarborAgent(_BasePiCliHarborAgent):
 
 
 class PiDevstackSuperpowersHarborAgent(_BasePiCliHarborAgent):
+    include_devstack_profile = True
     extra_args = (
         "--no-skills",
         "--skill",

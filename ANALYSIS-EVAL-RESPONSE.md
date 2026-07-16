@@ -42,24 +42,26 @@ the assumption that it could be contaminated. A post-move scan found no
 remaining trace that matched those signals; it found only the expected empty
 rerun holes.
 
-For the 26 audited evaluation cells, **4,592 clean completed trials remain and
-1,258 trials must be rerun**. This includes 98 tasks in the formerly partial
-ThinkingCap `little_coder_superpowers` cell (six quarantined plus 92 never
-started). The exact task IDs, reason counts, original thinking settings, and
-resume-safe commands are in:
+A stricter 2026-07-16 cutover subsequently archived **all** remaining
+pre-hermetic Aider artifacts, including trials that appeared clean in their pi
+trace but had still executed with answer-bearing metadata and unrestricted
+host access. The second archive is:
 
 ```text
-results-malformed-quarantine/aider-polyglot-leakage-20260716T0531Z/rerun-plan.json
-results-malformed-quarantine/aider-polyglot-leakage-20260716T0531Z/rerun-commands.sh
+results-malformed-quarantine/aider-polyglot-pre-cutover-20260716T193340Z/
 ```
 
-Each command points at the original campaign with `--results-dir`. The runner's
-resume logic skips the 4,592 retained trials because they still have complete
-manifest/verdict pairs and executes only the 1,258 holes. Run those commands
-only after the materialization, filesystem, and network fixes are merged.
-Superseded Ornith artifacts, unauditable Nemotron attempts, and the empty GLM
-little-coder attempt were removed but are not automatically scheduled as part
-of the matched 26-cell rerun plan.
+It moved 66 score-discoverable suite trees containing 4,658 trials (4,657
+complete and one incomplete) plus 1,212 stale task directories. Its JSONL move
+manifest preserves every original/destination path. Independent validation
+found all 66 sources absent, all destinations present, and zero Aider rows in
+the score viewer.
+
+The old 4,592-retained / 1,258-rerun plan remains preserved for forensic review
+but is **retired and must not be executed**: it would mix unmarked pre-cutover
+trials with new hermetic trials. New Aider campaigns must start from empty,
+fresh run IDs, and protected manifests must carry the exact
+`aider-hermetic-v1` isolation profile.
 
 ## Bottom line
 
@@ -267,9 +269,9 @@ marked contaminated rather than mechanically subtracted.
 
 ## Implications and next actions
 
-1. **Quarantine complete.** The affected and unauditable artifacts are outside
-   score discovery but preserved with a reason/evidence manifest. Do not move
-   them back or present the pre-quarantine aggregates as clean scores.
+1. **Quarantine complete.** Every pre-cutover Aider artifact is outside score
+   discovery and preserved across the trace-evidence and all-results archives.
+   Do not move it back or present any pre-cutover aggregate as a clean score.
 2. **Fix materialization first.** Exclude `.meta/example.*`, `.meta/exemplar.*`,
    `.approaches/`, canonical answer data, generated solutions, and any other
    answer-bearing track metadata. Copy only the starter/build/test artifacts
@@ -283,7 +285,7 @@ marked contaminated rather than mechanically subtracted.
 5. **Retain and automatically scan traces.** Make reference-path, cross-trial,
    and network-solution detections first-class verdict metadata. Kernel-level
    audit logs would close the remaining subprocess visibility gap.
-6. **Rerun the generated holes after the fix.** Start with a 20–30 task smoke
-   containing frequently contaminated exercises, then execute the resume-safe
-   plan to fill all 1,258 quarantined or missing slots. Regenerate aggregates
-   only after the post-run trace scan is clean.
+6. **Start fresh after the fix.** Use new run IDs and require
+   `aider-hermetic-v1` in every manifest. Do not execute the old hole-filling
+   plan or combine its unmarked retained trials with post-cutover artifacts.
+   Regenerate aggregates only from wholly hermetic campaigns.

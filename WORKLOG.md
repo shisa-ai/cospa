@@ -1179,6 +1179,22 @@ Append-only development log for the `cospa` repository.
 - Next action: archive every unmarked Aider result before starting fresh
   campaigns; never combine unmarked and `aider-hermetic-v1` trials.
 
+## 2026-07-17 — Archive every pre-cutover Aider result
+
+- Context: the first trace-based quarantine left 4,592 unmarked trials in score
+  discovery even though their workdirs had exposed answer-bearing metadata.
+- Decision: archive every extant Aider suite tree rather than infer cleanliness
+  from incomplete tool-call traces, and retire the mixed resume plan.
+- Evidence: 66 suite trees moved to
+  `results-malformed-quarantine/aider-polyglot-pre-cutover-20260716T193340Z/`,
+  preserving 4,658 trials and 1,212 stale task directories in a durable JSONL
+  move manifest. All 66 sources are absent, every destination exists, and the
+  archive contains all 4,657 original manifest/verdict pairs.
+- Validation: `find results -type d -name aider_polyglot` returns zero and
+  `./view --all --no-cache` shows zero Aider rows; `git diff --check` passes.
+- Next action: use only fresh run IDs whose manifests carry
+  `aider-hermetic-v1`; keep both quarantine generations for forensic review.
+
 ## 2026-07-22 — Add Laguna S 2.1 to the local model shortlist
 
 - Context: Poolside released Laguna S 2.1 after the original model survey; its

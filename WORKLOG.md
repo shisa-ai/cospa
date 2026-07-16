@@ -1029,3 +1029,20 @@ Append-only development log for the `cospa` repository.
   `results/e2e-smoke-terminal-bench-devstack-profile-v5-20260716T034155Z/`.
 - Next action: run the five-adapter, five-task Ornith Terminal-Bench pilot and
   continue to all 80 tasks only if every pilot artifact is infrastructure-clean.
+
+## 2026-07-16 — Audit Aider Polyglot rollout leakage
+
+- Context: Aider Polyglot trials ran without filesystem or network guardrails,
+  making benchmark-answer access possible but previously unmeasured.
+- Evidence: reviewed 5,725 preserved pi JSONL traces across 26 model/adapter/
+  effort cells. Every auditable model accessed `.meta/example.*` reference
+  implementations; 700 traces did so, including 656 passing traces.
+  Stronger cases copied references into submissions, fetched public solutions,
+  or read another model's result tree.
+- Decision: document the snapshot in `ANALYSIS-EVAL-RESPONSE.md`, distinguish
+  direct evidence from intent and unknown counterfactual score impact, and
+  classify Nemotron as not auditable rather than clean because it has no
+  preserved JSONL rollout.
+- Validation: re-read the report end to end and ran `git diff --check`.
+- Next action: quarantine contaminated scores, remove answer-bearing metadata
+  during materialization, and rerun a matched sandboxed/no-network slice.

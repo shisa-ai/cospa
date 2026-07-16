@@ -1164,6 +1164,21 @@ Append-only development log for the `cospa` repository.
   isolate SWE Atlas candidate tests from hidden rubrics/judge credentials, then
   run a judge-backed Q&A smoke.
 
+## 2026-07-17 — Mark hermetic Aider manifests explicitly
+
+- Context: trace-based cleanup left pre-cutover and hermetic trials impossible
+  to distinguish mechanically from manifest data alone.
+- RED evidence: `test_manifest_has_required_fields` failed because the Aider
+  suite manifest had no `isolation` block.
+- Decision: bump the suite protocol to 0.3 and record the exact
+  `aider-hermetic-v1` filesystem, agent-network, verifier-network, and excluded
+  reference-artifact policy in every new Aider manifest.
+- Validation: focused manifest/Aider tests report 44 passed; full
+  `mamba run -n coding-eval python -m pytest -q` reports 237 passed; `git diff
+  --check` passes.
+- Next action: archive every unmarked Aider result before starting fresh
+  campaigns; never combine unmarked and `aider-hermetic-v1` trials.
+
 ## 2026-07-22 — Add Laguna S 2.1 to the local model shortlist
 
 - Context: Poolside released Laguna S 2.1 after the original model survey; its

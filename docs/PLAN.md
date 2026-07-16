@@ -345,7 +345,9 @@ Rust are a **source corpus**, not the final benchmark definition. They contain
 - Budgets: capability limits and safety wall time are separate. A safety-wall
   hit is `budget_exhausted`, not an ordinary wrong answer. Measure model,
   tool, verifier, and total timing and calibrate serving `c=1` versus `c=2`
-  before any full run.
+  before any full run. Post-cutover manifests record the exact
+  `aider-hermetic-v1` isolation profile; Aider artifacts without that marker
+  must not be mixed into protected scores.
 
 ### Terminal-Bench (P11, second)
 

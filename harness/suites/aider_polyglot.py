@@ -59,7 +59,7 @@ class AiderPolyglotSuite:
     """
 
     name = "aider_polyglot"
-    version = "0.2"
+    version = "0.3"
     # Languages present in the real polyglot-benchmark repo
     languages = ["python", "go", "rust", "cpp", "java", "javascript"]
     task_count = 0
@@ -82,6 +82,21 @@ class AiderPolyglotSuite:
         "target",
     }
     REFERENCE_ARTIFACT_DIRS = {".approaches", ".meta"}
+    ISOLATION_PROFILE = "aider-hermetic-v1"
+
+    def manifest_metadata(self, task_data: Dict[str, Any]) -> Dict[str, Any]:
+        """Identify trials produced after the hermetic Aider cutover."""
+        return {
+            "isolation": {
+                "profile": self.ISOLATION_PROFILE,
+                "filesystem": "bubblewrap-empty-root-allowlist",
+                "agent_network": "selected-model-endpoint-only",
+                "verifier_network": "none",
+                "reference_artifacts_excluded": sorted(
+                    self.REFERENCE_ARTIFACT_DIRS
+                ),
+            }
+        }
 
     # Files/dirs that encode the hidden test assertions. These must NEVER be
     # copied into the agent's workdir (they would let the model reverse-

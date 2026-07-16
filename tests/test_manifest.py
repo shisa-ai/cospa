@@ -74,6 +74,15 @@ def test_manifest_has_required_fields():
     # tool_call_parser/config identifier
     assert "tool_call_parser" in manifest, manifest.keys()
     assert manifest["tool_call_parser"] != "pi-default"
+    # Aider integrity cutover provenance. Results without this exact profile
+    # must never be mixed into post-cutover hermetic scores.
+    assert manifest["suite"]["isolation"] == {
+        "profile": "aider-hermetic-v1",
+        "filesystem": "bubblewrap-empty-root-allowlist",
+        "agent_network": "selected-model-endpoint-only",
+        "verifier_network": "none",
+        "reference_artifacts_excluded": [".approaches", ".meta"],
+    }
     # timing
     assert manifest.get("run_end_time"), "run_end_time must be set"
     assert manifest["timing"].get("wall_clock_seconds") is not None

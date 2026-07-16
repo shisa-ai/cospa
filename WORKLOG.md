@@ -1116,3 +1116,25 @@ Append-only development log for the `cospa` repository.
   reports 46 passed and one failure. Both failures are the pre-existing
   port-8080 fixture collision and PyYAML newline assertion.
 - Next action: validate the new Harbor policy in a Docker-capable checkout.
+
+## 2026-07-16 — Quarantine contaminated Aider trials
+
+- Context: the trace audit established direct answer/reference access, and
+  unauditable artifacts could not be assumed clean.
+- Decision: conservatively move affected artifacts out of score-discoverable
+  `results/` rather than delete forensic evidence. Quarantine any trial with
+  answer-bearing metadata, benchmark network/vendor access, cross-result
+  access, a missing/unparseable trace, or incomplete manifest/verdict.
+- Evidence: 1,656 entries moved under
+  `results-malformed-quarantine/aider-polyglot-leakage-20260716T0531Z/`:
+  1,168 trial directories plus 488 stale no-trial task artifacts. The durable
+  JSONL manifest records source, destination, reasons, and trace evidence.
+- Validation: all 1,656 manifest destinations exist and original sources do
+  not; the quarantine preserves 1,153 verdicts/traces; a post-move trace scan
+  reports no remaining contamination signals, only 1,168 expected rerun holes.
+  `rerun-plan.json` accounts for all 5,850 slots in the 26 audited cells as
+  4,592 retained clean trials plus 1,258 required reruns; the command file
+  passes `bash -n` and `git diff --check` passes.
+- Next action: merge the workdir/filesystem/network isolation fixes, then run
+  the generated resume-safe commands to fill only the quarantined/missing
+  slots before regenerating scores.

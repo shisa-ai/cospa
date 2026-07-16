@@ -16,6 +16,51 @@
 > `pi_devstack_superpowers` recovery and `little_coder_superpowers` run were
 > still active, so their counts are explicitly partial and will grow.
 
+## Quarantine status
+
+The audit has now been converted into an operational quarantine. On 2026-07-16,
+1,656 artifact entries were moved out of score-discoverable `results/` into:
+
+```text
+results-malformed-quarantine/aider-polyglot-leakage-20260716T0531Z/
+```
+
+This is a move, not a deletion: the original workdirs, verdicts, manifests, and
+traces remain available for forensic review. The quarantine contains 1,168
+trial directories (1,153 with preserved verdicts/traces and 15 unauditable or
+incomplete) plus 488 stale task artifacts that never produced a trial. The
+reason counts overlap: 717 entries accessed reference/example/exemplar,
+approach, or canonical-data material; 511 crossed into other result paths; 27
+accessed the vendored benchmark; 15 used benchmark-specific network resources;
+and 15 lacked a usable trace and/or complete result artifacts.
+
+The policy was deliberately more conservative than the headline table: a
+trial was removed if its trace showed any answer-bearing reference access,
+benchmark-specific network/vendor access, or cross-trial/results access. Any
+trial without a parseable trace and complete manifest/verdict was removed on
+the assumption that it could be contaminated. A post-move scan found no
+remaining trace that matched those signals; it found only the expected empty
+rerun holes.
+
+For the 26 audited evaluation cells, **4,592 clean completed trials remain and
+1,258 trials must be rerun**. This includes 98 tasks in the formerly partial
+ThinkingCap `little_coder_superpowers` cell (six quarantined plus 92 never
+started). The exact task IDs, reason counts, original thinking settings, and
+resume-safe commands are in:
+
+```text
+results-malformed-quarantine/aider-polyglot-leakage-20260716T0531Z/rerun-plan.json
+results-malformed-quarantine/aider-polyglot-leakage-20260716T0531Z/rerun-commands.sh
+```
+
+Each command points at the original campaign with `--results-dir`. The runner's
+resume logic skips the 4,592 retained trials because they still have complete
+manifest/verdict pairs and executes only the 1,258 holes. Run those commands
+only after the materialization, filesystem, and network fixes are merged.
+Superseded Ornith artifacts, unauditable Nemotron attempts, and the empty GLM
+little-coder attempt were removed but are not automatically scheduled as part
+of the matched 26-cell rerun plan.
+
 ## Bottom line
 
 Yes. This is no longer merely a theoretical guardrail concern: every model
@@ -222,10 +267,9 @@ marked contaminated rather than mechanically subtracted.
 
 ## Implications and next actions
 
-1. **Quarantine the affected scores.** Preserve them as an interesting
-   contaminated-agent result, but do not present them as clean Aider Polyglot
-   capability scores. At minimum, flag the 700 direct-reference traces and
-   every aggregate cell containing them.
+1. **Quarantine complete.** The affected and unauditable artifacts are outside
+   score discovery but preserved with a reason/evidence manifest. Do not move
+   them back or present the pre-quarantine aggregates as clean scores.
 2. **Fix materialization first.** Exclude `.meta/example.*`, `.meta/exemplar.*`,
    `.approaches/`, canonical answer data, generated solutions, and any other
    answer-bearing track metadata. Copy only the starter/build/test artifacts
@@ -239,6 +283,7 @@ marked contaminated rather than mechanically subtracted.
 5. **Retain and automatically scan traces.** Make reference-path, cross-trial,
    and network-solution detections first-class verdict metadata. Kernel-level
    audit logs would close the remaining subprocess visibility gap.
-6. **Rerun a matched clean slice before the full matrix.** A 20–30 task slice
-   containing the most frequently contaminated exercises can estimate the
-   score impact and reveal whether adapter rankings survive the fix.
+6. **Rerun the generated holes after the fix.** Start with a 20–30 task smoke
+   containing frequently contaminated exercises, then execute the resume-safe
+   plan to fill all 1,258 quarantined or missing slots. Regenerate aggregates
+   only after the post-run trace scan is clean.

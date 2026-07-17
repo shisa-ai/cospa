@@ -1228,6 +1228,21 @@ Append-only development log for the `cospa` repository.
   `mamba run -n coding-eval python -m pytest -q` reports 240 passed.
 - Next action: resume this fresh run ID across all five adapters sequentially.
 
+## 2026-07-18 — Preserve Java security config in the verifier sandbox
+
+- Context: the completed Ornith matrix exposed a real-artifact miss: all 235
+  Java trials failed before tests because Arch's JDK `conf` symlink targets
+  `/etc/java21-openjdk`, which the empty-root verifier did not mount.
+- RED evidence: a sandboxed `MessageDigest.getInstance("SHA-256")` source-file
+  probe reproduced `java.lang.InternalError: Error loading java.security file`.
+- Decision: resolve only the selected JDK's external `conf` target and mount
+  that `/etc` subtree read-only; do not expose general `/etc` state.
+- Validation: the RED probe and no-network boundary test pass; real vendored
+  `java/affine-cipher` now executes 16 Gradle tests and passes; full
+  `mamba run -n coding-eval python -m pytest -q` reports 241 passed.
+- Next action: quarantine every Java verdict produced before this fix plus
+  endpoint-outage trials, then resume the three hermetic campaigns.
+
 ## 2026-07-22 — Add Laguna S 2.1 to the local model shortlist
 
 - Context: Poolside released Laguna S 2.1 after the original model survey; its

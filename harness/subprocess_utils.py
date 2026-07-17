@@ -158,6 +158,22 @@ def _append_dir_options(options: list[str], paths: Sequence[Path]) -> None:
                 existing.add(item)
 
 
+def _java_external_config_roots() -> list[Path]:
+    """Return /etc roots referenced by the selected JDK's conf symlink."""
+    java_executable = shutil.which("java")
+    if not java_executable:
+        return []
+    java_home = Path(java_executable).resolve().parent.parent
+    conf_path = java_home / "conf"
+    if not conf_path.is_symlink():
+        return []
+    target = conf_path.resolve()
+    etc_root = Path("/etc")
+    if target == etc_root or etc_root not in target.parents:
+        return []
+    return [target]
+
+
 def _node_installation_root() -> Path | None:
     """Return the selected NVM/FNM Node installation mounted for adapters."""
     node_executable = shutil.which("node")
@@ -271,6 +287,15 @@ def _sandbox_agent_command(
         if etc_path.exists():
             wrapped.extend(["--ro-bind", str(etc_path), str(etc_path)])
     wrapped.extend(["--ro-bind", str(hosts_file), "/etc/hosts"])
+    for java_config_root in _java_external_config_roots():
+        _append_dir_options(wrapped, [java_config_root])
+        wrapped.extend(
+            [
+                "--ro-bind",
+                str(java_config_root),
+                str(java_config_root),
+            ]
+        )
 
     node_installation = _node_installation_root()
     if node_installation:

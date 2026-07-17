@@ -1,5 +1,6 @@
 import signal
 import shlex
+import shutil
 import subprocess
 import threading
 from contextlib import contextmanager
@@ -194,6 +195,31 @@ def test_agent_sandbox_persists_explicit_session_dir(tmp_path):
 
     assert result.returncode == 0
     assert session_file.exists()
+def test_verifier_sandbox_java_loads_external_security_config(tmp_path):
+    """The allowlisted JDK must retain its /etc-backed security config."""
+    if shutil.which("java") is None:
+        pytest.skip("Java runtime is not installed")
+    source = tmp_path / "SecurityProbe.java"
+    source.write_text(
+        "import java.security.MessageDigest;\n"
+        "class SecurityProbe {\n"
+        "  public static void main(String[] args) throws Exception {\n"
+        "    MessageDigest.getInstance(\"SHA-256\");\n"
+        "  }\n"
+        "}\n"
+    )
+
+    result = subprocess_utils.run_command(
+        ["java", source.name],
+        cwd=tmp_path,
+        capture_output=True,
+        text=True,
+        sandbox_workdir=tmp_path,
+        sandbox_name="java-security-probe",
+        sandbox_model_access=False,
+    )
+
+    assert result.returncode == 0, result.stderr
 
 
 def test_verifier_sandbox_has_no_model_or_public_network(tmp_path):

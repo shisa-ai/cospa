@@ -236,8 +236,22 @@ echo "── Checking Aider Polyglot dataset ──"
 POLY_DIR="$VENDOR_DIR/polyglot-benchmark"
 POLY_REPO="https://github.com/Aider-AI/polyglot-benchmark.git"
 POLY_COMMIT="7e0611e77b54e2dea774cdc0aa00cf9f7ed6144f"
+
+ensure_polyglot_clean() {
+    local status
+    status="$(git -C "$POLY_DIR" status --porcelain --untracked-files=all)"
+    if [[ -n "$status" ]]; then
+        log_err "polyglot-benchmark checkout is dirty; refusing to run"
+        printf '%s\n' "$status" | head -20 >&2
+        log_err "Reset or re-clone $POLY_DIR before running evaluations."
+        exit 1
+    fi
+}
+
 if [[ -d "$POLY_DIR/.git" ]]; then
+    ensure_polyglot_clean
     log_ok "Aider Polyglot dataset already cloned at $POLY_DIR"
+
 else
     log_warn "Cloning the pinned Aider Polyglot source corpus..."
     mkdir -p "$VENDOR_DIR"

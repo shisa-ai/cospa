@@ -1243,6 +1243,25 @@ Append-only development log for the `cospa` repository.
 - Next action: quarantine every Java verdict produced before this fix plus
   endpoint-outage trials, then resume the three hermetic campaigns.
 
+## 2026-07-18 — Enforce clean Polyglot provenance and canonical grading
+
+- Context: the ThinkingCap Aider run used a dirty nested polyglot-benchmark
+  checkout containing eight modified solution files across seven tasks, and
+  the verifier graded model-modified test/build files.
+- Changes: archived the dirty diff, reset the vendor checkout to clean
+  `7e0611e77b54e2dea774cdc0aa00cf9f7ed6144f`, added setup/runtime dirty-tree
+  rejection, recorded dataset commit/tree metadata, and made verification use
+  a pre-agent canonical snapshot with only declared solution-file overlays.
+- RED/GREEN evidence: canonical-test and dirty-checkout tests failed before
+  the changes and pass now; `mamba run -n coding-eval python -m pytest -q`
+  reports 244 passed; `bash tests/scripts/run_all.sh` reports 47 assertions
+  passed; real clean materialization discovers 225 tasks with no missing
+  solution files; a real `python/beer-song` verifier run ignores an edited
+  always-failing agent test and passes eight canonical tests.
+- Decision: historical Aider scores remain invalid; rerun only after the clean
+  checkout and canonical verifier are in use.
+- Next: compare a matched vanilla/devstack rerun at an explicit effort level.
+
 ## 2026-07-22 — Add Laguna S 2.1 to the local model shortlist
 
 - Context: Poolside released Laguna S 2.1 after the original model survey; its

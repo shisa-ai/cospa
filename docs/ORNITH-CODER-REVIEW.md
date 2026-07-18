@@ -1252,6 +1252,37 @@ shape-correct but security-incomplete assumptions.
 Full rationale, exact network requirements, evidence, and launch decisions are
 in `docs/PROTECTION-AUDIT.md`.
 
+# Aider Polyglot provenance and canonical-verifier follow-up (2026-07-18)
+
+The ThinkingCap full run exposed two additional measurement failures:
+
+- The nested `vendor/polyglot-benchmark` checkout was dirty in eight tracked
+  solution files across seven tasks, plus generated build/package artifacts.
+  The checkout was archived under
+  `results-malformed-quarantine/polyglot-benchmark-dirty-20260718/` and reset
+  to clean `7e0611e77b54e2dea774cdc0aa00cf9f7ed6144f`, with 225 discovered
+  tasks.
+- The verifier graded model-modified test/build files directly. This allowed
+  test enable/disable edits to alter the evaluated contract and made the
+  special `go/counter` task's model-authored tests part of the score.
+
+The suite now snapshots the materialized task before the agent starts and
+verifies a clean temporary copy containing canonical evaluator files plus only
+solution paths declared by `.meta/config.json`. Manifests record the dataset
+repository, commit, tree, clean state, and canonical-verifier policy. Setup and
+runtime both fail closed on dirty real checkouts.
+
+Evidence: the RED canonical-test test failed before the snapshot overlay and
+now passes; 46 focused Aider tests pass; the real 225-task materializer smoke
+found no missing declared solution files; and a real `python/beer-song`
+verification passed eight canonical tests after its agent workdir test was
+replaced with an always-failing test. Full pytest reports 244 passed and the
+shell harness reports 47 passed assertions.
+
+Status: `fixed (unit + real-artifact integration)`. Historical Aider scores,
+including the ThinkingCap run, remain invalid until rerun with the clean
+checkout and canonical verifier.
+
 ### Aider hidden-test contamination (2026-08-12 follow-up)
 
 The earlier isolation cutover excluded reference `.meta/.approaches` dirs but

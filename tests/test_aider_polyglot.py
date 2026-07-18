@@ -167,6 +167,56 @@ def test_verify_reinjects_hidden_tests_at_grading_time():
         (workdir / "two_fer.py").write_text("def two_fer(name=None):\n    return 'x'\n")
         bad = suite.verify(td, workdir)
         assert bad["passed"] is False, bad
+        assert "Two Fer" in td["prompt"], td["prompt"]
+        assert td["language"] == "python"
+        assert td["problem"] == "two-fer"
+        assert (workdir / "two_fer.py").exists(), list(workdir.iterdir())
+        assert td["solution_files"] == ["two_fer.py"]
+
+
+def test_verify_uses_canonical_tests_but_model_solution(tmp_path):
+    """Verifier must ignore model-edited tests and preserve solution edits."""
+    suite = AiderPolyglotSuite()
+    workdir = tmp_path / "workdir"
+    canonical = tmp_path / "canonical"
+    workdir.mkdir()
+    canonical.mkdir()
+    (workdir / "solution.py").write_text("MODEL SOLUTION\n")
+    (workdir / "solution_test.py").write_text(
+        "def test_model_edited(): assert False\n"
+    )
+    (canonical / "solution.py").write_text("STARTER\n")
+    (canonical / "solution_test.py").write_text(
+        "def test_canonical(): assert True\n"
+    )
+    seen = {}
+
+    def fake_run(cmd, **kwargs):
+        verify_dir = Path(kwargs["cwd"])
+        seen["solution"] = (verify_dir / "solution.py").read_text()
+        seen["test"] = (verify_dir / "solution_test.py").read_text()
+        return subprocess.CompletedProcess(
+            args=cmd, returncode=0, stdout="1 passed in 0.01s\n", stderr=""
+        )
+
+    with patch(
+        "harness.suites.aider_polyglot.run_command", side_effect=fake_run
+    ):
+        verdict = suite.verify(
+            {
+                "language": "python",
+                "timeout": 1,
+                "_canonical_dir": str(canonical),
+                "solution_files": ["solution.py"],
+            },
+            workdir,
+        )
+
+    assert verdict["passed"] is True
+    assert seen == {
+        "solution": "MODEL SOLUTION\n",
+        "test": "def test_canonical(): assert True\n",
+    }
 
 
 @pytest.mark.parametrize(
@@ -374,6 +424,26 @@ def test_setup_sh_uses_real_benchmark_and_fails_loudly_when_missing(monkeypatch=
     )
     # And it must exit nonzero on clone failure rather than continuing
     assert "exit 1" in text, "setup.sh must exit 1 on dataset clone failure"
+
+
+def test_setup_sh_rejects_dirty_polyglot_checkout():
+    """Existing dataset checkouts must be clean before benchmark use."""
+    text = (PROJECT_ROOT / "scripts" / "setup.sh").read_text()
+    assert "status --porcelain --untracked-files=all" in text
+    assert "polyglot-benchmark checkout is dirty" in text
+
+
+@pytest.mark.requires_vendor
+def test_real_polyglot_checkout_is_clean_and_pinned():
+    """The real dataset must expose an immutable checkout identity."""
+    suite = AiderPolyglotSuite()
+    vendor_dir = PROJECT_ROOT / "vendor"
+    metadata = suite._git_dataset_metadata(vendor_dir / "polyglot-benchmark")
+
+    assert metadata["commit"]
+    assert metadata["tree"]
+    assert metadata["dirty"] is False
+    assert len(suite.get_task_ids(vendor_dir)) == 225
 
 
 @pytest.mark.parametrize(

@@ -95,7 +95,12 @@ class AiderPolyglotSuite:
                 "reference_artifacts_excluded": sorted(
                     self.REFERENCE_ARTIFACT_DIRS
                 ),
-            }
+            },
+            "verifier": {
+                "test_inputs": "canonical-task-snapshot",
+                "solution_overlay": "declared-solution-files-only",
+            },
+            "dataset": task_data.get("dataset", {}),
         }
 
     # Files/dirs that encode the hidden test assertions. These must NEVER be
@@ -128,6 +133,73 @@ class AiderPolyglotSuite:
             if (problem_dir / rel).exists():
                 hidden.append(Path(rel))
         return hidden
+
+    @staticmethod
+    def _git_dataset_metadata(dataset_root: Path) -> Dict[str, Any]:
+        """Return and validate the immutable dataset checkout identity.
+
+        Synthetic unit-test fixtures are ordinary directories and therefore
+        have no git identity. A real checkout, however, must be clean: a
+        previous agent can otherwise leave a complete solution in the vendor
+        tree for every later trial.
+        """
+        metadata = {
+            "repository": "Aider-AI/polyglot-benchmark",
+            "commit": None,
+            "tree": None,
+            "dirty": None,
+        }
+        if not (dataset_root / ".git").exists():
+            return metadata
+
+        def git(*args: str) -> str:
+            result = subprocess.run(
+                ["git", "-C", str(dataset_root), *args],
+                capture_output=True,
+                text=True,
+                check=False,
+            )
+            if result.returncode != 0:
+                raise RuntimeError(
+                    f"git {' '.join(args)} failed: "
+                    f"{(result.stderr or result.stdout).strip()}"
+                )
+            return result.stdout.strip()
+
+        commit = git("rev-parse", "HEAD")
+        tree = git("rev-parse", "HEAD^{tree}")
+        status = git("status", "--porcelain", "--untracked-files=all")
+        if status:
+            preview = "\n".join(status.splitlines()[:20])
+            raise RuntimeError(
+                "polyglot-benchmark checkout is dirty; refusing to run: "
+                f"{preview}"
+            )
+        metadata.update({"commit": commit, "tree": tree, "dirty": False})
+        return metadata
+
+    @staticmethod
+    def _declared_solution_files(problem_dir: Path, workdir: Path) -> List[str]:
+        """Return solution paths from Exercism metadata, with fixture fallback."""
+        config_file = problem_dir / ".meta" / "config.json"
+        if config_file.exists():
+            try:
+                config = json.loads(config_file.read_text())
+                solution_files = config.get("files", {}).get("solution", [])
+                if isinstance(solution_files, str):
+                    solution_files = [solution_files]
+                if isinstance(solution_files, list):
+                    return [str(path) for path in solution_files]
+            except (OSError, json.JSONDecodeError):
+                pass
+
+        return sorted(
+            str(path.relative_to(workdir))
+            for path in workdir.iterdir()
+            if path.is_file()
+            and path.suffix == ".py"
+            and "test" not in path.stem.lower()
+        )
 
     def _problem_dir(self, vendor_dir: Path, language: str, problem: str) -> Path:
         """Locate the on-disk problem directory for a (language, problem)."""
@@ -252,6 +324,15 @@ class AiderPolyglotSuite:
             else:
                 shutil.copy2(item, workdir / item.name)
 
+        # Keep a host-side snapshot before the agent starts. The verifier uses
+        # this snapshot for tests/build metadata and overlays only the declared
+        # solution files from the model-authored workdir.
+        canonical_dir = workdir.parent / "canonical"
+        shutil.rmtree(canonical_dir, ignore_errors=True)
+        self._copy_for_verification(workdir, canonical_dir)
+        solution_files = self._declared_solution_files(problem_dir, workdir)
+        dataset_root = vendor_dir / "polyglot-benchmark"
+
         return {
             "task_id": task_id,
             "prompt": prompt,
@@ -260,6 +341,9 @@ class AiderPolyglotSuite:
             "vendor_problem_dir": str(problem_dir),
             "hidden_test_paths": [str(rel) for rel in hidden_rel],
             "model_id": "nvidia/nemotron-3-ultra-550b-a55b",
+            "solution_files": solution_files,
+            "_canonical_dir": str(canonical_dir),
+            "dataset": self._git_dataset_metadata(dataset_root),
         }
 
     def prepare_agent_dependencies(
@@ -330,7 +414,10 @@ class AiderPolyglotSuite:
         language = task_data.get("language", "python")
         timeout = task_data.get("timeout", 300)  # 5 min default for tests
         setup_cmds: list[list[str]] = []
-        run_in_temp_copy = False
+        # Canonical snapshots must always be verified from a clean temporary
+        # tree, including Python and Go, so model-edited tests/config cannot be
+        # used by the grader.
+        run_in_temp_copy = bool(task_data.get("_canonical_dir"))
         env = self._verification_env()
 
         # Re-inject the hidden test files now that the agent has finished.
@@ -464,7 +551,9 @@ class AiderPolyglotSuite:
                     prefix=f"coding-eval-{language}-"
                 ) as tmp:
                     verify_dir = Path(tmp) / "workdir"
-                    self._copy_for_verification(workdir, verify_dir)
+                    self._copy_canonical_for_verification(
+                        task_data, workdir, verify_dir
+                    )
                     if language in {"c", "cpp"} and task_data.get("problem"):
                         source_link = verify_dir / task_data["problem"]
                         if source_link.is_dir() and not source_link.is_symlink():
@@ -596,6 +685,38 @@ class AiderPolyglotSuite:
             elif src.exists():
                 dst.parent.mkdir(parents=True, exist_ok=True)
                 shutil.copy2(src, dst)
+    @classmethod
+    def _copy_canonical_for_verification(
+        cls, task_data: Dict[str, Any], workdir: Path, dest: Path
+    ) -> None:
+        """Copy canonical evaluator inputs and overlay model solution files."""
+        canonical_value = task_data.get("_canonical_dir")
+        if not canonical_value:
+            cls._copy_for_verification(workdir, dest)
+            return
+
+        canonical_dir = Path(canonical_value)
+        if not canonical_dir.is_dir():
+            raise ValueError(f"Canonical verifier snapshot is missing: {canonical_dir}")
+        cls._copy_for_verification(canonical_dir, dest)
+
+        for relative in task_data.get("solution_files", []):
+            solution = Path(relative)
+            if solution.is_absolute() or ".." in solution.parts:
+                raise ValueError(f"Invalid declared solution path: {relative}")
+            source = workdir / solution
+            target = dest / solution
+            if not source.is_file():
+                raise ValueError(f"Declared solution file is missing: {source}")
+            try:
+                source.resolve().relative_to(workdir.resolve())
+            except ValueError as exc:
+                raise ValueError(
+                    f"Refusing solution symlink outside trial workdir: {source}"
+                ) from exc
+            target.parent.mkdir(parents=True, exist_ok=True)
+            target.unlink(missing_ok=True)
+            shutil.copy2(source, target)
 
     @classmethod
     def _copy_for_verification(cls, source: Path, dest: Path) -> None:

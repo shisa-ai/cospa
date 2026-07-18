@@ -36,6 +36,53 @@ def _http_server():
         server.server_close()
 
 
+def test_headless_agent_settings_disable_zentui_extension():
+    """TUI-only packages must not crash print-mode benchmark shutdown."""
+    settings = {
+        "packages": [
+            "npm:pi-tasks",
+            "https://github.com/lhl/pi-zentui",
+            {
+                "source": "git:github.com/lhl/pi-zentui",
+                "skills": ["skills/review"],
+            },
+        ],
+        "defaultThinkingLevel": "high",
+    }
+
+    filtered = subprocess_utils._headless_agent_settings(settings)
+
+    assert filtered == {
+        "packages": [
+            "npm:pi-tasks",
+            {
+                "source": "https://github.com/lhl/pi-zentui",
+                "extensions": [],
+            },
+            {
+                "source": "git:github.com/lhl/pi-zentui",
+                "skills": ["skills/review"],
+                "extensions": [],
+            },
+        ],
+        "defaultThinkingLevel": "high",
+    }
+    assert settings["packages"][1] == "https://github.com/lhl/pi-zentui"
+
+
+def test_headless_extension_paths_exclude_zentui(tmp_path):
+    """Direct TUI extensions must also stay out of print-mode profiles."""
+    extensions = tmp_path / "extensions"
+    extensions.mkdir()
+    (extensions / "skill-dollar.ts").write_text("export default () => {}\n")
+    (extensions / "pi-continue").mkdir()
+    (extensions / "pi-zentui").mkdir()
+
+    selected = subprocess_utils._headless_extension_paths(extensions)
+
+    assert [path.name for path in selected] == ["pi-continue", "skill-dollar.ts"]
+
+
 def test_node_installation_root_supports_fnm(monkeypatch, tmp_path):
     """FNM's multishell shims must resolve to the mounted Node installation."""
     fnm_versions = tmp_path / ".local" / "share" / "fnm" / "node-versions"

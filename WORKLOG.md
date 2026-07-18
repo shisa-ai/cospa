@@ -1262,6 +1262,23 @@ Append-only development log for the `cospa` repository.
   checkout and canonical verifier are in use.
 - Next: compare a matched vanilla/devstack rerun at an explicit effort level.
 
+## 2026-07-18 — Exclude zentui from headless benchmark profiles
+
+- Context: the fresh Ornith devstack rerun solved and tested its first real task,
+  but pi exited 1 when pi-zentui's asynchronous project refresh dereferenced a
+  stale extension context during print-mode shutdown.
+- RED evidence: package filtering did not exist, and a second real canary proved
+  that the same extension was also auto-discovered from the direct global
+  extension directory.
+- Decision: disable only pi-zentui's extension resource in private headless
+  settings and omit its direct extension directory; preserve all agentic
+  devstack extensions, package skills, and model configuration.
+- Validation: both RED tests pass; the real `cpp/all-your-base` adapter path now
+  exits 0 without the stale-context exception; full
+  `mamba run -n coding-eval python -m pytest -q` reports 246 passed.
+- Next action: archive the interrupted infrastructure canary and gate the fresh
+  two-adapter Ornith rerun on five canonical tasks before scaling to 225.
+
 ## 2026-07-22 — Add Laguna S 2.1 to the local model shortlist
 
 - Context: Poolside released Laguna S 2.1 after the original model survey; its

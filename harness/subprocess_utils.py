@@ -29,6 +29,48 @@ _NVM_ROOT = Path.home() / ".local" / "share" / "nvm"
 _FNM_NODE_VERSIONS_ROOT = (
     Path.home() / ".local" / "share" / "fnm" / "node-versions"
 )
+_HEADLESS_TUI_PACKAGE_SOURCES = frozenset(
+    {
+        "https://github.com/lhl/pi-zentui",
+        "git:github.com/lhl/pi-zentui",
+        "../../github/lhl/pi-zentui",
+    }
+)
+_HEADLESS_TUI_EXTENSION_NAMES = frozenset({"pi-zentui"})
+
+
+def _headless_extension_paths(extensions_dir: Path) -> list[Path]:
+    """Return direct extensions that are safe and relevant in print mode."""
+    return sorted(
+        (
+            path
+            for path in extensions_dir.iterdir()
+            if path.name not in _HEADLESS_TUI_EXTENSION_NAMES
+        ),
+        key=lambda path: path.name,
+    )
+
+
+def _headless_agent_settings(settings: dict[str, Any]) -> dict[str, Any]:
+    """Disable TUI-only extensions in Pi's print-mode sandbox profile."""
+    filtered = dict(settings)
+    packages = settings.get("packages")
+    if not isinstance(packages, list):
+        return filtered
+
+    filtered_packages: list[Any] = []
+    for entry in packages:
+        source = entry if isinstance(entry, str) else None
+        if isinstance(entry, dict) and isinstance(entry.get("source"), str):
+            source = entry["source"]
+        if source not in _HEADLESS_TUI_PACKAGE_SOURCES:
+            filtered_packages.append(entry)
+            continue
+        package = {"source": source} if isinstance(entry, str) else dict(entry)
+        package["extensions"] = []
+        filtered_packages.append(package)
+    filtered["packages"] = filtered_packages
+    return filtered
 
 
 def agent_sandbox_cwd(
@@ -111,7 +153,16 @@ def _write_private_agent_config(agent_dir: Path, model_id: str | None) -> None:
 
     settings_path = source_dir / "settings.json"
     if settings_path.exists():
-        (agent_dir / "settings.json").write_bytes(settings_path.read_bytes())
+        try:
+            settings = json.loads(settings_path.read_text())
+        except (OSError, json.JSONDecodeError):
+            (agent_dir / "settings.json").write_bytes(settings_path.read_bytes())
+        else:
+            if isinstance(settings, dict):
+                settings = _headless_agent_settings(settings)
+            (agent_dir / "settings.json").write_text(
+                json.dumps(settings, indent=2) + "\n"
+            )
 
     models_path = source_dir / "models.json"
     try:
@@ -333,7 +384,22 @@ def _sandbox_agent_command(
         _append_dir_options(wrapped, [pi_home, pi_home / "agent"])
         wrapped.extend(["--bind", str(private_agent), str(pi_home / "agent")])
         source_agent = Path.home() / ".pi" / "agent"
-        for dirname in ("extensions", "git", "npm"):
+        extensions_dir = source_agent / "extensions"
+        if extensions_dir.is_dir():
+            for source in _headless_extension_paths(extensions_dir):
+                private_target = private_agent / "extensions" / source.name
+                if source.is_dir():
+                    private_target.mkdir()
+                else:
+                    private_target.touch()
+                wrapped.extend(
+                    [
+                        "--ro-bind",
+                        str(source),
+                        str(pi_home / "agent" / "extensions" / source.name),
+                    ]
+                )
+        for dirname in ("git", "npm"):
             source = source_agent / dirname
             if source.is_dir():
                 wrapped.extend(

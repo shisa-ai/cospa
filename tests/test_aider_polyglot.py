@@ -782,6 +782,103 @@ def test_verify_go_counter_checks_all_implementations():
     assert "unexpectedly passed" in shell_cmd
     assert verdict["passed"] is True
     assert verdict["test_count"] == 1
+def test_verify_javascript_enables_canonical_xtests():
+    """Canonical JS grading must activate the same tests as Aider upstream."""
+    suite = AiderPolyglotSuite()
+
+    with tempfile.TemporaryDirectory() as tmp:
+        root = Path(tmp)
+        workdir = root / "workdir"
+        canonical = root / "canonical"
+        workdir.mkdir()
+        canonical.mkdir()
+        for directory in (workdir, canonical):
+            (directory / "package.json").write_text(
+                '{"scripts":{"test":"jest ./*"}}\n'
+            )
+            (directory / "example.js").write_text("export const value = 1;\n")
+        (canonical / "example.spec.js").write_text(
+            "test('first', () => {});\nxtest('second', () => {});\n"
+        )
+        seen = {}
+
+        def fake_run(command, **kwargs):
+            if command == ["npm", "test"]:
+                seen["tests"] = (Path(kwargs["cwd"]) / "example.spec.js").read_text()
+                return subprocess.CompletedProcess(
+                    args=command,
+                    returncode=0,
+                    stdout="Tests:       2 passed, 2 total\n",
+                    stderr="",
+                )
+            return subprocess.CompletedProcess(
+                args=command, returncode=0, stdout="installed\n", stderr=""
+            )
+
+        with patch(
+            "harness.suites.aider_polyglot.run_command", side_effect=fake_run
+        ):
+            verdict = suite.verify(
+                {
+                    "language": "javascript",
+                    "timeout": 1,
+                    "_canonical_dir": str(canonical),
+                    "solution_files": ["example.js"],
+                },
+                workdir,
+            )
+
+    assert "xtest(" not in seen["tests"]
+    assert seen["tests"].count("test(") == 2
+    assert verdict["passed"] is True
+    assert verdict["test_count"] == 2
+
+
+def test_verify_java_enables_canonical_disabled_tests():
+    """Canonical Java grading must activate the same tests as Aider upstream."""
+    suite = AiderPolyglotSuite()
+
+    with tempfile.TemporaryDirectory() as tmp:
+        root = Path(tmp)
+        workdir = root / "workdir"
+        canonical = root / "canonical"
+        for directory in (workdir, canonical):
+            test_dir = directory / "src" / "test" / "java"
+            test_dir.mkdir(parents=True)
+            (directory / "gradlew").write_text("#!/usr/bin/env sh\n")
+        (canonical / "src" / "test" / "java" / "ExampleTest.java").write_text(
+            '@Disabled("Remove to run test")\n@Test\nvoid example() {}\n'
+        )
+        seen = {}
+
+        def fake_run(command, **kwargs):
+            seen["tests"] = (
+                Path(kwargs["cwd"]) / "src" / "test" / "java" / "ExampleTest.java"
+            ).read_text()
+            return subprocess.CompletedProcess(
+                args=command,
+                returncode=0,
+                stdout="2 tests completed, 0 failed\n",
+                stderr="",
+            )
+
+        with patch(
+            "harness.suites.aider_polyglot.run_command", side_effect=fake_run
+        ):
+            verdict = suite.verify(
+                {
+                    "language": "java",
+                    "timeout": 1,
+                    "_canonical_dir": str(canonical),
+                    "solution_files": [],
+                },
+                workdir,
+            )
+
+    assert "@Disabled" not in seen["tests"]
+    assert "@Test" in seen["tests"]
+    assert verdict["passed"] is True
+    assert verdict["test_count"] == 2
 
 
 def test_verify_javascript_installs_exercise_dependencies_first():
@@ -838,4 +935,12 @@ def test_verify_rust_uses_short_temp_copy_for_cargo():
     cargo_cwd = Path(mock_run.call_args.kwargs["cwd"])
     assert cargo_cwd != workdir
     assert str(cargo_cwd).startswith("/tmp/")
+    assert mock_run.call_args.args[0] == [
+        "cargo",
+        "test",
+        "--verbose",
+        "--offline",
+        "--",
+        "--include-ignored",
+    ]
     assert verdict["passed"] is True

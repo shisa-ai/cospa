@@ -17,6 +17,7 @@ full polyglot-benchmark dataset from https://github.com/Aider-AI/polyglot-benchm
 import json
 import os
 import fnmatch
+import re
 import shlex
 import shutil
 import subprocess
@@ -487,7 +488,14 @@ class AiderPolyglotSuite:
             cmd = [gradle_cmd, "test", "--info", "--offline"]
             run_in_temp_copy = True
         elif language == "rust":
-            cmd = ["cargo", "test", "--verbose", "--offline"]
+            cmd = [
+                "cargo",
+                "test",
+                "--verbose",
+                "--offline",
+                "--",
+                "--include-ignored",
+            ]
             run_in_temp_copy = True
         elif language == "c" or language == "cpp":
             # Try cmake + build + test. Do not append a shell fallback such as
@@ -561,6 +569,7 @@ class AiderPolyglotSuite:
                         elif source_link.exists() or source_link.is_symlink():
                             source_link.unlink()
                         source_link.symlink_to(".", target_is_directory=True)
+                    self._activate_canonical_tests(language, verify_dir)
                     return self._run_verifier_commands(
                         setup_cmds,
                         cmd,
@@ -662,6 +671,25 @@ class AiderPolyglotSuite:
             "grader_output": grader_output,
             "exit_code": result.returncode,
         }
+
+    @staticmethod
+    def _activate_canonical_tests(language: str, workdir: Path) -> None:
+        """Enable the official Aider test set in the isolated verifier copy."""
+        if language in {"javascript", "typescript"}:
+            for test_file in workdir.rglob("*.spec.js"):
+                content = test_file.read_text()
+                enabled = re.sub(r"\bxtest\(", "test(", content)
+                if enabled != content:
+                    test_file.write_text(enabled)
+        elif language == "java":
+            test_root = workdir / "src" / "test"
+            if not test_root.is_dir():
+                return
+            for test_file in test_root.rglob("*.java"):
+                content = test_file.read_text()
+                enabled = re.sub(r"@Disabled\([^)]*\)\s*\n", "", content)
+                if enabled != content:
+                    test_file.write_text(enabled)
 
     @classmethod
     def _restore_hidden_tests(cls, task_data: Dict[str, Any], workdir: Path) -> None:

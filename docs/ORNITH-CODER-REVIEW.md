@@ -1283,6 +1283,28 @@ Status: `fixed (unit + real-artifact integration)`. Historical Aider scores,
 including the ThinkingCap run, remain invalid until rerun with the clean
 checkout and canonical verifier.
 
+# Canonical test-activation correction (2026-07-19)
+
+A result revalidation audit found that the first canonical-verifier fix restored
+clean evaluator files but under-ran the official Aider test contract in three
+languages. Aider's benchmark harness converts JavaScript `xtest` cases to
+`test`, removes Java `@Disabled(...)` annotations, and invokes Cargo with
+`--include-ignored`. The canonical verifier had omitted those steps, so many
+JavaScript and Rust tasks could pass on only the initially enabled case.
+
+The verifier now performs the same activation only inside its disposable
+canonical copy; model-authored tests and build files remain excluded. The
+historical reverify tool also accepts `--vendor-dir` so it can materialize a
+clean canonical snapshot instead of grading saved model-edited evaluator files.
+RED tests cover all three activation paths and historical test tampering.
+Real saved Bonsai solutions reverified with 9 JavaScript beer-song tests, 16
+Java affine-cipher tests, and 12 Rust accumulate tests; the prior Rust verdict
+had counted only one test. Full pytest reports 249 passed.
+
+Status: `fixed (unit + real-artifact integration)`. Existing score rows remain
+provisional until the corrected all-task revalidation completes; tasks that
+received dirty starter solutions still require fresh model trials.
+
 ### Aider hidden-test contamination (2026-08-12 follow-up)
 
 The earlier isolation cutover excluded reference `.meta/.approaches` dirs but

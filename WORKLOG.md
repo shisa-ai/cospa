@@ -1279,6 +1279,23 @@ Append-only development log for the `cospa` repository.
 - Next action: archive the interrupted infrastructure canary and gate the fresh
   two-adapter Ornith rerun on five canonical tasks before scaling to 225.
 
+## 2026-07-19 — Activate the full canonical Aider test set
+
+- Context: auditing the completed Bonsai row found 84 workdirs with modified
+  evaluator files and showed that clean canonical verification under-ran the
+  official JavaScript, Java, and Rust test activation rules.
+- RED evidence: canonical JavaScript retained `xtest`, canonical Java retained
+  `@Disabled(...)`, Cargo omitted `--include-ignored`, and historical reverify
+  accepted model-edited tests because it did not reconstruct vendor inputs.
+- Decision: activate official tests only in the disposable canonical verifier
+  copy and add an explicit `--vendor-dir` reverify path that overlays declared
+  model solution files onto a fresh clean snapshot.
+- Evidence: real Bonsai artifacts execute 9 JavaScript beer-song, 16 Java
+  affine-cipher, and 12 Rust accumulate tests; focused tests pass and
+  `mamba run -n coding-eval python -m pytest -q` reports 249 passed.
+- Next action: dry-run all 225 Bonsai artifacts through the corrected verifier,
+  then exclude the seven trials known to have received dirty starter code.
+
 ## 2026-07-22 — Add Laguna S 2.1 to the local model shortlist
 
 - Context: Poolside released Laguna S 2.1 after the original model survey; its

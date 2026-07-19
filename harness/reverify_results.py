@@ -6,6 +6,7 @@ import argparse
 import json
 import re
 import shutil
+import tempfile
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
@@ -187,6 +188,7 @@ def reverify_trial(
     write: bool = False,
     include_adapter_failed: bool = False,
     timestamp: str | None = None,
+    vendor_dir: Path | str | None = None,
 ) -> dict[str, Any]:
     trial_dir = Path(trial_dir)
     verdict_path = trial_dir / "verdict.json"
@@ -207,9 +209,28 @@ def reverify_trial(
     if task_data is None:
         return {"status": "error", "error": "could not infer task id", "path": str(trial_dir)}
 
+    canonical_verifier = False
+    dataset: dict[str, Any] | None = None
     try:
         suite = load_suite(suite_name)
-        new_verdict = suite.verify(task_data, workdir)
+        if suite_name == "aider_polyglot" and vendor_dir is not None:
+            with tempfile.TemporaryDirectory(prefix="cospa-reverify-canonical-") as tmp:
+                canonical_workdir = Path(tmp) / "workdir"
+                canonical_task_data = suite.materialize_task(
+                    task_data["task_id"],
+                    canonical_workdir,
+                    Path(vendor_dir),
+                )
+                for key in ("model_id", "thinking", "timeout"):
+                    if key in task_data:
+                        canonical_task_data[key] = task_data[key]
+                dataset_value = canonical_task_data.get("dataset")
+                if isinstance(dataset_value, dict):
+                    dataset = dataset_value
+                new_verdict = suite.verify(canonical_task_data, workdir)
+            canonical_verifier = True
+        else:
+            new_verdict = suite.verify(task_data, workdir)
     except Exception as exc:
         return {"status": "error", "error": str(exc), "path": str(trial_dir)}
 
@@ -219,7 +240,14 @@ def reverify_trial(
         "path": str(trial_dir),
         "old": _verdict_projection(old_verdict),
         "new": _verdict_projection(new_verdict),
+        "canonical_verifier": canonical_verifier,
     }
+    if dataset is not None:
+        result["dataset"] = dataset
+    if not new_verdict.get("passed"):
+        grader_output = new_verdict.get("grader_output")
+        if isinstance(grader_output, str):
+            result["new_grader_output_tail"] = grader_output[-8000:]
     if changed and write:
         timestamp = timestamp or datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
         backup = _backup_path(verdict_path, timestamp)
@@ -255,6 +283,7 @@ def reverify_results(
     write: bool = False,
     include_adapter_failed: bool = False,
     limit: int | None = None,
+    vendor_dir: Path | str | None = None,
 ) -> dict[str, Any]:
     results_dir = Path(results_dir).resolve()
     suite_filter = set(suites)
@@ -285,6 +314,7 @@ def reverify_results(
             timeout=timeout,
             write=write,
             include_adapter_failed=include_adapter_failed,
+            vendor_dir=vendor_dir,
         )
         status = result.get("status")
         if status == "changed":
@@ -325,6 +355,14 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--limit", type=int, default=None, help="Maximum matching trials to scan")
     parser.add_argument("--write", action="store_true", help="Replace changed verdict.json files")
     parser.add_argument(
+        "--vendor-dir",
+        default=None,
+        help=(
+            "Materialize canonical Aider verifier inputs from this vendor directory "
+            "instead of grading saved model-edited tests"
+        ),
+    )
+    parser.add_argument(
         "--include-adapter-failed",
         action="store_true",
         help="Also reverify trials marked adapter_failed",
@@ -343,6 +381,7 @@ def main(argv: list[str] | None = None) -> int:
         write=args.write,
         include_adapter_failed=args.include_adapter_failed,
         limit=args.limit,
+        vendor_dir=args.vendor_dir,
     )
 
     mode = "write" if args.write else "dry-run"

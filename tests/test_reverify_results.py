@@ -78,6 +78,44 @@ def test_reverify_results_dry_run_reports_changed_verdict_without_writing():
     assert stored["passed"] is False
 
 
+def test_reverify_results_uses_canonical_vendor_tests(make_polyglot_problem):
+    with tempfile.TemporaryDirectory() as tmp:
+        root = Path(tmp)
+        results_dir = root / "results"
+        vendor_dir = root / "vendor"
+        make_polyglot_problem(
+            vendor_dir,
+            "python",
+            "two-fer",
+            starter_name="two_fer",
+            starter_content="def two_fer(name='you'):\n    pass\n",
+            test_content=(
+                "from two_fer import two_fer\n\n"
+                "def test_default():\n"
+                "    assert two_fer() == 'One for you, one for me.'\n"
+            ),
+        )
+        trial_dir = _write_python_trial(results_dir, passed=True)
+        (trial_dir / "workdir" / "two_fer.py").write_text(
+            "def two_fer(name='you'):\n    return 'wrong'\n"
+        )
+        (trial_dir / "workdir" / "two_fer_test.py").write_text(
+            "def test_model_edited():\n    assert True\n"
+        )
+
+        summary = reverify_results(
+            results_dir,
+            suites=("aider_polyglot",),
+            vendor_dir=vendor_dir,
+        )
+
+    assert summary["scanned"] == 1
+    assert summary["changed"] == 1
+    assert summary["changes"][0]["old"]["passed"] is True
+    assert summary["changes"][0]["new"]["passed"] is False
+    assert summary["changes"][0]["canonical_verifier"] is True
+
+
 def test_reverify_results_write_backs_up_and_replaces_changed_verdict():
     with tempfile.TemporaryDirectory() as tmp:
         results_dir = Path(tmp) / "results"

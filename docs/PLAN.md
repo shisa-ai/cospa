@@ -96,6 +96,10 @@ reorder — earlier items unblock later ones.
       (`pi_vanilla`), `k=1`, and at least one reviewed `aider_cospa` problem in
       each of the six languages. Prove the hidden-test boundary,
       manifest/verdict path, and native grader before scaling.
+      The isolated verifier activates the official Aider test set per
+      language (JavaScript `xtest`, Java `@Disabled`, Rust ignored tests,
+      the C++ `EXERCISM_RUN_ALL_TESTS` build flag) and overlays only the
+      declared solution files from the pre-agent canonical snapshot.
 - [ ] **P11. Suite: Terminal-Bench.** `harness/suites/terminal_bench.py`
       wraps `harbor run` against the checked-in 80-task
       `terminal-bench-core==0.1.1` manifest and immutable upstream commit.

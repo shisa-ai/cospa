@@ -1305,6 +1305,36 @@ Status: `fixed (unit + real-artifact integration)`. Existing score rows remain
 provisional until the corrected all-task revalidation completes; tasks that
 received dirty starter solutions still require fresh model trials.
 
+# Bonsai `pi_vanilla` score audit (2026-07-19)
+
+A non-destructive corrected canonical revalidation completed for all 225 saved
+Bonsai workspaces at harness commit `52d958f` and clean dataset commit
+`7e0611e`. No stored verdict or manifest was rewritten. The viewer's 197/225
+(87.6%) row is not a valid single-condition score:
+
+- canonical saved code passes 188/225; enforcing adapter-success policy yields
+  187/225 (83.1%), but this is diagnostic rather than publishable;
+- seven trials received dirty solved starter files, and six saved outputs are
+  byte-identical to those starters;
+- preserved traces show 200 trials ran at observed `high` and the final 25 at
+  `medium`, despite every manifest being grouped as `default`;
+- `python/sgf-parsing` was interrupted with broken pipes when the owning Pi
+  background session stopped; the other 16 adapter failures exhausted the
+  600-second limit after retries;
+- 84 workdirs modified canonical evaluator files, confirming why historical
+  verdicts cannot be trusted directly.
+
+All 225 traces and usage records otherwise passed integrity checks. After
+canonical regrading and exclusion of contaminated/interrupted inputs, the valid
+partial strata are 165/192 at observed high and 15/25 at observed medium. They
+cover different task mixes and must not be compared as an effort ablation. A
+complete explicit-high result requires 33 clean reruns: seven contaminated
+inputs, 25 medium-thinking tasks, and interrupted `python/sgf-parsing`.
+
+Status: `partial (full artifact audit + canonical revalidation)`. Detailed
+non-destructive evidence is under
+`results/audits/bonsai-pi-vanilla-canonical-v2-20260719T063943Z/`.
+
 ### Aider hidden-test contamination (2026-08-12 follow-up)
 
 The earlier isolation cutover excluded reference `.meta/.approaches` dirs but

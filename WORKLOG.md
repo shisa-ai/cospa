@@ -1296,6 +1296,24 @@ Append-only development log for the `cospa` repository.
 - Next action: dry-run all 225 Bonsai artifacts through the corrected verifier,
   then exclude the seven trials known to have received dirty starter code.
 
+## 2026-07-19 — Audit the Bonsai vanilla score
+
+- Context: the completed viewer row mixed historical and corrected verifier
+  generations and still included artifacts created from a dirty dataset.
+- Evidence: all 225 saved workspaces reverified without writes at harness
+  `52d958f` against clean dataset `7e0611e`; all 225 traces and usage records
+  passed integrity checks. Detailed evidence is under
+  `results/audits/bonsai-pi-vanilla-canonical-v2-20260719T063943Z/`.
+- Findings: canonical adapter-policy scoring is 187/225 rather than the stored
+  197/225, but neither is publishable. Seven inputs were contaminated, one trial
+  was interrupted, and observed thinking drifted from high (200 tasks) to
+  medium (25 tasks) inside the `default` viewer cell.
+- Decision: preserve the durable verdicts unchanged and report only qualified
+  partial strata: 165/192 observed-high and 15/25 observed-medium. The strata
+  use different task mixes and are not an effort comparison.
+- Next action: rerun the generated 33-task recovery set under an explicit high
+  setting and a new run ID, then audit before merging with qualified artifacts.
+
 ## 2026-07-22 — Add Laguna S 2.1 to the local model shortlist
 
 - Context: Poolside released Laguna S 2.1 after the original model survey; its

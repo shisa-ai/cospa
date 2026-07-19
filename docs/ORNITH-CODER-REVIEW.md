@@ -1335,6 +1335,25 @@ Status: `partial (full artifact audit + canonical revalidation)`. Detailed
 non-destructive evidence is under
 `results/audits/bonsai-pi-vanilla-canonical-v2-20260719T063943Z/`.
 
+# Bonsai explicit-high recovery closure (2026-07-19)
+
+The generated 33-task recovery set completed under a new run ID with explicit
+`--thinking high`, clean dataset inputs, and the corrected canonical verifier.
+It passed 22/33. A second non-destructive audit reverified all 33 with zero
+errors and confirmed 33/33 explicit-high manifests, observed-high Pi traces,
+usage records, clean dataset identities, and canonical-verifier policies.
+
+Combining those recovery artifacts with the exact 192-task qualified
+observed-high partition yields **187/225 (83.1%)** across each vendor task
+exactly once. The language breakdown is C++ 23/26, Go 30/39, Java 39/47,
+JavaScript 43/49, Python 29/34, and Rust 23/30. Sixteen adapter timeouts remain
+policy failures. No source verdict or manifest was rewritten.
+
+Status: `fixed (full artifact audit + canonical revalidation + clean recovery
+run)`. The score of record is the audited high-thinking composite under
+`results/audits/bonsai-pi-vanilla-explicit-high-recovery-20260719T123716Z/`;
+the viewer's historical 197/225 row remains invalid and intentionally durable.
+
 ### Aider hidden-test contamination (2026-08-12 follow-up)
 
 The earlier isolation cutover excluded reference `.meta/.approaches` dirs but

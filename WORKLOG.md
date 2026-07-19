@@ -1328,6 +1328,24 @@ Append-only development log for the `cospa` repository.
   reports 252 passed.
 - Next action: launch those tasks at explicit high under a new recovery run ID.
 
+## 2026-07-19 — Close the Bonsai explicit-high score
+
+- Context: the first audit left a 33-task gap covering dirty inputs, medium
+  thinking, and one interrupted trial.
+- Evidence: recovery run
+  `bonsai-pi-vanilla-explicit-high-recovery-20260719` completed 33/33 and passed
+  22; a clean-vendor dry-run reverified all 33 with zero errors. Every recovery
+  manifest and trace records high thinking, observed usage, canonical policy,
+  and dataset `7e0611e`.
+- Decision: synthesize an exact non-destructive partition of 165/192 qualified
+  observed-high base passes plus 22/33 explicit-high recovery passes. Do not
+  rewrite either source campaign to make the viewer display the composite.
+- Result: the audited Bonsai `pi_vanilla` Aider Polyglot score is **187/225
+  (83.1%)**. Evidence is under
+  `results/audits/bonsai-pi-vanilla-explicit-high-recovery-20260719T123716Z/`.
+- Next action: use the composite audit as score-of-record evidence or add
+  explicit viewer support for audited composites before publishing it there.
+
 ## 2026-07-22 — Add Laguna S 2.1 to the local model shortlist
 
 - Context: Poolside released Laguna S 2.1 after the original model survey; its

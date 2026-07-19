@@ -259,6 +259,47 @@ def validate_required_adapter(task_data: dict, adapter) -> None:
         )
 
 
+def select_task_ids(
+    discovered_task_ids: list[str],
+    *,
+    tasks_file: Path | str | None = None,
+    problems: int | None = None,
+) -> list[str]:
+    """Return a validated task selection without silently dropping entries."""
+    if tasks_file is None:
+        return discovered_task_ids[:problems] if problems is not None else discovered_task_ids
+
+    tasks_file = Path(tasks_file)
+    try:
+        lines = tasks_file.read_text().splitlines()
+    except OSError as error:
+        raise ValueError(f"could not read --tasks-file {tasks_file}: {error}") from error
+
+    selected: list[str] = []
+    seen: set[str] = set()
+    for line_number, raw_line in enumerate(lines, 1):
+        task_id = raw_line.split("#", 1)[0].strip()
+        if not task_id:
+            continue
+        if task_id in seen:
+            raise ValueError(
+                f"duplicate task ID in {tasks_file}:{line_number}: {task_id}"
+            )
+        seen.add(task_id)
+        selected.append(task_id)
+
+    if not selected:
+        raise ValueError(f"--tasks-file contains no task IDs: {tasks_file}")
+
+    discovered = set(discovered_task_ids)
+    unknown = [task_id for task_id in selected if task_id not in discovered]
+    if unknown:
+        raise ValueError(
+            "unknown task ID(s) in --tasks-file: " + ", ".join(unknown)
+        )
+    return selected
+
+
 def generate_run_id() -> str:
     """Generate a path-safe run id for default CLI output isolation."""
     timestamp = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%S.%fZ")
@@ -1345,6 +1386,8 @@ def main():
     )
     args.vendor_dir = Path(args.vendor_dir)
     args.config = Path(args.config)
+    if getattr(args, "tasks_file", None) is not None:
+        args.tasks_file = Path(args.tasks_file)
     validate_args(args)
 
     # Pre-run reachability check (PLAN.md #137-138). Refuse to start the

@@ -1314,6 +1314,20 @@ Append-only development log for the `cospa` repository.
 - Next action: rerun the generated 33-task recovery set under an explicit high
   setting and a new run ID, then audit before merging with qualified artifacts.
 
+## 2026-07-19 — Select exact runner recovery tasks
+
+- Context: `--problems` can select only a leading task slice and could not run
+  the non-contiguous 33-task Bonsai recovery set without custom orchestration.
+- RED evidence: the runner ignored an ordered task file, accepted unknown and
+  duplicate IDs, and allowed competing file/limit selectors.
+- Decision: add fail-closed `--tasks-file` selection, preserve declared order,
+  ignore blank/comment lines, and reject duplicates, unknown IDs, empty files,
+  unreadable files, and combination with `--problems`.
+- Evidence: the real clean Polyglot universe resolves the recovery file to 33
+  unique tasks out of 225; `mamba run -n coding-eval python -m pytest -q`
+  reports 252 passed.
+- Next action: launch those tasks at explicit high under a new recovery run ID.
+
 ## 2026-07-22 — Add Laguna S 2.1 to the local model shortlist
 
 - Context: Poolside released Laguna S 2.1 after the original model survey; its

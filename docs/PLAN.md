@@ -57,7 +57,8 @@ reorder — earlier items unblock later ones.
       suite's verifier, writes
       `results/runs/<encoded-model>-<run-id>/<model>/<adapter>/<suite>/<task_id>/trial-<k>/{manifest.json,out/,verdict.json}`
       by default. Explicit `--results-dir` remains an exact output root for
-      intentional merges.
+      intentional merges. `--tasks-file` runs a validated ordered subset for
+      recovery campaigns and fails closed on duplicate or unknown task IDs.
       Manifest records: model id + provider, adapter id + version,
       model limits/pricing from pi config when available, sampling params
       including pinned thinking effort/budget, env hash, start/end time,

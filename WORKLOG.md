@@ -1346,6 +1346,26 @@ Append-only development log for the `cospa` repository.
 - Next action: use the composite audit as score-of-record evidence or add
   explicit viewer support for audited composites before publishing it there.
 
+## 2026-07-21 — Clarify Aider protocol and select a multilingual successor
+
+- Documented that cospa's Aider suite is a full-agent, visible-public-tests
+  protocol, while Aider's leaderboard supplies only solution files and allows
+  at most two edit attempts. Added result-labeling rules and the ThinkingCap
+  saturation/trace evidence in `docs/AIDER.md`.
+- Decision: visible repository tests are realistic development inputs, but an
+  independent evaluator holdout must remain unavailable until after the solver
+  exits. Agent-authored tests are useful secondary evidence, not the grader.
+- Selected a pinned SWE-bench-Live/MultiLang slice as the leading successor:
+  24 language-balanced canary tasks, then a 48-task core after runtime, flake,
+  network, and verifier-isolation qualification. SWE-bench Multilingual remains
+  the more established but older external anchor.
+- Updated `README.md` and `docs/PLAN.md` to link the protocol note, retain Aider
+  as a k=1 qualification gate, and record that the successor is recommended but
+  not yet implemented.
+- Evidence: re-read all changed documentation end-to-end; `git diff --check`
+  passes; local Markdown links resolve. No code behavior changed, so no test
+  suite was required by the docs/process verification tier.
+
 ## 2026-07-22 — Add Laguna S 2.1 to the local model shortlist
 
 - Context: Poolside released Laguna S 2.1 after the original model survey; its

@@ -21,6 +21,14 @@ validity-gated repository/feature suites. The harness does not serve models; it
 consumes provider definitions from
 `~/.pi/agent/models.json` and writes durable results under `results/`.
 
+> **Aider protocol note:** cospa runs Aider Polyglot as a full coding-agent
+> task with the repository tests visible, while Aider's published leaderboard
+> gives the model only solution files and at most two edit attempts. Current
+> cospa scores are therefore not leaderboard-comparable, and strong models have
+> saturated this suite as a scaffold discriminator. See
+> [Aider Polyglot protocol and score interpretation](docs/AIDER.md), including
+> the recommended SWE-bench-Live/MultiLang successor.
+
 ## What we're measuring
 
 The primary variable we want to isolate is **scaffold fit** — how well the

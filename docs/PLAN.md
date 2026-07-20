@@ -37,9 +37,10 @@ reorder — earlier items unblock later ones.
       for Harbor's phase-network sidecar, checks out
       Terminal-Bench Core 0.1.1 at commit `91e10457b5410f16c44364da1a34cb6de8c488a5`
       and SWE Atlas at `2cac47d64a9123d915b8f6f6f53763391920f574`,
-      and clones Aider Polyglot at source commit
-      `7e0611e77b54e2dea774cdc0aa00cf9f7ed6144f` under `vendor/`.
-      **Does not** touch models
+      extracts the canary24 rows from SWE-bench-Live/MultiLang revision
+      `608f7ae9ab8ea1f9f0d030fe04562cf6bd1a0c8b`, and clones Aider Polyglot
+      at source commit `7e0611e77b54e2dea774cdc0aa00cf9f7ed6144f` under
+      `vendor/`. **Does not** touch models
       or providers — model setup is a separate concern, by design.
 - [ ] **P3. Models check (`scripts/check-models.sh`).** Reads model IDs
       from a `configs/models.yaml` (or `~/.pi/agent/models.json`), pings
@@ -353,6 +354,7 @@ Rust are a **source corpus**, not the final benchmark definition. They contain
   before any full run. Post-cutover manifests record the exact
   `aider-hermetic-v1` isolation profile; Aider artifacts without that marker
   must not be mixed into protected scores.
+
 
 ### Terminal-Bench (P11, second)
 

@@ -26,6 +26,7 @@ from harness.suites.featurebench import (
     FeatureBenchLitePilotSuite,
 )
 from harness.suites.swe_explore import SweExploreVerified12Suite
+from harness.suites.swe_bench_live import SweBenchLiveMultilangCanarySuite
 
 SUITES = {
     "aider_polyglot": AiderPolyglotSuite,
@@ -33,6 +34,7 @@ SUITES = {
     "terminal_bench_core_pilot8": TerminalBenchCorePilot8Suite,
     "terminal_bench_core_pareto20": TerminalBenchCorePareto20Suite,
     "swe_atlas_pilot12": SweAtlasPilotSuite,
+    "swe_bench_live_multilang_canary24": SweBenchLiveMultilangCanarySuite,
     "bigcodebench_hard_instruct": BigCodeBenchHardInstructSuite,
     "bigcodebench_hard_instruct_hermetic143": BigCodeBenchHardInstructHermeticSuite,
     "bigcodebench_hard_agentic": BigCodeBenchHardAgenticSuite,

@@ -1,8 +1,8 @@
-# cospa
+# COSPA: Cost Of Solving Programming Assignments
 
 *The cost-performance benchmark for coding agents.*
 
-**Cospa** takes its name from the Japanese **コスパ** (*cospa*) — the
+**COSPA** takes its name from the Japanese **コスパ** (*cospa*) — the
 common clipping of **コストパフォーマンス** ("cost performance"), a word
 used everywhere in Japanese product reviews, electronics shopping, and
 everyday decision-making to mean *value for money*: how much capability
@@ -26,8 +26,9 @@ consumes provider definitions from
 > gives the model only solution files and at most two edit attempts. Current
 > cospa scores are therefore not leaderboard-comparable, and strong models have
 > saturated this suite as a scaffold discriminator. See
-> [Aider Polyglot protocol and score interpretation](docs/AIDER.md), including
-> the recommended SWE-bench-Live/MultiLang successor.
+> [Aider Polyglot protocol and score interpretation](docs/AIDER.md). Its
+> [SWE-bench-Live/MultiLang canary24 successor](docs/SWE-BENCH-LIVE.md) is now
+> implemented but remains partially qualified; do not launch a full matrix yet.
 
 ## What we're measuring
 
@@ -125,7 +126,7 @@ configs/          # models.yaml, suite configs
 scripts/          # setup.sh, check-models.sh
 results/          # Generated per-run (gitignored)
 view-scores/      # Score viewer (static HTML + server)
-vendor/           # Vendored datasets (TB, SWE Atlas, Polyglot)
+vendor/           # Vendored datasets (TB, SWE Atlas, SWE-bench-Live, Polyglot)
 ```
 
 ## Environments
@@ -152,8 +153,10 @@ and verifier use only the warmed read-only/disposable caches.
 Terminal-Bench Core is pinned to the 80-task `0.1.1` release at upstream commit
 `91e10457b5410f16c44364da1a34cb6de8c488a5`. SWE Atlas is pinned at
 `2cac47d64a9123d915b8f6f6f53763391920f574`, with the selected 12 task IDs and
-strata in `configs/swe_atlas_pilot12.json`. `scripts/setup.sh` checks out both
-commits detached and verifies Docker Buildx, which Harbor needs for phase-scoped
+strata in `configs/swe_atlas_pilot12.json`. SWE-bench-Live canary24 is pinned
+to dataset revision `608f7ae9ab8ea1f9f0d030fe04562cf6bd1a0c8b`; setup verifies
+its eight parquet hashes and extracts 24 complete, row-hashed JSONL records.
+`scripts/setup.sh` checks out both commits detached and verifies Docker Buildx, which Harbor needs for phase-scoped
 network isolation. Their runs go through Harbor and Docker. If your shell was
 opened before you were added to the `docker` group, use
 `sg docker -c '<command>'` or open a new login shell before running
@@ -263,8 +266,8 @@ mamba run -n cospa python harness/runner.py \
 ```
 
 The same model id can be used with `--suite terminal_bench`,
-`--suite swe_atlas_pilot12`, or the currently gated
-`--suite swe_polybench_verified`; the Harbor custom agent copies the selected
+`--suite swe_atlas_pilot12`, `--suite swe_polybench_verified`, or
+`--suite swe_bench_live_multilang_canary24`; the Harbor custom agent copies the selected
 provider config into the task container before it runs. The provider `baseUrl`
 still has to be reachable from inside Docker. SWE-PolyBench has a passing
 representative offline gold/null gate, but do not launch model scoring until
@@ -272,6 +275,33 @@ all 38 selected images complete gold/null/repeat validation.
 
 Use the same pattern for SGLang, llama.cpp, Ollama, or any other HF-serving
 stack as long as it exposes OpenAI-compatible chat completions.
+
+## Running the SWE-bench-Live canary
+
+The canary is a 24-task setup/reliability gate, not yet a headline matrix. It
+uses three recent tasks in each of C, C++, C#, Go, Java, JavaScript, Rust, and
+TypeScript. Existing repository tests are visible; the PR test patch and
+expected test identities are uploaded only after the agent exits. Solver
+processes are killed before that upload and the verifier runs without network.
+
+After setup and model-relay configuration, start with one task:
+
+```bash
+mamba run -n coding-eval python harness/runner.py \
+  --suite swe_bench_live_multilang_canary24 \
+  --adapter pi_vanilla \
+  --model local/ornith-1.0-35b \
+  --problems 1 \
+  --k 1 \
+  --thinking high
+```
+
+The selected images total 44.34 GiB compressed before layer sharing, so
+pre-pull images and exclude cold-pull time from model wall-clock comparisons.
+Only the C verifier currently has repeated gold plus baseline evidence. Finish
+the seven remaining language checks and audit one protected model trial before
+a full adapter run. See
+[the canary protocol and qualification record](docs/SWE-BENCH-LIVE.md).
 
 ## Running the SWE Atlas pilot
 
@@ -437,9 +467,11 @@ re-running, partial runs compose by directory union. Every run records
 model, adapter, sampling params, model limits/pricing when available, env
 hash, timing, and token/cost usage in `manifest.json`. pi-backed runs also
 copy the raw response trace to `out/pi_session.jsonl` for audit/backfill.
-Terminal-Bench agents first export container-side pi traces into Harbor job
-artifacts, then the runner/backfill copies those traces into the same
-`out/pi_session.jsonl` location.
+Harbor custom agents first export container-side pi traces, Git status, and a
+`git diff HEAD --text` patch (including intent-to-add files) into Harbor job
+artifacts; the runner/backfill copies pi traces into the same
+`out/pi_session.jsonl` location. SWE-bench-Live manifests additionally pin the
+complete dataset row, image digest, evaluator commit, and verifier policy.
 
 Aider results created before the 2026-08-12 hidden-test cutover are not clean
 capability evidence. Before 2026-07-16, agents could also see reference
@@ -455,6 +487,7 @@ post-cutover scores.
 - **Terminal-Bench Core 0.1.1** — pinned 80-task external anchor via Harbor. Wall-clock probe first.
 - **SWE Atlas pilot12** — eight Test Writing + four Codebase Q&A tasks, balanced across Go, Python, C, and TypeScript. Cost/reliability gate before `k=2`.
 - **BigCodeBench-Hard Instruct pilot15** — pinned one-sample, no-tool Python generation anchor with upstream calibrated scoring; kept separate from agentic scores.
+- **[SWE-bench-Live/MultiLang canary24](docs/SWE-BENCH-LIVE.md)** — 24 recent issue-resolution tasks across eight languages with evaluator-only PR tests; implemented but only partially qualified.
 - **Repository/feature portfolio (candidate)** — Multi-SWE-bench Flash, SWE-bench Multilingual, SWE-PolyBench, and FeatureBench enter only after the validity/runtime bake-off in `docs/EVALS.md`.
 
 ## Current Verified State
@@ -467,6 +500,10 @@ post-cutover scores.
 - Setup pins Terminal-Bench Core 0.1.1 and SWE Atlas pilot12, then verifies
   `little-coder`, installing it with `npm install -g little-coder` when absent
   and warning if `little-coder --list-models` cannot read provider config.
+- SWE-bench-Live canary24 is `partial (unit + real pinned artifact + C
+  gold/baseline end-to-end)`: all 24 rows and image manifests are pinned; the C
+  `libarchive` task passes repeated gold grading and fails the no-op baseline.
+  Seven language strata and a protected model trial remain.
 - SWE Atlas is `wired (unit test + real pinned artifact)`: all 12 public tasks
   discover and materialize with the declared workflow/language strata. A real
   rubric-scoring run still requires the pinned judge endpoint and is not yet

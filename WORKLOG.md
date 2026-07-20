@@ -1366,6 +1366,38 @@ Append-only development log for the `cospa` repository.
   passes; local Markdown links resolve. No code behavior changed, so no test
   suite was required by the docs/process verification tier.
 
+## 2026-07-21 — Add the SWE-bench-Live multilingual canary
+
+- Context: Aider Polyglot saturated under cospa's full-agent protocol, so the
+  planned replacement needed newer repository issues, visible development
+  tests, and evaluator-only holdouts without committing to a full matrix.
+- Selection: pinned 24 distinct repositories from
+  `SWE-bench-Live/MultiLang@608f7ae9`, three tasks per C/C++/C#/Go/Java/JS/
+  Rust/TypeScript and one small/medium/large gold-patch bucket per language.
+  Selection used no model results, capped declared test counts and gold patches,
+  and pinned 24 accessible image manifests at no more than 6 GiB compressed each.
+- RED evidence: the new suite tests first failed because the registry had no
+  Live suite; real Harbor loading then exposed the missing `environment/`
+  directory; full hidden-grader execution and durable Harbor Git-patch export
+  also received focused failing tests before their fixes.
+- Decision: generate Harbor-native tasks from row-hashed external JSONL; expose
+  the repository and existing tests to the solver, keep PR tests/parser/gold in
+  Harbor's post-agent channels, kill solver processes before test upload,
+  restrict the agent to its model relay, and run a hardened no-network verifier.
+  Require every declared F2P and P2P identity to be observed and passing.
+- Real evidence: all eight immutable parquet files extract to the same 24-row
+  JSONL; all image manifests resolve; C task `libarchive__libarchive-2968`
+  passed three consecutive gold runs, its no-op baseline failed on the missing
+  F2P test, and the final hardened-verifier gold run passed in 73 seconds with
+  1,740 parsed statuses.
+- Verification: `mamba run -n coding-eval python -m pytest -q` reports 263
+  passed; `bash tests/scripts/run_all.sh` reports 50 passed assertions; parquet
+  extraction/check/cmp, Python compilation, shell syntax, and diff whitespace
+  checks pass.
+- Status/next action: `partial (unit + real pinned artifact + C gold/baseline
+  end-to-end)`. Qualify gold/baseline behavior in the other seven languages and
+  audit one protected model trial before freezing core48 or launching a matrix.
+
 ## 2026-07-22 — Add Laguna S 2.1 to the local model shortlist
 
 - Context: Poolside released Laguna S 2.1 after the original model survey; its

@@ -28,7 +28,11 @@ EOF
 cat > "$BIN/mamba" <<'EOF'
 #!/usr/bin/env bash
 if [[ "$*" == "run -n cospa python --version" ]]; then
+MAMBA_LOG="$TMP/mamba.log"
+export MAMBA_LOG
     echo "Python 3.12.13"
+    exit 0
+elif [[ "$*" == *"fetch-swe-bench-live.py"*"--check"* ]]; then
     exit 0
 fi
 echo "unexpected mamba args: $*" >&2
@@ -66,6 +70,15 @@ fi
 HARBOR
     chmod +x "$(dirname "$0")/harbor"
 fi
+EOF
+
+cat > "$BIN/python3" <<'EOF'
+#!/usr/bin/env bash
+if [[ "$*" == *"fetch-swe-bench-live.py"*"--check"* ]]; then
+    exit 0
+fi
+echo "unexpected python3 args: $*" >&2
+exit 1
 EOF
 
 cat > "$BIN/git" <<'EOF'
@@ -136,11 +149,16 @@ assert_not_contains "$PROJ/vendor/swe-atlas|pull --ff-only" "$(cat "$GIT_LOG")" 
     "setup does not advance SWE Atlas to mutable head"
 assert_contains "Checking cospa mamba env" "$OUT" \
     "setup verifies the canonical cospa environment"
+assert_contains "SWE-bench-Live canary already extracted" "$OUT" \
+    "setup validates the pinned SWE-bench-Live canary before downloading"
+assert_contains "run -n cospa python" "$(cat "$MAMBA_LOG")" \
+    "setup validates Live rows with the pinned cospa Python environment"
+assert_contains "fetch-swe-bench-live.py" "$(cat "$MAMBA_LOG")" \
+    "setup invokes the Live validation script through the mamba environment"
 assert_contains "fetch origin 7e0611e77b54e2dea774cdc0aa00cf9f7ed6144f" \
     "$(cat "$GIT_LOG")" "setup fetches the immutable Polyglot source commit"
 assert_contains "checkout --detach 7e0611e77b54e2dea774cdc0aa00cf9f7ed6144f" \
     "$(cat "$GIT_LOG")" "setup checks out Polyglot detached"
 assert_not_contains "$PROJ/vendor/polyglot-benchmark|pull --ff-only" "$(cat "$GIT_LOG")" \
     "setup does not advance Polyglot to mutable head"
-
 summary

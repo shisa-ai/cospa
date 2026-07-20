@@ -284,6 +284,15 @@ Selection should be made without using the candidate models' success results:
 - use the same task list, timeout, and sampling settings for every adapter; and
 - pre-pull images before measuring wall time.
 
+Cospa now implements that canary as
+`swe_bench_live_multilang_canary24`. The immutable selection has 24 distinct
+repositories, three patch-size buckets per language, pinned complete dataset
+rows and image digests, and a 6 GiB compressed-image cap per task. The protected
+Harbor grader has repeated C gold/baseline evidence, but the other seven
+language strata and a model trial remain unqualified. Exact pins, isolation,
+scoring differences, resource totals, and launch commands are in
+[`docs/SWE-BENCH-LIVE.md`](SWE-BENCH-LIVE.md).
+
 Twenty-four tasks are only a canary and have wide statistical uncertainty. The
 48-task core is still a pilot; expand it if adapter differences are small.
 
@@ -327,10 +336,11 @@ do everything:
 | Primary freshness/scaffold pilot | 48-task SWE-bench-Live/MultiLang core | Do scaffold differences survive on newer repositories with evaluator-only PR tests? |
 | Deep agent robustness | Terminal-Bench / later protected suite | Can the scaffold recover across long, heterogeneous terminal tasks? |
 
-Do not launch a full matrix immediately. First run one adapter on the 24-task
-Live canary, measure image size, wall time, token use, dependency/network
-requirements, verifier determinism, and failure modes. Only then freeze the
-48-task core and run matched adapters.
+Do not launch a full matrix immediately. Finish the canary qualification in
+[`docs/SWE-BENCH-LIVE.md`](SWE-BENCH-LIVE.md): gold/baseline checks across all
+eight languages, then one protected adapter run with image, wall-time, token,
+network, trace, patch, verifier-determinism, and failure-mode review. Only then
+freeze the 48-task core and run matched adapters.
 
 ## Sources
 

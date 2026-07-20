@@ -64,9 +64,11 @@ fi
 # ── 3. Verify cospa mamba env ────────────────────────────────────────────
 echo ""
 echo "── Checking cospa mamba env ──"
+PYTHON_ENV_RUN=()
 if command -v mamba &>/dev/null; then
-    if mamba run -n cospa python --version 2>/dev/null; then
-        PY_VER=$(mamba run -n cospa python --version 2>/dev/null | grep -oP '\d+\.\d+')
+    PYTHON_ENV_RUN=(mamba run -n cospa python)
+    if "${PYTHON_ENV_RUN[@]}" --version 2>/dev/null; then
+        PY_VER=$("${PYTHON_ENV_RUN[@]}" --version 2>/dev/null | grep -oP '\d+\.\d+')
         if [[ "$PY_VER" == "3.12" ]]; then
             log_ok "cospa env found with python=$PY_VER"
         else
@@ -78,8 +80,9 @@ if command -v mamba &>/dev/null; then
         exit 1
     fi
 elif command -v conda &>/dev/null; then
-    if conda run -n cospa python --version 2>/dev/null; then
-        PY_VER=$(conda run -n cospa python --version 2>/dev/null | grep -oP '\d+\.\d+')
+    PYTHON_ENV_RUN=(conda run -n cospa python)
+    if "${PYTHON_ENV_RUN[@]}" --version 2>/dev/null; then
+        PY_VER=$("${PYTHON_ENV_RUN[@]}" --version 2>/dev/null | grep -oP '\d+\.\d+')
         if [[ "$PY_VER" == "3.12" ]]; then
             log_ok "cospa conda env found with python=$PY_VER"
         else
@@ -230,7 +233,50 @@ if [[ "$SWE_ATLAS_ACTUAL_COMMIT" != "$SWE_ATLAS_COMMIT" ]]; then
 fi
 log_ok "SWE Atlas pinned for pilot12 ($SWE_ATLAS_COMMIT)"
 
-# ── 7. Clone Aider Polyglot dataset ──────────────────────────────────────
+# ── 7. Extract pinned SWE-bench-Live/MultiLang canary ────────────────────
+echo ""
+echo "── Checking SWE-bench-Live/MultiLang canary24 ──"
+SWEBL_DIR="$VENDOR_DIR/swe-bench-live-multilang"
+SWEBL_MANIFEST="$PROJECT_DIR/configs/swe_bench_live_multilang_canary24.json"
+SWEBL_FETCH_SCRIPT="$PROJECT_DIR/scripts/fetch-swe-bench-live.py"
+SWEBL_REVISION="608f7ae9ab8ea1f9f0d030fe04562cf6bd1a0c8b"
+SWEBL_SPLITS=(c cpp cs go java js rust ts)
+if "${PYTHON_ENV_RUN[@]}" "$SWEBL_FETCH_SCRIPT" \
+    --manifest "$SWEBL_MANIFEST" \
+    --vendor-dir "$SWEBL_DIR" \
+    --check &>/dev/null; then
+    log_ok "SWE-bench-Live canary already extracted at $SWEBL_DIR"
+else
+    if ! command -v curl &>/dev/null || ! command -v uv &>/dev/null; then
+        log_err "curl and uv are required to fetch the pinned SWE-bench-Live canary"
+        exit 1
+    fi
+    log_warn "Downloading immutable SWE-bench-Live parquet splits (~267 MB)..."
+    SWEBL_TMP=$(mktemp -d)
+    swelive_cleanup() { rm -rf "$SWEBL_TMP"; }
+    trap swelive_cleanup EXIT
+    for split in "${SWEBL_SPLITS[@]}"; do
+        url="https://huggingface.co/datasets/SWE-bench-Live/MultiLang/resolve/$SWEBL_REVISION/data/${split}-00000-of-00001.parquet?download=true"
+        if ! curl -fL --retry 4 --retry-delay 2 \
+            -o "$SWEBL_TMP/$split.parquet" "$url"; then
+            log_err "Failed to download pinned SWE-bench-Live split: $split"
+            exit 1
+        fi
+    done
+    if ! uv run --isolated --with 'pyarrow==23.0.0' python \
+        "$SWEBL_FETCH_SCRIPT" \
+        --manifest "$SWEBL_MANIFEST" \
+        --vendor-dir "$SWEBL_DIR" \
+        --parquet-dir "$SWEBL_TMP"; then
+        log_err "Failed to extract or validate SWE-bench-Live canary rows"
+        exit 1
+    fi
+    swelive_cleanup
+    trap - EXIT
+    log_ok "SWE-bench-Live canary24 pinned to $SWEBL_REVISION"
+fi
+
+# ── 8. Clone Aider Polyglot dataset ──────────────────────────────────────
 echo ""
 echo "── Checking Aider Polyglot dataset ──"
 POLY_DIR="$VENDOR_DIR/polyglot-benchmark"
@@ -287,6 +333,7 @@ echo "  Python: $PY_VER (in cospa env)"
 echo "  Harbor: $(harbor --version 2>/dev/null || echo 'installed')"
 echo "  TB:     $TB_DIR"
 echo "  SWE Atlas: $SWE_ATLAS_DIR"
+echo "  SWE-bench-Live: $SWEBL_DIR"
 echo "  Polyglot: $POLY_DIR"
 echo ""
 echo "Next: bash scripts/check-models.sh"

@@ -1220,6 +1220,9 @@ def test_harbor_agent_cli_exports_pi_session_traces(monkeypatch):
     assert "$HOME/.pi/agent/sessions" in command, command
     assert "/logs/artifacts/pi-sessions" in command, command
     assert "find" in command and "*.jsonl" in command, command
+    assert "/logs/artifacts/workdir_diff.patch" in command, command
+    assert "ls-files --others --exclude-standard" in command, command
+    assert "diff HEAD --text" in command, command
 
 
 def test_harbor_agent_cli_omits_thinking_when_unset(monkeypatch):

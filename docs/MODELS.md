@@ -1,17 +1,20 @@
 # Candidate Models for RTX PRO 6000 Rigs (96 GB / 192 GB / 288 GB)
 
-Research notes (2026-07-15) on open-weight models that fit on 1–3×
-RTX PRO 6000 Blackwell (96 GB GDDR7, ~1.79 TB/s each, **PCIe Gen5 — no
-NVLink**) and might outperform **Ornith-1.0-35B** on agentic coding
-benchmarks. All repo sizes measured from HF API file trees; quant
-compositions verified by reading **safetensors headers only** (HTTP range
-requests — no weight downloads); architecture numbers from each repo's
-`config.json`.
+Research notes (updated 2026-07-22) on open-weight models that fit on
+1–3× RTX PRO 6000 Blackwell (96 GB GDDR7, ~1.79 TB/s each, **PCIe Gen5 —
+no NVLink**) and might outperform **Ornith-1.0-35B** on agentic coding
+benchmarks. Repo sizes come from HF API file trees; quant compositions
+were verified from **safetensors headers only** (HTTP range requests — no
+weight downloads) in the original survey, and architecture numbers come
+from each repo's `config.json`. Laguna S 2.1 launched after that audit: its
+numbers below use the official model cards, quantization config, and HF
+file tree, but its tensor headers have not yet been independently audited.
 
 Caveats that apply throughout:
 
-- All scores are **vendor self-reported**; scaffolds differ (OpenHands vs
-  Terminus-2 vs Claude Code) and can swing results by points.
+- All scores are **vendor- or leaderboard-reported**; scaffolds differ
+  (OpenHands vs Terminus-2 vs Claude Code vs Poolside `pool`) and can swing
+  results by points.
 - Terminal-Bench versions are inconsistent across cards (2.0 vs 2.1) —
   cross-model TB comparisons are approximate.
 - No community 4-bit quant publishes quality deltas. Sanity-eval with
@@ -40,64 +43,78 @@ per decoded token.
 | SWE-bench Multilingual | 69.3 | OpenHands |
 | Terminal-Bench 2.1 | 64.2 (62.8 w/ Claude Code scaffold) | Terminus-2 |
 
-## Benchmark comparison (self-reported)
+## Benchmark comparison (reported; harnesses differ)
 
 | Model | Arch | SWE-V | SWE-Pro | SWE-ML | Terminal-Bench |
 | --- | --- | --- | --- | --- | --- |
-| Ornith-1.0-35B | 35B MoE (act ~3B) | 75.6 | 50.4 | 69.3 | **64.2** (2.1) |
-| MiMo-V2.5 | 310B-A15B | n/pub (Pro: 78.9) | **56.1** | — | **65.8** (2.0) |
-| MiniMax M2.7 | 230B-A10B | 78.0 | 56.2 | **76.5** | 57.0 (2.0) |
+| Ornith-1.0-35B | 35B MoE (act ~3B) | 75.6 | 50.4 | 69.3 | 64.2 (2.1) |
+| **Laguna S 2.1** | 118B-A8.5B | — | **59.4** | **78.5** | 70.2 (2.1) |
+| MiMo-V2.5 | 310B-A15B | n/pub (Pro: 78.9) | 56.1 | — | 65.8 (2.0) |
+| MiniMax M2.7 | 230B-A10B | 78.0 | 56.2 | 76.5 | 57.0 (2.0) |
 | DeepSeek V4 Flash | 284B-A13B | **79.0** | — | — | 56.9 (2.0) |
-| Hy3 (see analysis) | 295B-A21B | 78.0 | 57.9 | — | n/pub |
+| Hy3 (see analysis) | 295B-A21B | 78.0 | 57.9 | 75.8 | **71.7** (2.1) |
 
-Reading: MiMo-V2.5 is the only one that (roughly) matches/beats Ornith on
-Terminal-Bench; M2.7 and V4 Flash beat it on SWE-bench-style tasks but
-trail ~7 pts on terminal work. Nothing dominates Ornith outright.
+Reading: Laguna is the first candidate with clear reported wins over
+Ornith on every overlapping benchmark: +9.0 SWE-Pro, +9.2 SWE-ML, and
++6.0 Terminal-Bench 2.1. Hy3 now has the highest published TB score in
+this set, but Laguna is less than half its total/active size and fits one
+GPU. These remain harness-mismatched vendor/leaderboard figures, not cospa
+results; Laguna's scores used Poolside's own `pool` harness and unusually
+large thinking budgets.
 
 ## Architecture / speed-relevant properties
 
-| Property | Ornith-1.0-35B | MiniMax M2.7 | DS V4 Flash | MiMo-V2.5 | Hy3 |
-| --- | --- | --- | --- | --- | --- |
-| Total / active params | 35B / ~3B | 230B / ~10B | 284B / 13B | 310B / 15B | 295B / 21B |
-| Layers | 40 | 62 | 43 | 48 | 80 (+MTP) |
-| Attention | **hybrid linear** (30 lin + 10 full), 2 KV × 256 | **all full** GQA, 8 KV × 128 | **MLA latent** (512+64) + DSA top-512 + SWA-128 | **hybrid** SWA-128/global, 4 KV, qk 192 / v 128 | all full GQA, 8 KV × 128 |
-| KV @ FP8 per token | ~10 KB (+ linear state) | ~124 KB | ~24 KB | ≤ 60 KB (interleave ratio unpublished) | ~160 KB |
-| 128K ctx KV | ~1.3 GB | ~16.2 GB | ~3.2 GB | ≤ 7.7 GB | ~21 GB |
-| MTP / draft | none | base has `num_mtp_modules: 3`, **stripped from nvidia NVFP4 repo** | 1 nextn layer, **included** (3.8 GB) | 3-layer MTP (~1.2 GB) included; separate DFlash draft repos | 1 MTP layer (3.8B) |
-| Context cap | 262K | 205K | 1M | 1M | 256K |
+| Property | Ornith-1.0-35B | Laguna S 2.1 | MiniMax M2.7 | DS V4 Flash | MiMo-V2.5 | Hy3 |
+| --- | --- | --- | --- | --- | --- | --- |
+| Total / active params | 35B / ~3B | 118B / 8.5B | 230B / ~10B | 284B / 13B | 310B / 15B | 295B / 21B |
+| Layers | 40 | 48 | 62 | 43 | 48 | 80 (+MTP) |
+| Attention | **hybrid linear** (30 lin + 10 full), 2 KV × 256 | **hybrid** 12 global + 36 SWA-512, 8 KV × 128 | **all full** GQA, 8 KV × 128 | **MLA latent** (512+64) + DSA top-512 + SWA-128 | **hybrid** SWA-128/global, 4 KV, qk 192 / v 128 | all full GQA, 8 KV × 128 |
+| KV @ FP8 per token | ~10 KB (+ linear state) | ~24 KB (+ ~38 MB fixed SWA state/stream) | ~124 KB | ~24 KB | ≤ 60 KB (interleave ratio unpublished) | ~160 KB |
+| 128K ctx KV | ~1.3 GB | ~3.2 GB | ~16.2 GB | ~3.2 GB | ≤ 7.7 GB | ~21 GB |
+| MTP / draft | none | official 6-layer BF16 DFlash (2.23 GB) | base has `num_mtp_modules: 3`, **stripped from nvidia NVFP4 repo** | 1 nextn layer, **included** (3.8 GB) | 3-layer MTP (~1.2 GB) included; separate DFlash draft repos | 1 MTP layer (3.8B) |
+| Context cap | 262K | 262K recommended / 1M native | 205K | 1M | 1M | 256K |
 
 MTP/draft implications: self-speculative decode typically gives
-**1.5–2.5× decode throughput on code** (high acceptance rates). DS V4
-Flash and MiMo-V2.5 ship usable MTP/draft weights in the repos below;
-**M2.7 loses this** unless the MTP modules are pulled from the BF16 repo
-and quantized separately. Ornith has none — its speed comes from raw
-active-param efficiency instead.
+**1.5–2.5× decode throughput on code** (high acceptance rates). Laguna
+ships quant-matched DFlash drafts; its NVFP4 card reports **2.43–3.69×**
+throughput on two code microbenchmarks at concurrency 1, though not on our
+hardware or agent workload. DS V4 Flash and MiMo-V2.5 also ship usable
+MTP/draft weights in the repos below. **M2.7 loses this** unless the MTP
+modules are pulled from the BF16 repo and quantized separately. Ornith has
+none — its speed comes from raw active-param efficiency instead.
 
 ## Decode speed model (estimates, not measurements)
 
 Batch-1 decode is memory-bandwidth-bound: tok/s ≈ MBU × aggregate BW /
-bytes-read-per-token. Bytes/token computed from the *actual stored
-dtypes* in each quant repo (headers): all-active tensors (attention,
-dense MLP, routers, lm_head row-major read) + `active/total ×` expert
-bytes. Assumptions: FP32-stored tensors load as BF16 at runtime; MBU
+bytes-read-per-token. For the original survey, bytes/token comes from the
+*actual stored dtypes* in each repo's tensor headers: all-active tensors
+(attention, dense MLP, routers, lm_head row-major read) + `active/total ×`
+expert bytes. Laguna instead uses its published quant config and file-tree
+size. Assumptions: FP32-stored tensors load as BF16 at runtime; MBU
 45–60% for TP2 over PCIe (no NVLink — allreduce per layer hurts;
-single-GPU Ornith gets 55–70%).
+single-GPU Ornith/Laguna estimates use 55–70%).
 
-| Model (repo) | GPUs | Bytes/token | Theor. max | Est. tok/s (MBU band) | w/ MTP/spec (×1.5–2) |
+| Model (repo) | GPUs | Bytes/token | Theor. max | Est. tok/s (MBU band) | w/ MTP/spec (indicative) |
 | --- | --- | --- | --- | --- | --- |
 | Ornith BF16 | 1 | ~6.5 GB | ~275 | **150–190** | n/a |
+| Laguna NVFP4 | 1 | ~10.5 GB (BF16 attention/shared + active NVFP4 experts) | ~170 | **93–119** | **225–440** (vendor DFlash factor) |
 | M2.7 NVFP4 | 2 | ~10.7 GB (attn 5.5 BF16 + experts 3.95 + head 1.2) | ~335 | **150–200** | unavailable (MTP stripped) |
 | DS V4 Flash native | 2 | ~11.3 GB (attn 5.5 FP8 + shared 1.1 + routed 3.5 + head/dense 1.2) | ~317 | **140–190** | **210–380** |
 | MiMo MXFP4 | 2 | ~17.2 GB (attn 7.4 + dense/router 3.5 + experts 5.0 + head 1.3) | ~208 | **95–125** | **140–250** |
 
 Notes:
+- Laguna's base estimate derives routed-expert storage from the published
+  quant config rather than audited tensor headers. Its DFlash range applies
+  Poolside's 2.43–3.69× concurrency-1 code factors, measured at TP=2 and
+  temperature 0, to our estimated one-GPU base range; treat it as a target,
+  not a measurement.
 - MiMo pays for BF16-stored attention (4.5 GB) — a requant with FP8
   attention (like mitomtuna's) drops it to ~14.8 GB/tok (~110–145 tok/s).
 - Prefill (compute-bound, long-context): DS V4 Flash fastest (DSA top-512
-  ⇒ near-linear), Ornith next (30/40 linear layers), MiMo mid (SWA
+  ⇒ near-linear), Ornith next (30/40 linear layers), Laguna/MiMo mid (SWA
   majority), **M2.7 slowest** (62 full-attention layers, O(n²)).
-- Ornith on this rig can also run **2 independent replicas** (one per
-  GPU) — 2× trial throughput for cospa-style parallel runs, no TP tax.
+- Ornith and Laguna can each run **2 independent replicas** (one per GPU)
+  on this rig — 2× trial throughput for cospa-style parallel runs, no TP tax.
 
 ## VRAM budgets: utilization × GPU count
 
@@ -118,6 +135,7 @@ fine, ≥ 0.95 often requires shrinking graph capture sizes or
 | Model / repo | Weights | 1×0.90 | 2×0.90 | 2×0.92 | 2×0.95 | 3×0.90 | 3×0.95 |
 | --- | --- | --- | --- | --- | --- | --- | --- |
 | Ornith BF16 | 70.2 | ✅ +16.2 | ✅ (or 2 replicas) | — | — | — | — |
+| Laguna NVFP4 (+ DFlash) | 71.9 (+2.23 draft) | ✅ +14.5 (+12.3) | ✅ (or 2 replicas) | — | — | ✅ (or 3 replicas) | — |
 | M2.7 NVFP4 | 139.9 | ✗ | ✅ +32.9 | ✅ +36.7 | ✅ +42.5 | ✅ +119 | ✅ |
 | DS V4 Flash native | 159.6 | ✗ | ✅ +13.2 | ✅ +17.0 | ✅ +22.8 | ✅ +99.6 | ✅ |
 | MiMo MXFP4 | 176.6 | ✗ | ❌ −3.8 | ⚠️ ±0 | ✅ +5.8 | ✅ +82.6 | ✅ |
@@ -130,10 +148,14 @@ fine, ≥ 0.95 often requires shrinking graph capture sizes or
 | M3 REAP25 | 187.0 | ✗ | ❌ | ❌ | ❌ | ✅ +72.2 | ✅ |
 
 KV context these leftovers buy (FP8 KV, minus ~2–3 GB activations):
-M2.7 @2×0.90 → ~30 GB ≈ 240K tokens aggregate (full 205K single-stream);
-DS V4 Flash @2×0.90 → ~10 GB ≈ **420K tokens** (MLA is that cheap);
-MiMo MXFP4 @2×0.95 → ~3–6 GB ≈ 50–200K depending on the global-layer
-share. MiMo on 2 GPUs is single-stream-only and graph-capture-constrained.
+Laguna @1×0.90 with its draft has 12.3 GB raw headroom; recommended 262K
+context consumes ~6.44 GB global KV plus ~38 MB fixed SWA state per stream,
+leaving ~5.8 GB for activations/graphs — plausible but tighter than the raw
+weight fit suggests, so validate 0.90 or use 0.92. M2.7 @2×0.90 → ~30 GB ≈
+240K tokens aggregate (full 205K single-stream); DS V4 Flash @2×0.90 →
+~10 GB ≈ **420K tokens** (MLA is that cheap); MiMo MXFP4 @2×0.95 → ~3–6
+GB ≈ 50–200K depending on the global-layer share. MiMo on 2 GPUs is
+single-stream-only and graph-capture-constrained.
 
 ### 3-GPU notes
 
@@ -151,6 +173,53 @@ fine-tune, but padding grows the 183.5 GB source checkpoint to 205.6 GB
 TP4 decode throughput on PRO 6000s, rather than the single-GPU-bandwidth
 ceiling of PP=3. See the measured path and PCIe P2P requirements below.
 Hy3 still needs PP=3, TP=2 plus a spare GPU, or a future equivalent repack.
+Laguna creates a simpler 3-GPU option: one independent NVFP4+DFlash server
+per card, with no TP divisibility or PCIe collective dependency.
+
+## Laguna S 2.1 (Poolside, 118B-A8.5B) — the new 1-GPU leader
+
+[Poolside's release](https://poolside.ai/blog/introducing-laguna-s-2-1) and
+[official model collection](https://huggingface.co/collections/poolside/laguna-s-21)
+describe a 117.6B MoE with ~8.5B active parameters: 48 layers, 256 routed
+experts top-10 plus one shared expert, and 12 global / 36 sliding-window-512
+attention layers. GQA uses 8 KV heads × 128. The weights are native 1M, but
+the released quant configs default to **262K** because Poolside recommends
+that setting for best quality and warns that forcing 1M may degrade it.
+
+The official
+[poolside/Laguna-S-2.1-NVFP4](https://huggingface.co/poolside/Laguna-S-2.1-NVFP4)
+shards total **71.9 GB**. Its config quantizes routed experts to NVFP4 while
+leaving attention, the dense/shared MLPs, and head at higher precision; FP8
+KV is part of the quant recipe. The matching six-layer BF16
+[Poolside DFlash draft](https://huggingface.co/poolside/Laguna-S-2.1-DFlash-NVFP4)
+is **2.23 GB**, so target + draft is ~74.1 GB and fits one 96 GB card. The
+official Q4_K_M GGUF is 75.17 GB, but Poolside's llama.cpp fork is still the
+published DFlash route; NVFP4 on Blackwell is the more relevant experiment.
+
+Only 12 global layers grow KV with context: ~24 KB/token FP8, or 6.44 GB at
+262K, plus ~38 MB of fixed SWA state per stream. The estimated base decode is
+~93–119 tok/s on one PRO 6000. Poolside reports concurrency-1 DFlash speedups
+of **3.69× HumanEval** and **2.43× MBPP** at TP=2/temperature 0; its DGX Spark
+recipe separately reports 13–14 tok/s without speculation and 22–24 tok/s on
+code with DFlash. Neither is a PRO 6000 agent-loop measurement. The target
+card uses 15 speculative tokens, while the draft card calls 7 recommended but
+benchmarks 15; pin this rather than trusting changing defaults.
+
+Capability is the strongest reported package here: TB 2.1 **70.2**, SWE-Pro
+**59.4**, and SWE-ML **78.5**, all averaged over four attempts with Poolside's
+`pool` harness and published final trajectories. The cost is test-time compute:
+mean completion length with thinking was ~129K tokens on TB, ~141K on SWE-Pro,
+and ~101K on SWE-ML. Thinking raised TB from 60.4 to 70.2 and DeepSWE from
+16.5 to 40.4, so a latency-capped cospa run may not reproduce the headline.
+
+Operational risks are unusually relevant to this benchmark. Poolside flags
+harness overfitting, malformed nested/JSON tool calls (explicitly including
+Pi's edit tool), and overthinking. Preserved reasoning between tool calls is
+recommended. Serving needs a very recent stack (the target card says vLLM
+≥0.25.0, while the draft card still labels upstream DFlash integration in
+progress). Verdict: **first model to trial** on a single PRO 6000, but test
+both thinking modes, preserve reasoning, and inspect tool-call recovery and
+token counts rather than treating the vendor scores as directly portable.
 
 ## MiMo-V2.5 (Xiaomi, 310B-A15B)
 
@@ -317,8 +386,11 @@ Caveats / relevance to us:
   run on PRO 6000 (sm_120) without rebuilding vLLM; the recipe, not the
   image, is what transfers. It also carries the prefix-cache-safe DFlash
   fix (vLLM PR #41703) that matters for agent loops.
-- Direct application: the MiMo-V2.5 DFlash quants above use the same
-  vLLM `method: dflash` path — this repo is evidence the path works.
+- Direct application: Laguna S 2.1 now ships an official quant-matched
+  DFlash draft and vendor speed measurements, making it the primary path to
+  validate. The MiMo-V2.5 DFlash quants above use the same vLLM
+  `method: dflash` path; this older repo remains evidence the Blackwell path
+  works outside Poolside's release stack.
 - Ornith angle: Ornith-1.0-35B is Qwen3.5-MoE lineage with a nearly
   identical shape to Qwen3.6-35B-A3B; if a z-lab-style drafter exists or
   can be trained for it, Ornith's ~150–190 tok/s could plausibly double,
@@ -335,9 +407,9 @@ context, 3 MTP modules. Official quant:
 F32 10.9 GB (loads BF16), embed/head BF16 2.5 GB. **No MTP tensors — the
 NVFP4 repo strips them**, so no self-speculative decode from this repo.
 
-Best all-around 2-GPU citizen: biggest KV headroom, best SWE-ML score.
-Weaknesses: priciest KV per token (~124 KB), O(n²) prefill at long
-context, no spec decode, 205K cap.
+Best all-around conventional TP2 citizen: biggest KV headroom and a strong
+SWE-ML score (76.5, now behind Laguna's 78.5). Weaknesses: priciest KV per
+token (~124 KB), O(n²) prefill at long context, no spec decode, 205K cap.
 
 ## DeepSeek V4 Flash (284B-A13B)
 
@@ -353,7 +425,8 @@ native repo is strictly smaller with no known quality downside; prefer it.
 
 Highest SWE-V (79.0), cheapest KV (~24 KB/tok → ~420K tokens even at
 0.90 util), MTP included (est. 210–380 tok/s effective), fastest
-long-context prefill. The best *speed × score* package of the group.
+long-context prefill. It remains the strongest SWE-V-first TP2 package,
+but Laguna is smaller and has broader reported agentic-coding wins.
 
 ## Hy3 (Tencent, 295B-A21B) — the 3-GPU pick, and a 2-GPU dark horse
 
@@ -362,8 +435,10 @@ GQA 64 Q / 8 KV heads × 128, 192 routed experts top-8
 (`moe_intermediate` 1536 → 290B routed params) + shared expert, 1 nextn
 (MTP) layer, 262K context. Native BF16 = 597.6 GB;
 [tencent/Hy3-FP8](https://huggingface.co/tencent/Hy3-FP8) = 299.9 GB
-(doesn't fit even 3×0.95 = 273.6). Best scores of any candidate on
-SWE-Pro (57.9); **no published Terminal-Bench score**.
+(doesn't fit even 3×0.95 = 273.6). Reported scores include SWE-V 78.0,
+SWE-Pro 57.9, SWE-ML 75.8, and Terminal-Bench 2.1 71.7; the latter two
+were surfaced in Poolside's cross-model release comparison and remain
+harness-mismatched.
 
 ### Parallelism / divisibility
 
@@ -417,11 +492,13 @@ Context budgets (FP8 KV, minus ~3 GB activations):
 - **3× PP3, kodelow @0.90**: ~74 GB → ~460K tokens aggregate; full 256K
   single-stream with room for batch. This is the comfortable config.
 
-Verdict: on 3 GPUs Hy3 is the score leader (SWE-V 78 / SWE-Pro 57.9) and
-fits easily, but PP=3 caps single-stream decode at ~50–75 tok/s and the
-missing TB score + missing MTP are open questions. On 2 GPUs the
-INCModel2 MXFP4 repo makes it a legitimate dark horse at ~103–138 tok/s
-with ~58–94K context — worth a cospa sanity eval against DS V4 Flash.
+Verdict: Hy3 has the highest reported TB score in this local set (71.7)
+and fits easily on 3 GPUs, but PP=3 caps single-stream decode at ~50–75
+tok/s; the absent MTP and unvalidated quants remain open questions. Laguna
+beats it on reported SWE-Pro/SWE-ML while using one GPU. On 2 GPUs the
+INCModel2 MXFP4 repo remains a legitimate dark horse at ~103–138 tok/s
+with ~58–94K context — worth a cospa sanity eval against Laguna and DS V4
+Flash.
 
 ## Ruled out (at 2 GPUs)
 
@@ -433,26 +510,31 @@ with ~58–94K context — worth a cospa sanity eval against DS V4 Flash.
 
 ## Recommendation (2× PRO 6000)
 
-1. **DeepSeek V4 Flash (native, 159.6 GB)** — best SWE-V, official
+1. **Laguna S 2.1 NVFP4 + DFlash (74.1 GB)** — strongest overlapping
+   SWE-Pro/SWE-ML/TB claims, official quant and draft, low KV, and one GPU
+   per replica. Run it first, but measure the huge thinking budget and Pi
+   tool-call failure modes; neither quality nor speed is cospa-verified.
+2. **DeepSeek V4 Flash (native, 159.6 GB)** — best SWE-V, official
    4-bit weights, MTP spec decode, near-linear prefill, huge context at
    safe 0.90 utilization. Weakest claim: no published SWE-Pro/TB edge.
-2. **MiniMax M2.7 NVFP4 (139.9 GB)** — most headroom, best SWE-ML;
-   loses spec decode (stripped MTP) and pays O(n²) prefill + heavy KV.
-3. **MiMo-V2.5 MXFP4 (176.6 GB)** — only candidate to edge Ornith on
-   Terminal-Bench, but needs 0.95 utilization, is single-stream, ~95–125
-   tok/s, and the quant is community/unvalidated.
-4. **Hy3 MXFP4 (INCModel2, 164.2 GB)** — dark horse: best SWE-Pro
-   (57.9), fits TP=2 at 0.90, ~103–138 tok/s, but only ~58–94K context
-   and an unvalidated preview quant. See the Hy3 section.
-5. **Ornith-1.0-35B** remains the value baseline: one GPU, top TB score,
-   ~150–190 tok/s, near-nil KV cost — and 2 replicas on this rig doubles
-   cospa trial throughput.
+3. **MiniMax M2.7 NVFP4 (139.9 GB)** — most headroom among the TP2
+   models; loses spec decode (stripped MTP) and pays O(n²) prefill + heavy KV.
+4. **MiMo-V2.5 MXFP4 (176.6 GB)** — edges Ornith on its reported
+   Terminal-Bench 2.0 score, but needs 0.95 utilization, is single-stream,
+   ~95–125 tok/s, and the quant is community/unvalidated.
+5. **Hy3 MXFP4 (INCModel2, 164.2 GB)** — score-first dark horse with
+   TB 2.1 71.7 and SWE-Pro 57.9; fits TP=2 at 0.90, ~103–138 tok/s, but
+   has only ~35K context there (~58–94K at 0.92–0.95) and uses an
+   unvalidated preview quant.
+6. **Ornith-1.0-35B** remains the throughput baseline: one GPU,
+   ~150–190 tok/s and near-nil KV cost, but Laguna now beats its published
+   coding scores and can likewise run one replica per GPU.
 
-On 3 GPUs: **MiMo-V2.5 TP3 + matching DFlash is now the first agentic/
-Terminal-Bench throughput experiment**: it preserves the promising MiMo
-target and has a card-reported 381.5 tok/s short-context validation result,
-but depends on invasive P2P host tuning and a custom early-stage serving
-stack. **Hy3 (kodelow NVFP4, PP=3)** remains the score-first SWE-Pro choice
-with a safer quant recipe, accepting ~42–50 tok/s single-stream. The simpler
-operational alternative is still DS V4 Flash on TP=2 plus an Ornith replica
-on GPU 3 for parallel matrix throughput.
+On 3 GPUs: **three independent Laguna NVFP4+DFlash replicas** are now the
+simplest high-scoring matrix-throughput experiment, with no TP tax or host
+P2P tuning. **MiMo-V2.5 TP3 + matching DFlash** remains the maximum-speed
+single-server experiment (card-reported 381.5 tok/s short-context), but
+depends on invasive P2P tuning and a custom early-stage stack. **Hy3
+(kodelow NVFP4, PP=3)** remains the score-first large-model alternative,
+accepting ~42–50 tok/s single-stream. DS V4 Flash on TP=2 plus Laguna or
+Ornith on GPU 3 is the simpler mixed-model configuration.

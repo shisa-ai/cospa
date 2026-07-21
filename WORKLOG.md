@@ -1138,3 +1138,20 @@ Append-only development log for the `cospa` repository.
 - Next action: merge the workdir/filesystem/network isolation fixes, then run
   the generated resume-safe commands to fill only the quarantined/missing
   slots before regenerating scores.
+
+## 2026-07-22 — Add Laguna S 2.1 to the local model shortlist
+
+- Context: Poolside released Laguna S 2.1 after the original model survey; its
+  official 71.9 GB NVFP4 target and 2.23 GB DFlash draft fit one PRO 6000 and
+  report stronger overlapping coding scores than Ornith.
+- Evidence: reviewed the release post, official HF collection/model cards,
+  repository file trees, quantization config, and DFlash benchmark card;
+  recalculated weight, KV, fit, and bandwidth-model estimates.
+- Decision: rank Laguna as the first 1-GPU trial while preserving explicit
+  caveats for Poolside-harness scores, 100K+ thinking traces, Pi tool-call
+  failures, unaudited tensor headers, and the early serving stack.
+- Validation: re-read `docs/MODELS.md` end to end; `git diff --check` and a
+  Markdown table-column check pass.
+- Next action: run both thinking modes with preserved reasoning on one PRO
+  6000, record token counts/tool-call recovery, then validate NVFP4+DFlash
+  speed and 262K-context memory use before promoting it to the matrix.

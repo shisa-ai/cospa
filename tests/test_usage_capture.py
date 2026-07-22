@@ -423,6 +423,48 @@ def test_load_model_metadata_has_qwen_36_repo_pricing():
     assert metadata["pricing_unit"] == "usd_per_1m_tokens"
 
 
+def test_load_model_metadata_has_laguna_s_repo_metadata():
+    """Laguna S direct-vLLM runs should retain endpoint limits and public pricing."""
+    with tempfile.TemporaryDirectory() as tmp:
+        models_json = Path(tmp) / "models.json"
+        models_json.write_text(json.dumps({
+            "providers": {
+                "local-vllm": {
+                    "models": [
+                        {
+                            "id": "laguna-s-2.1-nvfp4",
+                            "contextWindow": 524288,
+                            "maxTokens": 32768,
+                            "cost": {
+                                "input": 0,
+                                "cacheRead": 0,
+                                "cacheWrite": 0,
+                                "output": 0,
+                            },
+                        }
+                    ],
+                }
+            }
+        }))
+
+        metadata = load_model_metadata(
+            "local-vllm/laguna-s-2.1-nvfp4",
+            models_json_path=models_json,
+        )
+
+    assert metadata["cost"] == {
+        "input": 0.10,
+        "cacheRead": 0.01,
+        "cacheWrite": 0,
+        "output": 0.20,
+    }
+    assert metadata["pricing_unit"] == "usd_per_1m_tokens"
+    assert metadata["context_window"] == 524288
+    assert metadata["max_tokens"] == 32768
+    assert metadata["reasoning"] is True
+    assert metadata["reasoning_effort_source"] == "model-native-default-enabled"
+
+
 def test_load_model_metadata_preserves_long_context_pricing_tiers():
     """GPT-5.5 API-equivalent pricing has short and long context rates."""
     with tempfile.TemporaryDirectory() as tmp:

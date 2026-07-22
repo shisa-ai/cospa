@@ -1398,6 +1398,27 @@ Append-only development log for the `cospa` repository.
   end-to-end)`. Qualify gold/baseline behavior in the other seven languages and
   audit one protected model trial before freezing core48 or launching a matrix.
 
+## 2026-07-22 — Register Laguna S 2.1 for the canary
+
+- Context: the direct vLLM endpoint at `localhost:8001` now serves
+  `poolside/Laguna-S-2.1-NVFP4`; retaining its prior ThinkingCap model identity
+  would make reachability fail and mislabel durable benchmark results.
+- Decision: register `local-vllm/laguna-s-2.1-nvfp4` without removing the
+  historical ThinkingCap entry. Record the live endpoint's 524,288-token
+  context, the checkpoint's 32,768-token generation default, native
+  default-enabled reasoning, and OpenRouter-equivalent public pricing.
+- Evidence: live `/v1/models` and chat/tool-call probes returned the exact
+  Laguna model identity; the local pi registration matches the endpoint;
+  `scripts/check-models.sh` reports Laguna alive; the new repository-metadata
+  regression test passes.
+- Verification: `mamba run -n coding-eval python -m pytest -q` reports 264
+  passed. RED-first was not used because this is declarative model registration,
+  not a behavior implementation; the focused config regression would fail if
+  the repository entry were absent.
+- Next action: run the 24-task SWE-bench-Live multilingual canary sequentially
+  at k=1 through the protected single-endpoint Harbor relay and audit all
+  traces, patches, manifests, and verifier outcomes.
+
 ## 2026-07-22 — Add Laguna S 2.1 to the local model shortlist
 
 - Context: Poolside released Laguna S 2.1 after the original model survey; its

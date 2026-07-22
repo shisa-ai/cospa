@@ -23,6 +23,18 @@ models:
       cacheWrite: 0
       output: 2.40
     pricing_unit: usd_per_1m_tokens
+  - id: local-vllm/laguna-s-2.1-nvfp4
+    name: Laguna S 2.1 NVFP4 (direct vLLM)
+    context_window: 524288
+    max_tokens: 32768
+    reasoning: true
+    reasoning_effort_source: model-native-default-enabled
+    cost:
+      input: 0.10
+      cacheRead: 0.01
+      cacheWrite: 0
+      output: 0.20
+    pricing_unit: usd_per_1m_tokens
   - id: codex/gpt-5.5
     name: GPT-5.5
     context_window: 1050000

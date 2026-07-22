@@ -208,6 +208,25 @@ def test_collect_pi_session_usage_reads_explicit_trial_session_dir():
         assert (out_dir / "pi_session.jsonl").read_text() == session_file.read_text()
 
 
+def test_collect_pi_session_usage_tolerates_default_session_component_overflow():
+    """Optional telemetry must not abort long-path Harbor trials."""
+    with tempfile.TemporaryDirectory() as tmp:
+        tmp = Path(tmp)
+        workdir = tmp.joinpath(*(["segment"] * 50), "workdir")
+        sessions_root = tmp / "sessions"
+        sessions_root.mkdir()
+
+        assert len(pi_session_dir_for_cwd(workdir, sessions_root=sessions_root).name) > 255
+        summary = collect_pi_session_usage(
+            workdir,
+            tmp / "out",
+            sessions_root=sessions_root,
+        )
+
+    assert summary["status"] == "unavailable"
+    assert summary["reason"] == "no matching pi session trace found"
+
+
 def test_collect_harbor_pi_session_usage_copies_artifact_trace():
     with tempfile.TemporaryDirectory() as tmp:
         tmp = Path(tmp)

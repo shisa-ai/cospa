@@ -510,17 +510,27 @@ def find_pi_session_file(
         if session_dir is not None
         else pi_session_dir_for_cwd(cwd_path, sessions_root=sessions_root)
     )
-    if not resolved_session_dir.exists():
+    try:
+        if not resolved_session_dir.exists():
+            return None
+        session_files = list(resolved_session_dir.glob("*.jsonl"))
+    except OSError:
+        # pi's default layout flattens the full cwd into one filename
+        # component. Long benchmark result roots can exceed Linux NAME_MAX;
+        # missing optional telemetry must never abort a completed trial.
         return None
 
     matches: list[tuple[float, Path]] = []
     fallback: list[tuple[float, Path]] = []
-    for session_file in resolved_session_dir.glob("*.jsonl"):
+    for session_file in session_files:
         header = _session_header(session_file)
         if not header or header.get("cwd") != str(cwd_path):
             continue
         session_ts = _parse_timestamp(header.get("timestamp"))
-        mtime = session_file.stat().st_mtime
+        try:
+            mtime = session_file.stat().st_mtime
+        except OSError:
+            continue
         sort_ts = session_ts if session_ts is not None else mtime
         fallback.append((sort_ts, session_file))
         if start_time is not None and session_ts is not None and session_ts < start_time - 60:

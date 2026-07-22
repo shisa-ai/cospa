@@ -1419,6 +1419,28 @@ Append-only development log for the `cospa` repository.
   at k=1 through the protected single-endpoint Harbor relay and audit all
   traces, patches, manifests, and verifier outcomes.
 
+## 2026-07-22 — Keep telemetry path overflow from aborting trials
+
+- Context: five completed Harbor jobs in the Laguna S canary lacked top-level
+  manifests and verdicts because fallback usage discovery flattened the long
+  result workdir into a single pi session-directory component over Linux
+  `NAME_MAX`; `Path.exists()` raised `ENAMETOOLONG` after native evaluation.
+- RED evidence: a focused regression with an existing session root and a
+  many-component benchmark workdir reproduced `[Errno 36] File name too long`
+  in `collect_pi_session_usage`.
+- Decision: treat inaccessible default pi session paths like absent optional
+  telemetry. Session discovery now catches filesystem errors while probing or
+  listing the default directory and skips individual traces that disappear or
+  become unreadable during collection. Evaluation artifacts must not depend on
+  usage telemetry being available.
+- GREEN evidence: the exact overflow regression passes, as do the existing
+  explicit-session and Harbor-artifact usage tests.
+- Verification: `mamba run -n coding-eval python -m pytest -q` reports 265
+  passed.
+- Next action: recover only the missing top-level artifacts from the five
+  already-completed immutable Harbor job outputs; do not rerun or overwrite
+  their expensive model attempts, then audit the canary's infrastructure rate.
+
 ## 2026-07-22 — Add Laguna S 2.1 to the local model shortlist
 
 - Context: Poolside released Laguna S 2.1 after the original model survey; its

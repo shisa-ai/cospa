@@ -1441,6 +1441,34 @@ Append-only development log for the `cospa` repository.
   already-completed immutable Harbor job outputs; do not rerun or overwrite
   their expensive model attempts, then audit the canary's infrastructure rate.
 
+## 2026-07-22 — Withhold the Laguna S canary score
+
+- Context: the first protected full canary used Laguna S 2.1, `pi_vanilla`,
+  model-native reasoning, k=1, sequential execution, and one infrastructure-only
+  retry. It attempted 24 tasks through 27 Harbor jobs in 10.05 hours.
+- Decision: mark the run `qualification_failed_score_withheld`, not 2/24. Five
+  C#/Java images lacked Python for the grader, six JavaScript/TypeScript images
+  lacked `pi` in the agent phase, and two Rust hidden patches did not apply.
+  These 13 outcomes are benchmark infrastructure, not model failures.
+- Diagnostic evidence: among 11 mechanically valid native outcomes, 2 passed
+  (C++ small and Java small), or 2/11. Only 9 valid outcomes also retained a pi
+  trace and non-empty patch, with 1 pass. Neither rate is a headline benchmark
+  score; C#, JavaScript, and TypeScript had no valid outcomes.
+- Artifact audit: all 24 manifest/verdict pairs now exist; five were finalized
+  from their original completed Harbor jobs after the telemetry fix without
+  rerunning attempts. Timeout paths lost two traces/patches, and DuckDB exported
+  a 988,824,195-byte patch. The run-level `audit.json` records categories,
+  diagnostics, usage, timing, and recovery provenance.
+- Isolation/cleanup evidence: the selected model identity and provider were
+  present in all 11 exported pi traces; the agent allowlist and offline verifier
+  policies remained configured; no Harbor containers or runner processes
+  leaked. The temporary SSH tunnel, relay container, dedicated alias, firewall,
+  and disk monitor were stopped and removed after audit.
+- Next action: preflight agent and verifier executables in every image, move
+  artifact export to a timeout-safe phase with size limits, qualify hidden-patch
+  application against agent-modified trees, and repeat multilingual gold/no-op
+  checks before another protected model run or any core48 selection.
+
 ## 2026-07-22 — Add Laguna S 2.1 to the local model shortlist
 
 - Context: Poolside released Laguna S 2.1 after the original model survey; its

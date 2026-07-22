@@ -27,8 +27,9 @@ consumes provider definitions from
 > cospa scores are therefore not leaderboard-comparable, and strong models have
 > saturated this suite as a scaffold discriminator. See
 > [Aider Polyglot protocol and score interpretation](docs/AIDER.md). Its
-> [SWE-bench-Live/MultiLang canary24 successor](docs/SWE-BENCH-LIVE.md) is now
-> implemented but remains partially qualified; do not launch a full matrix yet.
+> [SWE-bench-Live/MultiLang canary24 successor](docs/SWE-BENCH-LIVE.md) is
+> implemented, but its first protected model run failed infrastructure
+> qualification. Do not report its raw score or launch a full matrix yet.
 
 ## What we're measuring
 
@@ -298,10 +299,11 @@ mamba run -n coding-eval python harness/runner.py \
 
 The selected images total 44.34 GiB compressed before layer sharing, so
 pre-pull images and exclude cold-pull time from model wall-clock comparisons.
-Only the C verifier currently has repeated gold plus baseline evidence. Finish
-the seven remaining language checks and audit one protected model trial before
-a full adapter run. See
-[the canary protocol and qualification record](docs/SWE-BENCH-LIVE.md).
+Only the C verifier currently has repeated gold plus baseline evidence. The
+first protected 24-task model run found 13 infrastructure-invalid tasks, so its
+raw score is withheld. Preflight `pi`, Python, hidden-patch application, and
+timeout-safe artifact export in every image before another model or adapter run.
+See [the canary protocol and qualification record](docs/SWE-BENCH-LIVE.md).
 
 ## Running the SWE Atlas pilot
 
@@ -487,7 +489,7 @@ post-cutover scores.
 - **Terminal-Bench Core 0.1.1** — pinned 80-task external anchor via Harbor. Wall-clock probe first.
 - **SWE Atlas pilot12** — eight Test Writing + four Codebase Q&A tasks, balanced across Go, Python, C, and TypeScript. Cost/reliability gate before `k=2`.
 - **BigCodeBench-Hard Instruct pilot15** — pinned one-sample, no-tool Python generation anchor with upstream calibrated scoring; kept separate from agentic scores.
-- **[SWE-bench-Live/MultiLang canary24](docs/SWE-BENCH-LIVE.md)** — 24 recent issue-resolution tasks across eight languages with evaluator-only PR tests; implemented but only partially qualified.
+- **[SWE-bench-Live/MultiLang canary24](docs/SWE-BENCH-LIVE.md)** — 24 recent issue-resolution tasks across eight languages with evaluator-only PR tests. Implemented, but its first protected run failed infrastructure qualification.
 - **Repository/feature portfolio (candidate)** — Multi-SWE-bench Flash, SWE-bench Multilingual, SWE-PolyBench, and FeatureBench enter only after the validity/runtime bake-off in `docs/EVALS.md`.
 
 ## Current Verified State
@@ -501,9 +503,10 @@ post-cutover scores.
   `little-coder`, installing it with `npm install -g little-coder` when absent
   and warning if `little-coder --list-models` cannot read provider config.
 - SWE-bench-Live canary24 is `partial (unit + real pinned artifact + C
-  gold/baseline end-to-end)`: all 24 rows and image manifests are pinned; the C
-  `libarchive` task passes repeated gold grading and fails the no-op baseline.
-  Seven language strata and a protected model trial remain.
+  gold/baseline end-to-end; protected model qualification failed)`: all 24 rows
+  and image manifests are pinned, but the Laguna S run found 13 missing-runtime
+  or hidden-patch infrastructure failures. Its diagnostic 2/11 valid-outcome
+  rate is not a headline score; repair and requalification remain.
 - SWE Atlas is `wired (unit test + real pinned artifact)`: all 12 public tasks
   discover and materialize with the declared workflow/language strata. A real
   rubric-scoring run still requires the pinned judge endpoint and is not yet

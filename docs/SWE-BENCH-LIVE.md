@@ -1,10 +1,11 @@
 # SWE-bench-Live/MultiLang canary24
 
-> **Status:** implemented and partially qualified. The pinned dataset,
-> materializer, Harbor task, protected test channel, and strict scorer are wired.
-> One C task has passed the gold verifier repeatedly and failed the clean
-> baseline as expected. The other seven language strata and a real model run
-> are still outstanding; do not freeze or run the proposed core48 matrix yet.
+> **Status:** implemented but not qualified for scoring. The pinned dataset,
+> materializer, Harbor task, protected test channel, and strict scorer are wired,
+> and one C task has passed repeated gold/baseline checks. A 24-task protected
+> Laguna S run then exposed 13 task/harness infrastructure failures. Its
+> diagnostic model outcomes are not a headline score; do not freeze or run the
+> proposed core48 matrix yet.
 
 Cospa suite ID: `swe_bench_live_multilang_canary24`.
 
@@ -69,9 +70,11 @@ The generated Harbor task uses the pinned prebuilt repository image with
 1. Environment start and trusted agent installation may use public network.
 2. During `agent.run()`, Harbor switches to an allowlist containing only the
    selected, container-reachable model relay hostname.
-3. After the agent returns, the custom Harbor agent exports pi traces, Git
+3. After a normal agent return, the custom Harbor agent exports pi traces, Git
    status, and a `git diff HEAD --text` patch (including intent-to-add files) as
-   durable artifacts.
+   durable artifacts. The first protected run showed that timeout and missing-
+   executable exits can bypass this shell postamble; timeout-safe artifact
+   collection is now a qualification blocker.
 4. Solver-created processes are killed before Harbor uploads `tests/`.
 5. Harbor uploads the hidden PR test patch, command/parser metadata, and grader.
 6. The verifier runs with `network_mode = "no-network"`, isolated Python mode,
@@ -149,16 +152,43 @@ Evidence collected on 2026-07-21:
 - the hardened offline verifier then passed another gold run in 73 seconds.
 
 This establishes `unit + real pinned artifact + one-language gold/baseline
-end-to-end`, not full multilingual qualification. Before core48 selection:
+end-to-end`, not full multilingual qualification.
 
-1. run gold three times and a clean baseline for at least one task in each of
-   the other seven languages;
-2. complete one protected `pi_vanilla` model trial and audit the exported trace,
-   patch, process cleanup, network boundary, and native evaluation;
-3. measure cold image pull separately from warm agent/verifier wall time;
-4. replace any flaky, network-dependent, resource-invalid, or parser-invalid
-   task without consulting candidate-model success; and
-5. only then freeze a predeclared core48 and run matched adapters.
+A protected `pi_vanilla` run with Laguna S 2.1 attempted all 24 tasks on
+2026-07-22. It issued 27 Harbor attempts in 10.05 hours and exited cleanly, but
+**failed benchmark qualification**:
+
+- five C#/Java verifier images lacked Python, so the hidden grader could not run;
+- six JavaScript/TypeScript images lacked the installed `pi` executable during
+  the agent phase;
+- two Rust hidden test patches could not be applied after the agent phase;
+- two otherwise mechanically valid timeout outcomes did not export a durable pi
+  trace or patch;
+- fallback telemetry finalization exceeded Linux `NAME_MAX` for five completed
+  jobs. Commit `0e9a5ed` fixes that last harness bug, and the missing top-level
+  artifacts were recovered from the original Harbor outputs without rerunning
+  model attempts; and
+- one exported Git patch was 988,824,195 bytes, showing that patch collection
+  also needs a size/type policy.
+
+Only 11/24 tasks produced mechanically valid native outcomes: 2 passed. That
+`2/11` is diagnostic only, not a canary score; only 9 of those 11 also retained
+both a pi trace and non-empty patch, with 1 pass. The durable run audit is
+`audit.json` under run
+`laguna-s21-swe-live-canary24-k1-20260722T1102JST`.
+
+Before core48 selection or another model run:
+
+1. preflight the actual agent and verifier commands in every pinned image,
+   including `pi`, Python, and task-specific toolchains;
+2. make trace/patch collection run in a timeout-safe post-agent phase and cap or
+   reject pathological artifacts;
+3. prove every hidden test patch applies both to the clean base and to a
+   representative agent-modified checkout without exposing the patch;
+4. run gold three times and a clean baseline in every language, replacing
+   infrastructure-invalid tasks without consulting candidate-model success;
+5. separate cold image pull from warm agent/verifier wall time; and
+6. only then repeat the protected canary and consider a predeclared core48.
 
 See `docs/AIDER.md` for why this protocol replaces Aider Polyglot as the leading
 scaffold-discrimination candidate and for comparison with other multilingual

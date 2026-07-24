@@ -1492,6 +1492,20 @@ Append-only development log for the `cospa` repository.
 - Next action: non-destructively regrade or cleanly rerun the Laguna JavaScript
   stratum before treating its raw 116/225 row as a headline score.
 
+## 2026-07-24 — Warm dependencies during canonical regrading
+
+- Context: the historical reverify tool rebuilt trusted canonical Aider inputs
+  but skipped suite dependency prefetch, so its offline JavaScript verifier
+  could not benefit from the newly pinned npm graph.
+- RED evidence: a focused canonical-reverify test failed because verification
+  ran before `prepare_agent_dependencies()`.
+- Decision: run dependency preparation on each fresh canonical materialization
+  before overlaying and grading the saved model solution. This preserves the
+  same pre-agent trust boundary used by new trials.
+- GREEN evidence: all 7 reverify tests and the full 267-test suite pass.
+- Next action: regrade the 49 Laguna JavaScript artifacts non-destructively and
+  retain a run-level audit rather than overwriting the original verdicts.
+
 ## 2026-07-22 — Add Laguna S 2.1 to the local model shortlist
 
 - Context: Poolside released Laguna S 2.1 after the original model survey; its

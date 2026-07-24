@@ -227,6 +227,11 @@ def reverify_trial(
                 dataset_value = canonical_task_data.get("dataset")
                 if isinstance(dataset_value, dict):
                     dataset = dataset_value
+                prepare_dependencies = getattr(
+                    suite, "prepare_agent_dependencies", None
+                )
+                if callable(prepare_dependencies):
+                    prepare_dependencies(canonical_task_data, canonical_workdir)
                 new_verdict = suite.verify(canonical_task_data, workdir)
             canonical_verifier = True
         else:

@@ -1381,6 +1381,21 @@ headline score.
 
 Status: `fixed (unit + real-artifact offline-verifier integration)`.
 
+# Canonical reverify dependency warm-up (2026-07-24)
+
+The non-destructive historical reverify path materialized clean canonical Aider
+inputs but called the offline verifier without first running the suite's
+networked dependency prefetch. That made it unable to repair the Laguna
+JavaScript verdicts even after the runtime lock fix.
+
+Canonical Aider reverify now invokes `prepare_agent_dependencies()` on the
+fresh trusted materialization before overlaying and grading the saved model
+solution. The same pre-agent lock invariant therefore applies to both new runs
+and historical regrading.
+
+Status: `fixed (unit test)`; the corrected 49-task Laguna regrade is the
+remaining operational validation.
+
 ### Aider hidden-test contamination (2026-08-12 follow-up)
 
 The earlier isolation cutover excluded reference `.meta/.approaches` dirs but

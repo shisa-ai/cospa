@@ -4,6 +4,7 @@ import json
 import sys
 import tempfile
 from pathlib import Path
+from unittest.mock import patch
 
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(PROJECT_ROOT))
@@ -114,6 +115,53 @@ def test_reverify_results_uses_canonical_vendor_tests(make_polyglot_problem):
     assert summary["changes"][0]["old"]["passed"] is True
     assert summary["changes"][0]["new"]["passed"] is False
     assert summary["changes"][0]["canonical_verifier"] is True
+
+
+def test_canonical_reverify_prefetches_dependencies_before_offline_verification():
+    class DependencySuite:
+        prepared = False
+
+        def materialize_task(self, task_id, workdir, vendor_dir):
+            workdir.mkdir(parents=True)
+            canonical = workdir.parent / "canonical"
+            canonical.mkdir()
+            return {
+                "task_id": task_id,
+                "language": "python",
+                "_canonical_dir": str(canonical),
+                "solution_files": ["two_fer.py"],
+            }
+
+        def prepare_agent_dependencies(self, task_data, workdir):
+            self.prepared = True
+
+        def verify(self, task_data, workdir):
+            assert self.prepared, "canonical dependencies were not prefetched"
+            return {
+                "passed": True,
+                "test_count": 1,
+                "grader_output": "1 passed",
+                "exit_code": 0,
+            }
+
+    with tempfile.TemporaryDirectory() as tmp:
+        root = Path(tmp)
+        results_dir = root / "results"
+        vendor_dir = root / "vendor"
+        vendor_dir.mkdir()
+        _write_python_trial(results_dir, passed=False)
+        suite = DependencySuite()
+
+        with patch("harness.reverify_results.load_suite", return_value=suite):
+            summary = reverify_results(
+                results_dir,
+                suites=("aider_polyglot",),
+                vendor_dir=vendor_dir,
+            )
+
+    assert suite.prepared is True
+    assert summary["errors"] == 0
+    assert summary["changed"] == 1
 
 
 def test_reverify_results_write_backs_up_and_replaces_changed_verdict():

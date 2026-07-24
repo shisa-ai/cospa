@@ -1354,6 +1354,33 @@ run)`. The score of record is the audited high-thinking composite under
 `results/audits/bonsai-pi-vanilla-explicit-high-recovery-20260719T123716Z/`;
 the viewer's historical 197/225 row remains invalid and intentionally durable.
 
+# JavaScript offline dependency lock correction (2026-07-24)
+
+The Laguna S 2.1 `pi_devstack` full run exposed a JavaScript verifier
+infrastructure failure: all 49 tasks reached native grading, but every offline
+`npm install` selected `electron-to-chromium@1.5.396` from refreshed cached
+registry metadata while prefetch had cached only `1.5.395`. Upstream exercises
+omit `package-lock.json`, and the trusted canonical snapshot was taken before
+prefetch generated one, so online warmup and offline grading could resolve
+different dependency graphs.
+
+JavaScript prefetch now explicitly generates a lock and copies it into the
+pre-agent canonical snapshot. The later isolated verifier therefore installs
+the exact graph fetched before network isolation rather than resolving mutable
+registry ranges. This lock is trusted verifier metadata because it is created
+before the agent starts; model-authored package metadata remains excluded.
+
+Evidence: the RED regression failed because the canonical snapshot lacked the
+generated lock; 49 focused Aider tests and the full 266-test suite pass after
+the fix. A real pinned `javascript/beer-song` materialization fetched
+dependencies, retained the resolved lock, and passed all 9 activated canonical
+tests in the offline verifier using a previously audited solution artifact.
+The original Laguna row remains diagnostic: its 0/49 JavaScript stratum is
+infrastructure-invalid and must be regraded or rerun before publishing a
+headline score.
+
+Status: `fixed (unit + real-artifact offline-verifier integration)`.
+
 ### Aider hidden-test contamination (2026-08-12 follow-up)
 
 The earlier isolation cutover excluded reference `.meta/.approaches` dirs but

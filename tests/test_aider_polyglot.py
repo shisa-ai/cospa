@@ -349,6 +349,43 @@ def test_prepare_agent_dependencies_prefetches_only_networked_toolchains(
         assert mock_run.call_args.args[0][: len(expected_prefix)] == expected_prefix
 
 
+def test_prepare_javascript_dependencies_pins_lock_in_canonical_snapshot():
+    """Offline grading must resolve the exact packages fetched before the agent."""
+    suite = AiderPolyglotSuite()
+    with tempfile.TemporaryDirectory() as tmp:
+        root = Path(tmp)
+        workdir = root / "workdir"
+        canonical = root / "canonical"
+        workdir.mkdir()
+        canonical.mkdir()
+        package_json = '{"scripts":{"test":"jest ./*"},"devDependencies":{"jest":"^29.7.0"}}\n'
+        (workdir / "package.json").write_text(package_json)
+        (canonical / "package.json").write_text(package_json)
+
+        def fake_install(command, **kwargs):
+            Path(kwargs["cwd"], "package-lock.json").write_text(
+                '{"lockfileVersion":3,"packages":{"node_modules/jest":{"version":"29.7.0"}}}\n'
+            )
+            return subprocess.CompletedProcess(
+                args=command, returncode=0, stdout="installed\n", stderr=""
+            )
+
+        with patch(
+            "harness.suites.aider_polyglot.run_command", side_effect=fake_install
+        ):
+            suite.prepare_agent_dependencies(
+                {
+                    "language": "javascript",
+                    "_canonical_dir": str(canonical),
+                },
+                workdir,
+            )
+
+        assert (canonical / "package-lock.json").read_text() == (
+            workdir / "package-lock.json"
+        ).read_text()
+
+
 @pytest.mark.parametrize(
     ("language", "expected_flag"),
     [("javascript", "--offline"), ("java", "--offline"), ("rust", "--offline")],

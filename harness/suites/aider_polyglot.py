@@ -360,6 +360,7 @@ class AiderPolyglotSuite:
             command = [
                 "npm",
                 "install",
+                "--package-lock",
                 "--no-audit",
                 "--no-fund",
                 "--ignore-scripts",
@@ -405,6 +406,26 @@ class AiderPolyglotSuite:
             raise RuntimeError(
                 f"Dependency prefetch failed for {language}: {output[-2000:]}"
             )
+
+        if language in {"javascript", "typescript"}:
+            # The upstream exercises intentionally omit package-lock.json. A
+            # later offline install must use the exact dependency graph fetched
+            # here; otherwise refreshed registry metadata can select a newer
+            # tarball that was never cached. This runs before the agent, so the
+            # generated lock remains trusted canonical verifier metadata.
+            package_lock = workdir / "package-lock.json"
+            canonical_value = task_data.get("_canonical_dir")
+            if canonical_value:
+                canonical_dir = Path(canonical_value)
+                if not package_lock.is_file():
+                    raise RuntimeError(
+                        "JavaScript dependency prefetch did not create package-lock.json"
+                    )
+                if not canonical_dir.is_dir():
+                    raise RuntimeError(
+                        f"Canonical verifier snapshot is missing: {canonical_dir}"
+                    )
+                shutil.copy2(package_lock, canonical_dir / package_lock.name)
 
     def verify(self, task_data: Dict[str, Any], workdir: Path) -> Dict[str, Any]:
         """

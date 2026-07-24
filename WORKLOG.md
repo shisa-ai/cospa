@@ -1469,6 +1469,29 @@ Append-only development log for the `cospa` repository.
   application against agent-modified trees, and repeat multilingual gold/no-op
   checks before another protected model run or any core48 selection.
 
+## 2026-07-24 — Pin JavaScript dependencies before offline grading
+
+- Context: the Laguna S 2.1 `pi_devstack` Aider run completed 225 tasks, but all
+  49 JavaScript verifiers failed before tests because online prefetch cached
+  `electron-to-chromium@1.5.395` while the later lockless offline install
+  resolved newly published `1.5.396` from mutable registry metadata.
+- RED evidence: the focused prefetch regression proved that npm generated a
+  lock only in the agent workdir and left the trusted canonical snapshot
+  unpinned.
+- Decision: require npm to generate `package-lock.json` during networked
+  prefetch and copy that pre-agent lock into the canonical verifier snapshot.
+  Offline grading now installs the exact dependency graph already fetched;
+  model-authored package metadata remains excluded.
+- GREEN evidence: 49 focused Aider tests pass. A real pinned JavaScript
+  `beer-song` materialization warmed dependencies and passed all 9 activated
+  canonical tests offline with a previously audited solution artifact.
+- Verification: the full suite reports 266 passed when the shell test's common
+  localhost endpoint probe is masked; an ordinary run reports 265 passed and
+  one unrelated shell-test failure because the live Ornith server on port 8000
+  invalidates that test's assumption that no common local endpoint exists.
+- Next action: non-destructively regrade or cleanly rerun the Laguna JavaScript
+  stratum before treating its raw 116/225 row as a headline score.
+
 ## 2026-07-22 — Add Laguna S 2.1 to the local model shortlist
 
 - Context: Poolside released Laguna S 2.1 after the original model survey; its

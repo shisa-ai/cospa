@@ -1506,6 +1506,23 @@ Append-only development log for the `cospa` repository.
 - Next action: regrade the 49 Laguna JavaScript artifacts non-destructively and
   retain a run-level audit rather than overwriting the original verdicts.
 
+## 2026-07-24 — Close the Laguna JavaScript regrade
+
+- Context: the source run's 49 JavaScript verdicts were infrastructure-invalid,
+  but all saved agent executions and solution workdirs were intact, making a
+  model rerun unnecessary after the canonical npm-lock repair.
+- Evidence: all 49 artifacts regraded against clean vendor commit `7e0611e`
+  with the canonical verifier and zero errors. Thirty-six passed; thirteen
+  reached native Jest test failures, with no remaining npm setup failures.
+- Decision: preserve every original verdict and retain the corrected audit at
+  `results/audits/laguna-s21-pi-devstack-javascript-regrade-20260724/`.
+  No `pre-reverify` backups exist because source artifacts were not rewritten.
+- Result: corrected JavaScript is 36/49 (73.5%). Combined with the original
+  116/176 non-JavaScript outcomes, the audited composite is **152/225 (67.6%)**.
+  The viewer's raw 116/225 row remains diagnostic rather than score-of-record.
+- Next action: use the audit composite for comparison, or add first-class
+  audited-composite viewer support instead of mutating historical verdicts.
+
 ## 2026-07-22 — Add Laguna S 2.1 to the local model shortlist
 
 - Context: Poolside released Laguna S 2.1 after the original model survey; its

@@ -1393,6 +1393,20 @@ fresh trusted materialization before overlaying and grading the saved model
 solution. The same pre-agent lock invariant therefore applies to both new runs
 and historical regrading.
 
+e corrected non-destructive regrade then covered all 49 Laguna JavaScript
+artifacts with zero errors against clean vendor commit `7e0611e`. Thirty-six
+saved solutions passed and thirteen reached native Jest failures; none retained
+the npm setup error. All 49 records used the canonical verifier, and no source
+verdict was overwritten. Combining 36/49 corrected JavaScript outcomes with
+the original 116/176 non-JavaScript outcomes yields an audited **152/225
+(67.6%)** composite. The original viewer row remains intentionally unchanged;
+the audit under
+`results/audits/laguna-s21-pi-devstack-javascript-regrade-20260724/` is the
+corrected score evidence.
+
+Status: `fixed (unit + full-stratum real-artifact regrade)`. No model rerun is
+needed for this verifier-only failure.
+
 Status: `fixed (unit test)`; the corrected 49-task Laguna regrade is the
 remaining operational validation.
 

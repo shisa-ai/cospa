@@ -1407,6 +1407,47 @@ corrected score evidence.
 Status: `fixed (unit + full-stratum real-artifact regrade)`. No model rerun is
 needed for this verifier-only failure.
 
+# Laguna vs Ornith failure-mechanics audit (2026-07-25 UTC)
+
+A trace-level comparison explained most of the corrected 152/225 Laguna versus
+217/225 Ornith `pi_devstack` gap. A fresh non-destructive canonical regrade of
+all 225 Ornith artifacts preserved 224 verdicts exactly and preserved one
+adapter-failed trial as a policy failure, confirming 217/225 against clean
+vendor commit `7e0611e`.
+
+All 73 corrected Laguna failures ended with `stopReason: length` at the model's
+32,768-token output ceiling, made no edit/write call, and left every declared
+solution file byte-identical to the clean starter. There were no Laguna
+failures without this signature. Three additional cap-hit trials passed only
+because their pre-implemented/refactor starters already satisfied the tests.
+The largest capped response used 84,118 total context tokens, far below the
+524,288 context window: this was per-response output exhaustion, not context
+exhaustion or trial timeout. Most failures stopped within three or four model
+responses, so the dominant loop was repetitive internal reasoning rather than
+repeated external tool calls.
+
+Representative matched-effort traces show Ornith writing early and using
+compiler/test feedback (`cpp/robot-name`, `rust/xorcism`), while Laguna
+correctly identifies requirements but reasons until truncation without
+creating an implementation. Ornith is not immune: both models eventually cap
+on `rust/react`, but Ornith first makes five edits and reaches native test
+feedback. `rust/dot-dsl` is a separate policy edge: Ornith's modular workdir
+passes 9/9 when its four new helper source files are admitted, but canonical
+solution-only grading intentionally excludes those undeclared files.
+
+The score gap is not an intrinsic-model controlled comparison. Both cells use
+the same nominal adapter and tasks, but observed thinking is mixed (Laguna:
+193 medium / 32 high; Ornith: 52 medium / 23 off / 150 high) and output ceilings
+differ (32,768 versus 81,920). The exact 84-task observed-effort-matched subset
+still favors Ornith 79/84 to 57/84, so effort mix alone does not explain the
+behavior. Future recovery work should explicitly pin thinking, test Laguna
+`off`/`low`/`medium` on a fixed failed-task subset, and treat one-shot
+continuation after a length stop as a separately labeled scaffold ablation.
+
+Status: `analyzed (full trace audit + canonical comparison regrade)`. Durable
+machine-readable and representative-task evidence is under
+`results/audits/laguna-vs-ornith-pi-devstack-analysis-20260725/`.
+
 Status: `fixed (unit test)`; the corrected 49-task Laguna regrade is the
 remaining operational validation.
 

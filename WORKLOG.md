@@ -1523,6 +1523,36 @@ Append-only development log for the `cospa` repository.
 - Next action: use the audit composite for comparison, or add first-class
   audited-composite viewer support instead of mutating historical verdicts.
 
+## 2026-07-25 — Explain the Laguna–Ornith outcome gap
+
+- Context: corrected Laguna scored 152/225 under `pi_devstack`, far below the
+  historical Ornith row, so the saved traces and workdirs needed a mechanical
+  failure audit before attributing the difference to model quality.
+- Canonical evidence: a fresh, non-destructive 225-task Ornith regrade against
+  clean vendor commit `7e0611e` preserved 224 verdicts and one adapter-policy
+  failure, confirming 217/225. No source artifacts were overwritten.
+- Laguna evidence: all 73 failures hit `stopReason: length` at exactly 32,768
+  output tokens, made no edit/write call, and retained clean-starter-identical
+  declared solution files. Zero failures lacked that signature; three further
+  cap-hit trials were no-op passes on already-implemented/refactor starters.
+- Decision: classify the dominant failure as model/server action-control under
+  a per-response output cap, not context exhaustion, timeout, verifier failure,
+  or a repeated external tool loop. Capped responses used at most 84,118 of the
+  524,288-token context window.
+- Comparison: Ornith passed 69 tasks Laguna failed by editing on median response
+  4 and iterating through tools/tests. Representative matched-effort examples
+  are `cpp/robot-name` and `rust/xorcism`; `go/matrix`, `rust/react`, and
+  `rust/dot-dsl` retain failure and grading-policy counterexamples.
+- Caveat: cells did not pin identical effort or output ceilings. Observed effort
+  was Laguna 193 medium / 32 high versus Ornith 52 medium / 23 off / 150 high;
+  ceilings were 32,768 versus 81,920. The exact 84-task effort-matched subset
+  still favors Ornith 79/84 to 57/84.
+- Durable evidence:
+  `results/audits/laguna-vs-ornith-pi-devstack-analysis-20260725/`.
+- Next action: run a fixed Laguna failed-task recovery subset with explicit
+  `off`/`low`/`medium` thinking before testing a separately labeled
+  continue-after-length scaffold intervention.
+
 ## 2026-07-22 — Add Laguna S 2.1 to the local model shortlist
 
 - Context: Poolside released Laguna S 2.1 after the original model survey; its

@@ -1448,6 +1448,32 @@ Status: `analyzed (full trace audit + canonical comparison regrade)`. Durable
 machine-readable and representative-task evidence is under
 `results/audits/laguna-vs-ornith-pi-devstack-analysis-20260725/`.
 
+# Matched nominal-off / 32K-cap comparison (2026-07-26)
+
+Full 225-task `pi_devstack` cells completed with explicit Pi `--thinking off`
+and a matched 32,768-token output ceiling. Laguna passed **172/225 (76.4%)**;
+Ornith passed **211/225 (93.8%)**. Paired outcomes were 168 both-pass, 43
+Ornith-only, four Laguna-only, and ten both-fail. Neither cell retained an
+adapter failure.
+
+The matched cap changed both models materially. Laguna improved by 20 tasks
+from its corrected mixed-effort result as cap-failure trials fell from 73 to
+53. Ornith fell by six tasks from its historical 81,920-cap result as cap hits
+rose from one to ten. All 53 Laguna failures still hit the output cap, and 50
+made no edit/write call. All ten cap-hit Ornith tasks failed.
+
+The experiment did **not** disable server-native reasoning. Every Ornith
+assistant message and 1,439/1,957 Laguna assistant messages retained parsed
+thinking. Direct endpoint probes disable it only when the vLLM request includes
+`chat_template_kwargs: {"enable_thinking": false}`; Pi `--thinking off`
+recorded a zero local budget but did not inject that field. These are therefore
+qualified as matched **nominal Pi thinking-off** cells, not true no-reasoning
+model scores.
+
+Status: `analyzed (two full end-to-end cells; server-off condition not met)`.
+Durable evidence is under
+`results/audits/laguna-vs-ornith-pi-devstack-nominal-off-matched-cap-20260726/`.
+
 Status: `fixed (unit test)`; the corrected 49-task Laguna regrade is the
 remaining operational validation.
 

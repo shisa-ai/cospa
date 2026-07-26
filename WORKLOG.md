@@ -1553,6 +1553,28 @@ Append-only development log for the `cospa` repository.
   `off`/`low`/`medium` thinking before testing a separately labeled
   continue-after-length scaffold intervention.
 
+## 2026-07-26 — Compare matched nominal-off model cells
+
+- Context: run full Laguna and Ornith `pi_devstack` cells with the same 225
+  tasks, k=1, explicit Pi `--thinking off`, and 32,768-token output ceiling.
+- Result: Laguna passed 172/225 (76.4%); Ornith passed 211/225 (93.8%). Paired
+  outcomes were 168 both-pass, 43 Ornith-only, four Laguna-only, and ten
+  both-fail. Neither cell retained an adapter failure.
+- Cap evidence: all 53 Laguna failures hit the output ceiling, versus ten of 14
+  Ornith failures. Laguna improved 20 tasks over its corrected mixed-effort
+  cell as cap failures dropped from 73 to 53; matched-cap Ornith dropped six
+  tasks from its prior 81,920-cap cell as cap hits rose from one to ten.
+- Qualification finding: Pi recorded thinking `off`, but server reasoning was
+  not disabled. Every Ornith assistant response and 1,439/1,957 Laguna responses
+  retained thinking. Direct probes require
+  `chat_template_kwargs.enable_thinking=false`, which Pi did not inject.
+- Decision: retain and label these as matched **nominal Pi thinking-off** cells,
+  not true no-reasoning scores.
+- Durable evidence:
+  `results/audits/laguna-vs-ornith-pi-devstack-nominal-off-matched-cap-20260726/`.
+- Next action: qualify a small server-off recovery subset before considering
+  another full 225-task pair.
+
 ## 2026-07-22 — Add Laguna S 2.1 to the local model shortlist
 
 - Context: Poolside released Laguna S 2.1 after the original model survey; its

@@ -63,6 +63,19 @@ def _command_model_id(cmd: Sequence[str]) -> str | None:
     return str(values[index + 1]) if index + 1 < len(values) else None
 
 
+def _command_session_dir(cmd: Sequence[str]) -> Path | None:
+    """Return an absolute explicit pi session directory, when requested."""
+    values = list(cmd)
+    try:
+        index = values.index("--session-dir")
+    except ValueError:
+        return None
+    if index + 1 >= len(values):
+        return None
+    path = Path(str(values[index + 1])).expanduser()
+    return path.resolve() if path.is_absolute() else None
+
+
 def _write_private_agent_config(agent_dir: Path, model_id: str | None) -> None:
     """Create the smallest pi config needed by one selected model."""
     source_dir = Path.home() / ".pi" / "agent"
@@ -146,6 +159,7 @@ def _sandbox_agent_command(
     sessions_root = pi_home / "agent" / "sessions"
     encoded_cwd = str(sandbox_cwd).strip("/").replace("/", "-")
     trial_session_dir = sessions_root / f"--{encoded_cwd}--"
+    explicit_session_dir = _command_session_dir(cmd)
     endpoint = urlparse(model_url) if model_url else None
     if endpoint and (
         endpoint.scheme not in {"http", "https"} or not endpoint.hostname
@@ -213,7 +227,8 @@ def _sandbox_agent_command(
         wrapped.extend(["--ro-bind", str(nvm_version), str(nvm_version)])
 
     if endpoint:
-        trial_session_dir.mkdir(parents=True, exist_ok=True)
+        persisted_session_dir = explicit_session_dir or trial_session_dir
+        persisted_session_dir.mkdir(parents=True, exist_ok=True)
         private_agent = sandbox_root / "agent"
         _write_private_agent_config(private_agent, _command_model_id(cmd))
 
@@ -229,13 +244,14 @@ def _sandbox_agent_command(
                 wrapped.extend(
                     ["--ro-bind", str(source), str(pi_home / "agent" / dirname)]
                 )
-        wrapped.extend(
-            [
-                "--bind",
-                str(trial_session_dir),
-                str(pi_home / "agent" / "sessions" / trial_session_dir.name),
-            ]
-        )
+        if explicit_session_dir is None:
+            wrapped.extend(
+                [
+                    "--bind",
+                    str(trial_session_dir),
+                    str(pi_home / "agent" / "sessions" / trial_session_dir.name),
+                ]
+            )
 
     cache_dir = Path.home() / ".cache"
     _append_dir_options(wrapped, [cache_dir])
@@ -294,6 +310,17 @@ def _sandbox_agent_command(
             "/tmp",
             "--tmpfs",
             "/run",
+        ]
+    )
+    if explicit_session_dir is not None and not (
+        explicit_session_dir == workdir or workdir in explicit_session_dir.parents
+    ):
+        _append_dir_options(wrapped, [explicit_session_dir])
+        wrapped.extend(
+            ["--bind", str(explicit_session_dir), str(explicit_session_dir)]
+        )
+    wrapped.extend(
+        [
             "--bind",
             str(workdir),
             str(sandbox_cwd),

@@ -103,6 +103,31 @@ def test_agent_sandbox_hides_shared_data_and_writes_trial(tmp_path):
     assert (tmp_path / "sandbox-write").exists()
 
 
+def test_agent_sandbox_persists_explicit_session_dir(tmp_path):
+    """An adapter's --session-dir must survive the empty-root sandbox."""
+    workdir = tmp_path / "workdir"
+    workdir.mkdir()
+    session_dir = tmp_path / "out" / "pi-sessions"
+    session_file = session_dir / "session.jsonl"
+
+    with _http_server() as allowed_port:
+        result = subprocess_utils.run_command(
+            [
+                "/bin/bash",
+                "-c",
+                f"touch {shlex.quote(str(session_file))}",
+                "--session-dir",
+                str(session_dir),
+            ],
+            sandbox_workdir=workdir,
+            sandbox_name="all-your-base",
+            sandbox_model_url=f"http://127.0.0.1:{allowed_port}/v1",
+        )
+
+    assert result.returncode == 0
+    assert session_file.exists()
+
+
 def test_verifier_sandbox_has_no_model_or_public_network(tmp_path):
     """Model-written code executed by a verifier stays hermetically isolated."""
     project_root = Path(__file__).resolve().parents[1]

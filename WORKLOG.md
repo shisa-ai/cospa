@@ -1155,3 +1155,32 @@ Append-only development log for the `cospa` repository.
 - Next action: run both thinking modes with preserved reasoning on one PRO
   6000, record token counts/tool-call recovery, then validate NVFP4+DFlash
   speed and 262K-context memory use before promoting it to the matrix.
+
+## 2026-08-01 — Persist trial-local sessions through sandbox
+
+- Context: the first real DS4 `pi_devstack` Aider run passed all 17 native
+  assertions, but its manifest had empty token usage. Pi received the explicit
+  trial-local `--session-dir`, yet the empty-root sandbox did not expose that
+  path, so no trace survived. After mounting it, collection still rejected the
+  trace because its header records the sandbox's virtual cwd rather than the
+  host workdir.
+- RED evidence: `test_agent_sandbox_persists_explicit_session_dir` failed when
+  the sandbox could not touch a trace outside its workdir, and
+  `test_run_trial_collects_trial_local_session_from_sandbox_cwd` failed with
+  unavailable usage for a trial-local trace carrying the virtual cwd.
+- Decision: recognize absolute `--session-dir` arguments, bind only that
+  directory into the hermetic namespace after `/tmp` and `/run` tmpfs setup,
+  then pair it with the virtual sandbox cwd during telemetry collection before
+  retaining the legacy global-session fallback.
+- GREEN evidence: both regression tests pass, along with the existing explicit
+  session, legacy virtual-cwd, and real sandbox boundary tests. A fresh real
+  `ds4/deepseek-v4-flash-0731` + `pi_devstack` run solved
+  `cpp/all-your-base` in 27.1 seconds, passed 17/17 assertions, copied
+  `out/pi_session.jsonl`, and recorded seven responses, 99,805 summed prompt
+  tokens, and 1,158 output tokens.
+- Validation: full pytest reports `228 passed, 2 skipped, 2 failed`; this is two
+  additional passes with the same pre-existing port-8080 fixture collision and
+  PyYAML block-scalar newline failure. The shell harness retains its same one
+  port-8080 collision; all other 46 assertions pass. `git diff --check` passes.
+- Next action: keep the one-task DS4 result as bounded smoke evidence only;
+  choose a multi-language slice before making a suite-level quality claim.

@@ -586,3 +586,49 @@ def test_run_trial_collects_session_from_sandbox_cwd(monkeypatch):
     assert verdict["passed"] is True
     assert manifest["token_usage"]["status"] == "observed"
     assert manifest["token_usage"]["prompt_tokens"] == 300
+
+
+def test_run_trial_collects_trial_local_session_from_sandbox_cwd(monkeypatch):
+    """Explicit --session-dir traces retain the sandbox's virtual cwd."""
+    suite = AiderPolyglotSuite()
+
+    class TrialLocalSandboxedSessionAdapter:
+        name = "pi_devstack"
+        version = "test"
+        uses_workspace_sandbox = True
+
+        def run(self, task_data, workdir, log_file, stderr_file):
+            (workdir / "two_fer.py").write_text(
+                "def two_fer(name=None):\n"
+                "    return 'One for you, one for me.' if name is None else f'One for {name}, one for me.'\n"
+            )
+            virtual_cwd = agent_sandbox_cwd(workdir, "two-fer")
+            session_dir = log_file.parent / "pi-sessions"
+            _write_jsonl(
+                session_dir / "2026-07-04T14-07-07Z_session.jsonl",
+                _session_events(virtual_cwd),
+            )
+            return AdapterResult(returncode=0)
+
+    with tempfile.TemporaryDirectory() as tmp:
+        tmp = Path(tmp)
+        vendor_dir = tmp / "vendor"
+        vendor_dir.mkdir()
+        _make_problem(vendor_dir)
+        results_dir = tmp / "results"
+
+        manifest, verdict = run_trial(
+            suite,
+            TrialLocalSandboxedSessionAdapter(),
+            "local/ornith-1.0-35b",
+            "python/two-fer",
+            1,
+            results_dir,
+            vendor_dir,
+            thinking="high",
+        )
+
+    assert verdict["passed"] is True
+    assert manifest["token_usage"]["status"] == "observed"
+    assert manifest["token_usage"]["prompt_tokens"] == 300
+    assert manifest["token_usage"]["trace_files"] == ["out/pi_session.jsonl"]

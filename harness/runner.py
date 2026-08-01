@@ -657,9 +657,17 @@ def run_trial(
             session_usage = collect_pi_session_usage(
                 fallback_workdir,
                 out_dir,
+                session_dir=out_dir / "pi-sessions",
                 start_time=start_time,
                 end_time=time.time(),
             )
+            if session_usage.get("status") != "observed":
+                session_usage = collect_pi_session_usage(
+                    fallback_workdir,
+                    out_dir,
+                    start_time=start_time,
+                    end_time=time.time(),
+                )
     if session_usage.get("status") == "observed":
         manifest["token_usage"] = session_usage
         response_models = session_usage.get("response_models")

@@ -1184,3 +1184,32 @@ Append-only development log for the `cospa` repository.
   port-8080 collision; all other 46 assertions pass. `git diff --check` passes.
 - Next action: keep the one-task DS4 result as bounded smoke evidence only;
   choose a multi-language slice before making a suite-level quality claim.
+
+## 2026-08-02 — Correct special-case Aider grading
+
+- Context: the first complete DS4 Aider campaign produced two false-negative
+  verdicts among its 11 apparent failures. A root C++ build executable named
+  `complex-numbers` shadowed the verifier's same-name source alias, and Go's
+  test-design-only `counter` exercise was run without selecting its four
+  supplied implementations.
+- RED evidence:
+  `test_verify_cpp_replaces_generated_binary_at_source_alias` observed a
+  regular file instead of the required source symlink, while
+  `test_verify_go_counter_checks_all_implementations` observed one generic
+  `go test` command instead of the task's required implementation matrix.
+- Decision: reserve and recreate the C++ source alias inside the disposable
+  verification copy. For `go/counter`, require model-authored tests to reject
+  known-bad `COUNTER_IMPL=1,2,3` and pass correct `COUNTER_IMPL=4`; other Go
+  exercises retain the generic verifier.
+- GREEN evidence: both regression tests pass. Real dry-run reverification of
+  the preserved DS4 workdirs changes `cpp/complex-numbers` from 0 tests to
+  40 passing cases and `go/counter` from an unset-env failure to four passing
+  model-authored test cases. Write-mode reverification retained timestamped old
+  verdict backups and recorded the replacement verdict metadata.
+- Validation: full pytest reports `230 passed, 2 skipped, 2 failed`; the only
+  failures remain the documented port-8080 fixture collision and PyYAML
+  block-scalar newline assertion. The shell harness retains its same one port
+  collision and all other 46 assertions pass. Python compilation and
+  `git diff --check` pass.
+- Next action: dry-run reverify all 225 DS4 trials for any additional grader
+  drift, then retain and report the corrected full score.

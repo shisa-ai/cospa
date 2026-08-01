@@ -459,6 +459,51 @@ def test_verify_cpp_uses_clean_copy_without_agent_build_cache():
         assert verdict["passed"] is True
 
 
+def test_verify_cpp_replaces_generated_binary_at_source_alias():
+    """A root build executable must not shadow the verifier's source alias."""
+    suite = AiderPolyglotSuite()
+    captured = {}
+
+    def fake_run(cmd, **kwargs):
+        cwd = Path(kwargs["cwd"])
+        source_alias = cwd / "complex-numbers"
+        captured["is_symlink"] = source_alias.is_symlink()
+        captured["resolves_to_cwd"] = source_alias.resolve() == cwd.resolve()
+        return subprocess.CompletedProcess(
+            args=cmd,
+            returncode=0,
+            stdout="All tests passed (69 assertions in 40 test cases)\n",
+            stderr="",
+        )
+
+    with tempfile.TemporaryDirectory() as tmp:
+        workdir = Path(tmp) / "workdir"
+        workdir.mkdir()
+        (workdir / "CMakeLists.txt").write_text(
+            "add_custom_target(test_complex-numbers)\n"
+        )
+        (workdir / "complex_numbers.cpp").write_text("// solution\n")
+        generated_binary = workdir / "complex-numbers"
+        generated_binary.write_bytes(b"generated executable")
+        generated_binary.chmod(0o755)
+
+        with patch(
+            "harness.suites.aider_polyglot.run_command", side_effect=fake_run
+        ):
+            verdict = suite.verify(
+                {
+                    "language": "cpp",
+                    "problem": "complex-numbers",
+                    "timeout": 1,
+                },
+                workdir,
+            )
+
+    assert captured["is_symlink"] is True
+    assert captured["resolves_to_cwd"] is True
+    assert verdict["passed"] is True
+
+
 def test_verify_cpp_rejects_symlinks_outside_trial():
     """Host-side grading must not follow a guessed link into shared data."""
     suite = AiderPolyglotSuite()
@@ -559,6 +604,33 @@ def test_verify_java_drops_invalid_java_home(monkeypatch):
     env = mock_run.call_args.kwargs["env"]
     assert "JAVA_HOME" not in env
     assert verdict["passed"] is True
+
+
+def test_verify_go_counter_checks_all_implementations():
+    """The counter test-design task must reject Impl1-3 and accept Impl4."""
+    suite = AiderPolyglotSuite()
+
+    with tempfile.TemporaryDirectory() as tmp:
+        with patch("harness.suites.aider_polyglot.run_command") as mock_run:
+            mock_run.return_value = subprocess.CompletedProcess(
+                args=["bash"],
+                returncode=0,
+                stdout="=== RUN   TestCounter\n--- PASS: TestCounter (0.00s)\nPASS\n",
+                stderr="",
+            )
+            verdict = suite.verify(
+                {"language": "go", "problem": "counter", "timeout": 1},
+                Path(tmp),
+            )
+
+    cmd = mock_run.call_args[0][0]
+    assert cmd[:2] == ["bash", "-c"]
+    shell_cmd = cmd[2]
+    for implementation in (1, 2, 3, 4):
+        assert f"COUNTER_IMPL={implementation}" in shell_cmd
+    assert "unexpectedly passed" in shell_cmd
+    assert verdict["passed"] is True
+    assert verdict["test_count"] == 1
 
 
 def test_verify_javascript_installs_exercise_dependencies_first():

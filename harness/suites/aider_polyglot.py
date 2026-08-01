@@ -293,7 +293,28 @@ class AiderPolyglotSuite:
             else:
                 cmd = ["npx", "jest", "--verbose"]
         elif language == "go":
-            cmd = ["go", "test", "./...", "-v", "-timeout", "5m"]
+            if task_data.get("problem") == "counter":
+                reject_incorrect = []
+                for implementation in (1, 2, 3):
+                    log_path = f"/tmp/cospa-counter-{implementation}.log"
+                    reject_incorrect.append(
+                        f"if COUNTER_IMPL={implementation} go test ./... -v "
+                        f"-timeout 5m >{log_path} 2>&1; then "
+                        f"cat {log_path}; "
+                        f"echo 'COUNTER_IMPL={implementation} unexpectedly passed' >&2; "
+                        "exit 1; "
+                        "else "
+                        f"echo 'COUNTER_IMPL={implementation} correctly rejected'; "
+                        "fi"
+                    )
+                cmd = [
+                    "bash",
+                    "-c",
+                    "; ".join(reject_incorrect)
+                    + "; COUNTER_IMPL=4 go test ./... -v -timeout 5m",
+                ]
+            else:
+                cmd = ["go", "test", "./...", "-v", "-timeout", "5m"]
         elif language == "java":
             gradle_cmd = "./gradlew" if (workdir / "gradlew").exists() else "gradle"
             cmd = [gradle_cmd, "test", "--info", "--offline"]
@@ -366,8 +387,11 @@ class AiderPolyglotSuite:
                     self._copy_for_verification(workdir, verify_dir)
                     if language in {"c", "cpp"} and task_data.get("problem"):
                         source_link = verify_dir / task_data["problem"]
-                        if not source_link.exists():
-                            source_link.symlink_to(".", target_is_directory=True)
+                        if source_link.is_dir() and not source_link.is_symlink():
+                            shutil.rmtree(source_link)
+                        elif source_link.exists() or source_link.is_symlink():
+                            source_link.unlink()
+                        source_link.symlink_to(".", target_is_directory=True)
                     return self._run_verifier_commands(
                         setup_cmds,
                         cmd,

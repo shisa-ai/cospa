@@ -26,6 +26,8 @@ from collections import Counter
 from pathlib import Path
 from unittest.mock import patch
 
+import pytest
+
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(PROJECT_ROOT))
 
@@ -803,6 +805,114 @@ def test_default_harbor_devstack_profile_disables_headless_unsafe_packages(tmp_p
         assert entry["prompts"] == []
         assert entry["themes"] == []
 
+def test_run_harbor_job_mounts_pinned_measuretwice_source_for_recovery_arms():
+    """Measure Twice arms must load one clean, commit-pinned read-only source."""
+    suite = TerminalBenchSuite()
+    commands = {}
+
+    def fake_run(cmd, **kwargs):
+        import subprocess as sp
+        if cmd[:2] == ["harbor", "run"]:
+            commands[current_adapter] = list(cmd)
+        return sp.CompletedProcess(args=cmd, returncode=0, stdout="", stderr="")
+
+    with tempfile.TemporaryDirectory() as tmp:
+        tmp = Path(tmp)
+        source = tmp / "pi-measuretwice"
+        extension = source / "extensions" / "pi-measuretwice"
+        extension.mkdir(parents=True)
+        (extension / "index.ts").write_text("export default function extension() {}\n")
+        import subprocess as sp
+        sp.run(["git", "init", "-q"], cwd=source, check=True)
+        sp.run(["git", "add", "extensions/pi-measuretwice/index.ts"], cwd=source, check=True)
+        sp.run(
+            [
+                "git", "-c", "user.name=Test", "-c", "user.email=test@example.invalid",
+                "commit", "-qm", "fixture",
+            ],
+            cwd=source,
+            check=True,
+        )
+        commit = sp.run(
+            ["git", "rev-parse", "HEAD"], cwd=source, check=True,
+            capture_output=True, text=True,
+        ).stdout.strip()
+        workdir = tmp / "workdir"
+        _make_local_harbor_task(workdir)
+        adapters = (
+            "pi_measuretwice_check_same",
+            "pi_measuretwice_check_cross",
+            "pi_measuretwice_repair_same",
+            "pi_measuretwice_repair_cross",
+        )
+        with patch.dict(
+            os.environ,
+            {
+                "CODING_EVAL_HARBOR_MODEL_BASE_URL": "http://model-relay:8013/v1",
+                "CODING_EVAL_MEASURETWICE_ROOT": str(source),
+                "CODING_EVAL_MEASURETWICE_COMMIT": commit,
+                "CODING_EVAL_MEASURETWICE_REVIEWER_MODEL_ID": "gpt-5.6-luna",
+            },
+        ), patch(
+            "harness.suites.terminal_bench.run_command", side_effect=fake_run,
+        ):
+            for current_adapter in adapters:
+                suite.run_harbor_job(
+                    "hello-world", "test/model", current_adapter,
+                    workdir, tmp / "jobs", 1,
+                )
+            (extension / "index.ts").write_text("// dirty\n")
+            with pytest.raises(RuntimeError, match="must be clean"):
+                suite._measuretwice_mounts("pi_measuretwice_repair_same")
+
+    assert set(commands) == set(adapters)
+    agents = {
+        adapter: cmd[cmd.index("--agent") + 1]
+        for adapter, cmd in commands.items()
+    }
+    assert len(set(agents.values())) == len(adapters)
+    for adapter, cmd in commands.items():
+        mounts = json.loads(cmd[cmd.index("--mounts") + 1])
+        assert mounts == [{
+            "type": "bind",
+            "source": str(extension.resolve()),
+            "target": "/opt/coding-eval-measuretwice",
+            "read_only": True,
+        }], adapter
+
+
+def test_run_harbor_job_rejects_cross_review_without_reviewer_model():
+    """Missing reviewer identity is infrastructure failure before Harbor launch."""
+    suite = TerminalBenchSuite()
+    with tempfile.TemporaryDirectory() as tmp, patch.dict(
+        os.environ,
+        {"CODING_EVAL_HARBOR_MODEL_BASE_URL": "http://model-relay:8013/v1"},
+        clear=True,
+    ), patch("harness.suites.terminal_bench.run_command") as run:
+        workdir = Path(tmp) / "workdir"
+        _make_local_harbor_task(workdir)
+        result = suite.run_harbor_job(
+            "hello-world", "test/model", "pi_measuretwice_repair_cross",
+            workdir, Path(tmp) / "jobs", 1,
+        )
+
+    assert result["returncode"] == -1
+    assert "reviewer model" in result["stderr"].lower()
+    run.assert_not_called()
+
+
+def test_measuretwice_harbor_adapters_are_registered_for_terminal_bench():
+    """The outer runner needs distinct labels even though Harbor owns execution."""
+    from harness.adapters import load_adapter
+
+    for name in (
+        "pi_measuretwice_check_same",
+        "pi_measuretwice_check_cross",
+        "pi_measuretwice_repair_same",
+        "pi_measuretwice_repair_cross",
+    ):
+        assert load_adapter(name).name == name
+
 
 def test_run_harbor_job_sets_pythonpath_for_custom_agent_import():
     """The Harbor subprocess must be able to import harness.* custom agents."""
@@ -1225,6 +1335,41 @@ def test_harbor_agent_cli_exports_pi_session_traces(monkeypatch):
     assert "diff HEAD --text" in command, command
 
 
+def test_harbor_measuretwice_cross_repair_writes_config_and_exports_evidence(monkeypatch):
+    """Cross repair must load only Measure Twice, pin Luna, and retain evidence."""
+    harbor_agents = _import_harbor_agents_with_fake_terminal_bench(monkeypatch)
+
+    with patch.dict(
+        os.environ,
+        {
+            "CODING_EVAL_PI_PROVIDER_NAME": "pool",
+            "CODING_EVAL_MEASURETWICE_REVIEWER_MODEL_ID": "gpt-5.6-luna",
+            "CODING_EVAL_MEASURETWICE_REVIEWER_THINKING": "medium",
+        },
+        clear=True,
+    ):
+        agent = harbor_agents.PiMeasureTwiceRepairCrossHarborAgent(
+            "pool/Ornith-1.0-35B"
+        )
+        command = agent._run_agent_commands("solve it")[0].command
+        config = agent._measuretwice_config_payload()
+        env = agent._env
+
+    assert agent.pi_package_version == "0.80.3"
+    assert config["enabled"] is True
+    assert config["profile"] == "repair"
+    assert config["models"]["reviewer"] == "pool/gpt-5.6-luna"
+    assert config["budgets"]["maxRevisions"] == 1
+    assert "--no-extensions" in command
+    assert "--extension /opt/coding-eval-measuretwice/index.ts" in command
+    assert "measuretwice.json" in command
+    assert "measuretwice/evidence" in command
+    assert "measuretwice-evidence" in command
+    assert env["MEASURE_TWICE_EVAL_REVIEWER_THINKING_LEVEL"] == "medium"
+    assert env["MEASURE_TWICE_EVAL_REVIEWER_TEMPERATURE"] == "1"
+    assert env["MEASURE_TWICE_EVAL_REVIEWER_TOP_P"] == "0.95"
+
+
 def test_harbor_agent_cli_omits_thinking_when_unset(monkeypatch):
     """Default effort must remain provider/model default unless pinned."""
     harbor_agents = _import_harbor_agents_with_fake_terminal_bench(monkeypatch)
@@ -1234,6 +1379,26 @@ def test_harbor_agent_cli_omits_thinking_when_unset(monkeypatch):
         command = agent._run_agent_commands("solve it")[0].command
 
     assert "--thinking" not in command, command
+
+
+def test_recovery_candidate_file_is_ordered_unique_core_subset():
+    """The Harbor recovery launch set must remain predeclared and pinned."""
+    from harness.runner import select_task_ids
+
+    suite = TerminalBenchSuite()
+    declared = suite._dataset_manifest()["task_ids"]
+    tasks_file = PROJECT_ROOT / "configs" / "terminal_bench_recovery_candidates.txt"
+    selected = select_task_ids(declared, tasks_file=tasks_file)
+
+    assert selected == [
+        "fix-git",
+        "fix-pandas-version",
+        "sanitize-git-repo",
+        "sanitize-git-repo.hard",
+        "swe-bench-langcodes",
+        "swe-bench-fsspec",
+        "processing-pipeline",
+    ]
 
 
 def test_get_task_ids_uses_only_terminal_bench_core_0_1_1_subset():

@@ -264,6 +264,8 @@ that scaffold matrix: it is a no-tool, one-generation orthogonal anchor.
 | `pi_devstack_superpowers` | devstack extensions + the same pinned Superpowers profile | Direct `pi_devstack` vs `pi_devstack` + Superpowers bench ablation. |
 | `little_coder_superpowers` | `little_coder` + the same pinned Superpowers profile | Same Superpowers ablation for little-coder. |
 | `bigcodebench_openai` | One OpenAI-compatible user message; no system prompt or tools | Separate BigCodeBench protocol anchor; never compared as a scaffold arm. |
+| `pi_measuretwice_check_{same,cross}` | Harbor-only Pi + isolated Measure Twice review | Recovery detection calibration with the executor or a separate reviewer. |
+| `pi_measuretwice_repair_{same,cross}` | Harbor-only Pi + one bounded Measure Twice repair | Tests whether review-guided retry recovers a frozen executor failure. |
 
 Prediction (worth testing): little_coder > pi_devstack > pi_vanilla on
 both suites, with the gap widest on the smallest models. Superpowers
@@ -378,6 +380,16 @@ Terminal-Bench 2.1 remains a separate milestone campaign.
   browser, TUI, and host-native fetch packages from its private copy before Pi
   package discovery; distinct class names alone do not establish a distinct
   scaffold.
+  pi home, the `pi_devstack*` agents additionally mount a read-only, sanitized
+  package-profile snapshot; distinct class names alone do not establish a
+  distinct scaffold. Recovery campaigns may also select four Harbor-only
+  `pi_measuretwice_*` agents. They mount a clean, commit-pinned extension source,
+  install Pi 0.80.3, write a benchmark-only check/repair config, and export raw
+  evidence. Same arms inherit the executor; cross arms register one explicitly
+  selected reviewer on the same provider endpoint. Hidden Harbor tests remain
+  unavailable to Measure Twice, so final native verification—not an extension
+  receipt—is the quality authority. The first recovery launch set is frozen in
+  `configs/terminal_bench_recovery_candidates.txt`.
 - Network boundary: Harbor environment build and installed-agent setup may use
   public network for images/packages. Migrated local tasks are patched so the
   prompt-bearing `[agent]` phase uses `network_mode = "allowlist"` with only

@@ -66,6 +66,13 @@ _CODING_EVAL_AGENT_ENV_KEYS = (
     "CODING_EVAL_THINKING",
     "CODING_EVAL_REASONING_EFFORT",
     "CODING_EVAL_CLEAN_AGENT_PROCESSES",
+    "CODING_EVAL_MEASURETWICE_REVIEWER_MODEL_ID",
+    "CODING_EVAL_MEASURETWICE_REVIEWER_THINKING",
+    "CODING_EVAL_MEASURETWICE_REVIEWER_TEMPERATURE",
+    "CODING_EVAL_MEASURETWICE_REVIEWER_TOP_P",
+    "MEASURE_TWICE_EVAL_REVIEWER_THINKING_LEVEL",
+    "MEASURE_TWICE_EVAL_REVIEWER_TEMPERATURE",
+    "MEASURE_TWICE_EVAL_REVIEWER_TOP_P",
 )
 
 _CONTAINER_BENCH_SKILLS = superpowers_container_skill_paths()
@@ -81,6 +88,8 @@ _RUNTIME_ACTIVATION_INLINE = (
     f'export PATH="{_COMPAT_NODE_DIR}/bin:{_PI_RUNTIME_DIR}/bin:$PATH"; '
     'else . "${NVM_DIR:-$HOME/.nvm}/nvm.sh"; nvm use 22 >/dev/null; fi'
 )
+
+_MEASURETWICE_EXTENSION = "/opt/coding-eval-measuretwice/index.ts"
 
 _RUNTIME_DEPENDENCY_INSTALL_COMMAND = rf"""
 set -e
@@ -240,6 +249,50 @@ pi list
     )
 
 
+def _measuretwice_config_payload(
+    profile: str,
+    *,
+    cross_reviewer: bool,
+) -> dict[str, Any]:
+    reviewer = "inherit"
+    if cross_reviewer:
+        provider = os.environ.get("CODING_EVAL_PI_PROVIDER_NAME")
+        model_id = os.environ.get("CODING_EVAL_MEASURETWICE_REVIEWER_MODEL_ID")
+        if not provider or not model_id:
+            raise ValueError("cross review requires provider and reviewer model ID")
+        reviewer = f"{provider}/{model_id}"
+    return {
+        "schemaVersion": 1,
+        "enabled": True,
+        "profile": profile,
+        "models": {"reviewer": reviewer},
+        "budgets": {
+            "maxRevisions": 1,
+            "maxCandidates": 1,
+            "maxReviewerCalls": 2,
+            "maxReviewerOutputTokens": 8192,
+            "maxReviewerToolCalls": 16,
+            "maxAddedTokens": 120000,
+            "maxWallSeconds": 1200,
+        },
+        "verification": {
+            "commands": [],
+            "replayRecognizedExecutorChecks": False,
+            "commandTimeoutSeconds": 900,
+            "compareToBaseline": True,
+        },
+    }
+
+
+def _measuretwice_config_install_command(config: dict[str, Any]) -> str:
+    """Write one benchmark-only Measure Twice config without host settings."""
+    payload = json.dumps(config, sort_keys=True, separators=(",", ":"))
+    return "\n".join([
+        'mkdir -p "$HOME/.pi/agent"',
+        f"printf '%s\\n' {shlex.quote(payload)} > \"$HOME/.pi/agent/measuretwice.json\"",
+    ])
+
+
 def _wrap_with_pi_session_export(
     run_command: str,
     *,
@@ -274,6 +327,11 @@ def _wrap_with_pi_session_export(
         "fi",
         "artifact_root=/logs/artifacts",
         "mkdir -p \"$artifact_root\"",
+        "measuretwice_root=\"$HOME/.pi/agent/measuretwice/evidence\"",
+        "if [[ -d \"$measuretwice_root\" ]]; then",
+        "  mkdir -p \"$artifact_root/measuretwice-evidence\"",
+        "  cp -a \"$measuretwice_root/.\" \"$artifact_root/measuretwice-evidence/\"",
+        "fi",
         "repo=",
         "if [[ -d /testbed/.git ]]; then",
         "  repo=/testbed",
@@ -303,6 +361,9 @@ if _HARBOR_NATIVE:
         extra_args: tuple[str, ...] = ()
         include_bench_skills = False
         include_devstack_profile = False
+        measuretwice_profile: str | None = None
+        measuretwice_cross_reviewer = False
+        pi_package_version: str | None = None
         _agent_name = "coding-eval-pi"
         _output_filename = "coding-eval-agent.txt"
 
@@ -311,11 +372,40 @@ if _HARBOR_NATIVE:
             return _BasePiCliHarborAgent._agent_name
 
         def _provider_env(self) -> dict[str, str]:
-            return {
+            env = {
                 key: value
                 for key in _CODING_EVAL_AGENT_ENV_KEYS
                 if (value := os.environ.get(key))
             }
+            if self.measuretwice_profile:
+                env["MEASURE_TWICE_EVAL_REVIEWER_THINKING_LEVEL"] = (
+                    os.environ.get("CODING_EVAL_MEASURETWICE_REVIEWER_THINKING")
+                    or "medium"
+                )
+                env["MEASURE_TWICE_EVAL_REVIEWER_TEMPERATURE"] = (
+                    os.environ.get("CODING_EVAL_MEASURETWICE_REVIEWER_TEMPERATURE")
+                    or "1"
+                )
+                env["MEASURE_TWICE_EVAL_REVIEWER_TOP_P"] = (
+                    os.environ.get("CODING_EVAL_MEASURETWICE_REVIEWER_TOP_P")
+                    or "0.95"
+                )
+            return env
+
+        def _measuretwice_config_payload(self) -> dict[str, Any]:
+            if not self.measuretwice_profile:
+                raise ValueError("Measure Twice is not enabled for this agent")
+            return _measuretwice_config_payload(
+                self.measuretwice_profile,
+                cross_reviewer=self.measuretwice_cross_reviewer,
+            )
+
+        def _measuretwice_command_prefix(self) -> str:
+            if not self.measuretwice_profile:
+                return ""
+            return _measuretwice_config_install_command(
+                self._measuretwice_config_payload()
+            ) + "\n"
 
         async def _write_local_pi_config(self, environment: BaseEnvironment) -> None:
             env = self._provider_env()
@@ -358,6 +448,7 @@ function parseJsonEnv(name) {
 const samplingParams = parseJsonEnv('CODING_EVAL_PI_SAMPLING_PARAMS');
 const thinkingLevelMap = parseJsonEnv('CODING_EVAL_PI_THINKING_LEVEL_MAP');
 const compat = parseJsonEnv('CODING_EVAL_PI_COMPAT');
+const reviewerModelId = process.env.CODING_EVAL_MEASURETWICE_REVIEWER_MODEL_ID;
 const models = [
   {
     id: modelId,
@@ -372,6 +463,17 @@ const models = [
     cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0 }
   }
 ];
+if (reviewerModelId && !models.some((model) => model.id === reviewerModelId)) {
+  models.push({
+    id: reviewerModelId,
+    name: reviewerModelId,
+    reasoning: true,
+    input: ['text'],
+    contextWindow: 262144,
+    maxTokens: 81920,
+    cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0 }
+  });
+}
 if (providerName === 'local') {
   for (const alias of ['ornith-1.0-35b', 'Ornith-1.0-35B']) {
     if (!models.some((model) => model.id === alias)) {
@@ -425,7 +527,7 @@ NODE
                 environment,
                 command=_RUNTIME_DEPENDENCY_INSTALL_COMMAND,
             )
-            version = self.version() or "latest"
+            version = self.pi_package_version or self.version() or "latest"
             package = self.npm_package
             if version != "latest":
                 package = f"{package}@{version}"
@@ -496,7 +598,9 @@ NODE
                 await self.exec_as_agent(
                     environment,
                     command=_wrap_with_pi_session_export(
-                        f"{_RUNTIME_ACTIVATION_INLINE}; {shlex.join(cmd)}",
+                        f"{_RUNTIME_ACTIVATION_INLINE}; "
+                        + self._measuretwice_command_prefix()
+                        + shlex.join(cmd),
                         output_filename=self._output_filename,
                     ),
                     env=self._provider_env(),
@@ -517,6 +621,9 @@ else:
         extra_args: tuple[str, ...] = ()
         include_bench_skills = False
         include_devstack_profile = False
+        measuretwice_profile: str | None = None
+        measuretwice_cross_reviewer = False
+        pi_package_version: str | None = None
         _agent_name = "coding-eval-pi"
 
         @staticmethod
@@ -530,11 +637,40 @@ else:
 
         @property
         def _env(self) -> dict[str, str]:
-            return {
+            env = {
                 key: value
                 for key in _CODING_EVAL_AGENT_ENV_KEYS
                 if (value := os.environ.get(key))
             }
+            if self.measuretwice_profile:
+                env["MEASURE_TWICE_EVAL_REVIEWER_THINKING_LEVEL"] = (
+                    os.environ.get("CODING_EVAL_MEASURETWICE_REVIEWER_THINKING")
+                    or "medium"
+                )
+                env["MEASURE_TWICE_EVAL_REVIEWER_TEMPERATURE"] = (
+                    os.environ.get("CODING_EVAL_MEASURETWICE_REVIEWER_TEMPERATURE")
+                    or "1"
+                )
+                env["MEASURE_TWICE_EVAL_REVIEWER_TOP_P"] = (
+                    os.environ.get("CODING_EVAL_MEASURETWICE_REVIEWER_TOP_P")
+                    or "0.95"
+                )
+            return env
+
+        def _measuretwice_config_payload(self) -> dict[str, Any]:
+            if not self.measuretwice_profile:
+                raise ValueError("Measure Twice is not enabled for this agent")
+            return _measuretwice_config_payload(
+                self.measuretwice_profile,
+                cross_reviewer=self.measuretwice_cross_reviewer,
+            )
+
+        def _measuretwice_command_prefix(self) -> str:
+            if not self.measuretwice_profile:
+                return ""
+            return _measuretwice_config_install_command(
+                self._measuretwice_config_payload()
+            ) + "\n"
 
         @property
         def _install_agent_script_path(self) -> Path:
@@ -542,7 +678,7 @@ else:
 
         def _get_template_variables(self) -> dict[str, str]:
             return {
-                "version": self.version or "latest",
+                "version": self.pi_package_version or self.version or "latest",
                 "cli_command": self.cli_command,
                 "npm_package": self.npm_package,
                 "include_bench_skills": self.include_bench_skills,
@@ -562,7 +698,11 @@ else:
                 *_thinking_args(),
                 instruction,
             ]
-            run_command = f"{_RUNTIME_ACTIVATION_INLINE}; {shlex.join(cmd)}"
+            run_command = (
+                f"{_RUNTIME_ACTIVATION_INLINE}; "
+                + self._measuretwice_command_prefix()
+                + shlex.join(cmd)
+            )
             return [
                 TerminalCommand(
                     command=_wrap_with_pi_session_export(run_command),
@@ -572,6 +712,53 @@ else:
                     append_enter=True,
                 )
             ]
+
+
+class _PiMeasureTwiceHarborAgent(_BasePiCliHarborAgent):
+    pi_package_version = "0.80.3"
+    extra_args = (
+        "--no-extensions",
+        "--extension",
+        _MEASURETWICE_EXTENSION,
+    )
+
+
+class PiMeasureTwiceCheckSameHarborAgent(_PiMeasureTwiceHarborAgent):
+    measuretwice_profile = "check"
+    _agent_name = "coding-eval-pi-measuretwice-check-same"
+
+    @staticmethod
+    def name() -> str:
+        return PiMeasureTwiceCheckSameHarborAgent._agent_name
+
+
+class PiMeasureTwiceCheckCrossHarborAgent(_PiMeasureTwiceHarborAgent):
+    measuretwice_profile = "check"
+    measuretwice_cross_reviewer = True
+    _agent_name = "coding-eval-pi-measuretwice-check-cross"
+
+    @staticmethod
+    def name() -> str:
+        return PiMeasureTwiceCheckCrossHarborAgent._agent_name
+
+
+class PiMeasureTwiceRepairSameHarborAgent(_PiMeasureTwiceHarborAgent):
+    measuretwice_profile = "repair"
+    _agent_name = "coding-eval-pi-measuretwice-repair-same"
+
+    @staticmethod
+    def name() -> str:
+        return PiMeasureTwiceRepairSameHarborAgent._agent_name
+
+
+class PiMeasureTwiceRepairCrossHarborAgent(_PiMeasureTwiceHarborAgent):
+    measuretwice_profile = "repair"
+    measuretwice_cross_reviewer = True
+    _agent_name = "coding-eval-pi-measuretwice-repair-cross"
+
+    @staticmethod
+    def name() -> str:
+        return PiMeasureTwiceRepairCrossHarborAgent._agent_name
 
 
 class PiVanillaHarborAgent(_BasePiCliHarborAgent):

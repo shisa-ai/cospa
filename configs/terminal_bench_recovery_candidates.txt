@@ -1,0 +1,10 @@
+# Predeclared Terminal-Bench Core 0.1.1 recovery candidates.
+# Dataset commit: 91e10457b5410f16c44364da1a34cb6de8c488a5
+# Preserve Harbor-native environment and verifier behavior; do not flatten.
+fix-git
+fix-pandas-version
+sanitize-git-repo
+sanitize-git-repo.hard
+swe-bench-langcodes
+swe-bench-fsspec
+processing-pipeline

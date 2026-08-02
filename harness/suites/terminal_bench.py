@@ -145,6 +145,16 @@ class TerminalBenchSuite:
         "npm:@the-forge-flow/camoufox-pi",
         "github.com/lhl/pi-zentui",
     )
+    MEASURETWICE_ADAPTERS = frozenset({
+        "pi_measuretwice_check_same",
+        "pi_measuretwice_check_cross",
+        "pi_measuretwice_repair_same",
+        "pi_measuretwice_repair_cross",
+    })
+    MEASURETWICE_CROSS_ADAPTERS = frozenset({
+        "pi_measuretwice_check_cross",
+        "pi_measuretwice_repair_cross",
+    })
 
     AGENT_MAP = {
         "pi_vanilla": "harness.harbor_agents:PiVanillaHarborAgent",
@@ -153,6 +163,18 @@ class TerminalBenchSuite:
             "harness.harbor_agents:PiDevstackSuperpowersHarborAgent"
         ),
         "pi_superpowers": "harness.harbor_agents:PiSuperpowersHarborAgent",
+        "pi_measuretwice_check_same": (
+            "harness.harbor_agents:PiMeasureTwiceCheckSameHarborAgent"
+        ),
+        "pi_measuretwice_check_cross": (
+            "harness.harbor_agents:PiMeasureTwiceCheckCrossHarborAgent"
+        ),
+        "pi_measuretwice_repair_same": (
+            "harness.harbor_agents:PiMeasureTwiceRepairSameHarborAgent"
+        ),
+        "pi_measuretwice_repair_cross": (
+            "harness.harbor_agents:PiMeasureTwiceRepairCrossHarborAgent"
+        ),
         "little_coder": "harness.harbor_agents:LittleCoderHarborAgent",
         "little_coder_superpowers": (
             "harness.harbor_agents:LittleCoderSuperpowersHarborAgent"
@@ -445,6 +467,59 @@ class TerminalBenchSuite:
             }
             for source, target in sources
         ]
+
+    def _measuretwice_mounts(
+        self,
+        adapter_name: str,
+    ) -> list[dict[str, Any]]:
+        """Return a clean, commit-pinned read-only Measure Twice source mount."""
+        if adapter_name not in self.MEASURETWICE_ADAPTERS:
+            return []
+
+        configured = os.environ.get("CODING_EVAL_MEASURETWICE_ROOT")
+        expected_commit = os.environ.get("CODING_EVAL_MEASURETWICE_COMMIT")
+        if not configured or not expected_commit:
+            raise FileNotFoundError(
+                "Measure Twice Harbor adapters require "
+                "CODING_EVAL_MEASURETWICE_ROOT and "
+                "CODING_EVAL_MEASURETWICE_COMMIT"
+            )
+        root = Path(configured).expanduser().resolve()
+        extension = root / "extensions" / "pi-measuretwice"
+        if not (extension / "index.ts").is_file():
+            raise FileNotFoundError(
+                f"Measure Twice extension entry is unavailable: {extension / 'index.ts'}"
+            )
+
+        def git(*args: str) -> str:
+            result = subprocess.run(
+                ["git", "-C", str(root), *args],
+                capture_output=True,
+                text=True,
+                timeout=10,
+                check=False,
+            )
+            if result.returncode != 0:
+                raise RuntimeError(
+                    f"Measure Twice source git {' '.join(args)} failed: "
+                    f"{(result.stderr or result.stdout).strip()}"
+                )
+            return result.stdout.strip()
+
+        actual_commit = git("rev-parse", "HEAD")
+        if actual_commit != expected_commit:
+            raise RuntimeError(
+                "Measure Twice source HEAD does not match "
+                "CODING_EVAL_MEASURETWICE_COMMIT"
+            )
+        if git("status", "--porcelain", "--untracked-files=all"):
+            raise RuntimeError("Measure Twice source must be clean before Harbor runs")
+        return [{
+            "type": "bind",
+            "source": str(extension),
+            "target": "/opt/coding-eval-measuretwice",
+            "read_only": True,
+        }]
 
     @staticmethod
     def _legacy_solution_commands(text: str) -> list[str]:
@@ -958,6 +1033,18 @@ class TerminalBenchSuite:
         jobs_dir = Path(jobs_dir).resolve()
         jobs_dir.mkdir(parents=True, exist_ok=True)
         harbor_env = self._harbor_env(model_id, thinking=thinking)
+        if (
+            adapter_name in self.MEASURETWICE_CROSS_ADAPTERS
+            and not harbor_env.get("CODING_EVAL_MEASURETWICE_REVIEWER_MODEL_ID")
+        ):
+            return {
+                "returncode": -1,
+                "stdout": "",
+                "stderr": (
+                    "Cross-review Measure Twice adapters require a reviewer "
+                    "model in CODING_EVAL_MEASURETWICE_REVIEWER_MODEL_ID."
+                ),
+            }
 
         base_url = harbor_env.get("CODING_EVAL_PI_PROVIDER_BASE_URL")
         if not base_url:
@@ -1097,11 +1184,12 @@ class TerminalBenchSuite:
             "--allow-agent-host", model_host,
             "--yes",
         ]
-        mounts = (
-            self._pi_runtime_mounts()
-            + self._compat_node_mounts()
-            + self._devstack_mounts(adapter_name)
-        )
+        mounts = [
+            *self._pi_runtime_mounts(),
+            *self._compat_node_mounts(),
+            *self._devstack_mounts(adapter_name),
+            *self._measuretwice_mounts(adapter_name),
+        ]
         if mounts:
             cmd += ["--mounts", json.dumps(mounts)]
 

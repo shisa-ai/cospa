@@ -1575,6 +1575,28 @@ Append-only development log for the `cospa` repository.
 - Next action: qualify a small server-off recovery subset before considering
   another full 225-task pair.
 
+## 2026-08-02 — Add Harbor-native Measure Twice recovery arms
+
+- Added four distinct Terminal-Bench-only adapters for check/repair with the
+  executor or a cross reviewer. Each custom Harbor agent pins Pi 0.80.3, writes
+  an isolated bounded Measure Twice config, loads only the explicit extension,
+  and exports raw evidence with the existing Pi/session/workdir artifacts.
+- Added a fail-closed read-only source mount requiring a clean Measure Twice
+  repository at `CODING_EVAL_MEASURETWICE_COMMIT`. Cross arms also fail before
+  Harbor launch when no reviewer model is declared; they register that model on
+  the selected provider endpoint and pin reviewer thinking separately.
+- Preserved the native Harbor verifier as quality authority: hidden tests are
+  not exposed as extension checks, and Terminal-Bench protection remains
+  partial under `docs/PROTECTION-AUDIT.md`.
+- Evidence: RED/GREEN Measure Twice tests; full
+  `mamba run -n coding-eval python -m pytest -q` = 272 passed; shell harness =
+  50 passed; Harbor 0.16.1 native import constructed the cross-repair agent;
+  the real clean Measure Twice source mounted at commit `c6aa65d`, and all seven
+  predeclared Terminal-Bench candidates were present in the pinned vendor set.
+- Status: `wired (unit + real pinned artifact + native import)`, not
+  end-to-end. A scored Harbor run remains blocked on model credits and a
+  dedicated container-reachable relay hostname.
+
 ## 2026-07-22 — Add Laguna S 2.1 to the local model shortlist
 
 - Context: Poolside released Laguna S 2.1 after the original model survey; its

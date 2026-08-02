@@ -49,6 +49,8 @@ Harness variants, same agent loop, same model:
 | `pi_superpowers` | vanilla pi plus the benchmark-safe Superpowers skill subset |
 | `pi_devstack_superpowers` | devstack extensions plus the same benchmark-safe skills |
 | `little_coder_superpowers` | `little-coder` plus the same benchmark-safe skills |
+| `pi_measuretwice_check_same` / `check_cross` | Harbor-only Measure Twice review with Ornith or a separate reviewer |
+| `pi_measuretwice_repair_same` / `repair_cross` | Harbor-only bounded Measure Twice repair with Ornith or a separate reviewer |
 
 **OpenCode is not implemented or registered as a Cospa adapter.** Historical
 qualification notes and an interrupted campaign scaffold do not constitute a
@@ -172,6 +174,41 @@ sanitized `settings.json`. For comparable long runs, use an immutable snapshot
 whose settings contain only the intended package sources and no auth/model
 files. Headless-incompatible resources can be disabled with pi package filters
 (for example, an extension that downloads a browser or assumes a TUI).
+
+The four `pi_measuretwice_*` adapters are Terminal-Bench/Harbor-only recovery
+arms. They install package-pinned Pi 0.80.3, load only a read-only Measure Twice
+source mount, write an isolated benchmark config, and export Measure Twice
+evidence into Harbor artifacts. The source must be clean and commit-pinned:
+
+```bash
+export CODING_EVAL_MEASURETWICE_ROOT=/path/to/pi-measuretwice
+export CODING_EVAL_MEASURETWICE_COMMIT=$(git -C "$CODING_EVAL_MEASURETWICE_ROOT" rev-parse HEAD)
+export CODING_EVAL_MEASURETWICE_REVIEWER_MODEL_ID=gpt-5.6-luna  # cross arms
+export CODING_EVAL_MEASURETWICE_REVIEWER_THINKING=medium
+# Optional overrides; defaults are temperature 1 and top-p 0.95.
+export CODING_EVAL_MEASURETWICE_REVIEWER_TEMPERATURE=1
+export CODING_EVAL_MEASURETWICE_REVIEWER_TOP_P=0.95
+```
+
+Same-model arms use `inherit`; cross arms add the reviewer model to the selected
+provider's isolated container catalog. Measure Twice cannot see Harbor's hidden
+verifier tests during solving, so these adapters configure review with no
+claimed deterministic task check. Harbor's final verifier remains authoritative.
+Use `--tasks-file` for a frozen recovery slice, and retain provider/container
+failures separately from candidate failures. Terminal-Bench's protection status
+remains partial as documented below; adding review/repair does not upgrade it.
+The tracked first slice is `configs/terminal_bench_recovery_candidates.txt`:
+
+```bash
+mamba run -n coding-eval python harness/runner.py \
+  --suite terminal_bench \
+  --adapter pi_measuretwice_repair_cross \
+  --model pool/Ornith-1.0-35B \
+  --tasks-file configs/terminal_bench_recovery_candidates.txt \
+  --k 1 \
+  --thinking off \
+  --run-id terminal-bench-repair-cross-k1
+```
 
 Terminal-Bench image build and agent install retain public network access, but
 the prompt-bearing agent phase is patched to Harbor `allowlist` mode for only

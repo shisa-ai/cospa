@@ -1196,3 +1196,25 @@ working environment for a fresh Docker-backed validation.
 A fresh Bonsai `pi_vanilla` run then solved `cpp/allergies` in 30.6 seconds and
 the isolated verifier passed all 50 native assertions. Aider's final boundary
 is therefore `fixed (unit + integration + real-artifact + end-to-end)`.
+
+### Aider hidden-test contamination (2026-08-12 follow-up)
+
+The earlier isolation cutover excluded reference `.meta/.approaches` dirs but
+still copied the problem's **test files** into the agent workdir. Because
+`materialize_task()` copied every non-excluded problem-dir entry, the model's
+workdir contained the exact assertions it was meant to satisfy (python
+`*_test.py`, go `*_test.go` + `cases_test.go`, cpp `*_test.cpp`, js `*.spec.js`,
+rust `tests/`, java `src/test/`). An agent that reads those files can reverse-
+engineer a passing solution, inflating scores. A real Muse-Glimmer trace
+confirmed the model `read all_your_base_test.cpp` before editing a solution.
+
+Status: `fixed (unit + integration + real-artifact)`. `materialize_task()` now
+excludes hidden test files/subtrees (`HIDDEN_TEST_PATTERNS` /
+`HIDDEN_TEST_RELATIVE`, all six languages) and records
+`vendor_problem_dir`/`hidden_test_paths`; `verify()` re-injects them at grading
+time, after the agent has finished. Evidence: new RED→GREEN tests
+`test_materialize_task_hides_test_files_from_workdir[6 langs]` and
+`test_verify_reinjects_hidden_tests_at_grading_time`, plus real-vendor python
+and cpp runs where the restored tests were actually compiled/run. Prior Aider
+runs (Bonsai smokes, DeepSeek V4 Flash full run, Muse-Glimmer run) are
+contaminated and were cleared; Aider must be re-run to produce clean numbers.

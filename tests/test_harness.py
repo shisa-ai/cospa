@@ -220,9 +220,10 @@ class TestSuites:
             workdir = tmpdir / "workdir"
             task_data = suite.materialize_task("python/two-fer", workdir, vendor_dir)
 
-            # Check that starter and test files were copied to workdir root
+            # Check that starter was copied to workdir root and the hidden
+            # test file was NOT (contamination guard).
             assert (workdir / "two_fer.py").exists()
-            assert (workdir / "two_fer_test.py").exists()
+            assert not (workdir / "two_fer_test.py").exists()
 
             # Check task_data
             assert "two-fer" in task_data["prompt"]

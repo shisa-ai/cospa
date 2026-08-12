@@ -1234,3 +1234,25 @@ Append-only development log for the `cospa` repository.
 - Next action: full Aider Polyglot run (225 problems, pi_vanilla + pi_devstack,
   k=1) underway as `muse-glimmer-20260812-aider-full`; report scored results
   when complete.
+
+## 2026-08-12 — Fix Aider hidden-test contamination
+
+- Context: A Muse-Glimmer Aider Polyglot run scored 223/225, implausibly high.
+  Trace review showed the model read `all_your_base_test.cpp` before solving:
+  the suite copied the problem's test files into the agent workdir, so the
+  model saw the exact assertions. The prior isolation audit excluded
+  `.meta/.approaches` but not the test files themselves.
+- Evidence: RED tests `test_materialize_task_hides_test_files_from_workdir`
+  (6 languages) and `test_verify_reinjects_hidden_tests_at_grading_time`
+  failed before the fix (test file present in workdir); GREEN after. Real
+  vendor python (16 collected) and cpp (test file compiled) runs confirm
+  tests are hidden during the solve and re-injected+run at grading time.
+- Decision: exclude hidden test files/subtrees from the agent workdir
+  (`HIDDEN_TEST_PATTERNS`/`HIDDEN_TEST_RELATIVE`); `verify()` restores them
+  after the agent finishes via `vendor_problem_dir`/`hidden_test_paths`.
+  Replaced the two tests that had codified the leak.
+- Validation: full pytest reports `236 passed, 2 skipped, 2 failed`; the only
+  failures are the pre-existing check-models port-8080 collision and the
+  PyYAML block-scalar newline assertion (both confirmed present on baseline).
+- Next action: clear contaminated Aider results (Bonsai, DeepSeek, Muse-
+  Glimmer) and re-run Muse-Glimmer Aider Polyglot for clean numbers.

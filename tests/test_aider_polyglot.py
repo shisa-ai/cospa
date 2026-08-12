@@ -66,26 +66,107 @@ def test_get_task_ids_finds_real_polyglot_layout():
     assert "python/two-fer" in ids, ids
 
 
-def test_materialize_task_real_layout_copies_starter_and_tests():
-    """materialize_task must copy starter + test files and extract the prompt."""
+# Per-language hidden test files, in the REAL polyglot-benchmark layout, that
+# must never be visible to the agent (they encode the expected assertions).
+HIDDEN_TEST_LAYOUT = {
+    "python": ["affine_cipher_test.py"],
+    "go": ["alphametics_test.go", "cases_test.go"],
+    "cpp": ["allergies_test.cpp"],
+    "javascript": ["affine-cipher.spec.js"],
+    "rust": ["tests/allergies.rs"],
+    "java": ["src/test/java/AllergiesTest.java"],
+}
+
+
+def _write_layout(vendor_dir: Path, lang: str, problem: str, hidden: list[str]):
+    """Write a realistic problem dir: starter + infra + hidden test files."""
+    pdir = (
+        vendor_dir
+        / "polyglot-benchmark"
+        / lang
+        / "exercises"
+        / "practice"
+        / problem
+    )
+    (pdir / ".docs").mkdir(parents=True)
+    (pdir / ".docs" / "instructions.md").write_text("# Instructions\nConvert between bases.\n")
+    (pdir / ".meta").mkdir()
+    (pdir / ".meta" / "example.txt").write_text("reference\n")
+    (pdir / ".approaches").mkdir()
+    (pdir / ".approaches" / "guide.md").write_text("guide\n")
+    (pdir / "starter.txt").write_text("def stub():\n    pass\n")
+    for rel in hidden:
+        p = pdir / rel
+        p.parent.mkdir(parents=True, exist_ok=True)
+        p.write_text("test content\n")
+    return pdir
+
+
+@pytest.mark.parametrize(
+    "language", ["python", "go", "cpp", "javascript", "rust", "java"]
+)
+def test_materialize_task_hides_test_files_from_workdir(language):
+    """Test files must NOT be copied into the agent workdir (contamination guard).
+
+    The agent may only see the problem statement + starter files. The hidden
+    tests encode the expected assertions and are re-injected at grading time.
+    """
     suite = AiderPolyglotSuite()
     with tempfile.TemporaryDirectory() as tmp:
         vendor_dir = Path(tmp) / "vendor"
-        _make_real_polyglot_problem(
-            vendor_dir, "python", "two-fer",
-            instructions="# Two Fer\nImplement two-fer.",
-            starter="def two_fer(name=None):\n    pass\n",
-            test="from two_fer import two_fer\ndef test_two_fer():\n    assert True\n",
+        hidden = HIDDEN_TEST_LAYOUT[language]
+        _write_layout(vendor_dir, language, "all-your-base", hidden)
+        workdir = Path(tmp) / "workdir"
+        td = suite.materialize_task(f"{language}/all-your-base", workdir, vendor_dir)
+
+        assert "Two" not in td["prompt"] or "Convert between bases" in td["prompt"]
+        # Starter + reference dirs excluded, prompt extracted.
+        assert not (workdir / ".meta").exists()
+        assert not (workdir / ".approaches").exists()
+        assert (workdir / "starter.txt").exists()
+        # The real assertion: NO hidden test file may appear in the workdir.
+        for rel in hidden:
+            assert not (workdir / rel).exists(), (
+                f"{language}: hidden test file leaked into workdir: {rel}"
+            )
+
+
+def test_verify_reinjects_hidden_tests_at_grading_time():
+    """Grading must still run the real (hidden) tests.
+
+    After materialize hides the tests, verify() must inject them back and run
+    them so a correct starter scores as passed and a wrong one as failed.
+    """
+    suite = AiderPolyglotSuite()
+    with tempfile.TemporaryDirectory() as tmp:
+        vendor_dir = Path(tmp) / "vendor"
+        pdir = _write_layout(
+            vendor_dir, "python", "two-fer", ["two_fer_test.py"]
         )
+        (pdir / "two_fer.py").write_text(
+            "def two_fer(name=None):\n    return "
+            "f'One for {name}, one for me.' if name else "
+            "'One for you, one for me.'\n"
+        )
+        (pdir / "two_fer_test.py").write_text(
+            "from two_fer import two_fer\n"
+            "def test_two_fer():\n"
+            "    assert two_fer() == 'One for you, one for me.'\n"
+        )
+
         workdir = Path(tmp) / "workdir"
         td = suite.materialize_task("python/two-fer", workdir, vendor_dir)
+        # Materialize must NOT leak the test into the agent workdir.
+        assert not (workdir / "two_fer_test.py").exists()
 
-        assert "Two Fer" in td["prompt"], td["prompt"]
-        assert td["language"] == "python"
-        assert td["problem"] == "two-fer"
-        # Starter and test files must be present in the workdir
-        assert (workdir / "two_fer.py").exists(), list(workdir.iterdir())
-        assert (workdir / "two_fer_test.py").exists(), list(workdir.iterdir())
+        verdict = suite.verify(td, workdir)
+        assert verdict["passed"] is True, verdict
+        assert verdict.get("test_count", 0) >= 1, verdict
+
+        # A deliberately wrong starter must FAIL after re-injection.
+        (workdir / "two_fer.py").write_text("def two_fer(name=None):\n    return 'x'\n")
+        bad = suite.verify(td, workdir)
+        assert bad["passed"] is False, bad
 
 
 @pytest.mark.parametrize(

@@ -16,6 +16,7 @@ full polyglot-benchmark dataset from https://github.com/Aider-AI/polyglot-benchm
 
 import json
 import os
+import fnmatch
 import shlex
 import shutil
 import subprocess
@@ -81,6 +82,37 @@ class AiderPolyglotSuite:
         "target",
     }
     REFERENCE_ARTIFACT_DIRS = {".approaches", ".meta"}
+
+    # Files/dirs that encode the hidden test assertions. These must NEVER be
+    # copied into the agent's workdir (they would let the model reverse-
+    # engineer a passing solution). They are re-injected by verify() at grading
+    # time, after the agent has finished. fnmatch-style filename patterns.
+    HIDDEN_TEST_PATTERNS = {
+        "python": ("*_test.py", "test_*.py"),
+        "go": ("*_test.go",),
+        "javascript": ("*.spec.js", "*.test.js"),
+        "cpp": ("*_test.cpp",),
+        "c": ("*_test.c",),
+    }
+    # Whole directories (relative to the problem dir) that hold the hidden
+    # tests, e.g. Rust integration tests and the Java src/test subtree.
+    HIDDEN_TEST_RELATIVE = {
+        "rust": ("tests",),
+        "java": ("src/test",),
+    }
+
+    @classmethod
+    def _hidden_test_entries(cls, problem_dir: Path, language: str) -> list[Path]:
+        """Return the problem-dir-relative paths of hidden test files/dirs."""
+        hidden: list[Path] = []
+        patterns = cls.HIDDEN_TEST_PATTERNS.get(language, ())
+        for item in problem_dir.iterdir():
+            if any(fnmatch.fnmatch(item.name, p) for p in patterns):
+                hidden.append(Path(item.name))
+        for rel in cls.HIDDEN_TEST_RELATIVE.get(language, ()):
+            if (problem_dir / rel).exists():
+                hidden.append(Path(rel))
+        return hidden
 
     def _problem_dir(self, vendor_dir: Path, language: str, problem: str) -> Path:
         """Locate the on-disk problem directory for a (language, problem)."""
@@ -167,15 +199,41 @@ class AiderPolyglotSuite:
 
         # Copy ALL files from the problem dir into the workdir root so the
         # language's test runner can find starter + tests + module files.
+        # The hidden test files (which encode the expected assertions) are
+        # deliberately EXCLUDED so the agent cannot read them; verify()
+        # re-injects them at grading time.
+        hidden_entries = self._hidden_test_entries(problem_dir, language)
+        hidden_rel = [Path(rel) for rel in hidden_entries]
+
+        def _skip(name: str) -> bool:
+            child = Path(name)
+            return any(child == h or h in child.parents for h in hidden_rel)
+
         for item in problem_dir.iterdir():
             if item.name == ".docs":
                 continue
-            if item.is_dir() and item.name in self.REFERENCE_ARTIFACT_DIRS:
+            if item.name in self.REFERENCE_ARTIFACT_DIRS:
                 continue
-            if item.is_dir() and item.name in self.GENERATED_ARTIFACT_DIRS:
+            if item.name in self.GENERATED_ARTIFACT_DIRS:
+                continue
+            if _skip(item.name):
                 continue
             if item.is_dir():
-                shutil.copytree(item, workdir / item.name, dirs_exist_ok=True)
+                def _ignore(current_dir: str, names: list[str]) -> set[str]:
+                    current = Path(current_dir).relative_to(problem_dir)
+                    return {
+                        n
+                        for n in names
+                        if n in self.GENERATED_ARTIFACT_DIRS
+                        or _skip(str(current / n))
+                    }
+
+                shutil.copytree(
+                    item,
+                    workdir / item.name,
+                    dirs_exist_ok=True,
+                    ignore=_ignore,
+                )
             else:
                 shutil.copy2(item, workdir / item.name)
 
@@ -184,6 +242,8 @@ class AiderPolyglotSuite:
             "prompt": prompt,
             "language": language,
             "problem": problem,
+            "vendor_problem_dir": str(problem_dir),
+            "hidden_test_paths": [str(rel) for rel in hidden_rel],
             "model_id": "nvidia/nemotron-3-ultra-550b-a55b",
         }
 
@@ -257,6 +317,11 @@ class AiderPolyglotSuite:
         setup_cmds: list[list[str]] = []
         run_in_temp_copy = False
         env = self._verification_env()
+
+        # Re-inject the hidden test files now that the agent has finished.
+        # They were kept out of the workdir during the solve to prevent the
+        # model from reading the expected assertions (contamination guard).
+        self._restore_hidden_tests(task_data, workdir)
 
         # Build test command based on language
         if language == "python":
@@ -493,6 +558,29 @@ class AiderPolyglotSuite:
             "grader_output": grader_output,
             "exit_code": result.returncode,
         }
+
+    @classmethod
+    def _restore_hidden_tests(cls, task_data: Dict[str, Any], workdir: Path) -> None:
+        """Re-inject hidden test files from the vendor problem dir at grading time.
+
+        The hidden tests were excluded from the agent's workdir during the solve
+        (see materialize_task). verify() runs after the agent has finished, so
+        restoring them here lets the grader run the real assertions without
+        ever exposing them to the model.
+        """
+        problem_dir = task_data.get("vendor_problem_dir")
+        rels = task_data.get("hidden_test_paths") or []
+        if not problem_dir or not rels:
+            return
+        problem_dir = Path(problem_dir)
+        for rel in rels:
+            src = problem_dir / rel
+            dst = workdir / rel
+            if src.is_dir():
+                shutil.copytree(src, dst, dirs_exist_ok=True)
+            elif src.exists():
+                dst.parent.mkdir(parents=True, exist_ok=True)
+                shutil.copy2(src, dst)
 
     @classmethod
     def _copy_for_verification(cls, source: Path, dest: Path) -> None:

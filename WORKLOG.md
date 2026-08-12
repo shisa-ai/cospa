@@ -1213,3 +1213,24 @@ Append-only development log for the `cospa` repository.
   `git diff --check` pass.
 - Next action: dry-run reverify all 225 DS4 trials for any additional grader
   drift, then retain and report the corrected full score.
+
+## 2026-08-12 — Add Muse Glimmer 30B to the model matrix
+
+- Context: Meta's Muse Glimmer 30B is served locally at
+  `http://stg04.local:8989/v1` (pi provider `local`, served model id
+  `Muse-Glimmer-30B`). Add it to the cospa matrix with real pricing so cost
+  accounting reflects the provider.
+- Evidence: `bash scripts/check-models.sh` reports `local/muse-glimmer-30b`
+  ALIVE (46 ms, HTTP 200); metadata resolves to pi `Muse-Glimmer-30B` with
+  context 131072 / max 65536 / reasoning; a 5-problem Aider Polyglot smoke
+  (`pi_vanilla`, k=1) passed all trials and the manifest records the cost.
+- Decision: price per the deepinfra numbers from the OpenRouter listing:
+  $0.30 input / $1.20 output / $0.04 cache-read per 1M tokens
+  (`input: 0.30, output: 1.20, cacheRead: 0.04, cacheWrite: 0`). The score
+  viewer's `_estimate_cost_usd` reads this repo config via `load_model_metadata`
+  (strict id match), so per-trial and total cost reflect the deepinfra rates.
+- Validation: `configs/models.yaml` parse + metadata lookup, model reachability
+  check, and one real end-to-end smoke run.
+- Next action: full Aider Polyglot run (225 problems, pi_vanilla + pi_devstack,
+  k=1) underway as `muse-glimmer-20260812-aider-full`; report scored results
+  when complete.

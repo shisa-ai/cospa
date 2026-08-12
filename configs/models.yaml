@@ -85,3 +85,14 @@ models:
       cacheWrite: 0
       output: 1.04
     pricing_unit: usd_per_1m_tokens
+  - id: local/muse-glimmer-30b
+    name: Muse Glimmer 30B
+    context_window: 131072
+    max_tokens: 65536
+    reasoning: true
+    cost:
+      input: 0.30
+      cacheRead: 0.04
+      cacheWrite: 0
+      output: 1.20
+    pricing_unit: usd_per_1m_tokens

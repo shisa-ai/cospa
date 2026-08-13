@@ -96,3 +96,14 @@ models:
       cacheWrite: 0
       output: 1.20
     pricing_unit: usd_per_1m_tokens
+  - id: local/deepseek-v4-flash-0731
+    name: DeepSeek V4 Flash 0731
+    context_window: 262144
+    max_tokens: 65536
+    reasoning: true
+    cost:
+      input: 0.14
+      cacheRead: 0.0028
+      cacheWrite: 0.14
+      output: 0.28
+    pricing_unit: usd_per_1m_tokens

@@ -1256,3 +1256,17 @@ Append-only development log for the `cospa` repository.
   PyYAML block-scalar newline assertion (both confirmed present on baseline).
 - Next action: clear contaminated Aider results (Bonsai, DeepSeek, Muse-
   Glimmer) and re-run Muse-Glimmer Aider Polyglot for clean numbers.
+
+## 2026-08-13 — Add DeepSeek V4 Flash 0731 to the matrix
+
+- Context: run a second local model in parallel with Muse-Glimmer to get more
+  eval throughput without endpoint contention (DeepSeek is served on separate
+  GPUs behind the same stg04.local pool).
+- Evidence: `local/deepseek-v4-flash-0731` resolves to pi `DeepSeek-V4-Flash-0731`
+  (context 262144 / max 65536 / reasoning); a 1-token ping returns the served
+  model `deepseek-v4-flash-0731`.
+- Decision: add to `configs/models.yaml` with the provider's own pricing
+  (input 0.14 / output 0.28 / cacheRead 0.0028 / cacheWrite 0.14 per 1M).
+- Validation: metadata lookup + reachability ping; run launched in parallel
+  with the Muse-Glimmer Aider run (vanilla + devstack).
+- Next action: report clean scored results for both models when the runs finish.

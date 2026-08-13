@@ -77,12 +77,15 @@ models:
       cacheWrite: 0
       output: 1.15
     pricing_unit: usd_per_1m_tokens
-  - id: local/ornith-1.0-35b
-    name: Ornith 1.0 35B
+  - id: shisa/ornith-35b-fp8-block
+    name: Ornith 1.0 35B (Shisa.AI)
+    reasoning: true
+    context_window: 262144
+    max_tokens: 81920
     cost:
       input: 0.14
-      cacheRead: 0
-      cacheWrite: 0
+      cacheRead: 0.14
+      cacheWrite: 0.14
       output: 1.04
     pricing_unit: usd_per_1m_tokens
   - id: local/muse-glimmer-30b

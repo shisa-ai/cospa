@@ -1270,3 +1270,22 @@ Append-only development log for the `cospa` repository.
 - Validation: metadata lookup + reachability ping; run launched in parallel
   with the Muse-Glimmer Aider run (vanilla + devstack).
 - Next action: report clean scored results for both models when the runs finish.
+
+## 2026-08-13 — Route Ornith through codex-pool shisa provider
+
+- Context: prior `local/ornith-1.0-35b` id routed to codex-pool's `local`
+  provider, which has no live ornith account -> HTTP 503. Ornith is served on
+  Shisa production (`api.shisa.ai/openai`), reachable via codex-pool as
+  `ornith-35b-fp8-block`.
+- Evidence: direct curl through codex-pool returned reasoning_tokens +
+  cached_tokens (256 on prefix repeat); pi->codex-pool->shisa end-to-end
+  (stopReason stop, thinking block, cacheRead 12288 on turn 2); pi initially
+  failed with 400 because it sent `role:developer` which api.shisa.ai rejects.
+- Fix: added a `shisa` provider to `~/.pi/agent/models.json` (baseUrl ->
+  codex-pool, model `ornith-35b-fp8-block`, compat.supportsDeveloperRole=false
+  so pi sends `system`, supportsReasoningEffort=true so `--thinking xhigh`
+  forwards); pointed `configs/models.yaml` ornith id at `shisa/ornith-35b-fp8-block`.
+- Validation: load_model_metadata resolves reasoning+cost; tests
+  test_harness / test_usage_capture / test_usage_backfill pass.
+- Next action: launch Ornith Aider run (pi_vanilla + pi_devstack, --thinking
+  xhigh) as bg tasks once muse/ds4 slots free, or on request.

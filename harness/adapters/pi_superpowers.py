@@ -17,7 +17,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Optional
 
-from harness.adapters.session_utils import trial_session_args
+from harness.adapters.session_utils import trial_session_args, with_no_network_hint
 from harness.subprocess_utils import run_command
 
 
@@ -89,7 +89,7 @@ class PiSuperpowersAdapter:
         allowlisted bench skills (systematic-debugging,
         verification-before-completion). Interactive skills are stripped.
         """
-        prompt = task_data.get("prompt", "")
+        prompt = with_no_network_hint(task_data.get("prompt", ""))
 
         cmd = [
             "pi",

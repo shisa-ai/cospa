@@ -1289,3 +1289,21 @@ Append-only development log for the `cospa` repository.
   test_harness / test_usage_capture / test_usage_backfill pass.
 - Next action: launch Ornith Aider run (pi_vanilla + pi_devstack, --thinking
   xhigh) as bg tasks once muse/ds4 slots free, or on request.
+
+## 2026-08-13 — Add no-network hint to all adapter prompts
+
+- Context: devstack runs scored 0% because the full-pi agent (with web/search
+  tools) tried to fetch the hidden *_test.cpp from GitHub when it couldn't find
+  it; all network is blocked in the sandbox (SSRF/DNS), so it retried across
+  web_fetch/tff-fetch_url/curl/tff-search_web until the 600s timeout. Muse
+  devstack: 55/55 traces hit SSRF walls. Not a scoring bug (one ds devstack
+  trial compiled+ran and failed a real test).
+- Change: added `with_no_network_hint()` in harness/adapters/session_utils.py
+  and prepended the single-line hint to the prompt in all six adapters
+  (pi_vanilla, pi_devstack, pi_superpowers, pi_devstack_superpowers,
+  little_coder, little_coder_superpowers).
+- Evidence: tests/test_adapter_prompt_hint.py (all adapters prepend the hint,
+  original task preserved). test_harness/test_usage_* pass; the 2 remaining
+  suite failures (test_terminal_bench materialize, test_scripts) are pre-existing
+  on clean tree.
+- Next action: restart devstack runs under the hint once current runs finish.

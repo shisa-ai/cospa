@@ -13,6 +13,7 @@ from pathlib import Path
 from typing import Optional
 
 from harness.adapters.pi_superpowers import _resolve_bench_skill_paths
+from harness.adapters.sampling import validate_pi_sampling_params
 from harness.adapters.session_utils import trial_session_args, with_no_network_hint
 from harness.subprocess_utils import run_command
 
@@ -39,6 +40,9 @@ class PiDevstackSuperpowersAdapter:
         stderr_file: Path,
     ) -> AdapterResult:
         prompt = with_no_network_hint(task_data.get("prompt", ""))
+        validate_pi_sampling_params(
+            task_data.get("model_id", ""), task_data.get("sampling_params", {})
+        )
 
         cmd = [
             "pi",

@@ -82,6 +82,12 @@ models:
     reasoning: true
     context_window: 262144
     max_tokens: 81920
+    sampling:
+      temperature: 0.6
+      top_p: 0.95
+      top_k: 20
+    sampling_source: https://huggingface.co/ornith-ai/Ornith-1.0-35B
+    sampling_rationale: model-card-recommended-agentic-tool-use
     cost:
       input: 0.14
       cacheRead: 0.14
@@ -93,6 +99,12 @@ models:
     context_window: 131072
     max_tokens: 65536
     reasoning: true
+    sampling:
+      temperature: 1.0
+      top_p: 0.95
+      top_k: 64
+    sampling_source: https://huggingface.co/meta-models/Muse-Glimmer-30B
+    sampling_rationale: model-card-best-practices-agentic-coding
     cost:
       input: 0.30
       cacheRead: 0.04
@@ -104,6 +116,11 @@ models:
     context_window: 262144
     max_tokens: 65536
     reasoning: true
+    sampling:
+      temperature: 1.0
+      top_p: 1.0
+    sampling_source: https://huggingface.co/deepseek-ai/DeepSeek-V4-Flash
+    sampling_rationale: model-card-local-deployment
     cost:
       input: 0.14
       cacheRead: 0.0028

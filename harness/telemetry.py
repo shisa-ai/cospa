@@ -340,6 +340,22 @@ def _safe_model_metadata(
     if isinstance(input_modalities, list):
         metadata["input_modalities"] = input_modalities
 
+    sampling = model.get("sampling") or model.get("sampling_params")
+    if isinstance(sampling, dict):
+        safe_sampling = {
+            key: value
+            for key, value in sampling.items()
+            if key in {"temperature", "top_p", "top_k", "min_p", "repetition_penalty"}
+            and isinstance(value, (int, float))
+            and not isinstance(value, bool)
+        }
+        if safe_sampling:
+            metadata["sampling_params"] = safe_sampling
+    for key in ("sampling_source", "sampling_rationale"):
+        value = model.get(key)
+        if isinstance(value, str) and value:
+            metadata[key] = value
+
     selected_profile = None
     cost = None
     if pricing_profile:

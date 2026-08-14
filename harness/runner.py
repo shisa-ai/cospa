@@ -275,24 +275,41 @@ def _manifest_sampling(
     *,
     model_metadata: dict | None = None,
 ) -> dict:
-    """Return explicit sampling metadata for the manifest.
+    """Return the explicit per-model sampling profile recorded in the manifest.
 
-    The harness does not control server-side sampling for pi/little-coder
-    providers, but null values make runs look accidentally incomplete. Use
-    task/env overrides when available and otherwise record a deliberate
-    "server-default" marker.
+    Pi receives sampling values through the selected model's ``samplingParams``
+    (validated by pi-backed adapters before each call).  The manifest mirrors
+    that profile rather than claiming an unverified server default.
     """
+    profile = task_data.get("sampling_params")
+    if not isinstance(profile, dict) and isinstance(model_metadata, dict):
+        profile = model_metadata.get("sampling_params")
+    if not isinstance(profile, dict):
+        profile = {}
+
+    def value(key: str) -> int | float | str:
+        explicit = task_data.get(key)
+        if explicit is not None:
+            return explicit
+        configured = profile.get(key)
+        return configured if configured is not None else "server-default"
+
     sampling = {
-        "temperature": task_data.get("temperature")
-        or os.environ.get("CODING_EVAL_TEMPERATURE")
-        or "server-default",
-        "top_p": task_data.get("top_p")
-        or os.environ.get("CODING_EVAL_TOP_P")
-        or "server-default",
-        "max_tokens": task_data.get("max_tokens")
-        or os.environ.get("CODING_EVAL_MAX_TOKENS")
-        or "server-default",
+        "temperature": value("temperature"),
+        "top_p": value("top_p"),
+        "top_k": value("top_k"),
+        "max_tokens": value("max_tokens"),
     }
+    source = task_data.get("sampling_source") or (
+        model_metadata.get("sampling_source") if isinstance(model_metadata, dict) else None
+    )
+    if source:
+        sampling["source"] = source
+    rationale = task_data.get("sampling_rationale") or (
+        model_metadata.get("sampling_rationale") if isinstance(model_metadata, dict) else None
+    )
+    if rationale:
+        sampling["rationale"] = rationale
     sampling.update(
         thinking_sampling_metadata(
             task_data.get("thinking"),
@@ -459,9 +476,22 @@ def run_trial(
     # Materialize the task into the workdir
     task_data = suite.materialize_task(task_id, workdir, vendor_dir)
 
-    # Override model_id with the actual model from args
+    model_metadata = load_model_metadata(model_id)
+
+    # Override model_id with the actual model from args.
     task_data["model_id"] = model_id
     task_data["model_base_url"] = resolve_model_base_url(model_id)
+    # Pi-backed adapters validate this profile against pi's model-level
+    # samplingParams before starting the agent.
+    if isinstance(model_metadata.get("sampling_params"), dict):
+        task_data["sampling_params"] = model_metadata["sampling_params"]
+    # Pi sends a model entry's maxTokens as max_tokens; carry it into the
+    # manifest so it records the actual request cap rather than a default.
+    if model_metadata.get("max_tokens") is not None:
+        task_data["max_tokens"] = model_metadata["max_tokens"]
+    for key in ("sampling_source", "sampling_rationale"):
+        if key in model_metadata:
+            task_data[key] = model_metadata[key]
     # Propagate thinking/effort level so adapters can pass --thinking to pi.
     # None means "use the model/provider default" (no --thinking flag).
     task_data["thinking"] = thinking
@@ -469,8 +499,6 @@ def run_trial(
 
     # Parse provider from model_id (e.g., "nvidia/nemotron-..." -> provider="nvidia")
     provider = model_id.split("/")[0] if "/" in model_id else "unknown"
-
-    model_metadata = load_model_metadata(model_id)
     model_manifest = {
         "id": model_id,
         "provider": provider,

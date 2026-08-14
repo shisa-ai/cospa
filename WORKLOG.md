@@ -1324,3 +1324,24 @@ Append-only development log for the `cospa` repository.
 - Validation: full pytest reports `242 passed, 2 skipped, 2 failed`; the only
   failures are the pre-existing check-models port collision and Terminal-Bench
   PyYAML block-scalar newline assertion documented on the prior baseline.
+
+## 2026-08-14 — Enforce model-card sampling profiles in pi runs
+
+- Context: manifests recorded `server-default` and adapters did not set
+  temperature/top-p/top-k. Direct server inspection found DeepSeek's vLLM
+  auto-generation config already uses the card's 1.0/1.0, but Muse's SGLang
+  defaults were 1.0/1.0/top_k=-1 rather than its card's 1.0/.95/64. Ornith's
+  Shisa route also received no explicit sampling fields.
+- Change: added model-card profiles to configs/models.yaml (DeepSeek 1/1;
+  Muse 1/.95/64; Ornith .6/.95/20), propagated them into manifests, added
+  pi-adapter fail-closed validation against pi models.json `samplingParams`,
+  and configured those actual pi entries. Manifest now records model maxTokens
+  because pi sends it as max_tokens.
+- Evidence: a localhost logging proxy captured actual pi completion payloads:
+  DS `{temperature:1,top_p:1,reasoning_effort:max}`, Muse
+  `{temperature:1,top_p:.95,top_k:64,reasoning_effort:xhigh}`, Ornith
+  `{temperature:.6,top_p:.95,top_k:20,reasoning_effort:xhigh}`. Focused suite:
+  47 passed. Full suite: 247 passed, 2 skipped; only pre-existing
+  test_terminal_bench newline and test_check_models shell failures remain.
+- Decision: discard partial Muse and Ornith runs made before explicit profiles;
+  DeepSeek's paused partial uses its matching 1/1 effective defaults.

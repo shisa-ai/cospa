@@ -1607,3 +1607,19 @@ Append-only development log for the `cospa` repository.
 - Decision: preserve upstream images' intentional nested working trees, but
   never silently discard or misattribute nested model changes.
 - Next: finish and classify the complete PolyBench gold/null gate.
+
+## 2026-08-14 — Preserve PolyBench's pinned MUI test reporter
+
+- Context: both selected MUI images contain an untracked custom Mocha reporter
+  required by their declared test commands; cleaning the agent repository
+  correctly removed it but left the verifier unable to run.
+- Change: copy the digest-pinned reporter to `/opt/cospa` before repository
+  cleanup and set `NODE_PATH` so its unchanged code resolves the image's pinned
+  Mocha dependency without network access.
+- Evidence: RED then GREEN materialization test. Real Harbor null/gold pairs on
+  the two pinned MUI images transition 5/6 to 6/6 and 51/52 to 52/52, with
+  zero-byte null patches. Full pytest reports 315 passed and only the two
+  documented baseline failures.
+- Decision: preserve only the explicitly referenced evaluator helper outside
+  the agent repository; continue deleting unrelated untracked image files.
+- Next: retain both MUI tasks in the repeat-qualified PolyBench subset.

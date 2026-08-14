@@ -228,6 +228,17 @@ mcp_servers = []
         prevents mutable plugin metadata from turning verification into a
         network-dependent operation.
         """
+        # MUI images ship this test-log reporter as an untracked evaluator
+        # helper. Preserve it outside the clean agent repository and keep the
+        # digest-pinned implementation used by the upstream command.
+        if "/testbed/custom-reporter.js" in test_command:
+            test_command = (
+                "export NODE_PATH=/testbed/node_modules${NODE_PATH:+:$NODE_PATH}; "
+                + test_command.replace(
+                    "/testbed/custom-reporter.js",
+                    "/opt/cospa/custom-reporter.js",
+                )
+            )
         if language.lower() != "java":
             return test_command
         return re.sub(
@@ -346,9 +357,12 @@ exit 0
             f"FROM {image_ref}\n"
             "RUN git config --global --add safe.directory /testbed \\\n"
             " && cd /testbed \\\n"
+            " && mkdir -p /opt/cospa \\\n"
+            " && if [ -f custom-reporter.js ]; then \\\n"
+            "      cp /testbed/custom-reporter.js /opt/cospa/custom-reporter.js; \\\n"
+            "    fi \\\n"
             f" && git reset --hard {shlex.quote(row['base_commit'])} \\\n"
             " && git clean -fd \\\n"
-            " && mkdir -p /opt/cospa \\\n"
             f" && {_SUBMODULE_STATE_PIPELINE} \\\n"
             " | sha256sum | awk '{print $1}' \\\n"
             " > /opt/cospa/submodules.sha256\n"

@@ -148,6 +148,22 @@ def test_polybench_javascript_parsers_accept_raw_harbor_output(repo):
     assert parsed["failed_tests"] == ["Source > Maths > Box3 > intersectsPlane"]
 
 
+def test_polybench_preserves_pinned_custom_reporter_outside_repository(tmp_path):
+    suite = SwePolyBenchVerifiedSuite()
+    task_root = tmp_path / "task"
+    suite.materialize_task("mui__material-ui-15534", task_root, ROOT / "vendor")
+
+    dockerfile = (task_root / "environment" / "Dockerfile").read_text()
+    assert "cp /testbed/custom-reporter.js /opt/cospa/custom-reporter.js" in dockerfile
+    assert dockerfile.index("cp /testbed/custom-reporter.js") < dockerfile.index(
+        "git clean -fd"
+    )
+    verifier = (task_root / "tests" / "test.sh").read_text()
+    assert "export NODE_PATH=/testbed/node_modules" in verifier
+    assert "--reporter /opt/cospa/custom-reporter.js" in verifier
+    assert "--reporter /testbed/custom-reporter.js" not in verifier
+
+
 def test_polybench_parser_and_score_require_all_f2p_and_no_p2p_failure():
     row = selected_row()
     f2p = ast.literal_eval(row["F2P"])

@@ -1479,3 +1479,19 @@ Append-only development log for the `cospa` repository.
   runnable. A resolved tag proves artifact identity, not verifier validity.
 - Next: integrate BigCodeBench-Hard, then run repeated null/gold checks against
   pinned repository-suite images before any Ornith score episode.
+
+## 2026-08-14 — Reuse unchanged evaluation image locks
+
+- Context: advancing suite-readiness metadata changed the pilot manifest hash
+  but not its 105 image requests; re-querying every mutable registry tag failed
+  after three retries and could unnecessarily change a frozen lock.
+- Change: added an explicit `--reuse-existing` mode that validates exact image
+  keys, suite/task provenance, Linux/amd64 platform, digest syntax, and pinned
+  references before refreshing only the source-manifest path and hash.
+- Evidence: RED then GREEN reuse/mismatch tests; all 9 resolver tests pass; the
+  real 105-image lock reused successfully and its source SHA-256 matches the
+  updated pilot manifest.
+- Decision: full resolution remains the default. Reuse is fail-closed and is
+  permitted only when the requested image set and provenance are identical.
+- Next: use full resolution for image changes and validated reuse for metadata-
+  only pilot updates.

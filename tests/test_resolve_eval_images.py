@@ -1,3 +1,4 @@
+import hashlib
 import importlib.util
 import json
 import subprocess
@@ -153,6 +154,58 @@ def test_extract_digest_fails_closed_without_linux_amd64():
                 }
             ]
         )
+
+
+def test_reuse_existing_lock_updates_hash_only_when_requests_match(tmp_path):
+    module = load_module()
+    manifest = tmp_path / "pilot.json"
+    manifest.write_text(
+        json.dumps(
+            {
+                "metadata": "changed",
+                "suites": {
+                    "example": {
+                        "tasks": [{"id": "task-1", "image_ref": "image:v1"}]
+                    }
+                },
+            }
+        )
+    )
+    digest = "sha256:" + "a" * 64
+    existing = {
+        "name": "lock",
+        "source_manifest": "old.json",
+        "source_manifest_sha256": "old",
+        "platform": {"os": "linux", "architecture": "amd64"},
+        "images": {
+            "image:v1": {
+                "suites": ["example"],
+                "task_ids": ["task-1"],
+                "digest": digest,
+                "pinned_ref": "image@" + digest,
+            }
+        },
+    }
+
+    reused = module.reuse_existing_lock(manifest, existing)
+    assert reused["source_manifest_sha256"] == hashlib.sha256(
+        manifest.read_bytes()
+    ).hexdigest()
+    assert reused["images"] == existing["images"]
+
+    manifest.write_text(
+        json.dumps(
+            {
+                "suites": {
+                    "example": {
+                        "tasks": [{"id": "task-2", "image_ref": "other:v1"}]
+                    }
+                }
+            }
+        )
+    )
+    with pytest.raises(ValueError, match="do not match"):
+        module.reuse_existing_lock(manifest, existing)
 
 
 def test_committed_lock_covers_exactly_the_selected_image_requests():

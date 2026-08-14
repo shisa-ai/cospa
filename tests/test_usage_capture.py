@@ -327,6 +327,28 @@ def test_load_model_metadata_prefers_repo_pricing_over_zero_provider_config():
     assert metadata["max_tokens"] == 128000
 
 
+def test_repo_models_include_glm_53_pool_metadata(tmp_path):
+    """The benchmark matrix should expose the healthy codex-pool GLM 5.3 route."""
+    metadata = load_model_metadata(
+        "zai/glm-5.3",
+        models_json_path=tmp_path / "missing-models.json",
+    )
+
+    assert metadata == {
+        "name": "GLM 5.3",
+        "context_window": 1000000,
+        "max_tokens": 128000,
+        "reasoning": True,
+        "cost": {
+            "input": 0,
+            "cacheRead": 0,
+            "cacheWrite": 0,
+            "output": 0,
+        },
+        "pricing_unit": "usd_per_1m_tokens",
+    }
+
+
 def test_load_model_metadata_has_qwen_36_repo_pricing():
     """Qwen 3.6 27B pricing should come from the benchmark config."""
     with tempfile.TemporaryDirectory() as tmp:

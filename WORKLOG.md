@@ -1519,3 +1519,23 @@ Append-only development log for the `cospa` repository.
   all agentic/scaffold scores; preserve raw model completions for audit.
 - Next: finish repository-suite gold/null/repeat gates, then run the predeclared
   Ornith smoke and concurrency ladder.
+
+## 2026-08-14 — Add GLM 5.3 to the model matrix
+
+- Context: codex-pool now advertises `zai/glm-5.3`; Pi's existing route uses
+  the `stg04.local:8989` proxy while the generated direct localhost route is
+  unreachable from this client.
+- Change: added GLM 5.3 limits, reasoning, and zero pool cost metadata to
+  `configs/models.yaml`; installed the proxy-adapted generated Pi provider list
+  at `~/.pi/agent/models.json` with directory/file modes 700/600.
+- Evidence: RED then GREEN
+  `test_repo_models_include_glm_53_pool_metadata`; all 13 usage-capture tests
+  pass. The existing Anthropic route returned HTTP 200, runner reachability is
+  true, and a minimal no-tools Pi prompt on `zai/glm-5.3:xhigh` returned `OK`.
+  Full pytest reached 300 passes; its six failures are the two documented
+  baseline failures plus four tests from the unrelated untracked SWE PolyBench
+  worktree files.
+- Decision: preserve the required proxy host/path instead of overwriting it
+  with unreachable localhost URLs. Treat the generated pool list as the source
+  of healthy providers and retain its advertised zero GLM 5.3 pool pricing.
+- Next: use `zai/glm-5.3` in a benchmark smoke before launching a matrix.

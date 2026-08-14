@@ -15,7 +15,12 @@ from pathlib import Path
 from typing import Optional
 
 from harness.adapters.sampling import validate_pi_sampling_params
-from harness.adapters.session_utils import trial_session_args, with_no_network_hint
+from harness.adapters.session_utils import (
+    behavior_trace_args,
+    behavior_trace_env,
+    trial_session_args,
+    with_no_network_hint,
+)
 from harness.subprocess_utils import run_command
 
 
@@ -43,6 +48,7 @@ class PiDevstackAdapter:
         validate_pi_sampling_params(
             task_data.get("model_id", ""), task_data.get("sampling_params", {})
         )
+        trace_env = behavior_trace_env(log_file)
 
         # Build the pi command — use normal devstack discovery
         cmd = [
@@ -51,6 +57,7 @@ class PiDevstackAdapter:
             "--model", task_data.get("model_id", "nvidia/nemotron-3-ultra-550b-a55b"),
         ]
         cmd.extend(trial_session_args(log_file))
+        cmd.extend(behavior_trace_args(log_file))
 
         thinking = task_data.get("thinking")
         if thinking:
@@ -67,6 +74,7 @@ class PiDevstackAdapter:
                         stdout=log_f,
                         stderr=stderr_f,
                         text=True,
+                        env=trace_env,
                         timeout=task_data.get("timeout", 600),  # 10 min default
                         sandbox_workdir=workdir,
                         sandbox_name=task_data.get("problem"),

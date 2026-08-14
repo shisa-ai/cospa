@@ -1367,3 +1367,23 @@ Append-only development log for the `cospa` repository.
   directly from the problem statement and visible workspace.”
 - Evidence: RED then GREEN test_adapter_prompt_hint; prompt and sampling tests:
   11 passed.
+
+## 2026-08-14 — Capture and expose behavioral telemetry
+
+- Context: pi session JSONL preserves tool calls and usage, but its timestamps
+  cannot separate provider inference from tool execution. Behavioral comparison
+  also needs exact tool names, categories, counts, errors, and search patterns.
+- Change: all pi-backed adapters now load a telemetry-only extension that records
+  provider/message/tool boundaries. The runner persists parallel-safe timing and
+  tool/category rollups; the viewer exposes LLM%, Tool%, Calls, and Search while
+  APIs retain detailed maps and slow-call examples. Legacy backfill recovers
+  counts/types/errors/search examples as `counts_only`, never invented timing.
+- Evidence: RED/GREEN behavior, adapter, runner, backfill, and viewer tests; 76
+  affected tests pass. Real pi tests against a local fake OpenAI server captured
+  inference and a real bash call end-to-end. A copied DeepSeek trace backfilled
+  16 calls, 2 errors, and 4 searches. Full suite: 270 passed, 2 skipped; only the
+  pre-existing non-hermetic check-models endpoint test and Terminal-Bench `|-`
+  newline assertion fail. Excluding those known tests: 267 passed, 2 skipped.
+- Decision: use unioned tool intervals for percentage (parallel-safe), preserve
+  summed worker time separately, and keep full tool payloads only in pi JSONL.
+  Existing in-flight runs can be count-backfilled but require restart for timing.

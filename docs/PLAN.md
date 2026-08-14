@@ -53,9 +53,15 @@ reorder — earlier items unblock later ones.
       Manifest records: model id + provider, adapter id + version,
       model limits/pricing from pi config when available, sampling params
       including pinned thinking effort/budget, env hash, start/end time,
-      and token/cost usage. pi-backed runs also preserve the raw pi JSONL
-      response trace under `out/` so usage can be audited or backfilled
-      without rerunning the model.
+      token/cost usage, and behavioral telemetry. pi-backed runs preserve the
+      raw pi JSONL response trace under `out/` and load a telemetry-only
+      extension that records compact provider/message/tool boundary events.
+      The runner rolls those events into each manifest: inference/tool/other
+      timing, parallel-safe tool wall time, exact tool and behavior-category
+      counts/times/errors, search activity, and slow/incomplete calls. Full
+      tool arguments/results stay in the pi session trace. Legacy traces can
+      backfill counts/types/errors/search examples, but are explicitly marked
+      `counts_only` because exact timing cannot be reconstructed.
       This is the single load-bearing component of the harness.
 - [ ] **P6. Adapter: `pi_vanilla`.** Launches `pi --no-extensions -m <model>`
       in headless mode against a task workdir. The baseline — pi's four
@@ -87,8 +93,13 @@ reorder — earlier items unblock later ones.
 - [ ] **P12. Score viewer (`view-scores/`).** Static HTML + a tiny
       `server.py` that walks `results/` and renders a table:
       rows = `(model, adapter, suite)`, cells = pass-rate with CI,
-      drill-down to per-task verdicts. Borrow the *shape* from
-      multieval's viewer; this is a clean-room write, not a port.
+      drill-down to per-task verdicts. Verbose terminal and HTML views expose
+      weighted inference/tool percentages plus mean tool/search calls; score
+      and task APIs retain aggregate exact tool/category maps, error/long-call
+      counts, slowest calls, and per-trial behavior rollups. Missing legacy
+      timing remains `-`, never inferred from ambiguous session timestamps.
+      Borrow the *shape* from multieval's viewer; this is a clean-room write,
+      not a port.
 - [ ] **P13. Scale-up matrix run.** Full Aider Polyglot × {pi_vanilla,
       pi_devstack, little_coder} × {models in `configs/models.yaml`} ×
       k=3. Measure TB wall-clock first, then decide whether to run TB

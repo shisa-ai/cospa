@@ -9,6 +9,8 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
+from harness.adapters.session_utils import behavior_trace_file
+from harness.behavior import summarize_behavior_events, summarize_pi_session_behavior
 from harness.telemetry import (
     collect_harbor_pi_session_usage,
     collect_pi_session_usage,
@@ -56,6 +58,106 @@ def _write_manifest(path: Path, manifest: dict) -> None:
 def _usage_observed(manifest: dict) -> bool:
     usage = manifest.get("token_usage")
     return isinstance(usage, dict) and usage.get("status") == "observed"
+
+
+def _merge_behavior_metadata(
+    manifest: dict,
+    trial_dir: Path,
+    *,
+    overwrite: bool,
+) -> bool:
+    existing = manifest.get("behavior")
+    if (
+        isinstance(existing, dict)
+        and existing.get("status") in {"observed", "partial", "counts_only"}
+        and not overwrite
+    ):
+        return False
+
+    event_file = behavior_trace_file(trial_dir / "out" / "session.log")
+    if event_file.exists():
+        summary = summarize_behavior_events(
+            event_file,
+            trial_wall_seconds=(manifest.get("timing") or {}).get(
+                "wall_clock_seconds"
+            ),
+        )
+        try:
+            summary["trace_file"] = str(event_file.relative_to(trial_dir))
+        except ValueError:
+            summary["trace_file"] = str(event_file)
+        manifest["behavior"] = summary
+        return True
+
+    candidates: list[Path] = []
+    usage = manifest.get("token_usage")
+    if isinstance(usage, dict):
+        for value in usage.get("trace_files", []):
+            if isinstance(value, str):
+                candidate = Path(value)
+                candidates.append(
+                    candidate if candidate.is_absolute() else trial_dir / candidate
+                )
+    out_dir = trial_dir / "out"
+    candidates.extend(out_dir.glob("pi_session*.jsonl"))
+    candidates.extend((out_dir / "pi_sessions").glob("*.jsonl"))
+    candidates.extend((out_dir / "pi-sessions").glob("*.jsonl"))
+
+    unique: list[Path] = []
+    seen: set[Path] = set()
+    for candidate in candidates:
+        if candidate.name == "behavior_events.jsonl" or not candidate.is_file():
+            continue
+        resolved = candidate.resolve()
+        if resolved not in seen:
+            seen.add(resolved)
+            unique.append(candidate)
+    summaries = [
+        summarize_pi_session_behavior(path)
+        for path in unique
+    ]
+    summaries = [summary for summary in summaries if summary.get("status") == "counts_only"]
+    if not summaries:
+        return False
+
+    combined: dict[str, Any] = {
+        "schema_version": 1,
+        "status": "counts_only",
+        "timing_available": False,
+        "trace_files": [],
+        "turn_count": 0,
+        "tool_calls": 0,
+        "tool_errors": 0,
+        "incomplete_tool_calls": 0,
+        "search_calls": 0,
+        "external_lookup_calls": 0,
+        "long_tool_calls": 0,
+        "tool_counts": {},
+        "category_counts": {},
+        "search_examples": [],
+        "longest_tools": [],
+    }
+    for summary in summaries:
+        combined["trace_files"].append(summary.get("trace_file"))
+        for field in (
+            "turn_count",
+            "tool_calls",
+            "tool_errors",
+            "incomplete_tool_calls",
+            "search_calls",
+            "external_lookup_calls",
+        ):
+            combined[field] += int(summary.get(field, 0) or 0)
+        for field in ("tool_counts", "category_counts"):
+            for name, value in summary.get(field, {}).items():
+                combined[field][name] = combined[field].get(name, 0) + int(value)
+        remaining = 5 - len(combined["search_examples"])
+        if remaining > 0:
+            combined["search_examples"].extend(
+                summary.get("search_examples", [])[:remaining]
+            )
+    manifest["behavior"] = combined
+    return True
 
 
 def _merge_model_metadata(manifest: dict) -> bool:
@@ -132,6 +234,7 @@ def backfill_manifest(
     changed = False
     changed |= _merge_model_metadata(manifest)
     changed |= _merge_thinking_metadata(manifest)
+    changed |= _merge_behavior_metadata(manifest, trial_dir, overwrite=overwrite)
 
     if _usage_observed(manifest) and not overwrite:
         if changed and not dry_run:

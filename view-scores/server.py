@@ -40,7 +40,7 @@ DEFAULT_CACHE_PATH = Path(
         PROJECT_ROOT / ".cache" / "view-scores.json",
     )
 )
-SCORE_CACHE_VERSION = 4
+SCORE_CACHE_VERSION = 5
 RUN_HEARTBEAT_FILE = ".runner-heartbeat.json"
 RUN_HEARTBEAT_STALE_SECONDS = 90
 
@@ -115,6 +115,16 @@ def _format_turns(value: float | int | None) -> str:
     if turns <= 0:
         return "-"
     return f"{turns:.1f}"
+
+
+def _format_percent(value: float | int | None) -> str:
+    if value is None:
+        return "-"
+    try:
+        percent = float(value)
+    except (TypeError, ValueError):
+        return "-"
+    return f"{percent:.1f}%"
 
 
 def _format_cost(value: float | int | None) -> str:
@@ -194,6 +204,14 @@ SORT_ALIASES = {
     "mean_wall_clock_seconds": "mean_wall_clock_seconds",
     "eta": "estimated_remaining_seconds",
     "estimated_remaining_seconds": "estimated_remaining_seconds",
+    "llm": "inference_percent",
+    "llm_percent": "inference_percent",
+    "inference_percent": "inference_percent",
+    "tool_percent": "tool_percent",
+    "calls": "mean_tool_calls",
+    "mean_tool_calls": "mean_tool_calls",
+    "search": "mean_search_calls",
+    "mean_search_calls": "mean_search_calls",
 }
 
 SORT_DEFAULT_DIRECTIONS = {
@@ -205,6 +223,10 @@ SORT_DEFAULT_DIRECTIONS = {
     "total_wall_clock_seconds": "asc",
     "mean_wall_clock_seconds": "asc",
     "estimated_remaining_seconds": "asc",
+    "inference_percent": "desc",
+    "tool_percent": "asc",
+    "mean_tool_calls": "asc",
+    "mean_search_calls": "asc",
 }
 
 
@@ -374,6 +396,10 @@ def format_scores_terminal(
             "Runtime",
             "Avg",
             "Turns",
+            "LLM%",
+            "Tool%",
+            "Calls",
+            "Search",
             "Tok In",
             "Tok Out",
             "$/M In",
@@ -425,6 +451,10 @@ def format_scores_terminal(
                 _format_duration(score.get("total_wall_clock_seconds")),
                 _format_duration(score.get("mean_wall_clock_seconds")),
                 _format_turns(score.get("mean_turns")),
+                _format_percent(score.get("inference_percent")),
+                _format_percent(score.get("tool_percent")),
+                _format_turns(score.get("mean_tool_calls")),
+                _format_turns(score.get("mean_search_calls")),
                 _format_tokens(score.get("prompt_tokens")),
                 _format_tokens(score.get("completion_tokens")),
                 _format_cost(score.get("input_cost_per_million_usd")),
@@ -993,6 +1023,10 @@ class ScoreHandler(SimpleHTTPRequestHandler):
                 <td class="{score_class}">{pass_rate:.1f}%</td>
                 <td>{score['passed_tasks']}/{score['total_tasks']}</td>
                 <td>{score['total_tasks']}</td>
+                <td>{html.escape(_format_percent(score.get("inference_percent")))}</td>
+                <td>{html.escape(_format_percent(score.get("tool_percent")))}</td>
+                <td>{html.escape(_format_turns(score.get("mean_tool_calls")))}</td>
+                <td>{html.escape(_format_turns(score.get("mean_search_calls")))}</td>
                 <td>{html.escape(_format_cost(score.get("estimated_cost_usd")))}</td>
                 <td>{html.escape(_format_cost(score.get("cost_per_completed_task_usd")))}</td>
                 <td>{html.escape(_format_rate(score.get("passed_tasks_per_usd")))}</td>
@@ -1034,6 +1068,10 @@ class ScoreHandler(SimpleHTTPRequestHandler):
                 <th>Score</th>
                 <th>Passed</th>
                 <th>Tasks</th>
+                <th>LLM%</th>
+                <th>Tool%</th>
+                <th>Calls</th>
+                <th>Search</th>
                 <th>Cost</th>
                 <th>$/Task</th>
                 <th>Pass/$</th>
@@ -1436,6 +1474,7 @@ class ScoreHandler(SimpleHTTPRequestHandler):
         grouped_trials = {}
         grouped_times = {}
         grouped_turns = {}
+        grouped_behavior = {}
         grouped_tokens = {}
         grouped_pricing = {}
         grouped_cost_coverage = {}
@@ -1532,6 +1571,94 @@ class ScoreHandler(SimpleHTTPRequestHandler):
             token_usage = self._token_usage_from_manifest(trial["manifest"])
             if token_usage["response_count"] > 0:
                 grouped_turns.setdefault(key, []).append(token_usage["response_count"])
+
+            behavior = trial["manifest"].get("behavior")
+            if isinstance(behavior, dict) and behavior.get("status") in {
+                "observed",
+                "partial",
+                "counts_only",
+            }:
+                behavior_totals = grouped_behavior.setdefault(
+                    key,
+                    {
+                        "trials": 0,
+                        "timing_trials": 0,
+                        "partial_trials": 0,
+                        "agent_seconds": 0.0,
+                        "inference_seconds": 0.0,
+                        "tool_seconds": 0.0,
+                        "other_seconds": 0.0,
+                        "tool_calls": 0,
+                        "tool_errors": 0,
+                        "incomplete_tool_calls": 0,
+                        "search_calls": 0,
+                        "search_seconds": 0.0,
+                        "external_lookup_calls": 0,
+                        "external_lookup_seconds": 0.0,
+                        "long_tool_calls": 0,
+                        "tool_counts": {},
+                        "category_counts": {},
+                        "tool_seconds_by_name": {},
+                        "category_seconds": {},
+                        "longest_tools": [],
+                    },
+                )
+                behavior_totals["trials"] += 1
+                agent_value = behavior.get("agent_seconds")
+                if (
+                    isinstance(agent_value, (int, float))
+                    and not isinstance(agent_value, bool)
+                    and agent_value > 0
+                ):
+                    behavior_totals["timing_trials"] += 1
+                if behavior.get("status") == "partial":
+                    behavior_totals["partial_trials"] += 1
+                for field in (
+                    "agent_seconds",
+                    "inference_seconds",
+                    "tool_seconds",
+                    "other_seconds",
+                    "search_seconds",
+                    "external_lookup_seconds",
+                ):
+                    value = behavior.get(field)
+                    if isinstance(value, (int, float)) and not isinstance(value, bool):
+                        behavior_totals[field] += float(value)
+                for field in (
+                    "tool_calls",
+                    "tool_errors",
+                    "incomplete_tool_calls",
+                    "search_calls",
+                    "external_lookup_calls",
+                    "long_tool_calls",
+                ):
+                    value = behavior.get(field)
+                    if isinstance(value, (int, float)) and not isinstance(value, bool):
+                        behavior_totals[field] += int(value)
+                for field in (
+                    "tool_counts",
+                    "category_counts",
+                    "tool_seconds_by_name",
+                    "category_seconds",
+                ):
+                    values = behavior.get(field)
+                    if not isinstance(values, dict):
+                        continue
+                    target = behavior_totals[field]
+                    for name, value in values.items():
+                        if isinstance(value, (int, float)) and not isinstance(value, bool):
+                            target[name] = target.get(name, 0) + value
+                longest = behavior.get("longest_tools")
+                if isinstance(longest, list):
+                    for item in longest:
+                        if isinstance(item, dict):
+                            behavior_totals["longest_tools"].append(
+                                {
+                                    **item,
+                                    "task_id": parts["task_id"],
+                                    "trial": trial_dir.name,
+                                }
+                            )
             pricing = self._pricing_from_manifest(
                 trial["manifest"],
                 prompt_tokens=token_usage["prompt_tokens"],
@@ -1610,6 +1737,41 @@ class ScoreHandler(SimpleHTTPRequestHandler):
             median_wall_clock_seconds = statistics.median(task_times) if task_times else 0
             turn_counts = grouped_turns.get(key5, [])
             mean_turns = statistics.fmean(turn_counts) if turn_counts else None
+            behavior_totals = grouped_behavior.get(key5)
+            if behavior_totals:
+                behavior_counted_trials = behavior_totals["trials"]
+                agent_seconds = behavior_totals["agent_seconds"]
+                inference_percent = (
+                    behavior_totals["inference_seconds"] / agent_seconds * 100
+                    if agent_seconds > 0
+                    else None
+                )
+                tool_percent = (
+                    behavior_totals["tool_seconds"] / agent_seconds * 100
+                    if agent_seconds > 0
+                    else None
+                )
+                other_percent = (
+                    behavior_totals["other_seconds"] / agent_seconds * 100
+                    if agent_seconds > 0
+                    else None
+                )
+                mean_tool_calls = (
+                    behavior_totals["tool_calls"] / behavior_counted_trials
+                )
+                mean_search_calls = (
+                    behavior_totals["search_calls"] / behavior_counted_trials
+                )
+                slowest_tools = sorted(
+                    behavior_totals["longest_tools"],
+                    key=lambda item: float(item.get("seconds", 0)),
+                    reverse=True,
+                )[:10]
+            else:
+                behavior_counted_trials = 0
+                inference_percent = tool_percent = other_percent = None
+                mean_tool_calls = mean_search_calls = None
+                slowest_tools = []
             started_count = len(
                 started_tasks.get(key5, set())
                 | set(task_trials.keys())
@@ -1736,6 +1898,33 @@ class ScoreHandler(SimpleHTTPRequestHandler):
                 "estimated_remaining_seconds": estimated_remaining_seconds,
                 "mean_turns": mean_turns,
                 "turn_counted_trials": len(turn_counts),
+                "behavior_counted_trials": behavior_counted_trials,
+                "behavior_timing_trials": (
+                    behavior_totals["timing_trials"] if behavior_totals else 0
+                ),
+                "behavior_partial_trials": (
+                    behavior_totals["partial_trials"] if behavior_totals else 0
+                ),
+                "inference_percent": inference_percent,
+                "tool_percent": tool_percent,
+                "other_percent": other_percent,
+                "mean_tool_calls": mean_tool_calls,
+                "mean_search_calls": mean_search_calls,
+                "agent_seconds": behavior_totals["agent_seconds"] if behavior_totals else 0,
+                "inference_seconds": behavior_totals["inference_seconds"] if behavior_totals else 0,
+                "tool_seconds": behavior_totals["tool_seconds"] if behavior_totals else 0,
+                "search_seconds": behavior_totals["search_seconds"] if behavior_totals else 0,
+                "tool_calls": behavior_totals["tool_calls"] if behavior_totals else 0,
+                "tool_errors": behavior_totals["tool_errors"] if behavior_totals else 0,
+                "incomplete_tool_calls": behavior_totals["incomplete_tool_calls"] if behavior_totals else 0,
+                "search_calls": behavior_totals["search_calls"] if behavior_totals else 0,
+                "external_lookup_calls": behavior_totals["external_lookup_calls"] if behavior_totals else 0,
+                "long_tool_calls": behavior_totals["long_tool_calls"] if behavior_totals else 0,
+                "tool_counts": dict(sorted(behavior_totals["tool_counts"].items())) if behavior_totals else {},
+                "category_counts": dict(sorted(behavior_totals["category_counts"].items())) if behavior_totals else {},
+                "tool_seconds_by_name": dict(sorted(behavior_totals["tool_seconds_by_name"].items())) if behavior_totals else {},
+                "category_seconds": dict(sorted(behavior_totals["category_seconds"].items())) if behavior_totals else {},
+                "slowest_tools": slowest_tools,
                 "prompt_tokens": token_totals["prompt_tokens"],
                 "completion_tokens": token_totals["completion_tokens"],
                 "cached_tokens": token_totals["cached_tokens"],
@@ -1815,6 +2004,7 @@ class ScoreHandler(SimpleHTTPRequestHandler):
                 "passed": verdict.get("passed", False),
                 "test_count": verdict.get("test_count", 0),
                 "wall_clock_seconds": manifest.get("timing", {}).get("wall_clock_seconds", 0),
+                "behavior": manifest.get("behavior"),
             })
 
         if not task_trials:

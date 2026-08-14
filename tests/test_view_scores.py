@@ -12,6 +12,8 @@ import sys
 import tempfile
 from pathlib import Path
 
+import pytest
+
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(PROJECT_ROOT))
 
@@ -21,7 +23,7 @@ from harness.path_utils import encode_model_path, encode_task_path
 def _write_trial(trial_dir: Path, *, passed: bool, wall_clock=10.0, exit_code=0,
                  test_count=1, adapter_failed=False, task_id="python/hello",
                  pending=False, model_id="nvidia/nemotron-3-ultra-550b-a55b",
-                 token_usage=None, model_cost=None):
+                 token_usage=None, model_cost=None, behavior=None):
     """Write a manifest.json + verdict.json pair into a trial dir."""
     trial_dir.mkdir(parents=True, exist_ok=True)
     (trial_dir / "manifest.json").write_text(json.dumps({
@@ -36,6 +38,7 @@ def _write_trial(trial_dir: Path, *, passed: bool, wall_clock=10.0, exit_code=0,
         "trial": 1,
         "timing": {"wall_clock_seconds": wall_clock},
         "token_usage": token_usage or {},
+        **({"behavior": behavior} if behavior is not None else {}),
         "exit_code": exit_code,
     }, indent=2))
     (trial_dir / "verdict.json").write_text(json.dumps({
@@ -217,6 +220,133 @@ def test_verbose_scores_average_response_turns_across_trials():
         < header_cells.index("Tok In")
     )
     assert columns["Turns"] == "5.0"
+
+
+def test_verbose_scores_aggregate_behavior_time_and_tool_counts():
+    """Behavior columns use weighted time and mean calls per traced trial."""
+    with tempfile.TemporaryDirectory() as tmp:
+        results_dir = Path(tmp) / "results"
+        model_id = "behavior/model"
+        adapter = "pi_vanilla"
+        suite = "aider_polyglot"
+        task_id = "python/hello"
+        base = (
+            results_dir
+            / encode_model_path(model_id)
+            / adapter
+            / suite
+            / encode_task_path(task_id)
+        )
+        for trial_number, behavior in enumerate(
+            (
+                {
+                    "status": "observed",
+                    "agent_seconds": 10,
+                    "inference_seconds": 6,
+                    "tool_seconds": 3,
+                    "other_seconds": 1,
+                    "tool_calls": 4,
+                    "tool_errors": 1,
+                    "search_calls": 1,
+                    "search_seconds": 2,
+                    "long_tool_calls": 0,
+                    "tool_counts": {"bash": 2, "read": 2},
+                    "category_counts": {"search": 1, "read": 2, "shell": 1},
+                },
+                {
+                    "status": "observed",
+                    "agent_seconds": 20,
+                    "inference_seconds": 10,
+                    "tool_seconds": 8,
+                    "other_seconds": 2,
+                    "tool_calls": 6,
+                    "tool_errors": 0,
+                    "search_calls": 3,
+                    "search_seconds": 5,
+                    "long_tool_calls": 2,
+                    "tool_counts": {"bash": 5, "edit": 1},
+                    "category_counts": {"search": 3, "edit": 1, "shell": 2},
+                },
+            ),
+            start=1,
+        ):
+            _write_trial(
+                base / f"trial-{trial_number}",
+                passed=True,
+                task_id=task_id,
+                model_id=model_id,
+                behavior=behavior,
+            )
+
+        h, server_mod = _make_handler(results_dir)
+        scores = h.get_scores()
+        output = server_mod.format_scores_terminal(
+            scores, results_dir=results_dir, verbose=True
+        )
+        browser_html = h.generate_html()
+
+    row = scores[0]
+    assert row["behavior_counted_trials"] == 2
+    assert row["inference_percent"] == pytest.approx(16 / 30 * 100)
+    assert row["tool_percent"] == pytest.approx(11 / 30 * 100)
+    assert row["mean_tool_calls"] == 5.0
+    assert row["mean_search_calls"] == 2.0
+    assert row["tool_errors"] == 1
+    assert row["long_tool_calls"] == 2
+    assert row["tool_counts"] == {"bash": 7, "edit": 1, "read": 2}
+    assert row["category_counts"]["search"] == 4
+
+    lines = output.splitlines()
+    header_cells = [cell.strip() for cell in lines[3].split("  ") if cell.strip()]
+    row_cells = [cell.strip() for cell in lines[5].split("  ") if cell.strip()]
+    columns = dict(zip(header_cells, row_cells, strict=True))
+    assert columns["LLM%"] == "53.3%"
+    assert columns["Tool%"] == "36.7%"
+    assert columns["Calls"] == "5.0"
+    assert columns["Search"] == "2.0"
+    assert "<th>LLM%</th>" in browser_html
+    assert "<th>Tool%</th>" in browser_html
+    assert "<th>Calls</th>" in browser_html
+    assert "<th>Search</th>" in browser_html
+    assert "53.3%" in browser_html
+    assert "36.7%" in browser_html
+
+
+def test_counts_only_behavior_shows_calls_without_claiming_timing():
+    with tempfile.TemporaryDirectory() as tmp:
+        results_dir = Path(tmp) / "results"
+        model_id = "legacy/model"
+        base = (
+            results_dir
+            / encode_model_path(model_id)
+            / "pi_vanilla"
+            / "aider_polyglot"
+            / encode_task_path("python/hello")
+        )
+        _write_trial(
+            base / "trial-1",
+            passed=False,
+            model_id=model_id,
+            behavior={
+                "status": "counts_only",
+                "tool_calls": 8,
+                "tool_errors": 1,
+                "search_calls": 3,
+                "external_lookup_calls": 1,
+                "long_tool_calls": 0,
+                "tool_counts": {"bash": 6, "read": 2},
+                "category_counts": {"search": 3, "read": 2, "shell": 3},
+            },
+        )
+        h, _ = _make_handler(results_dir)
+        row = h.get_scores()[0]
+
+    assert row["behavior_counted_trials"] == 1
+    assert row["behavior_timing_trials"] == 0
+    assert row["mean_tool_calls"] == 8
+    assert row["mean_search_calls"] == 3
+    assert row["inference_percent"] is None
+    assert row["tool_percent"] is None
 
 
 def test_get_scores_reads_named_run_wrapper_tree():

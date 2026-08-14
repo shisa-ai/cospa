@@ -293,7 +293,13 @@ def _sandbox_agent_command(
             and _PROJECT_ROOT in path.parents
             and workdir not in path.parents
         ):
-            _append_dir_options(wrapped, [path])
+            # Explicit extensions are files while skill paths are directories.
+            # Creating a directory at a file mountpoint makes bwrap reject the
+            # subsequent bind with "Is a directory".
+            _append_dir_options(
+                wrapped,
+                [path if path.is_dir() else path.parent],
+            )
             wrapped.extend(["--ro-bind", str(path), str(path)])
 
     _append_dir_options(

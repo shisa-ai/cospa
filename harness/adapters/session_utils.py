@@ -1,5 +1,6 @@
-"""Session-path helpers shared by pi-backed benchmark adapters."""
+"""Session-path and telemetry helpers shared by pi-backed adapters."""
 
+import os
 from pathlib import Path
 
 
@@ -39,3 +40,24 @@ def trial_session_dir(log_file: Path | str) -> Path:
 def trial_session_args(log_file: Path | str) -> list[str]:
     """Return pi CLI arguments for trial-local session persistence."""
     return ["--session-dir", str(trial_session_dir(log_file))]
+
+
+def behavior_trace_file(log_file: Path | str) -> Path:
+    """Return the compact pi lifecycle-event trace path for this trial."""
+    return trial_session_dir(log_file) / "behavior_events.jsonl"
+
+
+def behavior_trace_args(log_file: Path | str) -> list[str]:
+    """Return CLI args that load cospa's telemetry-only pi extension."""
+    extension = Path(__file__).with_name("behavior_trace_extension.ts").resolve()
+    return ["--extension", str(extension)]
+
+
+def behavior_trace_env(log_file: Path | str) -> dict[str, str]:
+    """Prepare a fresh trace and return the child environment pointing to it."""
+    trace_file = behavior_trace_file(log_file)
+    trace_file.parent.mkdir(parents=True, exist_ok=True)
+    trace_file.unlink(missing_ok=True)
+    env = os.environ.copy()
+    env["COSPA_BEHAVIOR_TRACE_FILE"] = str(trace_file.resolve())
+    return env

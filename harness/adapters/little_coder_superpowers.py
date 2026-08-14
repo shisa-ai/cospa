@@ -12,7 +12,12 @@ from pathlib import Path
 from typing import Optional
 
 from harness.adapters.pi_superpowers import _resolve_bench_skill_paths
-from harness.adapters.session_utils import trial_session_args, with_no_network_hint
+from harness.adapters.session_utils import (
+    behavior_trace_args,
+    behavior_trace_env,
+    trial_session_args,
+    with_no_network_hint,
+)
 from harness.subprocess_utils import run_command
 
 
@@ -35,6 +40,7 @@ class LittleCoderSuperpowersAdapter:
         Run little-coder with the Superpowers bench subset in headless mode.
         """
         prompt = with_no_network_hint(task_data.get("prompt", ""))
+        trace_env = behavior_trace_env(log_file)
 
         cmd = [
             "little-coder",
@@ -43,6 +49,7 @@ class LittleCoderSuperpowersAdapter:
             "--model", task_data.get("model_id", "nvidia/nemotron-3-ultra-550b-a55b"),
         ]
         cmd.extend(trial_session_args(log_file))
+        cmd.extend(behavior_trace_args(log_file))
 
         thinking = task_data.get("thinking")
         if thinking:
@@ -62,6 +69,7 @@ class LittleCoderSuperpowersAdapter:
                         stdout=log_f,
                         stderr=stderr_f,
                         text=True,
+                        env=trace_env,
                         timeout=task_data.get("timeout", 600),
                         sandbox_workdir=workdir,
                         sandbox_name=task_data.get("problem"),

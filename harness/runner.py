@@ -35,6 +35,8 @@ PROJECT_ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(PROJECT_ROOT))
 
 from harness.adapters import load_adapter
+from harness.adapters.session_utils import behavior_trace_file
+from harness.behavior import summarize_behavior_events
 from harness.suites import load_suite
 from harness.path_utils import encode_path_component
 from harness.subprocess_utils import agent_sandbox_cwd, resolve_model_base_url
@@ -701,6 +703,18 @@ def run_trial(
         response_models = session_usage.get("response_models")
         if isinstance(response_models, list) and response_models:
             manifest["model"]["served_model"] = response_models[-1]
+
+    behavior_file = behavior_trace_file(log_file)
+    if behavior_file.exists():
+        behavior = summarize_behavior_events(
+            behavior_file,
+            trial_wall_seconds=manifest.get("timing", {}).get("wall_clock_seconds"),
+        )
+        try:
+            behavior["trace_file"] = str(behavior_file.relative_to(trial_dir))
+        except ValueError:
+            behavior["trace_file"] = str(behavior_file)
+        manifest["behavior"] = behavior
 
     # Run the suite's verifier only if the adapter succeeded. A suite may
     # explicitly opt into post-failure verification by setting

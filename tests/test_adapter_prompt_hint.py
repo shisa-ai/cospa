@@ -115,3 +115,13 @@ def test_every_adapter_preserves_original_task_text():
         assert sent.count("Write a solution.") == 1
         # exactly one hint line
         assert sent.count(NO_NETWORK_HINT) == 1
+
+
+def test_every_adapter_loads_behavior_trace_extension():
+    """Every pi/little-coder scaffold must emit the same boundary telemetry."""
+    for name in ADAPTERS:
+        _, cmd = _capture_prompt(name)
+        assert "--extension" in cmd, f"adapter {name} omitted telemetry extension"
+        path = Path(cmd[cmd.index("--extension") + 1])
+        assert path.name == "behavior_trace_extension.ts"
+        assert path.is_file()

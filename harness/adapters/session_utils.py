@@ -4,14 +4,12 @@ from pathlib import Path
 
 
 # Single-line hint attached to every eval task prompt. The eval sandbox has no
-# network and hides reference files (e.g. hidden test files), so agents that try
-# to fetch or search online burn their whole budget on requests that can never
-# succeed. This line steers them to write the solution from what is provided.
+# network and intentionally withholds reference tests/solutions, so agents that
+# try to fetch or search for them burn their budget on unavailable information.
 NO_NETWORK_HINT = (
-    "Note: This sandbox has NO network access. There are no hidden tests or "
-    "reference solutions available. Do not try to fetch, search for, or look up "
-    "any files, tests, or references online — write the solution entirely from "
-    "the provided files and the problem statement."
+    "NOTE: Network access, hidden test files, and reference solutions are "
+    "unavailable. Solve the task directly from the problem statement and visible "
+    "workspace."
 )
 
 

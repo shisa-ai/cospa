@@ -65,8 +65,12 @@ def _capture_prompt(adapter_name: str, prompt: str = "Write a solution."):
     return captured["input"], captured["cmd"]
 
 
-def test_no_network_hint_states_hidden_references_are_unavailable():
-    assert "There are no hidden tests or reference solutions available." in NO_NETWORK_HINT
+def test_no_network_hint_directs_solution_to_visible_task_context():
+    assert (
+        "Network access, hidden test files, and reference solutions are unavailable."
+        in NO_NETWORK_HINT
+    )
+    assert "Solve the task directly from the problem statement and visible workspace." in NO_NETWORK_HINT
 
 
 def test_with_no_network_hint_prepends_by_default():

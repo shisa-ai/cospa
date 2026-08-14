@@ -1356,3 +1356,14 @@ Append-only development log for the `cospa` repository.
   to the shared no-network prompt hint used by every adapter.
 - Evidence: RED then GREEN test in test_adapter_prompt_hint.py; focused prompt
   and sampling tests: 11 passed.
+
+## 2026-08-14 — Direct agents to solve from visible task context
+
+- Context: the prior hint’s phrase “provided files” could imply that a missing
+  test interface should be located elsewhere, reinforcing futile hidden-test
+  searches.
+- Change: replaced it with the concise factual boundary: “Network access,
+  hidden test files, and reference solutions are unavailable. Solve the task
+  directly from the problem statement and visible workspace.”
+- Evidence: RED then GREEN test_adapter_prompt_hint; prompt and sampling tests:
+  11 passed.

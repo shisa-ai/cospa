@@ -1873,3 +1873,22 @@ Append-only development log for the `cospa` repository.
   credentials to benchmark containers.
 - Next: finish the true-xhigh disagreement panel, then use the mounted runtime
   for any corrected full vanilla/devstack cells.
+
+## 2026-08-15 — Support Pi on legacy-glibc task images
+
+- Context: Tailwind 853 uses glibc 2.23, which cannot execute the selected host
+  Node binary; the initial read-only runtime mount therefore still failed
+  before pi despite removing network installation.
+- Change: mount a SHA-pinned Node 22.14.0 glibc-2.17 compatibility build beside
+  the host pi package, select it only when the primary Node cannot execute, and
+  teach setup to download and verify the exact unofficial-builds archive.
+- Evidence: RED tests covered the compatibility mount, activation branch, and
+  setup URL/SHA pin. A real DS4 Tailwind 853 retry then ran pi, recorded
+  effective `high`, reached the native verifier, and completed in 109.66
+  seconds without infrastructure failure. Full pytest: 346 passed with only
+  the documented unrelated Terminal-Bench newline fixture failure.
+- Decision: keep the modern host runtime first; use the compatibility binary
+  only as the interpreter for the same read-only pi package on legacy images.
+- Next: rerun Muse's two remaining infrastructure tasks only after its server
+  returns; GPU0 is currently occupied by an unrelated Qwen benchmark and the
+  local model pool reports no live Muse account.

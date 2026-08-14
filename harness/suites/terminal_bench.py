@@ -272,6 +272,26 @@ class TerminalBenchSuite:
             }
         ]
 
+    def _compat_node_mounts(self) -> list[dict[str, Any]]:
+        """Mount a glibc-2.17 Node build for legacy benchmark images."""
+        configured = os.environ.get("CODING_EVAL_PI_COMPAT_NODE_DIR")
+        compat_dir = (
+            Path(configured).expanduser()
+            if configured
+            else Path.home() / ".cache" / "cospa-node-v22.14.0-glibc217"
+        )
+        compat_dir = compat_dir.resolve()
+        if not (compat_dir / "bin" / "node").is_file():
+            return []
+        return [
+            {
+                "type": "bind",
+                "source": str(compat_dir),
+                "target": "/opt/coding-eval-node-compat",
+                "read_only": True,
+            }
+        ]
+
     def _devstack_mounts(
         self,
         adapter_name: str,
@@ -792,7 +812,11 @@ class TerminalBenchSuite:
             "--allow-agent-host", model_host,
             "--yes",
         ]
-        mounts = self._pi_runtime_mounts() + self._devstack_mounts(adapter_name)
+        mounts = (
+            self._pi_runtime_mounts()
+            + self._compat_node_mounts()
+            + self._devstack_mounts(adapter_name)
+        )
         if mounts:
             cmd += ["--mounts", json.dumps(mounts)]
 

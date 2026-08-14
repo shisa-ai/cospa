@@ -480,6 +480,9 @@ def test_run_harbor_job_mounts_runtime_for_all_and_profile_only_for_devstack():
         (runtime / "bin").mkdir(parents=True)
         for executable in ("node", "pi", "little-coder"):
             (runtime / "bin" / executable).write_text("#!/bin/sh\n")
+        compat_node = tmp / "compat-node"
+        (compat_node / "bin").mkdir(parents=True)
+        (compat_node / "bin" / "node").write_text("#!/bin/sh\n")
         profile = tmp / "profile"
         (profile / "npm").mkdir(parents=True)
         (profile / "git").mkdir()
@@ -494,6 +497,7 @@ def test_run_harbor_job_mounts_runtime_for_all_and_profile_only_for_devstack():
             {
                 "CODING_EVAL_DEVSTACK_PROFILE_DIR": str(profile),
                 "CODING_EVAL_PI_RUNTIME_DIR": str(runtime),
+                "CODING_EVAL_PI_COMPAT_NODE_DIR": str(compat_node),
                 "CODING_EVAL_HARBOR_MODEL_BASE_URL": (
                     "http://model-relay:8013/v1"
                 ),
@@ -522,14 +526,24 @@ def test_run_harbor_job_mounts_runtime_for_all_and_profile_only_for_devstack():
         "target": "/opt/coding-eval-pi-runtime",
         "read_only": True,
     }
+    compat_mount = {
+        "type": "bind",
+        "source": str(compat_node.resolve()),
+        "target": "/opt/coding-eval-node-compat",
+        "read_only": True,
+    }
     vanilla = commands["pi_vanilla"]
-    assert json.loads(vanilla[vanilla.index("--mounts") + 1]) == [runtime_mount]
+    assert json.loads(vanilla[vanilla.index("--mounts") + 1]) == [
+        runtime_mount,
+        compat_mount,
+    ]
     for adapter in ("pi_devstack", "pi_devstack_superpowers"):
         cmd = commands[adapter]
         assert "--mounts" in cmd, cmd
         mounts = json.loads(cmd[cmd.index("--mounts") + 1])
         assert mounts == [
             runtime_mount,
+            compat_mount,
             {
                 "type": "bind",
                 "source": str(profile.resolve() / "npm"),
@@ -774,6 +788,7 @@ def test_native_harbor_agent_bootstrap_supports_non_debian_images(monkeypatch):
     assert 'nvm_dir="${NVM_DIR:-$HOME/.nvm}"' in install_command
     assert '. "$nvm_dir/nvm.sh"' in install_command
     assert "/opt/coding-eval-pi-runtime/bin/pi" in install_command
+    assert "/opt/coding-eval-node-compat/bin/node" in install_command
     config_command = agent.agent_commands[-1]
     assert "CODING_EVAL_PI_SAMPLING_PARAMS" in config_command
     assert "samplingParams" in config_command
@@ -798,6 +813,14 @@ def test_legacy_harbor_agent_bootstrap_supports_non_debian_images():
     assert "command -v apk" in template
     assert 'nvm_dir="${NVM_DIR:-$HOME/.nvm}"' in template
     assert '. "$nvm_dir/nvm.sh"' in template
+
+
+def test_setup_pins_legacy_glibc_node_runtime():
+    setup = (PROJECT_ROOT / "scripts" / "setup.sh").read_text()
+
+    assert "node-v22.14.0-linux-x64-glibc-217.tar.xz" in setup
+    assert "b7446cee2e84cfadd33a1d73949056084daa344502234729f5757615f356de01" in setup
+    assert "cospa-node-v22.14.0-glibc217" in setup
 
 
 def _import_harbor_agents_with_fake_terminal_bench(monkeypatch):

@@ -104,15 +104,22 @@ _CONTAINER_BENCH_SKILLS = (
 )
 
 _PI_RUNTIME_DIR = "/opt/coding-eval-pi-runtime"
+_COMPAT_NODE_DIR = "/opt/coding-eval-node-compat"
 _RUNTIME_ACTIVATION_INLINE = (
-    f'if [[ -x "{_PI_RUNTIME_DIR}/bin/pi" ]]; then '
+    f'if [[ -x "{_PI_RUNTIME_DIR}/bin/pi" ]] '
+    f'&& "{_PI_RUNTIME_DIR}/bin/node" --version >/dev/null 2>&1; then '
     f'export PATH="{_PI_RUNTIME_DIR}/bin:$PATH"; '
+    f'elif [[ -x "{_PI_RUNTIME_DIR}/bin/pi" ]] '
+    f'&& "{_COMPAT_NODE_DIR}/bin/node" --version >/dev/null 2>&1; then '
+    f'export PATH="{_COMPAT_NODE_DIR}/bin:{_PI_RUNTIME_DIR}/bin:$PATH"; '
     'else . "${NVM_DIR:-$HOME/.nvm}/nvm.sh"; nvm use 22 >/dev/null; fi'
 )
 
 _RUNTIME_DEPENDENCY_INSTALL_COMMAND = rf"""
 set -e
-if [[ -x "{_PI_RUNTIME_DIR}/bin/pi" && -x "{_PI_RUNTIME_DIR}/bin/node" ]]; then
+if [[ -x "{_PI_RUNTIME_DIR}/bin/pi" ]] \
+   && ("{_PI_RUNTIME_DIR}/bin/node" --version >/dev/null 2>&1 \
+       || "{_COMPAT_NODE_DIR}/bin/node" --version >/dev/null 2>&1); then
     exit 0
 elif command -v curl >/dev/null 2>&1; then
     exit 0
@@ -364,8 +371,12 @@ EOF
                     "set -euo pipefail; "
                     "nvm_dir=\"${NVM_DIR:-$HOME/.nvm}\"; "
                     "export NVM_DIR=\"$nvm_dir\"; "
-                    f"if [[ -x \"{_PI_RUNTIME_DIR}/bin/{self.cli_command}\" ]]; then "
+                    f"if [[ -x \"{_PI_RUNTIME_DIR}/bin/{self.cli_command}\" ]] "
+                    f"&& \"{_PI_RUNTIME_DIR}/bin/node\" --version >/dev/null 2>&1; then "
                     f"export PATH=\"{_PI_RUNTIME_DIR}/bin:$PATH\"; "
+                    f"elif [[ -x \"{_PI_RUNTIME_DIR}/bin/{self.cli_command}\" ]] "
+                    f"&& \"{_COMPAT_NODE_DIR}/bin/node\" --version >/dev/null 2>&1; then "
+                    f"export PATH=\"{_COMPAT_NODE_DIR}/bin:{_PI_RUNTIME_DIR}/bin:$PATH\"; "
                     "else "
                     "if [[ ! -f \"$nvm_dir/nvm.sh\" ]]; then "
                     "curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.40.2/install.sh | bash; "

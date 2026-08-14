@@ -145,6 +145,39 @@ if ! BUILDX_VERSION=$(docker buildx version 2>/dev/null); then
 fi
 log_ok "Docker Buildx found: $BUILDX_VERSION"
 
+# Some older benchmark images ship glibc 2.23, while the selected host NVM
+# runtime needs glibc 2.28. Mount a SHA-pinned Node 22 glibc-2.17 build beside
+# the host pi package so Harbor can execute the same CLI without task network.
+NODE_COMPAT_ARCHIVE="node-v22.14.0-linux-x64-glibc-217.tar.xz"
+NODE_COMPAT_SHA256="b7446cee2e84cfadd33a1d73949056084daa344502234729f5757615f356de01"
+NODE_COMPAT_URL="https://unofficial-builds.nodejs.org/download/release/v22.14.0/$NODE_COMPAT_ARCHIVE"
+NODE_COMPAT_DIR="${CODING_EVAL_PI_COMPAT_NODE_DIR:-$HOME/.cache/cospa-node-v22.14.0-glibc217}"
+echo ""
+echo "── Checking legacy-glibc Node runtime ──"
+if [[ -x "$NODE_COMPAT_DIR/bin/node" ]]; then
+    log_ok "Compatibility Node found: $($NODE_COMPAT_DIR/bin/node --version)"
+elif [[ -e "$NODE_COMPAT_DIR" ]]; then
+    log_err "Compatibility runtime path exists but is incomplete: $NODE_COMPAT_DIR"
+    exit 1
+else
+    for command_name in curl sha256sum tar; do
+        if ! command -v "$command_name" &>/dev/null; then
+            log_err "$command_name is required to install the compatibility Node runtime."
+            exit 1
+        fi
+    done
+    node_tmp=$(mktemp -d)
+    curl -fsSL --retry 3 -o "$node_tmp/$NODE_COMPAT_ARCHIVE" "$NODE_COMPAT_URL"
+    printf '%s  %s\n' "$NODE_COMPAT_SHA256" "$node_tmp/$NODE_COMPAT_ARCHIVE" \
+        | sha256sum -c -
+    mkdir -p "$node_tmp/root" "$(dirname "$NODE_COMPAT_DIR")"
+    tar -xJf "$node_tmp/$NODE_COMPAT_ARCHIVE" --strip-components=1 \
+        -C "$node_tmp/root"
+    mv "$node_tmp/root" "$NODE_COMPAT_DIR"
+    rm -rf "$node_tmp"
+    log_ok "Installed compatibility Node: $($NODE_COMPAT_DIR/bin/node --version)"
+fi
+
 # ── 5. Clone Terminal-Bench Core 0.1.1 ──────────────────────────────────
 echo ""
 echo "── Checking Terminal-Bench Core 0.1.1 ──"

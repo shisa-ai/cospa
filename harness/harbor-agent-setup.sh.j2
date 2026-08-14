@@ -2,8 +2,13 @@
 set -euo pipefail
 
 runtime_dir=/opt/coding-eval-pi-runtime
-if [[ -x "$runtime_dir/bin/{{ cli_command }}" && -x "$runtime_dir/bin/node" ]]; then
+compat_node_dir=/opt/coding-eval-node-compat
+if [[ -x "$runtime_dir/bin/{{ cli_command }}" ]] \
+   && "$runtime_dir/bin/node" --version >/dev/null 2>&1; then
     export PATH="$runtime_dir/bin:$PATH"
+elif [[ -x "$runtime_dir/bin/{{ cli_command }}" ]] \
+     && "$compat_node_dir/bin/node" --version >/dev/null 2>&1; then
+    export PATH="$compat_node_dir/bin:$runtime_dir/bin:$PATH"
 else
     if ! command -v curl >/dev/null 2>&1; then
         if command -v apt-get >/dev/null 2>&1; then

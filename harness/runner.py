@@ -53,7 +53,10 @@ def parse_args():
     parser.add_argument(
         "--suite",
         required=True,
-        help="Suite name (aider_polyglot, terminal_bench, swe_atlas_pilot12)",
+        help=(
+            "Suite name (aider_polyglot, terminal_bench, swe_atlas_pilot12, "
+            "bigcodebench_hard_instruct)"
+        ),
     )
     parser.add_argument(
         "--adapter",
@@ -61,7 +64,8 @@ def parse_args():
         help=(
             "Adapter name (pi_vanilla, pi_devstack, "
             "pi_devstack_superpowers, little_coder, "
-            "pi_superpowers, little_coder_superpowers)"
+            "pi_superpowers, little_coder_superpowers, "
+            "bigcodebench_openai)"
         ),
     )
     parser.add_argument("--model", required=True, help="Model ID (e.g. nvidia/nemotron-3-ultra-550b-a55b)")
@@ -124,6 +128,16 @@ def validate_args(args) -> None:
     if getattr(args, "retries", 2) < 0:
         print("✗ --retries must be zero or greater", file=sys.stderr)
         sys.exit(2)
+
+
+def validate_required_adapter(task_data: dict, adapter) -> None:
+    """Fail closed when a suite requires a protocol-specific adapter."""
+    required = task_data.get("required_adapter")
+    actual = getattr(adapter, "name", None)
+    if required and actual != required:
+        raise ValueError(
+            f"Suite protocol requires adapter {required!r}; received {actual!r}"
+        )
 
 
 def generate_run_id() -> str:
@@ -477,6 +491,7 @@ def run_trial(
 
     # Materialize the task into the workdir
     task_data = suite.materialize_task(task_id, workdir, vendor_dir)
+    validate_required_adapter(task_data, adapter)
 
     model_metadata = load_model_metadata(model_id)
 
@@ -489,14 +504,22 @@ def run_trial(
         task_data["sampling_params"] = model_metadata["sampling_params"]
     # Pi sends a model entry's maxTokens as max_tokens; carry it into the
     # manifest so it records the actual request cap rather than a default.
-    if model_metadata.get("max_tokens") is not None:
+    if (
+        model_metadata.get("max_tokens") is not None
+        and task_data.get("max_tokens") is None
+    ):
         task_data["max_tokens"] = model_metadata["max_tokens"]
     for key in ("sampling_source", "sampling_rationale"):
-        if key in model_metadata:
+        if key in model_metadata and key not in task_data:
             task_data[key] = model_metadata[key]
-    # Propagate thinking/effort level so adapters can pass --thinking to pi.
-    # None means "use the model/provider default" (no --thinking flag).
-    task_data["thinking"] = thinking
+    # Propagate thinking/effort only for protocols that support it. The
+    # non-agentic BigCodeBench arm records an explicit not-applicable value and
+    # sends no reasoning-effort parameter.
+    task_data["thinking"] = (
+        "not_applicable"
+        if task_data.get("thinking_policy") == "not_applicable"
+        else thinking
+    )
     prepare_dependencies = getattr(suite, "prepare_agent_dependencies", None)
 
     # Parse provider from model_id (e.g., "nvidia/nemotron-..." -> provider="nvidia")
@@ -648,6 +671,12 @@ def run_trial(
                     "completion_tokens": getattr(result.usage, "completion_tokens", None),
                     "total_tokens": getattr(result.usage, "total_tokens", None),
                 }
+            if getattr(result, "inference_seconds", None) is not None:
+                manifest["timing"]["provider_inference_seconds"] = (
+                    result.inference_seconds
+                )
+            if isinstance(getattr(result, "behavior", None), dict):
+                manifest["behavior"] = result.behavior
         except Exception as e:
             manifest["exit_code"] = -1
             manifest["timing"]["wall_clock_seconds"] = time.time() - start_time
@@ -659,7 +688,13 @@ def run_trial(
             with open(log_file, "a") as f:
                 f.write(f"\n[ERROR] {e}\n")
 
-    if is_harbor_suite:
+    manifest["timing"]["agent_wall_seconds"] = manifest["timing"].get(
+        "wall_clock_seconds", time.time() - start_time
+    )
+
+    if not getattr(adapter, "uses_pi_session", True):
+        session_usage = {"status": "not_applicable_nonagentic"}
+    elif is_harbor_suite:
         session_usage = collect_harbor_pi_session_usage(trial_dir / "jobs", out_dir)
         if session_usage.get("status") != "observed":
             session_usage = collect_pi_session_usage(
@@ -723,6 +758,7 @@ def run_trial(
     verify_on_failure = getattr(
         suite, "verify_on_adapter_failure", False
     )
+    verifier_started = time.time()
     if not adapter_failed or verify_on_failure:
         try:
             verdict = suite.verify(task_data, workdir)
@@ -746,6 +782,8 @@ def run_trial(
             "exit_code": manifest.get("exit_code", -1),
             "adapter_failed": True,
         }
+    manifest["timing"]["verifier_seconds"] = time.time() - verifier_started
+    manifest["timing"]["total_wall_seconds"] = time.time() - start_time
 
     # Write verdict
     verdict_path = trial_dir / "verdict.json"

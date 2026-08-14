@@ -1200,7 +1200,7 @@
       "image_digest_status": "resolved"
     },
     "bigcodebench_hard_instruct": {
-      "status": "ready_integration",
+      "status": "ready_smoke",
       "pilot_size": 15,
       "source": {
         "repository": "https://github.com/bigcode-project/bigcodebench.git",
@@ -1216,6 +1216,15 @@
       },
       "verifier_image_ref": "bigcodebench/bigcodebench-evaluate:latest",
       "image_digest_status": "resolved",
+      "protocol_spec": "configs/bigcodebench_hard_instruct_pilot15.json",
+      "validity_status": {
+        "selected_gold_passed": "15/15",
+        "selected_null_failed": "15/15",
+        "groundtruth_pass_rate": 1.0,
+        "representative_task": "BigCodeBench/15",
+        "representative_clean_repeats": 3,
+        "model_runs": 0
+      },
       "tasks": [
         {
           "id": "BigCodeBench/15",

@@ -339,7 +339,7 @@ rules, and a `c=1/2/4/8/16` ladder. The pilot sizes are:
 | SWE-bench Multilingual | 30 / 300 | Dataset and 30 image digests locked; gold/null/repeat validation pending |
 | SWE-PolyBench Verified | 38 / 382 | Dataset and 38 image digests locked; gold/null/repeat validation pending |
 | FeatureBench Lite | 6 / 30 | Dataset and 6 image digests locked; gold/null/repeat validation pending |
-| BigCodeBench-Hard Instruct | 15 / 148 | Dataset and verifier digest locked; separate non-agentic integration pending |
+| BigCodeBench-Hard Instruct | 15 / 148 | Non-agentic adapter ready; 15/15 gold pass and 15/15 null fail; Ornith smoke pending |
 
 **Measured setup state, 2026-08-14:** the host has 683 GiB free on `/`; all
 listed source repositories and external dataset files are present at the
@@ -347,7 +347,9 @@ manifested revisions/checksums. All 105 selected Linux/amd64 task/verifier
 images resolve to immutable platform-manifest digests in
 `configs/ornith_runtime_pilot_images_v1.json`. This is setup evidence, not
 verifier evidence: do not run a target model on a repository suite until its
-selected images survive repeated null/gold checks.
+selected images survive repeated null/gold checks. BigCodeBench is the first
+suite through that gate: its shared verifier passed all 15 selected gold/null
+pairs, with three clean repeats of each condition on `BigCodeBench/15`.
 
 The operational goal is a result within 12 hours with 20% reserve, so the
 campaign budget is 9.6 hours. If c=16 scaled perfectly, the maximum mean task
@@ -553,10 +555,16 @@ tail latency, setup costs, and failure rates decide whether c=16 is retained.
 - **Strength:** cheap, objective coverage of practical API composition and
   complex instruction following.
 - **Risk:** Python-only, synthetic, one-shot, and not repository-agent work.
-  “Calibrated” scores add omitted setup/imports, so Cospa should preserve both
-  raw and calibrated results or prefer raw Instruct.
+  “Calibrated” scores add omitted setup/imports, so the score must be labeled
+  calibrated and the original model completion retained for audit.
+- **Cospa protocol:** one OpenAI-compatible user message, no system prompt or
+  tools, greedy `n=1`, upstream sanitizer, and calibrated scoring in the
+  immutable network-disabled evaluator. The frozen public prompt spec contains
+  no tests or canonical solutions. Across the pilot15, 15/15 gold solutions
+  pass, 15/15 null solutions fail, and the upstream ground-truth rate is 1.000;
+  `BigCodeBench/15` repeats each condition cleanly three times.
 - **Cospa decision:** good low-cost orthogonal anchor, never a replacement for
-  `aider_cospa` or `cospa_repo`.
+  `aider_cospa` or `cospa_repo`, and never an arm in the scaffold matrix.
 
 ### LiveCodeBench
 

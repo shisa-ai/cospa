@@ -1495,3 +1495,27 @@ Append-only development log for the `cospa` repository.
   permitted only when the requested image set and provenance are identical.
 - Next: use full resolution for image changes and validated reuse for metadata-
   only pilot updates.
+
+## 2026-08-14 — Integrate BigCodeBench-Hard Instruct pilot15
+
+- Context: BigCodeBench is a cheap one-shot generation anchor, not an agent
+  scaffold arm; running it through pi's coding loop would make its score
+  incomparable and invent tool behavior the upstream protocol does not have.
+- Change: added a 15-task public prompt spec, a protocol-only adapter that sends
+  exactly one OpenAI-compatible user message with no system/tools, and upstream
+  calibrated scoring in the immutable Linux/amd64 evaluator. The runner now
+  preserves suite sampling overrides, records explicit zero-tool telemetry and
+  inference/verifier/total timing, and rejects a mismatched adapter. Hidden
+  parquet rows are converted only in container `/tmp`; no tests or canonical
+  solutions enter the model request or retained workdir.
+- Evidence: RED then GREEN `tests/test_bigcodebench.py` (7 tests); full pytest
+  reaches 299 passes with only the two documented baseline failures. In the
+  real 15.1 GB offline image, all 15 selected gold solutions pass, all 15 null
+  solutions fail, and every ground-truth rate is 1.000. `BigCodeBench/15`
+  repeated gold/null three times and the final single-container path repeated
+  both once with no hidden export retained.
+- Decision: mark the suite `ready_smoke (real verifier)`, not end-to-end model
+  verified. Keep its calibrated Pass@1 and zero-tool behavior separate from
+  all agentic/scaffold scores; preserve raw model completions for audit.
+- Next: finish repository-suite gold/null/repeat gates, then run the predeclared
+  Ornith smoke and concurrency ladder.

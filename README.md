@@ -16,15 +16,18 @@ when the capability-per-dollar is good.
 Clean-room harness for evaluating small/local coding models across agent
 harness variants with a cost-aware portfolio: the in-progress **`aider_cospa`**
 contract protocol, **Terminal-Bench Core 0.1.1**, the **SWE Atlas 12-task
-pilot**, and later validity-gated repository/feature suites. The harness does
-not serve models; it consumes provider definitions from
+pilot**, a no-tool **BigCodeBench-Hard Instruct pilot**, and later
+validity-gated repository/feature suites. The harness does not serve models; it
+consumes provider definitions from
 `~/.pi/agent/models.json` and writes durable results under `results/`.
 
 ## What we're measuring
 
-The single variable we want to isolate is **scaffold fit** — how well the
+The primary variable we want to isolate is **scaffold fit** — how well the
 agent's context engineering (system prompt, tool descriptions, skill
 selection, recovery behaviors) fits a small model's capabilities.
+BigCodeBench is a separate one-generation capability anchor, not a scaffold
+variant.
 
 Harness variants, same agent loop, same model:
 
@@ -103,8 +106,8 @@ intentionally provide a shared `--results-dir`.
 
 ```
 harness/          # Core runner + adapter + suite implementations
-  adapters/       # pi_vanilla, pi_devstack, little_coder
-  suites/         # aider_polyglot, terminal_bench, swe_atlas_pilot12
+  adapters/       # agentic variants + bigcodebench_openai
+  suites/         # Aider, Terminal-Bench, SWE Atlas, BigCodeBench
   runner.py       # Single load-bearing component
 configs/          # models.yaml, suite configs
 scripts/          # setup.sh, check-models.sh
@@ -276,6 +279,25 @@ run. First run all 12 at `k=1`, inspect time, normalized agent usage, judge
 usage, and infrastructure failures against `docs/EVALS.md`, then promote to a
 matched `k=2`. Do not launch the full adapter matrix first.
 
+## Running the BigCodeBench-Hard pilot
+
+BigCodeBench intentionally bypasses the coding-agent scaffold. Its dedicated
+adapter sends one user message with no system prompt or tools, requests one
+greedy sample, preserves the raw completion, and runs upstream sanitization
+plus calibrated scoring in the pinned network-disabled verifier image:
+
+```bash
+mamba run -n cospa python harness/runner.py \
+  --suite bigcodebench_hard_instruct \
+  --adapter bigcodebench_openai \
+  --model shisa/ornith-35b-fp8-block \
+  --problems 1 \
+  --k 1
+```
+
+The first verifier pull is about 15 GB. This protocol records zero tool calls
+by construction and must not be substituted into the agent scaffold matrix.
+
 ## Runner Output
 
 Interactive `harness/runner.py` runs print a lightweight elapsed-time heartbeat
@@ -373,15 +395,17 @@ post-cutover scores.
 - **`aider_canonical` (planned, optional)** — exact legacy protocol comparator; scores remain separate.
 - **Terminal-Bench Core 0.1.1** — pinned 80-task external anchor via Harbor. Wall-clock probe first.
 - **SWE Atlas pilot12** — eight Test Writing + four Codebase Q&A tasks, balanced across Go, Python, C, and TypeScript. Cost/reliability gate before `k=2`.
+- **BigCodeBench-Hard Instruct pilot15** — pinned one-sample, no-tool Python generation anchor with upstream calibrated scoring; kept separate from agentic scores.
 - **Repository/feature portfolio (candidate)** — Multi-SWE-bench Flash, SWE-bench Multilingual, SWE-PolyBench, and FeatureBench enter only after the validity/runtime bake-off in `docs/EVALS.md`.
 
 ## Current Verified State
 
-- Python tests: `mamba run -n cospa python -m pytest -q` reports `226 passed,
-  2 skipped, 2 failed`. The failures are the pre-existing port-8080 fixture
-  collision and PyYAML block-scalar newline assertion.
-- Shell harness: `bash tests/scripts/run_all.sh` reports `46` assertions passed
-  and the same port-8080 fixture collision.
+- Python tests: `mamba run -n cospa python -m pytest -q` reports `299 passed,
+  2 failed`. The failures are the documented non-hermetic `check-models`
+  endpoint fixture and the PyYAML block-scalar newline assertion.
+- Focused BigCodeBench/lock tests report 34 passes; real offline verification
+  passes all 15 gold tasks, rejects all 15 null tasks, and leaves no hidden
+  dataset export in retained trial workdirs.
 - Setup pins Terminal-Bench Core 0.1.1 and SWE Atlas pilot12, then verifies
   `little-coder`, installing it with `npm install -g little-coder` when absent
   and warning if `little-coder --list-models` cannot read provider config.
@@ -389,6 +413,10 @@ post-cutover scores.
   discover and materialize with the declared workflow/language strata. A real
   rubric-scoring run still requires the pinned judge endpoint and is not yet
   claimed as end-to-end verified.
+- BigCodeBench-Hard is `ready_smoke (real verifier)`: all 15 frozen gold
+  solutions pass, all 15 null solutions fail, and the upstream ground-truth
+  rate is 1.000 in the immutable offline evaluator. No target-model result is
+  claimed yet.
 - Terminal-Bench Docker smokes: `local/ornith-1.0-35b` + `hello-world`
   passed through Harbor 0.16 with both `pi_vanilla` and the mounted,
   sanitized `pi_devstack` profile.

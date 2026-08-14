@@ -8,8 +8,9 @@ from harness.adapters.pi_devstack_superpowers import PiDevstackSuperpowersAdapte
 from harness.adapters.little_coder import LittleCoderAdapter
 from harness.adapters.pi_superpowers import PiSuperpowersAdapter
 from harness.adapters.little_coder_superpowers import LittleCoderSuperpowersAdapter
+from harness.adapters.bigcodebench_openai import BigCodeBenchOpenAIAdapter
 
-ADAPTERS = {
+AGENTIC_ADAPTERS = {
     "pi_vanilla": PiVanillaAdapter,
     "pi_devstack": PiDevstackAdapter,
     "pi_devstack_superpowers": PiDevstackSuperpowersAdapter,
@@ -17,6 +18,12 @@ ADAPTERS = {
     "pi_superpowers": PiSuperpowersAdapter,
     "little_coder_superpowers": LittleCoderSuperpowersAdapter,
 }
+
+PROTOCOL_ADAPTERS = {
+    "bigcodebench_openai": BigCodeBenchOpenAIAdapter,
+}
+
+ADAPTERS = {**AGENTIC_ADAPTERS, **PROTOCOL_ADAPTERS}
 
 
 def load_adapter(name: str):

@@ -103,6 +103,14 @@ reorder — earlier items unblock later ones.
       eight Test Writing and four Codebase Q&A tasks, with three total tasks
       per Go/Python/C/TypeScript stratum. Preserve upstream verification,
       pin the rubric judge, and qualify cost/reliability at k=1 before k=2.
+- [ ] **P11c. Suite: BigCodeBench-Hard Instruct pilot15.**
+      `harness/suites/bigcodebench.py` and the protocol-specific
+      `bigcodebench_openai` adapter preserve a separate non-agentic baseline:
+      one OpenAI-compatible user message, no system/tools/context, greedy
+      `n=1`, upstream sanitization, and calibrated evaluation in the immutable
+      Linux/amd64 verifier image. Public prompts are committed; hidden tests
+      and canonical solutions remain in the pinned parquet and enter only the
+      post-generation, network-disabled verifier container.
 - [ ] **P12. Score viewer (`view-scores/`).** Static HTML + a tiny
       `server.py` that walks `results/` and renders a table:
       rows = `(model, adapter, suite)`, cells = pass-rate with CI,
@@ -138,11 +146,12 @@ model serving automation, automated regression on every commit.
 
 ## 1. What we're measuring, and why
 
-The single variable we want to isolate is **scaffold fit** — how well the
+The primary variable we want to isolate is **scaffold fit** — how well the
 agent's context engineering (system prompt, tool descriptions, skill
-selection, recovery behaviors) fits a *small* model's capabilities. All
-three harnesses are the same agent loop on the same model; what differs
-is what surrounds the model call.
+selection, recovery behaviors) fits a *small* model's capabilities. The
+agentic adapters use the same loop on the same model; what differs is what
+surrounds the model call. `bigcodebench_openai` is intentionally excluded from
+that scaffold matrix: it is a no-tool, one-generation orthogonal anchor.
 
 | Adapter | What it is | Why it's in the matrix |
 |---|---|---|
@@ -152,6 +161,7 @@ is what surrounds the model call.
 | `pi_superpowers` | `pi_vanilla` + Superpowers debugging/verification skills | Ablation: does generic methodology help or hurt without devstack extensions? |
 | `pi_devstack_superpowers` | devstack extensions + Superpowers debugging/verification skills | Direct `pi_devstack` vs `pi_devstack` + Superpowers bench ablation. |
 | `little_coder_superpowers` | `little_coder` + Superpowers debugging/verification skills | Same Superpowers ablation for little-coder. |
+| `bigcodebench_openai` | One OpenAI-compatible user message; no system prompt or tools | Separate BigCodeBench protocol anchor; never compared as a scaffold arm. |
 
 Prediction (worth testing): little_coder > pi_devstack > pi_vanilla on
 both suites, with the gap widest on the smallest models. Superpowers

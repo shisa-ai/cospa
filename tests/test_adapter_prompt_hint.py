@@ -15,7 +15,7 @@ from unittest.mock import patch
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(PROJECT_ROOT))
 
-from harness.adapters import ADAPTERS
+from harness.adapters import ADAPTERS, AGENTIC_ADAPTERS, PROTOCOL_ADAPTERS
 from harness.adapters import session_utils
 from harness.adapters.session_utils import NO_NETWORK_HINT, with_no_network_hint
 from harness.adapters.pi_vanilla import PiVanillaAdapter
@@ -94,8 +94,8 @@ def test_with_no_network_hint_can_append_at_bottom():
 
 def test_every_adapter_prepends_no_network_hint():
     """Every registered adapter must pass the hint to the agent on every run."""
-    assert ADAPTERS, "adapter registry must not be empty"
-    for name in ADAPTERS:
+    assert AGENTIC_ADAPTERS, "agentic adapter registry must not be empty"
+    for name in AGENTIC_ADAPTERS:
         sent, cmd = _capture_prompt(name)
         assert NO_NETWORK_HINT in sent, (
             f"adapter {name} did not include the no-network hint in its prompt"
@@ -110,7 +110,7 @@ def test_every_adapter_prepends_no_network_hint():
 
 def test_every_adapter_preserves_original_task_text():
     """The hint must not clobber the real problem statement."""
-    for name in ADAPTERS:
+    for name in AGENTIC_ADAPTERS:
         sent, _ = _capture_prompt(name)
         assert sent.count("Write a solution.") == 1
         # exactly one hint line
@@ -119,9 +119,15 @@ def test_every_adapter_preserves_original_task_text():
 
 def test_every_adapter_loads_behavior_trace_extension():
     """Every pi/little-coder scaffold must emit the same boundary telemetry."""
-    for name in ADAPTERS:
+    for name in AGENTIC_ADAPTERS:
         _, cmd = _capture_prompt(name)
         assert "--extension" in cmd, f"adapter {name} omitted telemetry extension"
         path = Path(cmd[cmd.index("--extension") + 1])
         assert path.name == "behavior_trace_extension.ts"
         assert path.is_file()
+
+
+def test_protocol_adapters_are_separate_from_agent_scaffold_invariants():
+    assert set(ADAPTERS) == set(AGENTIC_ADAPTERS) | set(PROTOCOL_ADAPTERS)
+    assert set(AGENTIC_ADAPTERS).isdisjoint(PROTOCOL_ADAPTERS)
+    assert set(PROTOCOL_ADAPTERS) == {"bigcodebench_openai"}

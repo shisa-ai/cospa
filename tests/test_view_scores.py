@@ -172,6 +172,53 @@ def test_get_scores_reads_encoded_tree():
     assert 0 < row["pass_rate"] <= 100, row
 
 
+def test_verbose_scores_average_response_turns_across_trials():
+    """Verbose rows should show average model turns per completed trial."""
+    with tempfile.TemporaryDirectory() as tmp:
+        results_dir = Path(tmp) / "results"
+        model_id = "turns/model"
+        adapter = "pi_vanilla"
+        suite = "aider_polyglot"
+        task_id = "python/hello"
+        base = (
+            results_dir
+            / encode_model_path(model_id)
+            / adapter
+            / suite
+            / encode_task_path(task_id)
+        )
+        for trial_number, response_count in enumerate((2, 4, 9), start=1):
+            _write_trial(
+                base / f"trial-{trial_number}",
+                passed=True,
+                task_id=task_id,
+                model_id=model_id,
+                token_usage={"response_count": response_count},
+            )
+
+        h, server_mod = _make_handler(results_dir)
+        scores = h.get_scores()
+        output = server_mod.format_scores_terminal(
+            scores,
+            results_dir=results_dir,
+            verbose=True,
+        )
+
+    assert len(scores) == 1
+    assert scores[0]["mean_turns"] == 5.0
+    assert scores[0]["turn_counted_trials"] == 3
+    lines = output.splitlines()
+    header_cells = [cell.strip() for cell in lines[3].split("  ") if cell.strip()]
+    row_cells = [cell.strip() for cell in lines[5].split("  ") if cell.strip()]
+    columns = dict(zip(header_cells, row_cells, strict=True))
+    assert (
+        header_cells.index("Avg")
+        < header_cells.index("Turns")
+        < header_cells.index("Tok In")
+    )
+    assert columns["Turns"] == "5.0"
+
+
 def test_get_scores_reads_named_run_wrapper_tree():
     """Named runs may live under results/<run-label>/<encoded-model>/..."""
     with tempfile.TemporaryDirectory() as tmp:

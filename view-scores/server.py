@@ -40,7 +40,7 @@ DEFAULT_CACHE_PATH = Path(
         PROJECT_ROOT / ".cache" / "view-scores.json",
     )
 )
-SCORE_CACHE_VERSION = 3
+SCORE_CACHE_VERSION = 4
 RUN_HEARTBEAT_FILE = ".runner-heartbeat.json"
 RUN_HEARTBEAT_STALE_SECONDS = 90
 
@@ -103,6 +103,18 @@ def _format_tokens(value: float | int | None) -> str:
     if total <= 0:
         return "-"
     return f"{total:,}"
+
+
+def _format_turns(value: float | int | None) -> str:
+    if value is None:
+        return "-"
+    try:
+        turns = float(value)
+    except (TypeError, ValueError):
+        return "-"
+    if turns <= 0:
+        return "-"
+    return f"{turns:.1f}"
 
 
 def _format_cost(value: float | int | None) -> str:
@@ -361,6 +373,7 @@ def format_scores_terminal(
             "Done",
             "Runtime",
             "Avg",
+            "Turns",
             "Tok In",
             "Tok Out",
             "$/M In",
@@ -411,6 +424,7 @@ def format_scores_terminal(
                 done,
                 _format_duration(score.get("total_wall_clock_seconds")),
                 _format_duration(score.get("mean_wall_clock_seconds")),
+                _format_turns(score.get("mean_turns")),
                 _format_tokens(score.get("prompt_tokens")),
                 _format_tokens(score.get("completion_tokens")),
                 _format_cost(score.get("input_cost_per_million_usd")),
@@ -1104,6 +1118,12 @@ class ScoreHandler(SimpleHTTPRequestHandler):
             "reasoning_tokens",
             "reasoning",
         )
+        response_count = cls._numeric_value(
+            usage,
+            "response_count",
+            "turn_count",
+            "turns",
+        )
 
         prompt = int(prompt_tokens or 0)
         completion = int(completion_tokens or 0)
@@ -1121,6 +1141,9 @@ class ScoreHandler(SimpleHTTPRequestHandler):
             "cache_creation_tokens": cache_creation,
             "reasoning_tokens": reasoning,
             "total_tokens": total,
+            # Each usage-bearing assistant response in a pi trace is one
+            # model turn, including responses that end in tool calls.
+            "response_count": int(response_count or 0),
         }
 
     @staticmethod
@@ -1412,6 +1435,7 @@ class ScoreHandler(SimpleHTTPRequestHandler):
 
         grouped_trials = {}
         grouped_times = {}
+        grouped_turns = {}
         grouped_tokens = {}
         grouped_pricing = {}
         grouped_cost_coverage = {}
@@ -1506,6 +1530,8 @@ class ScoreHandler(SimpleHTTPRequestHandler):
                     float(seconds)
                 )
             token_usage = self._token_usage_from_manifest(trial["manifest"])
+            if token_usage["response_count"] > 0:
+                grouped_turns.setdefault(key, []).append(token_usage["response_count"])
             pricing = self._pricing_from_manifest(
                 trial["manifest"],
                 prompt_tokens=token_usage["prompt_tokens"],
@@ -1582,6 +1608,8 @@ class ScoreHandler(SimpleHTTPRequestHandler):
                 total_wall_clock_seconds / len(task_times) if task_times else 0
             )
             median_wall_clock_seconds = statistics.median(task_times) if task_times else 0
+            turn_counts = grouped_turns.get(key5, [])
+            mean_turns = statistics.fmean(turn_counts) if turn_counts else None
             started_count = len(
                 started_tasks.get(key5, set())
                 | set(task_trials.keys())
@@ -1706,6 +1734,8 @@ class ScoreHandler(SimpleHTTPRequestHandler):
                 "mean_wall_clock_seconds": mean_wall_clock_seconds,
                 "median_wall_clock_seconds": median_wall_clock_seconds,
                 "estimated_remaining_seconds": estimated_remaining_seconds,
+                "mean_turns": mean_turns,
+                "turn_counted_trials": len(turn_counts),
                 "prompt_tokens": token_totals["prompt_tokens"],
                 "completion_tokens": token_totals["completion_tokens"],
                 "cached_tokens": token_totals["cached_tokens"],
@@ -1935,7 +1965,7 @@ def main(argv: list[str] | None = None) -> int:
         "-v",
         "--verbose",
         action="store_true",
-        help="Show status, runtime, average task time, and ETA",
+        help="Show status, runtime, average task time/turns, and ETA",
     )
 
     json_parser = subparsers.add_parser(

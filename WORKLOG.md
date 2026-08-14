@@ -1307,3 +1307,20 @@ Append-only development log for the `cospa` repository.
   suite failures (test_terminal_bench materialize, test_scripts) are pre-existing
   on clean tree.
 - Next action: restart devstack runs under the hint once current runs finish.
+
+## 2026-08-14 — Show average model turns in verbose scores
+
+- Context: compare how many model/tool-loop turns different models need to
+  solve benchmark tasks, alongside the existing average wall-clock time.
+- Evidence: RED→GREEN
+  `test_verbose_scores_average_response_turns_across_trials` uses three real
+  encoded trial artifacts (2, 4, and 9 responses) and verifies a 5.0-turn
+  average rendered after `Avg`. All 48 viewer tests pass; a live
+  `./view --results-dir results/runs --no-cache -v` shows populated turns.
+- Decision: treat each usage-bearing assistant response in pi's session JSONL
+  as one turn, average over completed trials with observed response counts,
+  expose `mean_turns`/`turn_counted_trials` in score JSON, and invalidate the
+  viewer cache so existing rows are recomputed.
+- Validation: full pytest reports `242 passed, 2 skipped, 2 failed`; the only
+  failures are the pre-existing check-models port collision and Terminal-Bench
+  PyYAML block-scalar newline assertion documented on the prior baseline.

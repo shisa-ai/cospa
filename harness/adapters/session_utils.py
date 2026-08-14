@@ -8,9 +8,10 @@ from pathlib import Path
 # to fetch or search online burn their whole budget on requests that can never
 # succeed. This line steers them to write the solution from what is provided.
 NO_NETWORK_HINT = (
-    "Note: This sandbox has NO network access. Do not try to fetch, search for, "
-    "or look up any files, tests, or references online — write the solution "
-    "entirely from the provided files and the problem statement."
+    "Note: This sandbox has NO network access. There are no hidden tests or "
+    "reference solutions available. Do not try to fetch, search for, or look up "
+    "any files, tests, or references online — write the solution entirely from "
+    "the provided files and the problem statement."
 )
 
 

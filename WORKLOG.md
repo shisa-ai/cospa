@@ -1345,3 +1345,14 @@ Append-only development log for the `cospa` repository.
   test_terminal_bench newline and test_check_models shell failures remain.
 - Decision: discard partial Muse and Ornith runs made before explicit profiles;
   DeepSeek's paused partial uses its matching 1/1 effective defaults.
+
+## 2026-08-14 — State hidden references are unavailable in task prompts
+
+- Context: Muse spent a live trial recursively searching the sandbox after
+  implementing its solution, attempting to find a hidden test/reference. The
+  benchmark intentionally exposes neither; this should be factual task context,
+  not a prohibition that masks subsequent agent behavior.
+- Change: added “There are no hidden tests or reference solutions available.”
+  to the shared no-network prompt hint used by every adapter.
+- Evidence: RED then GREEN test in test_adapter_prompt_hint.py; focused prompt
+  and sampling tests: 11 passed.

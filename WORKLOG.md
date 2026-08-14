@@ -1539,3 +1539,26 @@ Append-only development log for the `cospa` repository.
   with unreachable localhost URLs. Treat the generated pool list as the source
   of healthy providers and retain its advertised zero GLM 5.3 pool pricing.
 - Next: use `zai/glm-5.3` in a benchmark smoke before launching a matrix.
+
+## 2026-08-14 — Integrate SWE-PolyBench Verified pilot38
+
+- Context: the frozen 38-task repository pilot had immutable image digests and
+  a pinned dataset but no Cospa execution path or verifier evidence.
+- Change: added a Harbor suite that starts from each digest-pinned image,
+  resets the repository baseline in a derived image, withholds test/gold
+  patches until their Harbor phases, replays the captured model patch after
+  hidden tests, and scores F2P/P2P using isolated pinned upstream parsers.
+  Java uses the image's Maven cache offline. Setup now fails early when Docker
+  or Buildx is unavailable for Harbor's phase-network sidecar.
+- Evidence: RED then GREEN `tests/test_swe_polybench.py` (10 tests), including
+  real parser-output fixtures for Python, Java, JavaScript, and TypeScript;
+  setup's shell test passes 17 assertions. A real Harbor 0.16.1 Gson gate over
+  the pinned image produced null 4/6 incorrect with a zero-byte model patch and
+  gold 6/6 resolved with a 1,460-byte patch, both verifier runs offline. Full
+  pytest reports 310 passed plus the two documented baseline failures; the
+  shell suite likewise has only the existing check-models fixture failures.
+- Decision: call the adapter ready with representative end-to-end verifier
+  evidence, but retain the suite's blocked gold/null status until the other 37
+  selected tasks and repeat gate pass. Do not report an Ornith score yet.
+- Next: validate gold/null across all 38 selected images, then run repeats and
+  the predeclared Ornith smoke if the verifier gate remains clean.

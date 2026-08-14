@@ -337,7 +337,7 @@ rules, and a `c=1/2/4/8/16` ladder. The pilot sizes are:
 | SWE Atlas pilot12 | 12 / 12 | Pinned tasks ready; judge credentials/endpoint required |
 | Multi-SWE-bench Flash | 30 / 300 | Dataset and 30 image digests locked; gold/null/repeat validation pending |
 | SWE-bench Multilingual | 30 / 300 | Dataset and 30 image digests locked; gold/null/repeat validation pending |
-| SWE-PolyBench Verified | 38 / 382 | Dataset and 38 image digests locked; gold/null/repeat validation pending |
+| SWE-PolyBench Verified | 38 / 382 | Harbor adapter ready; representative Gson gold passes and null fails offline; remaining 37 plus repeats pending |
 | FeatureBench Lite | 6 / 30 | Dataset and 6 image digests locked; gold/null/repeat validation pending |
 | BigCodeBench-Hard Instruct | 15 / 148 | Non-agentic adapter ready; 15/15 gold pass and 15/15 null fail; Ornith smoke pending |
 
@@ -350,6 +350,10 @@ verifier evidence: do not run a target model on a repository suite until its
 selected images survive repeated null/gold checks. BigCodeBench is the first
 suite through that gate: its shared verifier passed all 15 selected gold/null
 pairs, with three clean repeats of each condition on `BigCodeBench/15`.
+SWE-PolyBench now has representative end-to-end Harbor evidence on
+`google__gson-1989`: the clean null fails F2P with 4/6 tests passing and an
+empty model patch, while gold resolves 6/6 with the verifier offline. This
+proves the adapter path, not the remaining 37 selected images or repeat gate.
 
 The operational goal is a result within 12 hours with 20% reserve, so the
 campaign budget is 9.6 hours. If c=16 scaled perfectly, the maximum mean task

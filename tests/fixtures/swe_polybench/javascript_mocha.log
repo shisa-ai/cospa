@@ -1,0 +1,14 @@
+> three@0.91.0 test
+> mocha --reporter json
+{
+  "stats": {"suites": 1, "tests": 2, "passes": 1, "pending": 0, "failures": 1},
+  "tests": [],
+  "pending": [],
+  "failures": [
+    {"title": "intersectsPlane", "fullTitle": "Source > Maths > Box3 > intersectsPlane"}
+  ],
+  "passes": [
+    {"title": "length/lengthSq", "fullTitle": "Source > Maths > Vector3 > length/lengthSq"}
+  ]
+}
+Container exited with status code: 1

@@ -1,0 +1,9 @@
+[INFO] Running com.google.gson.GsonTest
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.google.gson.GsonTest" tests="2" errors="0" skipped="0" failures="1">
+  <testcase classname="com.google.gson.GsonTest" name="testNewJsonWriter_Default"/>
+  <testcase classname="com.google.gson.GsonTest" name="testNewJsonWriter_Custom">
+    <failure message="expected custom writer"/>
+  </testcase>
+</testsuite>
+Container exited with status code: 1

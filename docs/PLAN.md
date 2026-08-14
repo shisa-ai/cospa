@@ -31,7 +31,8 @@ reorder — earlier items unblock later ones.
 - [ ] **P2. Install script (`scripts/setup.sh`).** Verifies pi (≥ some
       version), verifies the `cospa` mamba env (python=3.12) exists
       and is active, installs Harbor 0.16.1
-      (`uv tool install --force harbor==0.16.1`), checks out
+      (`uv tool install --force harbor==0.16.1`), verifies Docker plus Buildx
+      for Harbor's phase-network sidecar, checks out
       Terminal-Bench Core 0.1.1 at commit `91e10457b5410f16c44364da1a34cb6de8c488a5`
       and SWE Atlas at `2cac47d64a9123d915b8f6f6f53763391920f574`,
       and clones Aider Polyglot at source commit
@@ -111,6 +112,15 @@ reorder — earlier items unblock later ones.
       Linux/amd64 verifier image. Public prompts are committed; hidden tests
       and canonical solutions remain in the pinned parquet and enter only the
       post-generation, network-disabled verifier container.
+- [ ] **P11d. Suite: SWE-PolyBench Verified pilot38.**
+      `harness/suites/swe_polybench.py` materializes the outcome-blind 38-task
+      slice as Harbor tasks over digest-pinned images. A derived image resets
+      each repository to its declared base commit before the agent; hidden test
+      and gold patches enter only their Harbor phases. Verification replays the
+      captured model patch after hidden tests, runs without network (using the
+      pinned Maven cache for Java), and scores with the pinned upstream parser.
+      The representative Gson null/gold path is verified end-to-end; all 38
+      selected tasks remain gated on gold/null/repeat validation.
 - [ ] **P12. Score viewer (`view-scores/`).** Static HTML + a tiny
       `server.py` that walks `results/` and renders a table:
       rows = `(model, adapter, suite)`, cells = pass-rate with CI,

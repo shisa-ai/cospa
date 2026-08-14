@@ -1,0 +1,9 @@
+===== test session starts =====
+platform linux -- Python 3.12.0, pytest-8.3.0
+collected 2 items
+
+tests/unit/test_message_history.py::test_message_history_batch_summary PASSED
+tests/unit/test_message_history.py::test_message_history_limit FAILED
+
+===== short test summary info =====
+FAILED tests/unit/test_message_history.py::test_message_history_limit - AssertionError

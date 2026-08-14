@@ -123,6 +123,28 @@ if [[ "$HARBOR_ACTUAL_VERSION" != "$HARBOR_VERSION" ]]; then
 fi
 log_ok "harbor found: $HARBOR_ACTUAL_VERSION"
 
+# Harbor 0.16 builds a local egress-control sidecar whenever a task declares
+# phase-scoped network isolation. The Docker CLI can be present while its
+# Buildx plugin is absent, which otherwise fails only when the first trial
+# starts.
+echo ""
+echo "── Checking Docker for Harbor ──"
+if ! command -v docker &>/dev/null; then
+    log_err "docker not found in PATH. Harbor-backed suites require Docker."
+    exit 1
+fi
+if ! docker info &>/dev/null; then
+    log_err "Docker daemon is unavailable to the current user."
+    exit 1
+fi
+if ! BUILDX_VERSION=$(docker buildx version 2>/dev/null); then
+    log_err "Docker Buildx is required for Harbor's egress-control sidecar."
+    log_err "  Arch/CachyOS: sudo pacman -S docker-buildx"
+    log_err "  Debian/Ubuntu Docker repo: sudo apt install docker-buildx-plugin"
+    exit 1
+fi
+log_ok "Docker Buildx found: $BUILDX_VERSION"
+
 # ── 5. Clone Terminal-Bench Core 0.1.1 ──────────────────────────────────
 echo ""
 echo "── Checking Terminal-Bench Core 0.1.1 ──"

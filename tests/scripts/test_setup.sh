@@ -42,6 +42,18 @@ if [[ "${1:-}" == "--version" ]]; then
 fi
 EOF
 
+cat > "$BIN/docker" <<'EOF'
+#!/usr/bin/env bash
+if [[ "$*" == "info" ]]; then
+    exit 0
+elif [[ "$*" == "buildx version" ]]; then
+    echo "github.com/docker/buildx v0.35.0"
+    exit 0
+fi
+echo "unexpected docker args: $*" >&2
+exit 1
+EOF
+
 cat > "$BIN/uv" <<'EOF'
 #!/usr/bin/env bash
 echo "$*" >> "$UV_LOG"
@@ -87,7 +99,7 @@ LC
 fi
 EOF
 
-chmod +x "$BIN/pi" "$BIN/mamba" "$BIN/harbor" "$BIN/git" "$BIN/npm" "$BIN/uv"
+chmod +x "$BIN/pi" "$BIN/mamba" "$BIN/harbor" "$BIN/docker" "$BIN/git" "$BIN/npm" "$BIN/uv"
 
 NPM_LOG="$TMP/npm.log"
 GIT_LOG="$TMP/git.log"
@@ -105,6 +117,8 @@ assert_contains "tool install --force harbor==0.16.1" "$(cat "$UV_LOG" 2>/dev/nu
     "setup replaces an incompatible Harbor version with the pinned CLI"
 assert_contains "harbor found: 0.16.1" "$OUT" \
     "setup reports the pinned Harbor version after installation"
+assert_contains "Docker Buildx found" "$OUT" \
+    "setup verifies Harbor's phase-network sidecar build prerequisite"
 assert_contains 'TB_REPO="https://github.com/harbor-framework/terminal-bench-1.git"' \
     "$(cat "$PROJ/scripts/setup.sh")" \
     "setup uses the archived Core 0.1.1 repository that still exposes the pin"

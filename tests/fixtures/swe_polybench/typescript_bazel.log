@@ -1,0 +1,4 @@
+INFO: Analyzed target //packages/core/test/render3:render3 (0 packages loaded).
+//packages/core/test/render3:render3 PASSED in 12.3s
+//packages/compiler/test/selector:selector FAILED in 2.1s
+Executed 2 out of 2 tests: 1 test passes and 1 fails locally.

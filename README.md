@@ -141,7 +141,8 @@ Terminal-Bench Core is pinned to the 80-task `0.1.1` release at upstream commit
 `91e10457b5410f16c44364da1a34cb6de8c488a5`. SWE Atlas is pinned at
 `2cac47d64a9123d915b8f6f6f53763391920f574`, with the selected 12 task IDs and
 strata in `configs/swe_atlas_pilot12.json`. `scripts/setup.sh` checks out both
-commits detached. Their runs go through Harbor and Docker. If your shell was
+commits detached and verifies Docker Buildx, which Harbor needs for phase-scoped
+network isolation. Their runs go through Harbor and Docker. If your shell was
 opened before you were added to the `docker` group, use
 `sg docker -c '<command>'` or open a new login shell before running
 Harbor-backed smoke tests.
@@ -242,10 +243,13 @@ mamba run -n cospa python harness/runner.py \
   --k 1
 ```
 
-The same model id can be used with `--suite terminal_bench` or
-`--suite swe_atlas_pilot12`; the Harbor custom agent copies the selected
+The same model id can be used with `--suite terminal_bench`,
+`--suite swe_atlas_pilot12`, or the currently gated
+`--suite swe_polybench_verified`; the Harbor custom agent copies the selected
 provider config into the task container before it runs. The provider `baseUrl`
-still has to be reachable from inside Docker.
+still has to be reachable from inside Docker. SWE-PolyBench has a passing
+representative offline gold/null gate, but do not launch model scoring until
+all 38 selected images complete gold/null/repeat validation.
 
 Use the same pattern for SGLang, llama.cpp, Ollama, or any other HF-serving
 stack as long as it exposes OpenAI-compatible chat completions.

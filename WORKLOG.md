@@ -1852,3 +1852,24 @@ Append-only development log for the `cospa` repository.
   diagnostic artifacts remain durable and available only through `--all`.
 - Next: complete controlled thinking and test-overlap sensitivity checks before
   starting the corrected devstack matrix.
+
+## 2026-08-15 — Remove Harbor's per-task Pi network install
+
+- Context: five PolyBench outcomes were infrastructure failures because task
+  images without preinstalled Node/NVM repeatedly cloned NVM and installed pi
+  over public DNS; retries on MUI stalled or failed before model execution.
+- Change: mount the selected host NVM version read-only at
+  `/opt/coding-eval-pi-runtime` for every Pi/little-coder Harbor arm, activate
+  its node/CLI directly in setup, config, devstack, and run shells, and retain
+  the portable NVM/package-manager path only as a fallback.
+- Evidence: RED tests required a runtime mount for vanilla plus runtime/profile
+  mounts for devstack and verified native/fallback activation. A real DS4 MUI
+  trial that previously failed setup completed agent and native verifier phases
+  in 255.75 seconds, with requested and observed `xhigh` and no infrastructure
+  failure. Full pytest: 345 passed with only the documented unrelated
+  Terminal-Bench newline fixture failure.
+- Decision: the mounted tree contains only the immutable selected node/global
+  package runtime, is read-only, and exposes no host settings, sessions, or
+  credentials to benchmark containers.
+- Next: finish the true-xhigh disagreement panel, then use the mounted runtime
+  for any corrected full vanilla/devstack cells.

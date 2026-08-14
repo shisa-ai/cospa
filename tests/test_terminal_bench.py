@@ -463,8 +463,8 @@ def test_run_harbor_job_uses_distinct_custom_agents_for_adapter_variants():
     assert "aider" not in seen.values(), seen
 
 
-def test_run_harbor_job_mounts_devstack_profile_only_for_devstack():
-    """Devstack Harbor arms must see the real package cache, unlike vanilla."""
+def test_run_harbor_job_mounts_runtime_for_all_and_profile_only_for_devstack():
+    """Every Harbor arm gets pi offline; only devstack gets package mounts."""
     suite = TerminalBenchSuite()
     commands = {}
 
@@ -476,6 +476,10 @@ def test_run_harbor_job_mounts_devstack_profile_only_for_devstack():
 
     with tempfile.TemporaryDirectory() as tmp:
         tmp = Path(tmp)
+        runtime = tmp / "runtime"
+        (runtime / "bin").mkdir(parents=True)
+        for executable in ("node", "pi", "little-coder"):
+            (runtime / "bin" / executable).write_text("#!/bin/sh\n")
         profile = tmp / "profile"
         (profile / "npm").mkdir(parents=True)
         (profile / "git").mkdir()
@@ -489,6 +493,7 @@ def test_run_harbor_job_mounts_devstack_profile_only_for_devstack():
             os.environ,
             {
                 "CODING_EVAL_DEVSTACK_PROFILE_DIR": str(profile),
+                "CODING_EVAL_PI_RUNTIME_DIR": str(runtime),
                 "CODING_EVAL_HARBOR_MODEL_BASE_URL": (
                     "http://model-relay:8013/v1"
                 ),
@@ -511,12 +516,20 @@ def test_run_harbor_job_mounts_devstack_profile_only_for_devstack():
                     1,
                 )
 
-    assert "--mounts" not in commands["pi_vanilla"]
+    runtime_mount = {
+        "type": "bind",
+        "source": str(runtime.resolve()),
+        "target": "/opt/coding-eval-pi-runtime",
+        "read_only": True,
+    }
+    vanilla = commands["pi_vanilla"]
+    assert json.loads(vanilla[vanilla.index("--mounts") + 1]) == [runtime_mount]
     for adapter in ("pi_devstack", "pi_devstack_superpowers"):
         cmd = commands[adapter]
         assert "--mounts" in cmd, cmd
         mounts = json.loads(cmd[cmd.index("--mounts") + 1])
         assert mounts == [
+            runtime_mount,
             {
                 "type": "bind",
                 "source": str(profile.resolve() / "npm"),
@@ -760,6 +773,7 @@ def test_native_harbor_agent_bootstrap_supports_non_debian_images(monkeypatch):
     install_command = agent.agent_commands[0]
     assert 'nvm_dir="${NVM_DIR:-$HOME/.nvm}"' in install_command
     assert '. "$nvm_dir/nvm.sh"' in install_command
+    assert "/opt/coding-eval-pi-runtime/bin/pi" in install_command
     config_command = agent.agent_commands[-1]
     assert "CODING_EVAL_PI_SAMPLING_PARAMS" in config_command
     assert "samplingParams" in config_command
@@ -771,6 +785,7 @@ def test_native_harbor_agent_bootstrap_supports_non_debian_images(monkeypatch):
     run_command = agent.agent_commands[-1]
     assert '. "${NVM_DIR:-$HOME/.nvm}/nvm.sh"' in run_command
     assert "nvm use 22" in run_command
+    assert "/opt/coding-eval-pi-runtime/bin/pi" in run_command
 
 
 def test_legacy_harbor_agent_bootstrap_supports_non_debian_images():

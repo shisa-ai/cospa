@@ -103,9 +103,18 @@ _CONTAINER_BENCH_SKILLS = (
     "/installed-agent/bench-skills/verification-before-completion",
 )
 
-_RUNTIME_DEPENDENCY_INSTALL_COMMAND = r"""
+_PI_RUNTIME_DIR = "/opt/coding-eval-pi-runtime"
+_RUNTIME_ACTIVATION_INLINE = (
+    f'if [[ -x "{_PI_RUNTIME_DIR}/bin/pi" ]]; then '
+    f'export PATH="{_PI_RUNTIME_DIR}/bin:$PATH"; '
+    'else . "${NVM_DIR:-$HOME/.nvm}/nvm.sh"; nvm use 22 >/dev/null; fi'
+)
+
+_RUNTIME_DEPENDENCY_INSTALL_COMMAND = rf"""
 set -e
-if command -v curl >/dev/null 2>&1; then
+if [[ -x "{_PI_RUNTIME_DIR}/bin/pi" && -x "{_PI_RUNTIME_DIR}/bin/node" ]]; then
+    exit 0
+elif command -v curl >/dev/null 2>&1; then
     exit 0
 elif command -v apt-get >/dev/null 2>&1; then
     export DEBIAN_FRONTEND=noninteractive
@@ -143,7 +152,7 @@ def _thinking_args() -> list[str]:
 
 def _devstack_profile_install_command() -> str:
     """Install the read-only devstack package snapshot into the agent home."""
-    return r'''
+    command = r'''
 set -euo pipefail
 profile_root=/opt/coding-eval-devstack
 agent_dir="$HOME/.pi/agent"
@@ -155,9 +164,12 @@ rm -rf "$agent_dir/npm" "$agent_dir/git"
 ln -s "$profile_root/npm" "$agent_dir/npm"
 ln -s "$profile_root/git" "$agent_dir/git"
 cp "$profile_root/settings.json" "$agent_dir/settings.json"
-. "${NVM_DIR:-$HOME/.nvm}/nvm.sh"
+__COSPA_RUNTIME_ACTIVATION__
 pi list
 '''.strip()
+    return command.replace(
+        "__COSPA_RUNTIME_ACTIVATION__", _RUNTIME_ACTIVATION_INLINE
+    )
 
 
 def _wrap_with_pi_session_export(
@@ -229,7 +241,7 @@ if _HARBOR_NATIVE:
 
             command = r"""
 mkdir -p "$HOME/.pi/agent"
-. "${NVM_DIR:-$HOME/.nvm}/nvm.sh"
+__COSPA_RUNTIME_ACTIVATION__
 node <<'NODE'
 const fs = require('fs');
 const os = require('os');
@@ -300,7 +312,7 @@ const cfg = {
 fs.mkdirSync(dir, { recursive: true });
 fs.writeFileSync(path.join(dir, 'models.json'), JSON.stringify(cfg, null, 2));
 NODE
-"""
+""".replace("__COSPA_RUNTIME_ACTIVATION__", _RUNTIME_ACTIVATION_INLINE)
             await self.exec_as_agent(environment, command=command, env=env)
 
         async def _install_devstack_profile(
@@ -352,6 +364,9 @@ EOF
                     "set -euo pipefail; "
                     "nvm_dir=\"${NVM_DIR:-$HOME/.nvm}\"; "
                     "export NVM_DIR=\"$nvm_dir\"; "
+                    f"if [[ -x \"{_PI_RUNTIME_DIR}/bin/{self.cli_command}\" ]]; then "
+                    f"export PATH=\"{_PI_RUNTIME_DIR}/bin:$PATH\"; "
+                    "else "
                     "if [[ ! -f \"$nvm_dir/nvm.sh\" ]]; then "
                     "curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.40.2/install.sh | bash; "
                     "fi; "
@@ -360,6 +375,7 @@ EOF
                     "nvm alias default 22; "
                     f"if ! command -v {shlex.quote(self.cli_command)} >/dev/null 2>&1; then "
                     f"npm install -g {shlex.quote(package)}; "
+                    "fi; "
                     "fi; "
                     f"{shlex.quote(self.cli_command)} --version"
                 ),
@@ -388,10 +404,7 @@ EOF
             await self.exec_as_agent(
                 environment,
                 command=_wrap_with_pi_session_export(
-                    (
-                        f'. "${{NVM_DIR:-$HOME/.nvm}}/nvm.sh"; '
-                        f'nvm use 22 >/dev/null; {shlex.join(cmd)}'
-                    ),
+                    f"{_RUNTIME_ACTIVATION_INLINE}; {shlex.join(cmd)}",
                     output_filename=self._output_filename,
                 ),
                 env=self._provider_env(),
@@ -448,10 +461,7 @@ else:
                 *_thinking_args(),
                 instruction,
             ]
-            run_command = (
-                '. "${NVM_DIR:-$HOME/.nvm}/nvm.sh"; '
-                f'nvm use 22 >/dev/null; {shlex.join(cmd)}'
-            )
+            run_command = f"{_RUNTIME_ACTIVATION_INLINE}; {shlex.join(cmd)}"
             return [
                 TerminalCommand(
                     command=_wrap_with_pi_session_export(run_command),

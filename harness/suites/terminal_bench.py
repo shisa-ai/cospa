@@ -247,6 +247,31 @@ class TerminalBenchSuite:
                 env["CODING_EVAL_LOCAL_API_KEY"] = api_key
         return env
 
+    def _pi_runtime_mounts(self) -> list[dict[str, Any]]:
+        """Mount the selected host pi/node runtime to avoid task network setup."""
+        configured = os.environ.get("CODING_EVAL_PI_RUNTIME_DIR")
+        if configured:
+            runtime_dir = Path(configured).expanduser()
+        else:
+            pi_executable = shutil.which("pi")
+            if not pi_executable:
+                return []
+            runtime_dir = Path(pi_executable).parent.parent
+        runtime_dir = runtime_dir.resolve()
+        if not (
+            (runtime_dir / "bin" / "node").is_file()
+            and (runtime_dir / "bin" / "pi").is_file()
+        ):
+            return []
+        return [
+            {
+                "type": "bind",
+                "source": str(runtime_dir),
+                "target": "/opt/coding-eval-pi-runtime",
+                "read_only": True,
+            }
+        ]
+
     def _devstack_mounts(
         self,
         adapter_name: str,
@@ -767,9 +792,9 @@ class TerminalBenchSuite:
             "--allow-agent-host", model_host,
             "--yes",
         ]
-        devstack_mounts = self._devstack_mounts(adapter_name)
-        if devstack_mounts:
-            cmd += ["--mounts", json.dumps(devstack_mounts)]
+        mounts = self._pi_runtime_mounts() + self._devstack_mounts(adapter_name)
+        if mounts:
+            cmd += ["--mounts", json.dumps(mounts)]
 
         cmd += ["--path", str(local_task_path)]
 

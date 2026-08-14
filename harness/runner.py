@@ -37,7 +37,10 @@ sys.path.insert(0, str(PROJECT_ROOT))
 
 from harness.adapters import load_adapter
 from harness.adapters.session_utils import behavior_trace_file
-from harness.behavior import summarize_behavior_events
+from harness.behavior import (
+    summarize_behavior_events,
+    summarize_pi_session_behavior,
+)
 from harness.suites import load_suite
 from harness.path_utils import encode_path_component
 from harness.subprocess_utils import agent_sandbox_cwd, resolve_model_base_url
@@ -749,6 +752,23 @@ def run_trial(
         response_models = session_usage.get("response_models")
         if isinstance(response_models, list) and response_models:
             manifest["model"]["served_model"] = response_models[-1]
+        # Harbor agents export durable pi sessions but run in benchmark-owned
+        # containers where the host adapter's compact trace extension is not
+        # loaded. Recover counts and message-bound wall timings from the copied
+        # session so tool behavior is still comparable across adapter arms.
+        if is_harbor_suite:
+            trace_files = session_usage.get("trace_files")
+            if isinstance(trace_files, list):
+                for relative_trace in reversed(trace_files):
+                    if not isinstance(relative_trace, str):
+                        continue
+                    session_behavior = summarize_pi_session_behavior(
+                        trial_dir / relative_trace
+                    )
+                    if session_behavior.get("status") != "unavailable":
+                        session_behavior["trace_file"] = relative_trace
+                        manifest["behavior"] = session_behavior
+                        break
 
     behavior_file = behavior_trace_file(log_file)
     if behavior_file.exists():

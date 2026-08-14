@@ -10,6 +10,7 @@ from __future__ import annotations
 import json
 import re
 from collections import defaultdict
+from datetime import datetime
 from pathlib import Path
 from typing import Any, Iterable
 
@@ -116,8 +117,28 @@ def _round_map(values: dict[str, float]) -> dict[str, float]:
     return {key: round(value, 6) for key, value in sorted(values.items())}
 
 
+def _session_timestamp_seconds(event: dict[str, Any]) -> float | None:
+    """Return a pi session event's top-level wall timestamp in seconds."""
+    value = event.get("timestamp")
+    if isinstance(value, (int, float)) and not isinstance(value, bool):
+        return float(value) / 1000 if value > 10_000_000_000 else float(value)
+    if not isinstance(value, str) or not value:
+        return None
+    try:
+        return datetime.fromisoformat(value.replace("Z", "+00:00")).timestamp()
+    except ValueError:
+        return None
+
+
 def summarize_pi_session_behavior(session_file: Path | str) -> dict[str, Any]:
-    """Recover tool counts/types from legacy pi session JSONL without timing."""
+    """Recover tool counts, categories, and wall timings from pi session JSONL.
+
+    Current pi traces timestamp each message when it is appended. A tool call's
+    assistant-message timestamp and matching tool-result timestamp therefore
+    bound its execution, while user/tool-result to assistant intervals bound
+    provider inference. Older traces without timestamps retain counts-only
+    behavior instead of claiming timing precision they do not contain.
+    """
     session_file = Path(session_file)
     try:
         lines = session_file.read_text().splitlines()
@@ -128,6 +149,10 @@ def summarize_pi_session_behavior(session_file: Path | str) -> dict[str, Any]:
     call_order: list[str] = []
     turn_count = 0
     valid_events = 0
+    event_times: list[float] = []
+    inference_intervals: list[tuple[float, float]] = []
+    last_prompt_time: float | None = None
+    provider_requests = 0
     for line in lines:
         if not line.strip():
             continue
@@ -138,6 +163,9 @@ def summarize_pi_session_behavior(session_file: Path | str) -> dict[str, Any]:
         if not isinstance(event, dict):
             continue
         valid_events += 1
+        event_time = _session_timestamp_seconds(event)
+        if event_time is not None:
+            event_times.append(event_time)
         if event.get("type") != "message":
             continue
         message = event.get("message")
@@ -146,6 +174,14 @@ def summarize_pi_session_behavior(session_file: Path | str) -> dict[str, Any]:
         role = message.get("role")
         if role == "assistant":
             turn_count += 1
+            if (
+                event_time is not None
+                and last_prompt_time is not None
+                and event_time >= last_prompt_time
+            ):
+                inference_intervals.append((last_prompt_time, event_time))
+                provider_requests += 1
+            last_prompt_time = None
             content = message.get("content")
             if not isinstance(content, list):
                 continue
@@ -159,8 +195,11 @@ def summarize_pi_session_behavior(session_file: Path | str) -> dict[str, Any]:
                     "tool_call_id": call_id,
                     "tool_name": str(block.get("name") or "unknown"),
                     "arguments": block.get("arguments") or {},
+                    "start": event_time,
+                    "end": None,
                     "complete": False,
                     "is_error": False,
+                    "result_chars": 0,
                 }
                 call_order.append(call_id)
         elif role == "toolResult":
@@ -168,15 +207,35 @@ def summarize_pi_session_behavior(session_file: Path | str) -> dict[str, Any]:
             if call_id in calls:
                 calls[call_id]["complete"] = True
                 calls[call_id]["is_error"] = bool(message.get("isError"))
+                calls[call_id]["end"] = event_time
+                content = message.get("content")
+                if isinstance(content, list):
+                    calls[call_id]["result_chars"] = sum(
+                        len(str(block.get("text") or ""))
+                        for block in content
+                        if isinstance(block, dict)
+                    )
+            if event_time is not None:
+                last_prompt_time = event_time
+        elif role == "user" and event_time is not None:
+            last_prompt_time = event_time
 
     if not valid_events:
         return {"schema_version": 1, "status": "unavailable"}
 
     tool_counts: dict[str, int] = defaultdict(int)
     category_counts: dict[str, int] = defaultdict(int)
+    tool_seconds_by_name: dict[str, float] = defaultdict(float)
+    category_seconds: dict[str, float] = defaultdict(float)
+    tool_intervals: list[tuple[float, float]] = []
+    search_intervals: list[tuple[float, float]] = []
+    external_intervals: list[tuple[float, float]] = []
     tool_errors = 0
     incomplete = 0
     examples: list[dict[str, Any]] = []
+    detailed_tools: list[dict[str, Any]] = []
+    timing_partial = False
+    final_time = max(event_times) if event_times else None
     for call_id in call_order:
         record = calls[call_id]
         name = record["tool_name"]
@@ -187,6 +246,36 @@ def summarize_pi_session_behavior(session_file: Path | str) -> dict[str, Any]:
             tool_errors += 1
         if not record["complete"]:
             incomplete += 1
+        start = record.get("start")
+        end = record.get("end")
+        if isinstance(start, (int, float)) and not isinstance(start, bool):
+            if not isinstance(end, (int, float)) or isinstance(end, bool):
+                end = final_time
+                timing_partial = True
+            if isinstance(end, (int, float)) and end >= start:
+                interval = (float(start), float(end))
+                duration = interval[1] - interval[0]
+                tool_intervals.append(interval)
+                tool_seconds_by_name[name] += duration
+                category_seconds[category] += duration
+                if category in _SEARCH_CATEGORIES:
+                    search_intervals.append(interval)
+                if category == "external_lookup":
+                    external_intervals.append(interval)
+                detailed_tools.append(
+                    {
+                        "tool_call_id": call_id,
+                        "tool_name": name,
+                        "category": category,
+                        "seconds": round(duration, 6),
+                        "complete": bool(record["complete"]),
+                        "is_error": bool(record["is_error"]),
+                        "result_chars": int(record.get("result_chars") or 0),
+                        "arguments_preview": _arguments_preview(record.get("arguments")),
+                    }
+                )
+        elif event_times:
+            timing_partial = True
         if category in _SEARCH_CATEGORIES and len(examples) < 5:
             examples.append(
                 {
@@ -199,12 +288,13 @@ def summarize_pi_session_behavior(session_file: Path | str) -> dict[str, Any]:
                 }
             )
 
-    return {
+    counts = {
         "schema_version": 1,
         "status": "counts_only",
         "timing_available": False,
         "trace_file": str(session_file),
         "turn_count": turn_count,
+        "provider_requests": provider_requests,
         "tool_calls": len(call_order),
         "tool_errors": tool_errors,
         "incomplete_tool_calls": incomplete,
@@ -220,6 +310,43 @@ def summarize_pi_session_behavior(session_file: Path | str) -> dict[str, Any]:
         "search_examples": examples,
         "longest_tools": [],
     }
+    if len(event_times) < 2:
+        return counts
+
+    first_time = min(event_times)
+    last_time = max(event_times)
+    agent_seconds = max(last_time - first_time, 0.0)
+    inference_seconds = _union_seconds(inference_intervals)
+    tool_seconds = _union_seconds(tool_intervals)
+    occupied_seconds = _union_seconds([*inference_intervals, *tool_intervals])
+    detailed_tools.sort(key=lambda item: item["seconds"], reverse=True)
+    counts.update(
+        {
+            "status": "partial" if timing_partial or incomplete else "observed",
+            "timing_available": True,
+            "agent_seconds": round(agent_seconds, 6),
+            "inference_seconds": round(inference_seconds, 6),
+            "provider_headers_seconds": 0.0,
+            "tool_seconds": round(tool_seconds, 6),
+            "tool_worker_seconds": round(
+                sum(end - start for start, end in tool_intervals), 6
+            ),
+            "other_seconds": round(
+                max(agent_seconds - occupied_seconds, 0.0), 6
+            ),
+            "search_seconds": round(_union_seconds(search_intervals), 6),
+            "external_lookup_seconds": round(
+                _union_seconds(external_intervals), 6
+            ),
+            "long_tool_calls": sum(
+                item["seconds"] >= 30.0 for item in detailed_tools
+            ),
+            "tool_seconds_by_name": _round_map(tool_seconds_by_name),
+            "category_seconds": _round_map(category_seconds),
+            "longest_tools": detailed_tools[:5],
+        }
+    )
+    return counts
 
 
 def summarize_behavior_events(

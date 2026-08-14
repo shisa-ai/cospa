@@ -98,6 +98,28 @@ _CONTAINER_BENCH_SKILLS = (
     "/installed-agent/bench-skills/verification-before-completion",
 )
 
+_RUNTIME_DEPENDENCY_INSTALL_COMMAND = r"""
+set -e
+if command -v curl >/dev/null 2>&1; then
+    exit 0
+elif command -v apt-get >/dev/null 2>&1; then
+    export DEBIAN_FRONTEND=noninteractive
+    apt-get update
+    apt-get install -y curl ca-certificates
+elif command -v dnf >/dev/null 2>&1; then
+    dnf install -y curl ca-certificates
+elif command -v microdnf >/dev/null 2>&1; then
+    microdnf install -y curl ca-certificates
+elif command -v yum >/dev/null 2>&1; then
+    yum install -y curl ca-certificates
+elif command -v apk >/dev/null 2>&1; then
+    apk add --no-cache curl ca-certificates
+else
+    echo "Unable to install curl: no supported package manager" >&2
+    exit 1
+fi
+""".strip()
+
 
 def _configured_thinking() -> str | None:
     thinking = (
@@ -295,8 +317,7 @@ EOF
         async def install(self, environment: BaseEnvironment) -> None:
             await self.exec_as_root(
                 environment,
-                command="apt-get update && apt-get install -y curl ca-certificates",
-                env={"DEBIAN_FRONTEND": "noninteractive"},
+                command=_RUNTIME_DEPENDENCY_INSTALL_COMMAND,
             )
             version = self.version() or "latest"
             package = self.npm_package

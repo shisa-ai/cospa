@@ -452,10 +452,7 @@ exit 0
                 "verifier_failed": True,
                 "failure_class": "verifier_failed",
             }
-        if (
-            status.get("test_patch_applied") is not True
-            or status.get("model_patch_applied") is not True
-        ):
+        if status.get("test_patch_applied") is not True:
             return {
                 "passed": False,
                 "test_count": 0,
@@ -463,6 +460,20 @@ exit 0
                 "exit_code": -1,
                 "verifier_failed": True,
                 "failure_class": "verifier_failed",
+            }
+        if status.get("model_patch_applied") is not True:
+            # The hidden test patch applied cleanly, so the evaluator is sound.
+            # A model patch that conflicts with those tests (commonly because
+            # the agent edited visible tests) is a model outcome, not an
+            # infrastructure failure eligible for a stochastic retry.
+            return {
+                "passed": False,
+                "test_count": 0,
+                "grader_output": output_file.read_text(errors="replace"),
+                "exit_code": 1,
+                "failure_class": "incorrect",
+                "model_patch_bytes": len(patch_file.read_bytes()),
+                "model_patch_applied": False,
             }
 
         test_output = output_file.read_text(errors="replace")

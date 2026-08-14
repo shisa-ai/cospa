@@ -12,6 +12,7 @@ Reproduces ORNITH-CODER-REVIEW.md findings #4 and follow-up audit item B:
     instead of the generic adapter path.
 """
 
+import asyncio
 import json
 import importlib
 import os
@@ -67,7 +68,20 @@ def _write_pi_session_trace(path: Path, cwd: str = "/terminal-bench/workdir"):
         }),
         json.dumps({
             "type": "message",
+            "timestamp": "2026-07-05T10:00:00Z",
+            "message": {"role": "user", "content": "fix it"},
+        }),
+        json.dumps({
+            "type": "message",
+            "timestamp": "2026-07-05T10:00:02Z",
             "message": {
+                "role": "assistant",
+                "content": [{
+                    "type": "toolCall",
+                    "id": "shell-1",
+                    "name": "bash",
+                    "arguments": {"command": "git status --short"},
+                }],
                 "provider": "local",
                 "model": "Ornith-1.0-35B",
                 "responseId": "chatcmpl-terminal-bench",
@@ -80,6 +94,25 @@ def _write_pi_session_trace(path: Path, cwd: str = "/terminal-bench/workdir"):
                     "totalTokens": 840,
                     "cost": {"total": 0.007},
                 },
+            },
+        }),
+        json.dumps({
+            "type": "message",
+            "timestamp": "2026-07-05T10:00:05Z",
+            "message": {
+                "role": "toolResult",
+                "toolCallId": "shell-1",
+                "toolName": "bash",
+                "content": [{"type": "text", "text": ""}],
+                "isError": False,
+            },
+        }),
+        json.dumps({
+            "type": "message",
+            "timestamp": "2026-07-05T10:00:07Z",
+            "message": {
+                "role": "assistant",
+                "content": [{"type": "text", "text": "done"}],
             },
         }),
     ]) + "\n")
@@ -607,6 +640,75 @@ def test_run_harbor_job_exports_thinking_to_container_agent_env():
     assert captured["env"]["CODING_EVAL_REASONING_EFFORT"] == "high"
 
 
+def _import_harbor_agents_with_fake_native_harbor(monkeypatch):
+    """Import the modern Harbor agent branch without Harbor installed."""
+    for name in list(sys.modules):
+        if name == "harness.harbor_agents" or name.startswith("harbor"):
+            monkeypatch.delitem(sys.modules, name, raising=False)
+
+    class FakeBaseInstalledAgent:
+        def __init__(self, model_name, *args, **kwargs):
+            self.model_name = model_name
+            self.root_commands = []
+            self.agent_commands = []
+
+        def version(self):
+            return None
+
+        async def exec_as_root(self, environment, *, command, env=None):
+            self.root_commands.append(command)
+
+        async def exec_as_agent(self, environment, *, command, env=None):
+            self.agent_commands.append(command)
+
+    module_names = (
+        "harbor",
+        "harbor.agents",
+        "harbor.agents.installed",
+        "harbor.environments",
+        "harbor.models",
+        "harbor.models.agent",
+    )
+    for name in module_names:
+        monkeypatch.setitem(sys.modules, name, types.ModuleType(name))
+
+    base_mod = types.ModuleType("harbor.agents.installed.base")
+    base_mod.BaseInstalledAgent = FakeBaseInstalledAgent
+    environment_mod = types.ModuleType("harbor.environments.base")
+    environment_mod.BaseEnvironment = object
+    context_mod = types.ModuleType("harbor.models.agent.context")
+    context_mod.AgentContext = object
+    monkeypatch.setitem(sys.modules, "harbor.agents.installed.base", base_mod)
+    monkeypatch.setitem(sys.modules, "harbor.environments.base", environment_mod)
+    monkeypatch.setitem(sys.modules, "harbor.models.agent.context", context_mod)
+
+    return importlib.import_module("harness.harbor_agents")
+
+
+def test_native_harbor_agent_bootstrap_supports_non_debian_images(monkeypatch):
+    """Agent setup must not unconditionally invoke apt-get on Amazon Linux."""
+    harbor_agents = _import_harbor_agents_with_fake_native_harbor(monkeypatch)
+    agent = harbor_agents.PiVanillaHarborAgent("local/muse-glimmer-30b")
+
+    asyncio.run(agent.install(object()))
+
+    dependency_command = agent.root_commands[0]
+    assert "command -v curl" in dependency_command
+    assert "command -v apt-get" in dependency_command
+    assert "command -v dnf" in dependency_command
+    assert "command -v apk" in dependency_command
+
+
+def test_legacy_harbor_agent_bootstrap_supports_non_debian_images():
+    """The legacy setup template must retain the same package portability."""
+    template = (PROJECT_ROOT / "harness" / "harbor-agent-setup.sh.j2").read_text()
+
+    assert "command -v curl" in template
+    assert "command -v apt-get" in template
+    assert "command -v dnf" in template
+    assert "command -v apk" in template
+
+
 def _import_harbor_agents_with_fake_terminal_bench(monkeypatch):
     """Import harbor_agents without requiring Terminal-Bench's full deps."""
     for name in list(sys.modules):
@@ -853,6 +955,12 @@ def test_runner_records_terminal_bench_harbor_usage_trace():
     assert usage["completion_tokens"] == 80
     assert usage["cost_usd"] == 0.007
     assert usage["trace_files"] == ["out/pi_session.jsonl"]
+    behavior = manifest["behavior"]
+    assert behavior["status"] == "observed"
+    assert behavior["tool_calls"] == 1
+    assert behavior["tool_counts"] == {"bash": 1}
+    assert behavior["tool_seconds"] == 3.0
+    assert behavior["inference_seconds"] == 4.0
 
 
 def test_runner_delegates_terminal_bench_thinking_to_harbor():

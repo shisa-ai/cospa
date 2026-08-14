@@ -1723,3 +1723,26 @@ Append-only development log for the `cospa` repository.
   trial concurrency at or below 16 for the first campaign.
 - Next: finish the Harbor-backed PolyBench concurrency smoke, then launch the
   matched `c=8` model cells.
+
+## 2026-08-15 — Unblock target-model PolyBench trials
+
+- Context: the first real PolyBench agent smoke failed before inference because
+  Amazon Linux task images do not provide `apt-get`; successful reruns also
+  exposed missing Harbor tool rollups and model/test patch conflicts mislabeled
+  as retryable evaluator failures.
+- Change: make Harbor agent bootstrap detect existing `curl` and support apt,
+  dnf, microdnf, yum, and apk; recover per-tool counts, categories, errors, and
+  message-bound wall timings from exported pi sessions; score an unapplied
+  model patch as incorrect when the hidden test patch applied successfully.
+- Evidence: RED tests reproduced unconditional apt, absent Harbor behavior, and
+  the incorrect retry class. Targeted tests pass. Real `c=2` target-model
+  smokes produced native verifier artifacts on both lanes: Muse resolved one
+  of two tasks in 589.4/703.1 seconds; DeepSeek completed in 235.6/371.9
+  seconds. DeepSeek emitted 42/36 tool calls and Muse 110/92, with tool types
+  and inference/tool wall time recoverable from every session. Full pytest:
+  333 passed with only the two documented unrelated baseline failures.
+- Decision: accept the package bootstrap as fixed (integration test), treat
+  hidden-test patch conflicts as model outcomes without retries, and use raw pi
+  sessions as the authoritative Harbor behavior source.
+- Next: launch BCB on both models at `c=8`, then matched PolyBench vanilla and
+  devstack phases at `c=8` while recording GPU/queue telemetry.

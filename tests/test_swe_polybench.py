@@ -270,7 +270,7 @@ def test_polybench_verify_reads_harbor_verifier_artifacts(tmp_path):
     assert verdict["model_patch_bytes"] > 0
 
 
-def test_polybench_verify_fails_closed_when_model_patch_did_not_apply(tmp_path):
+def test_polybench_verify_scores_unapplied_model_patch_as_incorrect(tmp_path):
     suite = SwePolyBenchVerifiedSuite()
     task_root = tmp_path / "trial" / "workdir"
     task = suite.materialize_task(
@@ -292,5 +292,5 @@ def test_polybench_verify_fails_closed_when_model_patch_did_not_apply(tmp_path):
 
     verdict = suite.verify(task, task_root)
     assert verdict["passed"] is False
-    assert verdict["verifier_failed"] is True
-    assert verdict["failure_class"] == "verifier_failed"
+    assert "verifier_failed" not in verdict
+    assert verdict["failure_class"] == "incorrect"

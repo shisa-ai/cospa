@@ -25,16 +25,14 @@
   "candidate_sources": [
     {
       "id": "kernelbench_verified",
-      "initial_review_ceiling": 12,
-      "strata": [
-        "level",
-        "operator_family",
-        "expected_optimization_shape"
-      ]
+      "initial_review_ceiling": 0,
+      "status": "skipped_no_guaranteed_eval_gpu",
+      "decision": "Do not integrate: a dedicated evaluation GPU cannot be assumed available."
     },
     {
       "id": "dabstep",
       "initial_review_ceiling": 16,
+      "status": "selected_task_discovery",
       "strata": [
         "difficulty",
         "answer_shape",
@@ -43,13 +41,9 @@
     },
     {
       "id": "ds_1000_matplotlib",
-      "initial_review_ceiling": 16,
-      "strata": [
-        "plot_type",
-        "library_composition",
-        "prompt_size"
-      ],
-      "status": "optional_anchor"
+      "initial_review_ceiling": 0,
+      "status": "skipped_overlap",
+      "decision": "Do not integrate: the one-shot anchor role is unnecessary alongside existing coverage."
     }
   ],
   "selection": {

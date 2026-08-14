@@ -266,9 +266,12 @@ adjudication cannot waive a failed mechanical gate. Raw reviews,
 disagreements, and reason codes remain durable evidence rather than being
 collapsed into an unexplained majority vote.
 
-The first expansion candidates are KernelBench-Verified, DABstep, and an
-optional DS-1000 Matplotlib anchor. Their model reviews must not delay target-
-model smokes on suites that are already mechanically qualified.
+DABstep is the selected expansion candidate for task-level discovery.
+KernelBench-Verified is skipped because a dedicated evaluation GPU cannot be
+assumed available, and DS-1000 Matplotlib is skipped because its one-shot
+anchor role is unnecessary alongside existing coverage. DABstep review must
+not delay target-model smokes on suites that are already mechanically
+qualified.
 
 ## Time and budget methodology
 

@@ -1688,3 +1688,20 @@ Append-only development log for the `cospa` repository.
 - Next: build a small review runner and calibrate the three reviewers on an
   outcome-blind block from KernelBench-Verified, DABstep, and optional DS-1000
   Matplotlib without delaying already-qualified target-model smokes.
+
+## 2026-08-15 — Narrow expansion discovery to DABstep
+
+- Context: the three-model source calibration completed, but a dedicated GPU
+  cannot be assumed for kernel evaluation and another one-shot generation
+  anchor is unnecessary.
+- Evidence: DABstep received a unanimous pilot recommendation. Source-review
+  walls were 9.573 seconds for Codex Spark, 26.713 for Muse, and 38.282 for
+  DeepSeek; all normalized reviews passed the value schema.
+- Decision: select DABstep for task-level discovery; explicitly skip
+  KernelBench-Verified for lack of a guaranteed evaluation GPU and DS-1000
+  Matplotlib for overlap with existing one-shot coverage.
+- Validation: task-discovery JSON parses, `git diff --check` passes, and the
+  changed policy text was re-read. No code tests are required for this
+  docs/config-only decision.
+- Next: pin DABstep artifacts, review an outcome-blind task block with all
+  three discovery models, and mechanically qualify any nominated tasks.

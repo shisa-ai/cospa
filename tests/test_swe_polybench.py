@@ -66,6 +66,9 @@ def test_polybench_materializes_harbor_task_with_hidden_verifier_only(tmp_path):
     assert dockerfile.startswith("FROM " + task["image_ref"] + "\n")
     assert f"git reset --hard {row['base_commit']}" in dockerfile
     assert "git clean -fd" in dockerfile
+    assert "git submodule foreach --recursive" in dockerfile
+    assert "git ls-files -co --exclude-standard -z" in dockerfile
+    assert "/opt/cospa/submodules.sha256" in dockerfile
     instruction = (task_root / "instruction.md").read_text()
     assert row["problem_statement"] in instruction
     assert row["patch"] not in instruction
@@ -76,12 +79,16 @@ def test_polybench_materializes_harbor_task_with_hidden_verifier_only(tmp_path):
     assert (task_root / "tests" / "test.patch").read_text() == row["test_patch"]
     assert (task_root / "solution" / "gold.patch").read_text() == row["patch"]
     verifier = (task_root / "tests" / "test.sh").read_text()
-    capture_at = verifier.index("git diff --binary")
+    capture_at = verifier.index("git diff --ignore-submodules=all --binary")
     hidden_patch_at = verifier.index("git apply --whitespace=nowarn /tests/test.patch")
     model_patch_at = verifier.index(
         "git apply --whitespace=nowarn /logs/verifier/model.patch"
     )
     assert capture_at < hidden_patch_at < model_patch_at
+    assert "git submodule foreach --recursive" in verifier
+    assert "git ls-files -co --exclude-standard -z" in verifier
+    assert "git diff --ignore-submodules=all --binary" in verifier
+    assert '"submodule_patch_capturable":%s' in verifier
     assert '"model_patch_applied":%s' in verifier
     assert "mvn -o clean verify" in verifier
     assert "/logs/verifier/test_output.txt" in verifier

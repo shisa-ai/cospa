@@ -25,6 +25,12 @@ from harness.suites.terminal_bench import PROJECT_ROOT, TerminalBenchSuite
 PILOT_PATH = PROJECT_ROOT / "configs" / "ornith_runtime_pilot_v1.json"
 IMAGE_LOCK_PATH = PROJECT_ROOT / "configs" / "ornith_runtime_pilot_images_v1.json"
 _CSV_FIELD_SIZE_LOCK = threading.Lock()
+_SUBMODULE_STATE_PIPELINE = (
+    "git submodule foreach --recursive --quiet "
+    "'printf \"%s\\n\" \"$displaypath\"; git rev-parse HEAD; "
+    "git ls-files -co --exclude-standard -z "
+    "| LC_ALL=C sort -z | xargs -0r sha256sum'"
+)
 
 
 def parse_polybench_test_output(
@@ -239,13 +245,29 @@ mkdir -p /logs/verifier
 cd /testbed || exit 0
 git config --global --add safe.directory /testbed
 
-# Capture all model changes before hidden artifacts enter the repository.
+# Some upstream images intentionally carry a dirty submodule working tree.
+# Hash that declared baseline and fail closed if the agent changed it: a root
+# git diff cannot faithfully capture or replay nested-repository edits.
+submodule_state_hash() {{
+  {_SUBMODULE_STATE_PIPELINE} | sha256sum | awk '{{print $1}}'
+}}
+submodule_patch_capturable=true
+if [[ ! -r /opt/cospa/submodules.sha256 ]] || \
+   [[ "$(submodule_state_hash)" != "$(cat /opt/cospa/submodules.sha256)" ]]; then
+  submodule_patch_capturable=false
+fi
+
+# Capture all replayable model changes before hidden artifacts enter the
+# repository. Ignore the image's pre-existing dirty submodule baseline.
 git add -N . >/dev/null 2>&1 || true
-git diff --binary {shlex.quote(base_commit)} > /logs/verifier/model.patch
+git diff --ignore-submodules=all --binary {shlex.quote(base_commit)} \
+  > /logs/verifier/model.patch
 git reset --hard {shlex.quote(base_commit)} >/dev/null 2>&1
 git clean -fd >/dev/null 2>&1
 
-if git apply --whitespace=nowarn /tests/test.patch; then
+if [[ "$submodule_patch_capturable" != true ]]; then
+  test_patch_applied=false
+elif git apply --whitespace=nowarn /tests/test.patch; then
   test_patch_applied=true
 else
   test_patch_applied=false
@@ -266,6 +288,9 @@ if [[ "$test_patch_applied" == true && "$model_patch_applied" == true ]]; then
   bash -lc {quoted_test_command} > /logs/verifier/test_output.txt 2>&1
   test_exit_code=$?
   set -e
+elif [[ "$submodule_patch_capturable" != true ]]; then
+  test_exit_code=-1
+  echo "Model changed an unsupported submodule" > /logs/verifier/test_output.txt
 elif [[ "$test_patch_applied" != true ]]; then
   test_exit_code=-1
   echo "Hidden test patch failed to apply" > /logs/verifier/test_output.txt
@@ -274,8 +299,9 @@ else
   echo "Model patch failed to apply" > /logs/verifier/test_output.txt
 fi
 
-printf '{{"test_patch_applied":%s,"model_patch_applied":%s,"test_exit_code":%s}}\n' \
-  "$test_patch_applied" "$model_patch_applied" "$test_exit_code" \
+printf '{{"submodule_patch_capturable":%s,"test_patch_applied":%s,"model_patch_applied":%s,"test_exit_code":%s}}\n' \
+  "$submodule_patch_capturable" "$test_patch_applied" \
+  "$model_patch_applied" "$test_exit_code" \
   > /logs/verifier/status.json
 # Harbor requires a reward artifact. Cospa computes the authoritative score
 # from the pinned upstream parser after the job finishes.
@@ -321,7 +347,11 @@ exit 0
             "RUN git config --global --add safe.directory /testbed \\\n"
             " && cd /testbed \\\n"
             f" && git reset --hard {shlex.quote(row['base_commit'])} \\\n"
-            " && git clean -fd\n"
+            " && git clean -fd \\\n"
+            " && mkdir -p /opt/cospa \\\n"
+            f" && {_SUBMODULE_STATE_PIPELINE} \\\n"
+            " | sha256sum | awk '{print $1}' \\\n"
+            " > /opt/cospa/submodules.sha256\n"
         )
         (workdir / "tests" / "test.patch").write_text(row["test_patch"])
         test_script = workdir / "tests" / "test.sh"

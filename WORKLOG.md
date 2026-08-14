@@ -1590,3 +1590,20 @@ Append-only development log for the `cospa` repository.
 - Decision: preserve the pinned upstream parsers rather than forking their
   result logic; normalize only the execution-wrapper framing Cospa replaced.
 - Next: rerun the 38-task null/gold gate with corrected parser framing.
+
+## 2026-08-14 — Fail closed on PolyBench submodule edits
+
+- Context: code-server's pinned image intentionally carries a dirty VS Code
+  submodule baseline. Root `git diff` falsely attributed that baseline to a
+  no-op agent and cannot faithfully replay later edits inside the submodule.
+- Change: hash each image's non-ignored submodule baseline in the derived image,
+  omit unchanged submodule dirtiness from the root model patch, and reject any
+  agent episode that changes nested repository state.
+- Evidence: RED then GREEN PolyBench materialization tests. On the real pinned
+  code-server image, null now has a zero-byte patch and gold resolves with 282
+  of 283 parsed tests passing. A deliberate nested edit is rejected before
+  hidden tests with `submodule_patch_capturable=false`. Full pytest reports 314
+  passed and only the two documented baseline failures.
+- Decision: preserve upstream images' intentional nested working trees, but
+  never silently discard or misattribute nested model changes.
+- Next: finish and classify the complete PolyBench gold/null gate.

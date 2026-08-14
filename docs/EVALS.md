@@ -323,6 +323,38 @@ A 30-minute row is a **planning ceiling**, not a recommendation that every
 suite use the same wall timeout. Before any 300+ task campaign, measure 5–12
 representative tasks at `c=1` and `c=2`, including cold and warm verifier costs.
 
+### Frozen Ornith runtime pilot v1
+
+`configs/ornith_runtime_pilot_v1.json` is the source of truth for the first
+outcome-blind timing/validity wave. It pins source and dataset revisions,
+content hashes, exact task IDs, strata, the model/scaffold, telemetry, stop
+rules, and a `c=1/2/4/8/16` ladder. The pilot sizes are:
+
+| Evaluation | Pilot | Current gate |
+| --- | ---: | --- |
+| Aider source corpus | 23 / 225 | Blocked until the contract audit freezes eligible tasks |
+| Terminal-Bench Core 0.1.1 | 8 / 80 | Source and Harbor 0.16.1 ready; fresh Docker smoke required |
+| SWE Atlas pilot12 | 12 / 12 | Pinned tasks ready; judge credentials/endpoint required |
+| Multi-SWE-bench Flash | 30 / 300 | Dataset ready; image digest, gold/null, and repeat validation pending |
+| SWE-bench Multilingual | 30 / 300 | Dataset ready; image digest, gold/null, and repeat validation pending |
+| SWE-PolyBench Verified | 38 / 382 | Dataset ready; image digest, gold/null, and repeat validation pending |
+| FeatureBench Lite | 6 / 30 | Dataset ready; image digest, gold/null, and repeat validation pending |
+| BigCodeBench-Hard Instruct | 15 / 148 | Dataset ready; separate non-agentic integration pending |
+
+**Measured setup state, 2026-08-14:** the host has 683 GiB free on `/`; all
+listed source repositories and external dataset files are present at the
+manifested revisions/checksums. This is setup evidence, not verifier evidence.
+Repository image tags are deliberately marked `pending_validation`; do not run
+a target model until each selected image is resolved to a digest and survives
+repeated null/gold checks.
+
+The operational goal is a result within 12 hours with 20% reserve, so the
+campaign budget is 9.6 hours. If c=16 scaled perfectly, the maximum mean task
+walls for a full campaign would be about 41.0 minutes for 225 tasks, 115.2 for
+80, 30.7 for 300, 24.1 for 382, 307.2 for 30, and 62.3 for 148. These are
+feasibility thresholds, **not runtime estimates**. Measured throughput,
+tail latency, setup costs, and failure rates decide whether c=16 is retained.
+
 ## Methodology review of leading candidates
 
 ### Aider Polyglot source corpus
@@ -589,9 +621,12 @@ coding-agent gap.
 ### 2. Measure serving concurrency separately
 
 Use one fixed 12–20 task block, randomized once, with the same model and
-`pi_vanilla` at `c=1` and `c=2`. Compare makespan, throughput, p90 latency,
-timeouts, score, and telemetry. Do not launch a broad `c=n` campaign. Repeat the
-block under a second scaffold only after choosing a safe server concurrency.
+`pi_vanilla`. Gate first on matched `c=1` and `c=2`, then advance one rung at a
+time through `c=4`, `c=8`, and `c=16`. Compare makespan, completed tasks/hour,
+p50/p90/p99 latency, endpoint and infrastructure errors, score, and telemetry.
+Stop on throughput regression, overload, changed failure semantics, host
+pressure, or a p95 task wall above 2.5× the c=1 value. Repeat the block under a
+second scaffold only after choosing a safe production concurrency.
 
 ### 3. Run a repository-source bake-off
 

@@ -1436,3 +1436,27 @@ Append-only development log for the `cospa` repository.
   not block this setup-path correction.
 - Next: freeze the deterministic pilot manifests, validate null/gold/repeat
   behavior, then run Ornith smoke and concurrency crossover gates.
+
+## 2026-08-14 — Freeze the Ornith runtime pilot
+
+- Context: a 10% sample can project operational time but is too small for a
+  precise score estimate. The campaign also needs explicit c=16 safety gates
+  rather than assuming serving throughput translates into agent throughput.
+- Change: added `configs/ornith_runtime_pilot_v1.json` with immutable source
+  and dataset revisions/checksums, outcome-blind task IDs and strata, the
+  Ornith/pi-vanilla configuration, required timing/tool telemetry, failure
+  taxonomy, host reserves, and a gated `c=1/2/4/8/16` ladder. Pilot sizes are
+  23 Aider source tasks, 8 Terminal-Bench Core, all 12 SWE Atlas tasks, 30 each
+  from Multi-SWE Flash and SWE-bench Multilingual, 38 PolyBench Verified, 6
+  FeatureBench Lite, and 15 BigCodeBench-Hard Instruct.
+- Evidence: RED then GREEN `tests/test_eval_runtime_pilot.py` (10 tests),
+  including real-vendor revision/hash/task checks. All eight source checkouts
+  match their 40-character pins; all five downloaded dataset files match the
+  manifest SHA-256 values. The host has 683 GiB free on `/`.
+- Decision: target a 12-hour result with a 20% reserve (9.6-hour campaign
+  budget). Treat pilot scores as directional. Aider remains blocked on the
+  contract audit, SWE Atlas on judge configuration, and repository suites on
+  image-digest plus repeated null/gold validation; these gates are explicit,
+  not ordinary model failures.
+- Next: resolve selected image digests, exercise null/gold/repeat verification,
+  integrate the cheap BigCodeBench anchor, then begin matched Ornith smokes.

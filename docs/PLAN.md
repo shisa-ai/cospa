@@ -114,8 +114,10 @@ reorder — earlier items unblock later ones.
       Borrow the *shape* from multieval's viewer; this is a clean-room write,
       not a port.
 - [ ] **P13. Cost-gated campaigns.** Do not launch a full Cartesian matrix.
-      First measure one fixed `aider_cospa` task block at serving concurrency
-      `c=1` and `c=2`. Use one representative model to compare adapters, then
+      First gate one fixed `aider_cospa` task block at serving concurrency
+      `c=1` and `c=2`, then advance one rung at a time through `c=4`, `c=8`,
+      and the intended production point `c=16` only while throughput and tail
+      error gates pass. Use one representative model to compare adapters, then
       compare models only on the winning one or two adapters. Reserve
       `aider_cospa_full`, `k>1`, Terminal-Bench 2.x, repository, and feature
       campaigns for configurations that pass the runtime/token/validity gates

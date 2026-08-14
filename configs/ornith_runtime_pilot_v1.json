@@ -1,0 +1,1408 @@
+{
+  "name": "ornith_runtime_pilot_v1",
+  "version": "2026-08-14",
+  "purpose": "Runtime, infrastructure, and validity pilot; score estimates are directional only.",
+  "selection_seed": "cospa-ornith-runtime-pilot-v1",
+  "selection_policy": {
+    "outcome_blind": true,
+    "repository_suites": "Allocate approximately 10% by language; preserve published task-type/difficulty proportions where available; balance patch-size tertiles and prefer distinct repositories using a stable SHA-256 tie-break.",
+    "featurebench": "Six tasks from distinct repositories: five L1 and one L2, balanced across patch-size strata.",
+    "bigcodebench": "Fifteen Instruct tasks proportional across 3/4/5+ library-count strata, balanced across prompt-size tertiles.",
+    "terminal_bench": "Eight predeclared capability strata, including one deliberately heavy build task; no target-model outcomes inspected."
+  },
+  "runtime_policy": {
+    "model": "shisa/ornith-35b-fp8-block",
+    "adapter": "pi_vanilla",
+    "thinking": "xhigh",
+    "independent_trials": 1,
+    "concurrency_ladder": [
+      1,
+      2,
+      4,
+      8,
+      16
+    ],
+    "intended_production_concurrency": 16,
+    "routine_wall_target_hours": 12,
+    "reserve_fraction": 0.2,
+    "campaign_budget_hours": 9.6,
+    "crossover_gate": {
+      "initial_concurrency": [
+        1,
+        2
+      ],
+      "advance_when": "c=2 increases completed tasks/hour by at least 10%, infrastructure failures remain <=5%, and failure semantics do not change.",
+      "higher_concurrency": "Advance through 4, 8, and 16 one rung at a time; stop on throughput regression, p95 wall >2.5x the c=1 p95, endpoint overload, or host pressure."
+    },
+    "host_limits": {
+      "logical_cpus_per_trial": 2,
+      "memory_gib_per_trial_start": 8,
+      "max_parallel_trials": 16,
+      "minimum_available_memory_gib": 32,
+      "note": "Increase per-task memory only for a recorded suite/image requirement; reduce concurrency to preserve the host reserve."
+    },
+    "required_telemetry": [
+      "cold_setup_seconds",
+      "warm_setup_seconds",
+      "agent_wall_seconds",
+      "provider_inference_seconds",
+      "tool_wall_seconds",
+      "verifier_seconds",
+      "total_wall_seconds",
+      "queue_time_if_exposed",
+      "token_usage",
+      "tool_names_types_counts_errors",
+      "score",
+      "failure_taxonomy"
+    ],
+    "failure_taxonomy": [
+      "setup_failed",
+      "image_failed",
+      "model_transport_failed",
+      "budget_exhausted",
+      "verifier_failed",
+      "incorrect",
+      "resolved"
+    ]
+  },
+  "suites": {
+    "aider_cospa_source": {
+      "status": "blocked_contract_audit",
+      "pilot_size": 23,
+      "source": {
+        "repository": "https://github.com/Aider-AI/polyglot-benchmark.git",
+        "revision": "7e0611e77b54e2dea774cdc0aa00cf9f7ed6144f",
+        "license": "not declared at corpus root; audit per-exercise Exercism licenses"
+      },
+      "legal_status": "pending_contract_audit",
+      "task_ids": [],
+      "selection_after_audit": {
+        "count": 23,
+        "stratify_by": [
+          "language",
+          "concept_multiplicity",
+          "category"
+        ],
+        "outcome_blind": true
+      },
+      "blocker": "Do not run under the aider_cospa name until the 225-row contract audit and reviewed panel are frozen."
+    },
+    "terminal_bench_core_0_1_1": {
+      "status": "ready_smoke",
+      "pilot_size": 8,
+      "source": {
+        "repository": "https://github.com/harbor-framework/terminal-bench-1.git",
+        "revision": "91e10457b5410f16c44364da1a34cb6de8c488a5",
+        "license": "Apache-2.0"
+      },
+      "harness": {
+        "name": "harbor",
+        "version": "0.16.1"
+      },
+      "tasks": [
+        {
+          "id": "fix-git",
+          "stratum": "version-control repair"
+        },
+        {
+          "id": "csv-to-parquet",
+          "stratum": "data transformation"
+        },
+        {
+          "id": "configure-git-webserver",
+          "stratum": "service configuration"
+        },
+        {
+          "id": "modernize-fortran-build",
+          "stratum": "build modernization"
+        },
+        {
+          "id": "cron-broken-network",
+          "stratum": "network debugging"
+        },
+        {
+          "id": "extract-safely",
+          "stratum": "security and archive handling"
+        },
+        {
+          "id": "train-fasttext",
+          "stratum": "machine-learning workflow"
+        },
+        {
+          "id": "build-tcc-qemu",
+          "stratum": "heavy systems build and emulation"
+        }
+      ]
+    },
+    "swe_atlas_pilot12": {
+      "status": "blocked_judge_configuration",
+      "pilot_size": 12,
+      "source": {
+        "repository": "https://github.com/scaleapi/SWE-Atlas.git",
+        "revision": "2cac47d64a9123d915b8f6f6f53763391920f574",
+        "license": "Apache-2.0"
+      },
+      "judge": {
+        "model": "anthropic/claude-opus-4-5-20251101",
+        "api_key_env": "SWE_ATLAS_JUDGE_API_KEY",
+        "base_url_env": "SWE_ATLAS_JUDGE_BASE_URL"
+      },
+      "tasks": [
+        {
+          "id": "tw/task-6902ef3ab97fe23e2ad271ee",
+          "language": "typescript",
+          "workflow": "test_writing",
+          "repository": "Automattic/wp-calypso",
+          "category": null,
+          "test_level": "unit"
+        },
+        {
+          "id": "tw/task-6902ef3ab97fe23e2ad271f3",
+          "language": "typescript",
+          "workflow": "test_writing",
+          "repository": "Automattic/wp-calypso",
+          "category": null,
+          "test_level": "acceptance"
+        },
+        {
+          "id": "tw/task-6902ef3ab97fe23e2ad271f8",
+          "language": "python",
+          "workflow": "test_writing",
+          "repository": "secdev/scapy",
+          "category": null,
+          "test_level": "unit"
+        },
+        {
+          "id": "tw/task-6902ef3ab97fe23e2ad2722c",
+          "language": "python",
+          "workflow": "test_writing",
+          "repository": "paperless-ngx/paperless-ngx",
+          "category": null,
+          "test_level": "acceptance"
+        },
+        {
+          "id": "tw/task-6902ef3ab97fe23e2ad27239",
+          "language": "c",
+          "workflow": "test_writing",
+          "repository": "kovidgoyal/kitty",
+          "category": null,
+          "test_level": "unit"
+        },
+        {
+          "id": "tw/task-6902ef3ab97fe23e2ad27243",
+          "language": "c",
+          "workflow": "test_writing",
+          "repository": "kovidgoyal/kitty",
+          "category": null,
+          "test_level": "integration"
+        },
+        {
+          "id": "tw/task-6902ef3ab97fe23e2ad27283",
+          "language": "go",
+          "workflow": "test_writing",
+          "repository": "drakkan/sftpgo",
+          "category": null,
+          "test_level": "unit"
+        },
+        {
+          "id": "tw/task-6902ef3ab97fe23e2ad27207",
+          "language": "go",
+          "workflow": "test_writing",
+          "repository": "grafana/k6",
+          "category": null,
+          "test_level": "integration"
+        },
+        {
+          "id": "qa/task-6905333b74f22949d97ba9a2",
+          "language": "typescript",
+          "workflow": "codebase_qa",
+          "repository": "Automattic/wp-calypso",
+          "category": "Code Onboarding",
+          "test_level": null
+        },
+        {
+          "id": "qa/task-6905333b74f22949d97ba9c5",
+          "language": "python",
+          "workflow": "codebase_qa",
+          "repository": "secdev/scapy",
+          "category": "Root-cause analysis",
+          "test_level": null
+        },
+        {
+          "id": "qa/task-6905333b74f22949d97ba9e3",
+          "language": "c",
+          "workflow": "codebase_qa",
+          "repository": "kovidgoyal/kitty",
+          "category": "Architecture & system design",
+          "test_level": null
+        },
+        {
+          "id": "qa/task-6905333b74f22949d97ba9c8",
+          "language": "go",
+          "workflow": "codebase_qa",
+          "repository": "trufflesecurity/trufflehog",
+          "category": "Security",
+          "test_level": null
+        }
+      ],
+      "blocker": "A real run requires the pinned judge model through SWE_ATLAS_JUDGE_API_KEY and SWE_ATLAS_JUDGE_BASE_URL."
+    },
+    "multi_swe_bench_flash": {
+      "status": "blocked_image_digest_validation",
+      "pilot_size": 30,
+      "source": {
+        "repository": "https://github.com/multi-swe-bench/multi-swe-bench.git",
+        "revision": "24f493f8a103e72312ded4f6b9c89f081d69cb09",
+        "license": "Apache-2.0"
+      },
+      "dataset": {
+        "repository": "https://huggingface.co/datasets/ByteDance-Seed/Multi-SWE-bench-flash",
+        "revision": "b0485dbebaf8a1317ebf140e80e6fc6c02d3502b",
+        "sha256": "48d6d02cc976a71a06b494cc60581d92e82c06c2793c0d412c52c63e6956bebe",
+        "local_path": "vendor/eval-data/multi-swe-flash/multi_swe_bench_flash.jsonl",
+        "license": "CC0 subject to upstream repository licenses"
+      },
+      "tasks": [
+        {
+          "id": "jqlang__jq-1793",
+          "language": "c",
+          "repository": "jqlang/jq",
+          "difficulty": "≤15mins",
+          "patch_bytes": 690,
+          "test_patch_bytes": 1117
+        },
+        {
+          "id": "jqlang__jq-2821",
+          "language": "c",
+          "repository": "jqlang/jq",
+          "difficulty": "1h - 4h",
+          "patch_bytes": 7683,
+          "test_patch_bytes": 988
+        },
+        {
+          "id": "jqlang__jq-2919",
+          "language": "c",
+          "repository": "jqlang/jq",
+          "difficulty": "≤15mins",
+          "patch_bytes": 2604,
+          "test_patch_bytes": 581
+        },
+        {
+          "id": "ponylang__ponyc-2007",
+          "language": "c",
+          "repository": "ponylang/ponyc",
+          "difficulty": "15mins - 1h",
+          "patch_bytes": 2902,
+          "test_patch_bytes": 614
+        },
+        {
+          "id": "catchorg__Catch2-2187",
+          "language": "c++",
+          "repository": "catchorg/Catch2",
+          "difficulty": "15mins - 1h",
+          "patch_bytes": 1936,
+          "test_patch_bytes": 26712
+        },
+        {
+          "id": "fmtlib__fmt-3158",
+          "language": "c++",
+          "repository": "fmtlib/fmt",
+          "difficulty": "≤15mins",
+          "patch_bytes": 594,
+          "test_patch_bytes": 897
+        },
+        {
+          "id": "nlohmann__json-609",
+          "language": "c++",
+          "repository": "nlohmann/json",
+          "difficulty": "15mins - 1h",
+          "patch_bytes": 5053,
+          "test_patch_bytes": 2892
+        },
+        {
+          "id": "simdjson__simdjson-545",
+          "language": "c++",
+          "repository": "simdjson/simdjson",
+          "difficulty": "1h - 4h",
+          "patch_bytes": 29245,
+          "test_patch_bytes": 19768
+        },
+        {
+          "id": "cli__cli-1642",
+          "language": "go",
+          "repository": "cli/cli",
+          "difficulty": "1h - 4h",
+          "patch_bytes": 4830,
+          "test_patch_bytes": 3283
+        },
+        {
+          "id": "cli__cli-2263",
+          "language": "go",
+          "repository": "cli/cli",
+          "difficulty": "≤15mins",
+          "patch_bytes": 1252,
+          "test_patch_bytes": 1778
+        },
+        {
+          "id": "cli__cli-352",
+          "language": "go",
+          "repository": "cli/cli",
+          "difficulty": "15mins - 1h",
+          "patch_bytes": 3114,
+          "test_patch_bytes": 1767
+        },
+        {
+          "id": "cli__cli-624",
+          "language": "go",
+          "repository": "cli/cli",
+          "difficulty": "≤15mins",
+          "patch_bytes": 2995,
+          "test_patch_bytes": 3589
+        },
+        {
+          "id": "cli__cli-696",
+          "language": "go",
+          "repository": "cli/cli",
+          "difficulty": "1h - 4h",
+          "patch_bytes": 9477,
+          "test_patch_bytes": 27629
+        },
+        {
+          "id": "fasterxml__jackson-databind-4360",
+          "language": "java",
+          "repository": "fasterxml/jackson-databind",
+          "difficulty": null,
+          "patch_bytes": 1399,
+          "test_patch_bytes": 1100
+        },
+        {
+          "id": "fasterxml__jackson-dataformat-xml-590",
+          "language": "java",
+          "repository": "fasterxml/jackson-dataformat-xml",
+          "difficulty": null,
+          "patch_bytes": 2140,
+          "test_patch_bytes": 1265
+        },
+        {
+          "id": "google__gson-1555",
+          "language": "java",
+          "repository": "google/gson",
+          "difficulty": null,
+          "patch_bytes": 3972,
+          "test_patch_bytes": 1325
+        },
+        {
+          "id": "googlecontainertools__jib-2536",
+          "language": "java",
+          "repository": "googlecontainertools/jib",
+          "difficulty": null,
+          "patch_bytes": 2774,
+          "test_patch_bytes": 1911
+        },
+        {
+          "id": "anuraghazra__github-readme-stats-2228",
+          "language": "javascript",
+          "repository": "anuraghazra/github-readme-stats",
+          "difficulty": "1h - 4h",
+          "patch_bytes": 1938,
+          "test_patch_bytes": 5519
+        },
+        {
+          "id": "anuraghazra__github-readme-stats-99",
+          "language": "javascript",
+          "repository": "anuraghazra/github-readme-stats",
+          "difficulty": "15mins - 1h",
+          "patch_bytes": 2369,
+          "test_patch_bytes": 577
+        },
+        {
+          "id": "expressjs__express-3495",
+          "language": "javascript",
+          "repository": "expressjs/express",
+          "difficulty": "1h - 4h",
+          "patch_bytes": 883,
+          "test_patch_bytes": 1727
+        },
+        {
+          "id": "iamkun__dayjs-1953",
+          "language": "javascript",
+          "repository": "iamkun/dayjs",
+          "difficulty": "≤15mins",
+          "patch_bytes": 382,
+          "test_patch_bytes": 676
+        },
+        {
+          "id": "iamkun__dayjs-668",
+          "language": "javascript",
+          "repository": "iamkun/dayjs",
+          "difficulty": "15mins - 1h",
+          "patch_bytes": 3328,
+          "test_patch_bytes": 2883
+        },
+        {
+          "id": "BurntSushi__ripgrep-727",
+          "language": "rust",
+          "repository": "BurntSushi/ripgrep",
+          "difficulty": "≤15mins",
+          "patch_bytes": 1001,
+          "test_patch_bytes": 700
+        },
+        {
+          "id": "clap-rs__clap-5298",
+          "language": "rust",
+          "repository": "clap-rs/clap",
+          "difficulty": "15mins - 1h",
+          "patch_bytes": 8301,
+          "test_patch_bytes": 5529
+        },
+        {
+          "id": "sharkdp__fd-1162",
+          "language": "rust",
+          "repository": "sharkdp/fd",
+          "difficulty": "15mins - 1h",
+          "patch_bytes": 589,
+          "test_patch_bytes": 591
+        },
+        {
+          "id": "tokio-rs__bytes-547",
+          "language": "rust",
+          "repository": "tokio-rs/bytes",
+          "difficulty": "1h - 4h",
+          "patch_bytes": 6263,
+          "test_patch_bytes": 4516
+        },
+        {
+          "id": "darkreader__darkreader-6747",
+          "language": "typescript",
+          "repository": "darkreader/darkreader",
+          "difficulty": "≤15mins",
+          "patch_bytes": 2671,
+          "test_patch_bytes": 3525
+        },
+        {
+          "id": "mui__material-ui-23778",
+          "language": "typescript",
+          "repository": "mui/material-ui",
+          "difficulty": "≤15mins",
+          "patch_bytes": 549,
+          "test_patch_bytes": 803
+        },
+        {
+          "id": "vuejs__core-10218",
+          "language": "typescript",
+          "repository": "vuejs/core",
+          "difficulty": "15mins - 1h",
+          "patch_bytes": 1591,
+          "test_patch_bytes": 913
+        },
+        {
+          "id": "vuejs__core-10874",
+          "language": "typescript",
+          "repository": "vuejs/core",
+          "difficulty": "15mins - 1h",
+          "patch_bytes": 2954,
+          "test_patch_bytes": 1305
+        }
+      ],
+      "image_digest_status": "pending_validation"
+    },
+    "swe_bench_multilingual": {
+      "status": "blocked_image_digest_validation",
+      "pilot_size": 30,
+      "source": {
+        "repository": "https://github.com/SWE-bench/SWE-bench.git",
+        "revision": "b3f33bf3f7dc07080486fa2e1c5d3f0de8ab14e2",
+        "license": "MIT"
+      },
+      "dataset": {
+        "repository": "https://huggingface.co/datasets/SWE-bench/SWE-bench_Multilingual",
+        "revision": "46ed4e9c82862c0fa94e44c98c839d470f3472ad",
+        "sha256": "f71dbee835fb3fd7d3b4b04334dab3f2c0ec16c518fb76b888d9d03d0a637904",
+        "local_path": "vendor/eval-data/swe-bench-multilingual/test.parquet",
+        "license": "MIT"
+      },
+      "tasks": [
+        {
+          "id": "jqlang__jq-2750",
+          "language": "c",
+          "repository": "jqlang/jq",
+          "patch_bytes": 51014,
+          "test_patch_bytes": 1338,
+          "image_ref": "swebench/sweb.eval.x86_64.jqlang_1776_jq-2750:latest"
+        },
+        {
+          "id": "micropython__micropython-10095",
+          "language": "c",
+          "repository": "micropython/micropython",
+          "patch_bytes": 1278,
+          "test_patch_bytes": 494,
+          "image_ref": "swebench/sweb.eval.x86_64.micropython_1776_micropython-10095:latest"
+        },
+        {
+          "id": "redis__redis-10095",
+          "language": "c",
+          "repository": "redis/redis",
+          "patch_bytes": 470,
+          "test_patch_bytes": 1974,
+          "image_ref": "swebench/sweb.eval.x86_64.redis_1776_redis-10095:latest"
+        },
+        {
+          "id": "nlohmann__json-4237",
+          "language": "c++",
+          "repository": "nlohmann/json",
+          "patch_bytes": 1642,
+          "test_patch_bytes": 5589,
+          "image_ref": "swebench/sweb.eval.x86_64.nlohmann_1776_json-4237:latest"
+        },
+        {
+          "id": "caddyserver__caddy-4774",
+          "language": "go",
+          "repository": "caddyserver/caddy",
+          "patch_bytes": 3365,
+          "test_patch_bytes": 847,
+          "image_ref": "swebench/sweb.eval.x86_64.caddyserver_1776_caddy-4774:latest"
+        },
+        {
+          "id": "gin-gonic__gin-3820",
+          "language": "go",
+          "repository": "gin-gonic/gin",
+          "patch_bytes": 626,
+          "test_patch_bytes": 678,
+          "image_ref": "swebench/sweb.eval.x86_64.gin-gonic_1776_gin-3820:latest"
+        },
+        {
+          "id": "gohugoio__hugo-12343",
+          "language": "go",
+          "repository": "gohugoio/hugo",
+          "patch_bytes": 672,
+          "test_patch_bytes": 1724,
+          "image_ref": "swebench/sweb.eval.x86_64.gohugoio_1776_hugo-12343:latest"
+        },
+        {
+          "id": "hashicorp__terraform-35611",
+          "language": "go",
+          "repository": "hashicorp/terraform",
+          "patch_bytes": 2547,
+          "test_patch_bytes": 1141,
+          "image_ref": "swebench/sweb.eval.x86_64.hashicorp_1776_terraform-35611:latest"
+        },
+        {
+          "id": "apache__druid-15402",
+          "language": "java",
+          "repository": "apache/druid",
+          "patch_bytes": 1872,
+          "test_patch_bytes": 1835,
+          "image_ref": "swebench/sweb.eval.x86_64.apache_1776_druid-15402:latest"
+        },
+        {
+          "id": "apache__lucene-12626",
+          "language": "java",
+          "repository": "apache/lucene",
+          "patch_bytes": 1148,
+          "test_patch_bytes": 4392,
+          "image_ref": "swebench/sweb.eval.x86_64.apache_1776_lucene-12626:latest"
+        },
+        {
+          "id": "google__gson-2061",
+          "language": "java",
+          "repository": "google/gson",
+          "patch_bytes": 1319,
+          "test_patch_bytes": 1577,
+          "image_ref": "swebench/sweb.eval.x86_64.google_1776_gson-2061:latest"
+        },
+        {
+          "id": "projectlombok__lombok-3486",
+          "language": "java",
+          "repository": "projectlombok/lombok",
+          "patch_bytes": 7492,
+          "test_patch_bytes": 9337,
+          "image_ref": "swebench/sweb.eval.x86_64.projectlombok_1776_lombok-3486:latest"
+        },
+        {
+          "id": "axios__axios-5316",
+          "language": "javascript",
+          "repository": "axios/axios",
+          "patch_bytes": 11042,
+          "test_patch_bytes": 6419,
+          "image_ref": "swebench/sweb.eval.x86_64.axios_1776_axios-5316:latest"
+        },
+        {
+          "id": "babel__babel-15649",
+          "language": "javascript",
+          "repository": "babel/babel",
+          "patch_bytes": 1522,
+          "test_patch_bytes": 2745,
+          "image_ref": "swebench/sweb.eval.x86_64.babel_1776_babel-15649:latest"
+        },
+        {
+          "id": "vuejs__core-11915",
+          "language": "javascript",
+          "repository": "vuejs/core",
+          "patch_bytes": 682,
+          "test_patch_bytes": 860,
+          "image_ref": "swebench/sweb.eval.x86_64.vuejs_1776_core-11915:latest"
+        },
+        {
+          "id": "briannesbitt__carbon-2752",
+          "language": "php",
+          "repository": "briannesbitt/carbon",
+          "patch_bytes": 877,
+          "test_patch_bytes": 884,
+          "image_ref": "swebench/sweb.eval.x86_64.briannesbitt_1776_carbon-2752:latest"
+        },
+        {
+          "id": "laravel__framework-53914",
+          "language": "php",
+          "repository": "laravel/framework",
+          "patch_bytes": 2711,
+          "test_patch_bytes": 1868,
+          "image_ref": "swebench/sweb.eval.x86_64.laravel_1776_framework-53914:latest"
+        },
+        {
+          "id": "php-cs-fixer__php-cs-fixer-7663",
+          "language": "php",
+          "repository": "php-cs-fixer/php-cs-fixer",
+          "patch_bytes": 7370,
+          "test_patch_bytes": 2808,
+          "image_ref": "swebench/sweb.eval.x86_64.php-cs-fixer_1776_php-cs-fixer-7663:latest"
+        },
+        {
+          "id": "phpoffice__phpspreadsheet-3570",
+          "language": "php",
+          "repository": "phpoffice/phpspreadsheet",
+          "patch_bytes": 1410,
+          "test_patch_bytes": 4424,
+          "image_ref": "swebench/sweb.eval.x86_64.phpoffice_1776_phpspreadsheet-3570:latest"
+        },
+        {
+          "id": "fastlane__fastlane-19207",
+          "language": "ruby",
+          "repository": "fastlane/fastlane",
+          "patch_bytes": 810,
+          "test_patch_bytes": 1167,
+          "image_ref": "swebench/sweb.eval.x86_64.fastlane_1776_fastlane-19207:latest"
+        },
+        {
+          "id": "fluent__fluentd-3328",
+          "language": "ruby",
+          "repository": "fluent/fluentd",
+          "patch_bytes": 608,
+          "test_patch_bytes": 965,
+          "image_ref": "swebench/sweb.eval.x86_64.fluent_1776_fluentd-3328:latest"
+        },
+        {
+          "id": "jekyll__jekyll-8047",
+          "language": "ruby",
+          "repository": "jekyll/jekyll",
+          "patch_bytes": 941,
+          "test_patch_bytes": 1057,
+          "image_ref": "swebench/sweb.eval.x86_64.jekyll_1776_jekyll-8047:latest"
+        },
+        {
+          "id": "jordansissel__fpm-1829",
+          "language": "ruby",
+          "repository": "jordansissel/fpm",
+          "patch_bytes": 2850,
+          "test_patch_bytes": 1363,
+          "image_ref": "swebench/sweb.eval.x86_64.jordansissel_1776_fpm-1829:latest"
+        },
+        {
+          "id": "rubocop__rubocop-13653",
+          "language": "ruby",
+          "repository": "rubocop/rubocop",
+          "patch_bytes": 3477,
+          "test_patch_bytes": 1471,
+          "image_ref": "swebench/sweb.eval.x86_64.rubocop_1776_rubocop-13653:latest"
+        },
+        {
+          "id": "astral-sh__ruff-15330",
+          "language": "rust",
+          "repository": "astral-sh/ruff",
+          "patch_bytes": 1964,
+          "test_patch_bytes": 1547,
+          "image_ref": "swebench/sweb.eval.x86_64.astral-sh_1776_ruff-15330:latest"
+        },
+        {
+          "id": "burntsushi__ripgrep-2576",
+          "language": "rust",
+          "repository": "burntsushi/ripgrep",
+          "patch_bytes": 2232,
+          "test_patch_bytes": 768,
+          "image_ref": "swebench/sweb.eval.x86_64.burntsushi_1776_ripgrep-2576:latest"
+        },
+        {
+          "id": "sharkdp__bat-2201",
+          "language": "rust",
+          "repository": "sharkdp/bat",
+          "patch_bytes": 884,
+          "test_patch_bytes": 671,
+          "image_ref": "swebench/sweb.eval.x86_64.sharkdp_1776_bat-2201:latest"
+        },
+        {
+          "id": "tokio-rs__tokio-4867",
+          "language": "rust",
+          "repository": "tokio-rs/tokio",
+          "patch_bytes": 6711,
+          "test_patch_bytes": 769,
+          "image_ref": "swebench/sweb.eval.x86_64.tokio-rs_1776_tokio-4867:latest"
+        },
+        {
+          "id": "preactjs__preact-2896",
+          "language": "typescript",
+          "repository": "preactjs/preact",
+          "patch_bytes": 839,
+          "test_patch_bytes": 2699,
+          "image_ref": "swebench/sweb.eval.x86_64.preactjs_1776_preact-2896:latest"
+        },
+        {
+          "id": "preactjs__preact-2927",
+          "language": "typescript",
+          "repository": "preactjs/preact",
+          "patch_bytes": 357,
+          "test_patch_bytes": 776,
+          "image_ref": "swebench/sweb.eval.x86_64.preactjs_1776_preact-2927:latest"
+        }
+      ],
+      "image_digest_status": "pending_validation"
+    },
+    "swe_polybench_verified": {
+      "status": "blocked_image_digest_validation",
+      "pilot_size": 38,
+      "source": {
+        "repository": "https://github.com/amazon-science/SWE-PolyBench.git",
+        "revision": "9c836c5d7f3cb991934132b77d29e6941d912a07",
+        "license": "MIT"
+      },
+      "dataset": {
+        "repository": "https://huggingface.co/datasets/AmazonScience/SWE-PolyBench_Verified",
+        "revision": "b3fca77b637379f0c01ad86d18753a7ac1998b53",
+        "sha256": "0c8138e73c34fa29a5276b675b146b72d78ce001fcc4560d76302c908b4808a5",
+        "local_path": "vendor/eval-data/swe-polybench-verified/test.csv",
+        "license": "MIT"
+      },
+      "tasks": [
+        {
+          "id": "apache__dubbo-3855",
+          "language": "java",
+          "repository": "apache/dubbo",
+          "task_type": "Refactoring",
+          "patch_bytes": 2417,
+          "test_patch_bytes": 6533,
+          "image_ref": "ghcr.io/timesler/swe-polybench.eval.x86_64.apache__dubbo-3855:v1.1"
+        },
+        {
+          "id": "apache__dubbo-4567",
+          "language": "java",
+          "repository": "apache/dubbo",
+          "task_type": "Bug Fix",
+          "patch_bytes": 717,
+          "test_patch_bytes": 834,
+          "image_ref": "ghcr.io/timesler/swe-polybench.eval.x86_64.apache__dubbo-4567:v1.1"
+        },
+        {
+          "id": "apache__rocketmq-5008",
+          "language": "java",
+          "repository": "apache/rocketmq",
+          "task_type": "Bug Fix",
+          "patch_bytes": 19464,
+          "test_patch_bytes": 1934,
+          "image_ref": "ghcr.io/timesler/swe-polybench.eval.x86_64.apache__rocketmq-5008:v1.1"
+        },
+        {
+          "id": "apolloconfig__apollo-4568",
+          "language": "java",
+          "repository": "apolloconfig/apollo",
+          "task_type": "Bug Fix",
+          "patch_bytes": 2154,
+          "test_patch_bytes": 987,
+          "image_ref": "ghcr.io/timesler/swe-polybench.eval.x86_64.apolloconfig__apollo-4568:v1.1"
+        },
+        {
+          "id": "google__gson-1989",
+          "language": "java",
+          "repository": "google/gson",
+          "task_type": "Bug Fix",
+          "patch_bytes": 1525,
+          "test_patch_bytes": 2877,
+          "image_ref": "ghcr.io/timesler/swe-polybench.eval.x86_64.google__gson-1989:v1.1"
+        },
+        {
+          "id": "google__guava-3971",
+          "language": "java",
+          "repository": "google/guava",
+          "task_type": "Feature",
+          "patch_bytes": 5554,
+          "test_patch_bytes": 8141,
+          "image_ref": "ghcr.io/timesler/swe-polybench.eval.x86_64.google__guava-3971:v1.1"
+        },
+        {
+          "id": "trinodb__trino-3859",
+          "language": "java",
+          "repository": "trinodb/trino",
+          "task_type": "Bug Fix",
+          "patch_bytes": 2020,
+          "test_patch_bytes": 2769,
+          "image_ref": "ghcr.io/timesler/swe-polybench.eval.x86_64.trinodb__trino-3859:v1.1"
+        },
+        {
+          "id": "mrdoob__three.js-14836",
+          "language": "javascript",
+          "repository": "mrdoob/three.js",
+          "task_type": "Bug Fix",
+          "patch_bytes": 294,
+          "test_patch_bytes": 1300,
+          "image_ref": "ghcr.io/timesler/swe-polybench.eval.x86_64.mrdoob__three.js-14836:v1.1"
+        },
+        {
+          "id": "mrdoob__three.js-20991",
+          "language": "javascript",
+          "repository": "mrdoob/three.js",
+          "task_type": "Feature",
+          "patch_bytes": 2431,
+          "test_patch_bytes": 982,
+          "image_ref": "ghcr.io/timesler/swe-polybench.eval.x86_64.mrdoob__three.js-20991:v1.1"
+        },
+        {
+          "id": "prettier__prettier-9850",
+          "language": "javascript",
+          "repository": "prettier/prettier",
+          "task_type": "Bug Fix",
+          "patch_bytes": 2626,
+          "test_patch_bytes": 2569,
+          "image_ref": "ghcr.io/timesler/swe-polybench.eval.x86_64.prettier__prettier-9850:v1.1"
+        },
+        {
+          "id": "serverless__serverless-2952",
+          "language": "javascript",
+          "repository": "serverless/serverless",
+          "task_type": "Bug Fix",
+          "patch_bytes": 3982,
+          "test_patch_bytes": 1810,
+          "image_ref": "ghcr.io/timesler/swe-polybench.eval.x86_64.serverless__serverless-2952:v1.1"
+        },
+        {
+          "id": "serverless__serverless-5775",
+          "language": "javascript",
+          "repository": "serverless/serverless",
+          "task_type": "Bug Fix",
+          "patch_bytes": 433,
+          "test_patch_bytes": 1257,
+          "image_ref": "ghcr.io/timesler/swe-polybench.eval.x86_64.serverless__serverless-5775:v1.1"
+        },
+        {
+          "id": "serverless__serverless-6827",
+          "language": "javascript",
+          "repository": "serverless/serverless",
+          "task_type": "Bug Fix",
+          "patch_bytes": 1739,
+          "test_patch_bytes": 1030,
+          "image_ref": "ghcr.io/timesler/swe-polybench.eval.x86_64.serverless__serverless-6827:v1.1"
+        },
+        {
+          "id": "sveltejs__svelte-1227",
+          "language": "javascript",
+          "repository": "sveltejs/svelte",
+          "task_type": "Bug Fix",
+          "patch_bytes": 681,
+          "test_patch_bytes": 1505,
+          "image_ref": "ghcr.io/timesler/swe-polybench.eval.x86_64.sveltejs__svelte-1227:v1.1"
+        },
+        {
+          "id": "sveltejs__svelte-4454",
+          "language": "javascript",
+          "repository": "sveltejs/svelte",
+          "task_type": "Bug Fix",
+          "patch_bytes": 1227,
+          "test_patch_bytes": 3391,
+          "image_ref": "ghcr.io/timesler/swe-polybench.eval.x86_64.sveltejs__svelte-4454:v1.1"
+        },
+        {
+          "id": "sveltejs__svelte-630",
+          "language": "javascript",
+          "repository": "sveltejs/svelte",
+          "task_type": "Bug Fix",
+          "patch_bytes": 2848,
+          "test_patch_bytes": 1685,
+          "image_ref": "ghcr.io/timesler/swe-polybench.eval.x86_64.sveltejs__svelte-630:v1.1"
+        },
+        {
+          "id": "sveltejs__svelte-6564",
+          "language": "javascript",
+          "repository": "sveltejs/svelte",
+          "task_type": "Feature",
+          "patch_bytes": 1149,
+          "test_patch_bytes": 3219,
+          "image_ref": "ghcr.io/timesler/swe-polybench.eval.x86_64.sveltejs__svelte-6564:v1.1"
+        },
+        {
+          "id": "Significant-Gravitas__AutoGPT-4652",
+          "language": "python",
+          "repository": "Significant-Gravitas/AutoGPT",
+          "task_type": "Bug Fix",
+          "patch_bytes": 3395,
+          "test_patch_bytes": 9214,
+          "image_ref": "ghcr.io/timesler/swe-polybench.eval.x86_64.significant-gravitas__autogpt-4652:v1.1"
+        },
+        {
+          "id": "huggingface__transformers-21345",
+          "language": "python",
+          "repository": "huggingface/transformers",
+          "task_type": "Feature",
+          "patch_bytes": 1501,
+          "test_patch_bytes": 465,
+          "image_ref": "ghcr.io/timesler/swe-polybench.eval.x86_64.huggingface__transformers-21345:v1.1"
+        },
+        {
+          "id": "huggingface__transformers-22458",
+          "language": "python",
+          "repository": "huggingface/transformers",
+          "task_type": "Bug Fix",
+          "patch_bytes": 3802,
+          "test_patch_bytes": 812,
+          "image_ref": "ghcr.io/timesler/swe-polybench.eval.x86_64.huggingface__transformers-22458:v1.1"
+        },
+        {
+          "id": "huggingface__transformers-23796",
+          "language": "python",
+          "repository": "huggingface/transformers",
+          "task_type": "Bug Fix",
+          "patch_bytes": 1788,
+          "test_patch_bytes": 974,
+          "image_ref": "ghcr.io/timesler/swe-polybench.eval.x86_64.huggingface__transformers-23796:v1.1"
+        },
+        {
+          "id": "huggingface__transformers-26164",
+          "language": "python",
+          "repository": "huggingface/transformers",
+          "task_type": "Bug Fix",
+          "patch_bytes": 2111,
+          "test_patch_bytes": 1830,
+          "image_ref": "ghcr.io/timesler/swe-polybench.eval.x86_64.huggingface__transformers-26164:v1.1"
+        },
+        {
+          "id": "huggingface__transformers-27463",
+          "language": "python",
+          "repository": "huggingface/transformers",
+          "task_type": "Feature",
+          "patch_bytes": 20673,
+          "test_patch_bytes": 3684,
+          "image_ref": "ghcr.io/timesler/swe-polybench.eval.x86_64.huggingface__transformers-27463:v1.1"
+        },
+        {
+          "id": "huggingface__transformers-29311",
+          "language": "python",
+          "repository": "huggingface/transformers",
+          "task_type": "Bug Fix",
+          "patch_bytes": 1232,
+          "test_patch_bytes": 2463,
+          "image_ref": "ghcr.io/timesler/swe-polybench.eval.x86_64.huggingface__transformers-29311:v1.1"
+        },
+        {
+          "id": "keras-team__keras-19773",
+          "language": "python",
+          "repository": "keras-team/keras",
+          "task_type": "Bug Fix",
+          "patch_bytes": 798,
+          "test_patch_bytes": 1036,
+          "image_ref": "ghcr.io/timesler/swe-polybench.eval.x86_64.keras-team__keras-19773:v1.1"
+        },
+        {
+          "id": "langchain-ai__langchain-3367",
+          "language": "python",
+          "repository": "langchain-ai/langchain",
+          "task_type": "Bug Fix",
+          "patch_bytes": 767,
+          "test_patch_bytes": 1034,
+          "image_ref": "ghcr.io/timesler/swe-polybench.eval.x86_64.langchain-ai__langchain-3367:v1.1"
+        },
+        {
+          "id": "langchain-ai__langchain-5625",
+          "language": "python",
+          "repository": "langchain-ai/langchain",
+          "task_type": "Bug Fix",
+          "patch_bytes": 3336,
+          "test_patch_bytes": 1971,
+          "image_ref": "ghcr.io/timesler/swe-polybench.eval.x86_64.langchain-ai__langchain-5625:v1.1"
+        },
+        {
+          "id": "yt-dlp__yt-dlp-9862",
+          "language": "python",
+          "repository": "yt-dlp/yt-dlp",
+          "task_type": "Bug Fix",
+          "patch_bytes": 2745,
+          "test_patch_bytes": 2734,
+          "image_ref": "ghcr.io/timesler/swe-polybench.eval.x86_64.yt-dlp__yt-dlp-9862:v1.1"
+        },
+        {
+          "id": "angular__angular-37561",
+          "language": "typescript",
+          "repository": "angular/angular",
+          "task_type": "Bug Fix",
+          "patch_bytes": 2289,
+          "test_patch_bytes": 6068,
+          "image_ref": "ghcr.io/timesler/swe-polybench.eval.x86_64.angular__angular-37561:v1.1"
+        },
+        {
+          "id": "coder__code-server-6278",
+          "language": "typescript",
+          "repository": "coder/code-server",
+          "task_type": "Bug Fix",
+          "patch_bytes": 1722,
+          "test_patch_bytes": 1688,
+          "image_ref": "ghcr.io/timesler/swe-polybench.eval.x86_64.coder__code-server-6278:v1.1"
+        },
+        {
+          "id": "microsoft__vscode-127071",
+          "language": "typescript",
+          "repository": "microsoft/vscode",
+          "task_type": "Bug Fix",
+          "patch_bytes": 796,
+          "test_patch_bytes": 1963,
+          "image_ref": "ghcr.io/timesler/swe-polybench.eval.x86_64.microsoft__vscode-127071:v1.1"
+        },
+        {
+          "id": "microsoft__vscode-135805",
+          "language": "typescript",
+          "repository": "microsoft/vscode",
+          "task_type": "Feature",
+          "patch_bytes": 929,
+          "test_patch_bytes": 1462,
+          "image_ref": "ghcr.io/timesler/swe-polybench.eval.x86_64.microsoft__vscode-135805:v1.1"
+        },
+        {
+          "id": "microsoft__vscode-136347",
+          "language": "typescript",
+          "repository": "microsoft/vscode",
+          "task_type": "Bug Fix",
+          "patch_bytes": 6123,
+          "test_patch_bytes": 1334,
+          "image_ref": "ghcr.io/timesler/swe-polybench.eval.x86_64.microsoft__vscode-136347:v1.1"
+        },
+        {
+          "id": "microsoft__vscode-189223",
+          "language": "typescript",
+          "repository": "microsoft/vscode",
+          "task_type": "Bug Fix",
+          "patch_bytes": 954,
+          "test_patch_bytes": 1007,
+          "image_ref": "ghcr.io/timesler/swe-polybench.eval.x86_64.microsoft__vscode-189223:v1.1"
+        },
+        {
+          "id": "mui__material-ui-15534",
+          "language": "typescript",
+          "repository": "mui/material-ui",
+          "task_type": "Bug Fix",
+          "patch_bytes": 4529,
+          "test_patch_bytes": 767,
+          "image_ref": "ghcr.io/timesler/swe-polybench.eval.x86_64.mui__material-ui-15534:v1.1"
+        },
+        {
+          "id": "mui__material-ui-19072",
+          "language": "typescript",
+          "repository": "mui/material-ui",
+          "task_type": "Bug Fix",
+          "patch_bytes": 2225,
+          "test_patch_bytes": 2031,
+          "image_ref": "ghcr.io/timesler/swe-polybench.eval.x86_64.mui__material-ui-19072:v1.1"
+        },
+        {
+          "id": "tailwindlabs__tailwindcss-550",
+          "language": "typescript",
+          "repository": "tailwindlabs/tailwindcss",
+          "task_type": "Bug Fix",
+          "patch_bytes": 488,
+          "test_patch_bytes": 1405,
+          "image_ref": "ghcr.io/timesler/swe-polybench.eval.x86_64.tailwindlabs__tailwindcss-550:v1.1"
+        },
+        {
+          "id": "tailwindlabs__tailwindcss-853",
+          "language": "typescript",
+          "repository": "tailwindlabs/tailwindcss",
+          "task_type": "Feature",
+          "patch_bytes": 9356,
+          "test_patch_bytes": 612,
+          "image_ref": "ghcr.io/timesler/swe-polybench.eval.x86_64.tailwindlabs__tailwindcss-853:v1.1"
+        }
+      ],
+      "image_digest_status": "pending_validation"
+    },
+    "featurebench_lite": {
+      "status": "blocked_image_digest_validation",
+      "pilot_size": 6,
+      "source": {
+        "repository": "https://github.com/LiberCoders/FeatureBench.git",
+        "revision": "445dcbaec0b2e136061b0acb54e753c0a9f1888e",
+        "license": "MIT"
+      },
+      "dataset": {
+        "repository": "https://huggingface.co/datasets/LiberCoders/FeatureBench",
+        "revision": "e99d6efdfe511ea832c1b5735c536129561ec96a",
+        "sha256": "d0d1ee656179cd4f24547cfdccd31e10d8f77f337056661ffc8278f839a6ab7d",
+        "local_path": "vendor/eval-data/featurebench-lite/lite.parquet",
+        "license": "MIT"
+      },
+      "tasks": [
+        {
+          "id": "Lightning-AI__pytorch-lightning.126fa6f1.test_data.c8b292af.lv1",
+          "language": "python",
+          "repository": "Lightning-AI/pytorch-lightning",
+          "level": "lv1",
+          "patch_bytes": 40303,
+          "test_patch_bytes": 15634,
+          "image_ref": "libercoders/featurebench-specs_pytorch_lightning-instance_83799db4"
+        },
+        {
+          "id": "huggingface__trl.02a34777.test_data_utils.827a9d15.lv1",
+          "language": "python",
+          "repository": "huggingface/trl",
+          "level": "lv1",
+          "patch_bytes": 42015,
+          "test_patch_bytes": 47853,
+          "image_ref": "libercoders/featurebench-specs_trl-instance_725be9aa"
+        },
+        {
+          "id": "linkedin__Liger-Kernel.c856fbab.test_poly_norm.7b0e3399.lv1",
+          "language": "python",
+          "repository": "linkedin/Liger-Kernel",
+          "level": "lv1",
+          "patch_bytes": 11808,
+          "test_patch_bytes": 8815,
+          "image_ref": "libercoders/featurebench-specs_liger_kernel-instance_23e4cbae"
+        },
+        {
+          "id": "mlflow__mlflow.93dab383.test_span.69efd376.lv1",
+          "language": "python",
+          "repository": "mlflow/mlflow",
+          "level": "lv1",
+          "patch_bytes": 30364,
+          "test_patch_bytes": 29478,
+          "image_ref": "libercoders/featurebench-specs_mlflow-instance_efffa87e"
+        },
+        {
+          "id": "pandas-dev__pandas.82fa2715.test_iceberg.85771c70.lv2",
+          "language": "python",
+          "repository": "pandas-dev/pandas",
+          "level": "lv2",
+          "patch_bytes": 0,
+          "test_patch_bytes": 3592,
+          "image_ref": "libercoders/featurebench-specs_pandas-instance_15f634a6"
+        },
+        {
+          "id": "sphinx-doc__sphinx.e347e59c.test_domain_c.4068b9e8.lv1",
+          "language": "python",
+          "repository": "sphinx-doc/sphinx",
+          "level": "lv1",
+          "patch_bytes": 25688,
+          "test_patch_bytes": 44948,
+          "image_ref": "libercoders/featurebench-specs_sphinx-instance_6191afb1"
+        }
+      ],
+      "image_digest_status": "pending_validation"
+    },
+    "bigcodebench_hard_instruct": {
+      "status": "ready_integration",
+      "pilot_size": 15,
+      "source": {
+        "repository": "https://github.com/bigcode-project/bigcodebench.git",
+        "revision": "09dd993f46c3fbf3a799465bb96d524edcb0b199",
+        "license": "Apache-2.0"
+      },
+      "dataset": {
+        "repository": "https://huggingface.co/datasets/bigcode/bigcodebench-hard",
+        "revision": "298d2cc7b96612e15e47313c3603ee124cee0c1f",
+        "sha256": "73a4270b43feb81abefad7bb1b592937c768ea45c3263bedc1cabd30a9a6ce79",
+        "local_path": "vendor/eval-data/bigcodebench-hard/v0.1.4.parquet",
+        "license": "Apache-2.0"
+      },
+      "tasks": [
+        {
+          "id": "BigCodeBench/15",
+          "language": "python",
+          "libraries": [
+            "subprocess",
+            "csv",
+            "os"
+          ],
+          "library_count": 3,
+          "prompt_bytes": 842,
+          "test_bytes": 3554
+        },
+        {
+          "id": "BigCodeBench/162",
+          "language": "python",
+          "libraries": [
+            "numpy",
+            "matplotlib",
+            "re"
+          ],
+          "library_count": 3,
+          "prompt_bytes": 607,
+          "test_bytes": 2263
+        },
+        {
+          "id": "BigCodeBench/227",
+          "language": "python",
+          "libraries": [
+            "librosa",
+            "matplotlib",
+            "soundfile",
+            "numpy",
+            "os"
+          ],
+          "library_count": 5,
+          "prompt_bytes": 1085,
+          "test_bytes": 2730
+        },
+        {
+          "id": "BigCodeBench/267",
+          "language": "python",
+          "libraries": [
+            "numpy",
+            "matplotlib",
+            "scipy"
+          ],
+          "library_count": 3,
+          "prompt_bytes": 627,
+          "test_bytes": 2788
+        },
+        {
+          "id": "BigCodeBench/273",
+          "language": "python",
+          "libraries": [
+            "http",
+            "cgi",
+            "json"
+          ],
+          "library_count": 3,
+          "prompt_bytes": 1387,
+          "test_bytes": 3612
+        },
+        {
+          "id": "BigCodeBench/287",
+          "language": "python",
+          "libraries": [
+            "json",
+            "collections",
+            "os"
+          ],
+          "library_count": 3,
+          "prompt_bytes": 374,
+          "test_bytes": 3537
+        },
+        {
+          "id": "BigCodeBench/324",
+          "language": "python",
+          "libraries": [
+            "subprocess",
+            "threading",
+            "time"
+          ],
+          "library_count": 3,
+          "prompt_bytes": 274,
+          "test_bytes": 1659
+        },
+        {
+          "id": "BigCodeBench/346",
+          "language": "python",
+          "libraries": [
+            "subprocess",
+            "time",
+            "os",
+            "sys"
+          ],
+          "library_count": 4,
+          "prompt_bytes": 538,
+          "test_bytes": 2842
+        },
+        {
+          "id": "BigCodeBench/502",
+          "language": "python",
+          "libraries": [
+            "pandas",
+            "datetime",
+            "random",
+            "seaborn"
+          ],
+          "library_count": 4,
+          "prompt_bytes": 830,
+          "test_bytes": 1951
+        },
+        {
+          "id": "BigCodeBench/503",
+          "language": "python",
+          "libraries": [
+            "pandas",
+            "datetime",
+            "numpy"
+          ],
+          "library_count": 3,
+          "prompt_bytes": 498,
+          "test_bytes": 3328
+        },
+        {
+          "id": "BigCodeBench/583",
+          "language": "python",
+          "libraries": [
+            "base64",
+            "Crypto",
+            "rsa",
+            "os"
+          ],
+          "library_count": 4,
+          "prompt_bytes": 872,
+          "test_bytes": 1865
+        },
+        {
+          "id": "BigCodeBench/879",
+          "language": "python",
+          "libraries": [
+            "pandas",
+            "numpy",
+            "scipy"
+          ],
+          "library_count": 3,
+          "prompt_bytes": 1242,
+          "test_bytes": 2267
+        },
+        {
+          "id": "BigCodeBench/964",
+          "language": "python",
+          "libraries": [
+            "pandas",
+            "pathlib",
+            "docx",
+            "os"
+          ],
+          "library_count": 4,
+          "prompt_bytes": 776,
+          "test_bytes": 3975
+        },
+        {
+          "id": "BigCodeBench/985",
+          "language": "python",
+          "libraries": [
+            "math",
+            "pandas",
+            "os",
+            "json"
+          ],
+          "library_count": 4,
+          "prompt_bytes": 896,
+          "test_bytes": 4685
+        },
+        {
+          "id": "BigCodeBench/1077",
+          "language": "python",
+          "libraries": [
+            "pytz",
+            "datetime",
+            "numpy"
+          ],
+          "library_count": 3,
+          "prompt_bytes": 1045,
+          "test_bytes": 1792
+        }
+      ]
+    }
+  }
+}

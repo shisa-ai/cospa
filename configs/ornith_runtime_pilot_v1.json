@@ -248,7 +248,7 @@
       "blocker": "A real run requires the pinned judge model through SWE_ATLAS_JUDGE_API_KEY and SWE_ATLAS_JUDGE_BASE_URL."
     },
     "multi_swe_bench_flash": {
-      "status": "blocked_image_digest_validation",
+      "status": "blocked_gold_null_validation",
       "pilot_size": 30,
       "source": {
         "repository": "https://github.com/multi-swe-bench/multi-swe-bench.git",
@@ -504,10 +504,10 @@
           "test_patch_bytes": 1305
         }
       ],
-      "image_digest_status": "pending_validation"
+      "image_digest_status": "resolved"
     },
     "swe_bench_multilingual": {
-      "status": "blocked_image_digest_validation",
+      "status": "blocked_gold_null_validation",
       "pilot_size": 30,
       "source": {
         "repository": "https://github.com/SWE-bench/SWE-bench.git",
@@ -763,10 +763,10 @@
           "image_ref": "swebench/sweb.eval.x86_64.preactjs_1776_preact-2927:latest"
         }
       ],
-      "image_digest_status": "pending_validation"
+      "image_digest_status": "resolved"
     },
     "swe_polybench_verified": {
-      "status": "blocked_image_digest_validation",
+      "status": "blocked_gold_null_validation",
       "pilot_size": 38,
       "source": {
         "repository": "https://github.com/amazon-science/SWE-PolyBench.git",
@@ -1124,10 +1124,10 @@
           "image_ref": "ghcr.io/timesler/swe-polybench.eval.x86_64.tailwindlabs__tailwindcss-853:v1.1"
         }
       ],
-      "image_digest_status": "pending_validation"
+      "image_digest_status": "resolved"
     },
     "featurebench_lite": {
-      "status": "blocked_image_digest_validation",
+      "status": "blocked_gold_null_validation",
       "pilot_size": 6,
       "source": {
         "repository": "https://github.com/LiberCoders/FeatureBench.git",
@@ -1197,7 +1197,7 @@
           "image_ref": "libercoders/featurebench-specs_sphinx-instance_6191afb1"
         }
       ],
-      "image_digest_status": "pending_validation"
+      "image_digest_status": "resolved"
     },
     "bigcodebench_hard_instruct": {
       "status": "ready_integration",
@@ -1214,6 +1214,8 @@
         "local_path": "vendor/eval-data/bigcodebench-hard/v0.1.4.parquet",
         "license": "Apache-2.0"
       },
+      "verifier_image_ref": "bigcodebench/bigcodebench-evaluate:latest",
+      "image_digest_status": "resolved",
       "tasks": [
         {
           "id": "BigCodeBench/15",

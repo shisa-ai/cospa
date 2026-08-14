@@ -335,18 +335,19 @@ rules, and a `c=1/2/4/8/16` ladder. The pilot sizes are:
 | Aider source corpus | 23 / 225 | Blocked until the contract audit freezes eligible tasks |
 | Terminal-Bench Core 0.1.1 | 8 / 80 | Source and Harbor 0.16.1 ready; fresh Docker smoke required |
 | SWE Atlas pilot12 | 12 / 12 | Pinned tasks ready; judge credentials/endpoint required |
-| Multi-SWE-bench Flash | 30 / 300 | Dataset ready; image digest, gold/null, and repeat validation pending |
-| SWE-bench Multilingual | 30 / 300 | Dataset ready; image digest, gold/null, and repeat validation pending |
-| SWE-PolyBench Verified | 38 / 382 | Dataset ready; image digest, gold/null, and repeat validation pending |
-| FeatureBench Lite | 6 / 30 | Dataset ready; image digest, gold/null, and repeat validation pending |
-| BigCodeBench-Hard Instruct | 15 / 148 | Dataset ready; separate non-agentic integration pending |
+| Multi-SWE-bench Flash | 30 / 300 | Dataset and 30 image digests locked; gold/null/repeat validation pending |
+| SWE-bench Multilingual | 30 / 300 | Dataset and 30 image digests locked; gold/null/repeat validation pending |
+| SWE-PolyBench Verified | 38 / 382 | Dataset and 38 image digests locked; gold/null/repeat validation pending |
+| FeatureBench Lite | 6 / 30 | Dataset and 6 image digests locked; gold/null/repeat validation pending |
+| BigCodeBench-Hard Instruct | 15 / 148 | Dataset and verifier digest locked; separate non-agentic integration pending |
 
 **Measured setup state, 2026-08-14:** the host has 683 GiB free on `/`; all
 listed source repositories and external dataset files are present at the
-manifested revisions/checksums. This is setup evidence, not verifier evidence.
-Repository image tags are deliberately marked `pending_validation`; do not run
-a target model until each selected image is resolved to a digest and survives
-repeated null/gold checks.
+manifested revisions/checksums. All 105 selected Linux/amd64 task/verifier
+images resolve to immutable platform-manifest digests in
+`configs/ornith_runtime_pilot_images_v1.json`. This is setup evidence, not
+verifier evidence: do not run a target model on a repository suite until its
+selected images survive repeated null/gold checks.
 
 The operational goal is a result within 12 hours with 20% reserve, so the
 campaign budget is 9.6 hours. If c=16 scaled perfectly, the maximum mean task

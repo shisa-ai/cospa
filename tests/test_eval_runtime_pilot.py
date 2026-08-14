@@ -9,6 +9,7 @@ import pytest
 
 ROOT = Path(__file__).parents[1]
 PILOT_PATH = ROOT / "configs" / "ornith_runtime_pilot_v1.json"
+IMAGE_LOCK_PATH = ROOT / "configs" / "ornith_runtime_pilot_images_v1.json"
 
 
 def load_pilot():
@@ -134,15 +135,38 @@ def test_external_artifacts_are_content_pinned():
             assert len(dataset["sha256"]) == 64, name
 
 
-def test_repository_images_must_pass_digest_gate_before_model_runs():
-    suites = load_pilot()["suites"]
+def test_selected_images_are_digest_pinned_before_model_runs():
+    pilot_bytes = PILOT_PATH.read_bytes()
+    pilot = json.loads(pilot_bytes)
+    lock = json.loads(IMAGE_LOCK_PATH.read_text())
+    suites = pilot["suites"]
+    selected_task_count = 0
+
     for name in (
         "multi_swe_bench_flash",
         "swe_bench_multilingual",
         "swe_polybench_verified",
         "featurebench_lite",
+        "bigcodebench_hard_instruct",
     ):
-        assert suites[name]["image_digest_status"] == "pending_validation"
+        assert suites[name]["image_digest_status"] == "resolved"
+        if name != "bigcodebench_hard_instruct":
+            assert suites[name]["status"] == "blocked_gold_null_validation"
+        selected_task_count += sum(
+            1 for task in suites[name].get("tasks", []) if task.get("image_ref")
+        )
+
+    # Multi-SWE image names are computed by the resolver; BigCodeBench adds one
+    # verifier image. Every selected task/verifier must have one immutable pin.
+    selected_task_count += suites["multi_swe_bench_flash"]["pilot_size"]
+    selected_task_count += 1
+    assert len(lock["images"]) == selected_task_count == 105
+    assert lock["source_manifest_sha256"] == hashlib.sha256(pilot_bytes).hexdigest()
+    assert lock["platform"] == {"os": "linux", "architecture": "amd64"}
+    for image in lock["images"].values():
+        assert image["digest"].startswith("sha256:")
+        assert len(image["digest"]) == 71
+        assert image["pinned_ref"].endswith("@" + image["digest"])
 
 
 @pytest.mark.requires_vendor

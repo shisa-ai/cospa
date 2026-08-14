@@ -1460,3 +1460,22 @@ Append-only development log for the `cospa` repository.
   not ordinary model failures.
 - Next: resolve selected image digests, exercise null/gold/repeat verification,
   integrate the cheap BigCodeBench anchor, then begin matched Ornith smokes.
+
+## 2026-08-14 — Lock first-wave evaluation images
+
+- Context: five selected evaluation families still referenced mutable task or
+  verifier image tags, so model runs could not be reproduced or safely start.
+- Change: added a fail-closed resolver and a Linux/amd64 lock containing 105
+  immutable platform-manifest digests: 30 Multi-SWE Flash, 30 SWE-bench
+  Multilingual, 38 SWE-PolyBench, 6 FeatureBench, and one BigCodeBench verifier.
+  The resolver computes upstream Multi-SWE image names, writes atomically, and
+  retries transient registry failures with bounded backoff.
+- Evidence: RED then GREEN digest-status and transient-retry tests; two complete
+  real registry resolutions produced the same 105 digests; 18 focused tests
+  pass. Full pytest reaches 290 passes with only the two already-documented
+  baseline failures in the non-hermetic check-models endpoint test and the
+  Terminal-Bench YAML `|-` newline assertion.
+- Decision: advance repository suites to `blocked_gold_null_validation`, not
+  runnable. A resolved tag proves artifact identity, not verifier validity.
+- Next: integrate BigCodeBench-Hard, then run repeated null/gold checks against
+  pinned repository-suite images before any Ornith score episode.

@@ -1387,3 +1387,27 @@ Append-only development log for the `cospa` repository.
 - Decision: use unioned tool intervals for percentage (parallel-safe), preserve
   summed worker time separately, and keep full tool payloads only in pi JSONL.
   Existing in-flight runs can be count-backfilled but require restart for timing.
+
+## 2026-08-14 — Define the Cospa evaluation portfolio
+
+- Context: Aider's 225-task difficulty sample and retry/test-feedback protocol
+  conflate contract inference with implementation, and the prior eval review
+  contained pre-hidden-test Aider measurements that are no longer valid.
+- Change: rewrote `docs/EVALS.md` around the `aider_cospa` protocol, a 50/50
+  repeated-versus-language-specific contract panel, explicit benchmark quality
+  gates, separate capability/time budgets, a repository-source bake-off, and
+  reviewed methodologies for the leading multilingual, feature, terminal,
+  fresh, and low-cost coding evaluations. Updated `README.md` and
+  `docs/PLAN.md` so the public overview and architecture source of truth carry
+  the same protocol names, contamination boundary, and cost-gated campaign.
+- Evidence: checked the 225-task vendored corpus (225 instances, 100 concepts,
+  183 repeated-concept instances); reviewed first-party papers, repositories,
+  dataset cards, and harness docs; calculated a labeled runtime table from the
+  clean in-progress Cospa manifests and published budgets; re-read the document
+  end to end; `git diff --check` passes.
+- Decision: keep `aider_canonical` only as a legacy comparator; do not assign
+  the `aider_cospa` name until all 225 public contracts and hidden assertions
+  are reviewed. Treat unknown external runtimes as pilot-required rather than
+  implied by task count, and measure `c=1` versus `c=2` before scaling.
+- Next: create the versioned 225-row contract audit manifest and run the
+  Multi-SWE Flash / SWE-bench Multilingual / SWE-PolyBench validity bake-off.

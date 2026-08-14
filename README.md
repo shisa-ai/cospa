@@ -14,10 +14,11 @@ measured alongside what you pay for it** — so a result is only "good"
 when the capability-per-dollar is good.
 
 Clean-room harness for evaluating small/local coding models across agent
-harness variants on **Aider Polyglot**, **Terminal-Bench Core 0.1.1**, and the
-**SWE Atlas 12-task pilot**. The harness does not serve models; it consumes
-provider definitions from `~/.pi/agent/models.json`
-and writes durable results under `results/`.
+harness variants with a cost-aware portfolio: the in-progress **`aider_cospa`**
+contract protocol, **Terminal-Bench Core 0.1.1**, the **SWE Atlas 12-task
+pilot**, and later validity-gated repository/feature suites. The harness does
+not serve models; it consumes provider definitions from
+`~/.pi/agent/models.json` and writes durable results under `results/`.
 
 ## What we're measuring
 
@@ -35,6 +36,29 @@ Harness variants, same agent loop, same model:
 | `pi_superpowers` | vanilla pi plus the benchmark-safe Superpowers skill subset |
 | `pi_devstack_superpowers` | devstack extensions plus the same benchmark-safe skills |
 | `little_coder_superpowers` | `little-coder` plus the same benchmark-safe skills |
+
+## Evaluation protocol
+
+Aider's 225 Exercism tasks are a useful multilingual source corpus, not Cospa's
+final protocol. Aider selected them because at most three of seven 2024 models
+solved each task, and its canonical retry/test-feedback loop conflates learning
+the contract from the grader with implementing a public contract.
+
+Cospa's target **`aider_cospa`** protocol instead provides the complete public
+API/ABI and behavioral contract, gives the agent full freedom inside one
+isolated workspace episode, keeps behavioral tests and reference solutions
+hidden, and verifies only after the episode with no test-feedback retry.
+Independent `k>1` trials restart from pristine workspaces. The primary panel
+will be approximately 50% repeated concepts across languages and 50%
+language-specific tasks; reports will include task-, language-, and
+concept-weighted scores.
+
+The existing `aider_polyglot` command is currently the isolated source-corpus
+implementation: it hides tests and references, but it must not be relabeled
+`aider_cospa` until all 225 contracts have been reviewed against their hidden
+assertions. `aider_canonical` will remain an optional, separately scored legacy
+comparator. See [`docs/EVALS.md`](docs/EVALS.md) for the normative protocol,
+methodology review, candidate portfolio, and runtime estimates.
 
 ## Quick start
 
@@ -336,16 +360,20 @@ Terminal-Bench agents first export container-side pi traces into Harbor job
 artifacts, then the runner/backfill copies those traces into the same
 `out/pi_session.jsonl` location.
 
-Aider results created before the 2026-07-16 isolation cutover may have exposed
-official `.meta` examples, `.approaches` guides, neighboring vendor exercises,
-prior results, or global pi sessions to the model. Keep those artifacts for
-audit, but do not treat their passes as clean evidence of independent solving.
+Aider results created before the 2026-08-12 hidden-test cutover are not clean
+capability evidence. Before 2026-07-16, agents could also see reference
+artifacts and shared state; between that isolation cutover and 2026-08-12, the
+exact behavioral test files were still copied into agent workspaces. Preserve
+any such artifacts only for protocol audit and never mix them with
+post-cutover scores.
 
 ## Benchmarks
 
-- **Aider Polyglot** — 225 Exercism problems (C++, Go, Java, JS, Python, Rust). Cheap signal.
+- **`aider_cospa` / `aider_cospa_full` (in design)** — reviewed contract-visible, behavior-hidden panels derived from 225 C++/Go/Java/JavaScript/Python/Rust source tasks. The current `aider_polyglot` suite is only their hidden-test substrate pending the 225-task contract audit.
+- **`aider_canonical` (planned, optional)** — exact legacy protocol comparator; scores remain separate.
 - **Terminal-Bench Core 0.1.1** — pinned 80-task external anchor via Harbor. Wall-clock probe first.
 - **SWE Atlas pilot12** — eight Test Writing + four Codebase Q&A tasks, balanced across Go, Python, C, and TypeScript. Cost/reliability gate before `k=2`.
+- **Repository/feature portfolio (candidate)** — Multi-SWE-bench Flash, SWE-bench Multilingual, SWE-PolyBench, and FeatureBench enter only after the validity/runtime bake-off in `docs/EVALS.md`.
 
 ## Current Verified State
 
@@ -366,11 +394,10 @@ audit, but do not treat their passes as clean evidence of independent solving.
   sanitized `pi_devstack` profile.
 - Devstack smoke artifact:
   `results/e2e-smoke-terminal-bench-devstack-profile-v5-20260716T034155Z/local%2Fornith-1.0-35b/pi_devstack/terminal_bench/hello-world/trial-1/`.
-- Provider Aider Polyglot smoke run `provider-smoke-20260704T023522Z`
-  completed with `pi_vanilla`, `--problems 5`, `--k 1`: local Ornith `4/5`,
-  NVIDIA Nemotron `2/5`, and Zai GLM `4/5`.
-- Little-coder Ornith smoke run `little-coder-ornith-smoke-20260704T0550Z`
-  completed with `little_coder`, `--problems 5`, `--k 1`: local Ornith `5/5`.
+- Aider smoke scores produced before 2026-08-12 are protocol-contaminated and
+  intentionally excluded from current capability claims. Post-cutover runs use
+  hidden tests but remain named `aider_polyglot` until the contract audit is
+  complete.
 
 ## License
 

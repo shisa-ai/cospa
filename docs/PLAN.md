@@ -1,8 +1,10 @@
 # PLAN.md — cospa
 
 > Clean-room harness for evaluating **small local coding models** across
-> **agent harness variants** on **Aider Polyglot**, **Terminal-Bench Core**, and
-> the pinned **SWE Atlas Q&A + Test Writing pilot**.
+> **agent harness variants** using a portfolio: the contract-complete
+> **`aider_cospa`** protocol, pinned **Terminal-Bench Core**, the pinned
+> **SWE Atlas Q&A + Test Writing pilot**, and later cost-gated repository and
+> feature suites selected under `docs/EVALS.md`.
 >
 > Scope is deliberately narrow: no model serving, no vLLM/SGLang config, no
 > training. Models are an *input* (provider IDs in `models.json`); results are
@@ -71,15 +73,23 @@ reorder — earlier items unblock later ones.
       settings). This is "pi as we actually run it day-to-day."
 - [ ] **P8. Adapter: `little_coder`.** Launches `little-coder -m <model>`.
       pi + 20 extensions + 30 skills, but the same loop and tools API.
-- [ ] **P9. Suite: Aider Polyglot.** `harness/suites/aider_polyglot.py`
-      loads the 225-problem dataset, materializes one problem per task
-      into a workdir, runs the adapter, then grades via the existing
-      Exercism test runner per language. **Do this suite first** — it's
-      the cheap signal (~minutes per problem vs hours for TB).
-- [ ] **P10. First end-to-end smoke.** One model (Nemotron 550B or
-      Qwen 3.6 27B — whichever is alive), one adapter (`pi_vanilla`),
-      one suite (Aider Polyglot), k=1 trial, **5 problems** only. Prove
-      the manifest/verdict path works before scaling.
+- [ ] **P9. Suite: Aider source corpus.**
+      `harness/suites/aider_polyglot.py` loads the 225-problem Exercism
+      dataset, materializes one problem per task without behavioral tests or
+      reference artifacts, runs one unrestricted workspace-only episode, then
+      injects hidden tests into an isolated verifier. This implementation is
+      the substrate for `aider_cospa_full`, not yet the completed protocol.
+- [ ] **P9a. Contract audit and protocol cutover.** Review all 225 visible
+      contracts against their hidden assertions across all six languages;
+      create a versioned inclusion/augmentation/exclusion manifest; freeze an
+      approximately 50% repeated-concept / 50% language-specific primary panel;
+      expose complete API/ABI behavior without test leakage; register distinct
+      `aider_cospa`, `aider_cospa_full`, and optional `aider_canonical` suite
+      IDs. Follow the hard gates and reporting rules in `docs/EVALS.md`.
+- [ ] **P10. First contract-protocol smoke.** One live model, one adapter
+      (`pi_vanilla`), `k=1`, and at least one reviewed `aider_cospa` problem in
+      each of the six languages. Prove the hidden-test boundary,
+      manifest/verdict path, and native grader before scaling.
 - [ ] **P11. Suite: Terminal-Bench.** `harness/suites/terminal_bench.py`
       wraps `harbor run` against the checked-in 80-task
       `terminal-bench-core==0.1.1` manifest and immutable upstream commit.
@@ -100,11 +110,13 @@ reorder — earlier items unblock later ones.
       timing remains `-`, never inferred from ambiguous session timestamps.
       Borrow the *shape* from multieval's viewer; this is a clean-room write,
       not a port.
-- [ ] **P13. Scale-up matrix run.** Full Aider Polyglot × {pi_vanilla,
-      pi_devstack, little_coder} × {models in `configs/models.yaml`} ×
-      k=3. Measure TB wall-clock first, then decide whether to run TB
-      at k=3 or k=5 (TB runs are long; the TODO notes ±2–3pt error bars
-      at k=5).
+- [ ] **P13. Cost-gated campaigns.** Do not launch a full Cartesian matrix.
+      First measure one fixed `aider_cospa` task block at serving concurrency
+      `c=1` and `c=2`. Use one representative model to compare adapters, then
+      compare models only on the winning one or two adapters. Reserve
+      `aider_cospa_full`, `k>1`, Terminal-Bench 2.x, repository, and feature
+      campaigns for configurations that pass the runtime/token/validity gates
+      in `docs/EVALS.md`; report independent repetitions rather than best-of-k.
 - [ ] **P14. Superpowers ablation (2×2).** Add adapters `pi_superpowers`
       and `little_coder_superpowers`. For bench runs, **strip interactive
       skill-check flows** (no user present to answer clarifying questions)
@@ -185,31 +197,44 @@ in the manifest so a mismatch is detectable in post.
 
 ## 3. Suites
 
-### Aider Polyglot (P9, first)
+### `aider_cospa` contract implementation (P9/P9a, first)
 
-225 Exercism problems across C++, Go, Java, JS, Python, Rust. Each problem
-is independent, fast (minutes), and graded by the language's native test
-runner. Cheap signal; do this before any TB run.
+The 225 Aider/Exercism instances across C++, Go, Java, JavaScript, Python, and
+Rust are a **source corpus**, not the final benchmark definition. They contain
+100 concepts: 183 task instances belong to repeated cross-language concepts and
+42 are singletons. The protocol and task-review criteria are normative in
+`docs/EVALS.md`.
 
-- Dataset: vendored at `vendor/aider-polyglot/` (clone the public repo).
-- Per-task: materialize the problem's starter files into a fresh workdir,
-  excluding solution-bearing `.meta/` examples and `.approaches/` guides.
-  Prefix the problem statement with the task ID, required language, and an
-  explicit current-workdir-only boundary, then run the existing test suite.
-- Isolation: all local Aider adapters run through an empty-root bubblewrap
-  namespace. Its allowlist contains the active workdir, selected system and
-  language runtimes, the selected provider/model config, read-only scaffold
-  packages, disposable dependency/browser caches, and the trial's unique
-  telemetry session. Shared repositories, general home state, `vendor/`,
-  `results/`, and prior sessions are absent. The network namespace has no
-  public route; a host socat process and Unix socket expose only the configured
-  model endpoint. Model-written code is also verified inside a workdir-only,
-  no-network namespace. JavaScript, Java, and Rust dependencies are prefetched
-  before agent launch and consumed offline; Java uses JDK 21 for the vendored
-  Gradle 8.7 wrapper. This is a fail-closed Linux requirement: `bwrap` and
-  `socat` must exist.
-- Verdict: pass/fail per problem; partial credit possible per-language if
-  tests are tiered (record raw pass count, derive binary for the headline).
+- Suites: `aider_cospa` is the reviewed frequent-run panel;
+  `aider_cospa_full` is all retained/augmented source instances;
+  `aider_canonical` is an optional legacy reproduction whose scores never merge
+  with the Cospa protocol.
+- Public contract: expose complete observable behavior and exact API/ABI
+  requirements. Hidden tests may contain surprising inputs, never secret
+  requirements. Do not call the suite `aider_cospa` until all 225 contracts and
+  hidden assertions have a versioned review decision.
+- Episode: materialize starter/build artifacts into a fresh workdir without
+  behavioral tests, `.meta` solutions, or `.approaches`; run one unrestricted
+  workspace-only agent episode; do not provide verifier feedback or an
+  in-episode retry; inject hidden tests only after the agent stops.
+- Isolation: all local adapters run through an empty-root bubblewrap namespace.
+  Its allowlist contains the active workdir, selected system and language
+  runtimes, selected provider/model config, read-only scaffold packages,
+  disposable dependency/browser caches, and the trial's unique telemetry
+  session. Shared repositories, general home state, `vendor/`, `results/`, and
+  prior sessions are absent. The network namespace has no public route; a host
+  socat process and Unix socket expose only the configured model endpoint.
+  Model-written code is verified inside a workdir-only, no-network namespace.
+  JavaScript, Java, and Rust dependencies are prefetched before agent launch and
+  consumed offline; Java uses JDK 21 for the vendored Gradle 8.7 wrapper. This
+  is a fail-closed Linux requirement: `bwrap` and `socat` must exist.
+- Verdict: all required behavioral checks and the public API/ABI must pass for
+  resolution. Test-level partial credit is diagnostic only. Report task-,
+  language-, and concept-weighted scores plus paired repeated-concept outcomes.
+- Budgets: capability limits and safety wall time are separate. A safety-wall
+  hit is `budget_exhausted`, not an ordinary wrong answer. Measure model,
+  tool, verifier, and total timing and calibrate serving `c=1` versus `c=2`
+  before any full run.
 
 ### Terminal-Bench (P11, second)
 

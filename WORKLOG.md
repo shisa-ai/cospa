@@ -1643,3 +1643,28 @@ Append-only development log for the `cospa` repository.
   correct in the pinned image.
 - Next: qualify the remaining repository and feature candidates before running
   Ornith.
+
+## 2026-08-14 — Survey domain candidates for wide harness-comparison panel
+
+- Context: strategy shift toward a Cospa-owned multi-domain panel
+  (`cospa_wide`) whose primary axis is adapter/scaffold comparison;
+  `docs/EVALS.md` repo-suite review runs in parallel and keeps adoption
+  authority.
+- Change: add `docs/EVALS-WIDE-PANEL.md` surveying GPU-kernel/low-level
+  (KernelBench, TritonBench, SWE-Perf), data science (DABstep, DSBench),
+  visualization (MatPlotBench, PandasPlotBench, Plot2Code, ChartMimic),
+  text manipulation (gap; propose authored mini-corpus), and fresh
+  repo/feature context (SWE-Lancer, R2E-Gym, Commit0, LiveSWEBench),
+  each against the EVALS.md hard gates, plus a strawman ~120-150-slot
+  panel and sequencing plan.
+- Evidence: sources fetched 2026-08-14 (KernelBench/TritonBench/SWE-Perf/
+  DSBench/PandasPlotBench READMEs, arXiv abstracts, DDG-HTML discovery);
+  all unverified quantities labeled Unknown/pilot-required in the doc.
+  Docs-only change; re-read end-to-end, no test run required per AGENTS.md
+  verification tiers.
+- Decision: KernelBench + DABstep are leading adopt candidates; viz domain
+  requires a Cospa deterministic grader; text-manipulation domain must be
+  authored; EVALS.md Decision table intentionally untouched.
+- Next: merge with the repo-suite bake-off into one portfolio decision in
+  docs/EVALS.md; pin host GPU inventory; build the deterministic plot
+  grader and KernelBench null/gold screen first.

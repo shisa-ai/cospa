@@ -1668,3 +1668,23 @@ Append-only development log for the `cospa` repository.
 - Next: merge with the repo-suite bake-off into one portfolio decision in
   docs/EVALS.md; pin host GPU inventory; build the deterministic plot
   grader and KernelBench null/gold screen first.
+
+## 2026-08-14 — Pin tri-model task discovery
+
+- Context: use the two independent local serving lanes plus fast Codex Spark to
+  broaden candidate-task review without allowing reviewer-model outcomes to
+  select tasks around their own strengths.
+- Change: add `configs/task_discovery_panel_v1.json` and make its outcome-blind
+  review/adjudication boundary normative in `docs/EVALS.md`. Muse-Glimmer,
+  DeepSeek V4 Flash 0731, and `codex/gpt-5.3-codex-spark` review identical
+  public-only packets; executable qualification remains authoritative.
+- Evidence: Muse and DeepSeek each returned HTTP 200 through the local pool;
+  Spark returned the requested `OK` in 2.084 seconds. JSON parsing,
+  `git diff --check`, and an end-to-end reread of the changed docs/config pass.
+- Decision: all three review every calibration candidate. Scaled batches rotate
+  primary/validator roles and use the third model for disagreements/high-risk
+  tasks. No model vote can waive pinned artifact isolation, three clean null
+  and gold observations, regression checks, timing, or legal gates.
+- Next: build a small review runner and calibrate the three reviewers on an
+  outcome-blind block from KernelBench-Verified, DABstep, and optional DS-1000
+  Matplotlib without delaying already-qualified target-model smokes.

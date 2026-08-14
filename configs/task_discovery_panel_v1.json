@@ -1,0 +1,115 @@
+{
+  "name": "task_discovery_panel_v1",
+  "version": "2026-08-14",
+  "purpose": "Outcome-blind model-assisted discovery and review of candidate evaluation tasks; executable qualification remains authoritative.",
+  "reviewers": [
+    {
+      "id": "local/muse-glimmer-30b",
+      "served_model": "Muse-Glimmer-30B",
+      "lane": "local_gpu0",
+      "strength": "agentic coding and contract review"
+    },
+    {
+      "id": "local/deepseek-v4-flash-0731",
+      "served_model": "DeepSeek-V4-Flash-0731",
+      "lane": "local_gpu1_gpu2",
+      "strength": "repository and verifier review"
+    },
+    {
+      "id": "codex/gpt-5.3-codex-spark",
+      "served_model": "gpt-5.3-codex-spark",
+      "lane": "codex_pool",
+      "strength": "fast independent review and adjudication"
+    }
+  ],
+  "candidate_sources": [
+    {
+      "id": "kernelbench_verified",
+      "initial_review_ceiling": 12,
+      "strata": [
+        "level",
+        "operator_family",
+        "expected_optimization_shape"
+      ]
+    },
+    {
+      "id": "dabstep",
+      "initial_review_ceiling": 16,
+      "strata": [
+        "difficulty",
+        "answer_shape",
+        "tool_sequence"
+      ]
+    },
+    {
+      "id": "ds_1000_matplotlib",
+      "initial_review_ceiling": 16,
+      "strata": [
+        "plot_type",
+        "library_composition",
+        "prompt_size"
+      ],
+      "status": "optional_anchor"
+    }
+  ],
+  "selection": {
+    "outcome_blind": true,
+    "stable_tie_break": "sha256(task_discovery_panel_v1 + source_id + task_id)",
+    "forbidden_selection_inputs": [
+      "target-model solve outcome",
+      "target-model trajectory",
+      "gold or null score",
+      "hidden test content",
+      "reference solution or gold patch"
+    ]
+  },
+  "review_protocol": {
+    "calibration_pilot": "All three reviewers independently review every candidate.",
+    "scaled_batches": "Assign a rotating primary and validator by stable hash; send disagreements and every high-risk task to the third reviewer. Balance assignments so every reviewer serves in every role.",
+    "reviewer_isolation": "Reviewers receive the same public task packet and cannot read another review before submitting their own.",
+    "adjudication": "The third review resolves classification disagreements only. It cannot waive a hard gate or mechanical failure.",
+    "public_input_allowlist": [
+      "public task statement and API contract",
+      "starter-tree inventory without hidden artifacts",
+      "declared language, toolchain, and verifier command",
+      "source revision, task metadata, provenance, and license",
+      "task taxonomy and environment resource declaration"
+    ],
+    "review_schema": [
+      "source_id",
+      "task_id",
+      "reviewer_id",
+      "contract_sufficient",
+      "behavioral_value",
+      "task_category",
+      "language",
+      "agentic_value",
+      "likely_environment_risks",
+      "likely_leakage_risks",
+      "license_status",
+      "include_recommendation",
+      "reason_codes",
+      "confidence"
+    ]
+  },
+  "mechanical_qualification": {
+    "authority": "Executable checks and recorded artifacts override every model recommendation.",
+    "required": [
+      "pinned source, dataset, image, toolchain, and verifier revisions",
+      "agent workspace excludes hidden tests, gold artifacts, future history, and prior outcomes",
+      "null fails target checks for the intended reason with no model patch",
+      "gold passes target checks without regressions",
+      "three clean observations per null and gold condition",
+      "cold and warm setup and verifier timing",
+      "failure taxonomy separates setup, image, verifier, budget, transport, incorrect, and resolved",
+      "license permits the intended use and manifest distribution"
+    ],
+    "timing_domains": "GPU/performance tasks additionally pin GPU model, clocks, driver, framework, contention policy, warmup, repetitions, and noise thresholds."
+  },
+  "decision_policy": {
+    "nomination": "Model reviews nominate tasks for mechanical qualification; they do not qualify tasks.",
+    "disagreement": "Retain all raw reviews and the adjudication reason. Do not collapse disagreement into an unexplained majority vote.",
+    "acceptance": "A task enters an evaluation manifest only after every hard gate passes. Reviewer consensus cannot rescue a failed gate.",
+    "reporting": "Publish per-domain/source results and reviewer disagreement diagnostics; never blend domains into one capability score."
+  }
+}

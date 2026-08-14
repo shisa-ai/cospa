@@ -237,6 +237,39 @@ Avoid selecting a suite merely because it is large, popular on model cards, or
 hard for an old model cohort. Measure repository, language, task-type, patch
 size, and concept concentration before freezing a subset.
 
+### Model-assisted task discovery is advisory
+
+`configs/task_discovery_panel_v1.json` pins the first model-assisted discovery
+panel: local Muse-Glimmer 30B, local DeepSeek V4 Flash 0731, and
+`codex/gpt-5.3-codex-spark`. These reviewers help classify and red-team public
+candidate tasks; they do not decide whether a task is valid.
+
+The calibration pilot gives all three models the same public-only task packet
+and collects independent structured reviews before any model can see another
+review. At scale, a stable hash rotates primary and validator assignments; the
+third model adjudicates disagreements and reviews every high-risk candidate.
+Assignments remain balanced so no model becomes the permanent proposer or
+judge.
+
+Discovery reviewers may inspect the public contract, starter-tree inventory,
+declared toolchain/verifier command, source metadata, provenance, license, and
+resource declaration. They may not inspect hidden tests, gold/reference
+artifacts, null/gold scores, target-model trajectories, or target-model solve
+outcomes. This keeps source selection outcome-blind and prevents a model from
+selecting tasks around its own strengths.
+
+Reviewer consensus only nominates a task for qualification. Acceptance still
+requires the standing executable gates: pinned artifacts, hidden-artifact
+isolation, three clean null and three clean gold observations, regression
+checks, failure separation, timing evidence, and legal usability. A third-model
+adjudication cannot waive a failed mechanical gate. Raw reviews,
+disagreements, and reason codes remain durable evidence rather than being
+collapsed into an unexplained majority vote.
+
+The first expansion candidates are KernelBench-Verified, DABstep, and an
+optional DS-1000 Matplotlib anchor. Their model reviews must not delay target-
+model smokes on suites that are already mechanically qualified.
+
 ## Time and budget methodology
 
 ### Do not score GPU speed as coding ability

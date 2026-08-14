@@ -150,7 +150,7 @@ rm -rf "$agent_dir/npm" "$agent_dir/git"
 ln -s "$profile_root/npm" "$agent_dir/npm"
 ln -s "$profile_root/git" "$agent_dir/git"
 cp "$profile_root/settings.json" "$agent_dir/settings.json"
-. "$HOME/.nvm/nvm.sh"
+. "${NVM_DIR:-$HOME/.nvm}/nvm.sh"
 pi list
 '''.strip()
 
@@ -224,7 +224,7 @@ if _HARBOR_NATIVE:
 
             command = r"""
 mkdir -p "$HOME/.pi/agent"
-. "$HOME/.nvm/nvm.sh"
+. "${NVM_DIR:-$HOME/.nvm}/nvm.sh"
 node <<'NODE'
 const fs = require('fs');
 const os = require('os');
@@ -327,13 +327,14 @@ EOF
                 environment,
                 command=(
                     "set -euo pipefail; "
-                    "if [[ -f \"$HOME/.nvm/nvm.sh\" ]]; then "
-                    ". \"$HOME/.nvm/nvm.sh\"; "
-                    "else "
+                    "nvm_dir=\"${NVM_DIR:-$HOME/.nvm}\"; "
+                    "export NVM_DIR=\"$nvm_dir\"; "
+                    "if [[ ! -f \"$nvm_dir/nvm.sh\" ]]; then "
                     "curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.40.2/install.sh | bash; "
-                    ". \"$HOME/.nvm/nvm.sh\"; "
                     "fi; "
+                    ". \"$nvm_dir/nvm.sh\"; "
                     "nvm install 22; "
+                    "nvm alias default 22; "
                     f"if ! command -v {shlex.quote(self.cli_command)} >/dev/null 2>&1; then "
                     f"npm install -g {shlex.quote(package)}; "
                     "fi; "
@@ -364,7 +365,10 @@ EOF
             await self.exec_as_agent(
                 environment,
                 command=_wrap_with_pi_session_export(
-                    f". ~/.nvm/nvm.sh; {shlex.join(cmd)}",
+                    (
+                        f'. "${{NVM_DIR:-$HOME/.nvm}}/nvm.sh"; '
+                        f'nvm use 22 >/dev/null; {shlex.join(cmd)}'
+                    ),
                     output_filename=self._output_filename,
                 ),
                 env=self._provider_env(),
@@ -421,9 +425,13 @@ else:
                 *_thinking_args(),
                 instruction,
             ]
+            run_command = (
+                '. "${NVM_DIR:-$HOME/.nvm}/nvm.sh"; '
+                f'nvm use 22 >/dev/null; {shlex.join(cmd)}'
+            )
             return [
                 TerminalCommand(
-                    command=_wrap_with_pi_session_export(shlex.join(cmd)),
+                    command=_wrap_with_pi_session_export(run_command),
                     min_timeout_sec=0.0,
                     max_timeout_sec=float("inf"),
                     block=True,

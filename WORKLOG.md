@@ -1768,3 +1768,25 @@ Append-only development log for the `cospa` repository.
   fresh result root; retain the valid DeepSeek BCB15 cell.
 - Next: rerun Muse BCB15 at `c=8`, then proceed to PolyBench vanilla only if all
   15 trials have textual completions and native verifier verdicts.
+
+## 2026-08-15 — Make Harbor bootstrap portable across task images
+
+- Context: fresh `c=8` PolyBench runs passed the Java-image bootstrap but failed
+  on JavaScript images whose preinstalled NVM root is `/usr/local/nvm`; setup
+  sourced `$HOME/.nvm`, and later shells selected Node 16 and could not find the
+  Node 22 global `pi` command.
+- Change: honor `${NVM_DIR:-$HOME/.nvm}` throughout setup/config/run commands,
+  pin the NVM default and active shell to Node 22, classify Harbor trial
+  `exception_info` as retryable infrastructure instead of a wrong answer, and
+  flush runner heartbeats as interrupted before signal termination.
+- Evidence: RED tests reproduced NVM-root, run-shell, hidden Harbor exception,
+  and stale-heartbeat behavior. A real Muse trial on JavaScript task
+  `mrdoob__three.js-14836` completed agent and native verifier phases in 435.85
+  seconds with observed usage and 71 tool calls; its incorrect verdict is a
+  genuine model outcome, not infrastructure. Full pytest: 337 passed with only
+  the two documented unrelated baseline failures.
+- Decision: preserve stopped/invalid cells under
+  `results/validation/excluded-campaign-cells-20260815`; do not score them or
+  resume their mixed retry artifacts.
+- Next: add the separately labeled agentic BigCodeBench workspace suite, then
+  start fresh vanilla and devstack cells for agentic BCB and PolyBench.

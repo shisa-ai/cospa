@@ -697,6 +697,14 @@ def test_native_harbor_agent_bootstrap_supports_non_debian_images(monkeypatch):
     assert "command -v apt-get" in dependency_command
     assert "command -v dnf" in dependency_command
     assert "command -v apk" in dependency_command
+    install_command = agent.agent_commands[0]
+    assert 'nvm_dir="${NVM_DIR:-$HOME/.nvm}"' in install_command
+    assert '. "$nvm_dir/nvm.sh"' in install_command
+
+    asyncio.run(agent.run("fix it", object(), object()))
+    run_command = agent.agent_commands[-1]
+    assert '. "${NVM_DIR:-$HOME/.nvm}/nvm.sh"' in run_command
+    assert "nvm use 22" in run_command
 
 
 def test_legacy_harbor_agent_bootstrap_supports_non_debian_images():
@@ -707,6 +715,8 @@ def test_legacy_harbor_agent_bootstrap_supports_non_debian_images():
     assert "command -v apt-get" in template
     assert "command -v dnf" in template
     assert "command -v apk" in template
+    assert 'nvm_dir="${NVM_DIR:-$HOME/.nvm}"' in template
+    assert '. "$nvm_dir/nvm.sh"' in template
 
 
 def _import_harbor_agents_with_fake_terminal_bench(monkeypatch):
@@ -801,6 +811,8 @@ def test_harbor_agent_cli_forwards_configured_thinking(monkeypatch):
         command = agent._run_agent_commands("solve it")[0].command
 
     assert "--thinking high" in command, command
+    assert '. "${NVM_DIR:-$HOME/.nvm}/nvm.sh"' in command
+    assert "nvm use 22" in command
 
 
 def test_harbor_agent_cli_exports_pi_session_traces(monkeypatch):
@@ -903,6 +915,61 @@ def test_runner_delegates_terminal_bench_to_harbor():
     )
     assert harbor_calls[0][0] == "hello-world"
     assert harbor_calls[0][1] == "nvidia/nemotron-3-ultra-550b-a55b"
+
+
+def test_runner_treats_harbor_agent_exception_as_infrastructure():
+    """A Harbor command exit 0 must not hide a failed agent phase."""
+    from harness.adapters.pi_vanilla import PiVanillaAdapter
+    from harness.runner import run_trial
+
+    suite = TerminalBenchSuite()
+    adapter = PiVanillaAdapter()
+
+    def fake_harbor(
+        self,
+        task_id,
+        model_id,
+        adapter_name,
+        workdir,
+        jobs_dir,
+        n_attempts=1,
+        vendor_dir=None,
+        thinking=None,
+    ):
+        trial_dir = Path(jobs_dir) / "job" / "trial"
+        trial_dir.mkdir(parents=True)
+        (trial_dir / "result.json").write_text(json.dumps({
+            "task_name": task_id,
+            "agent_result": None,
+            "verifier_result": {"rewards": {"reward": 0.0}},
+            "exception_info": {
+                "exception_type": "NonZeroAgentExitCodeError",
+                "exception_message": "pi: command not found",
+            },
+        }))
+        return {"returncode": 0, "stdout": "", "stderr": ""}
+
+    with tempfile.TemporaryDirectory() as tmp:
+        tmp_path = Path(tmp)
+        vendor_dir = tmp_path / "vendor"
+        _make_task_yaml_task(vendor_dir, "hello-world")
+        with patch.object(TerminalBenchSuite, "run_harbor_job", fake_harbor), \
+             patch.object(suite, "verify") as verify:
+            verify.return_value = {"passed": True, "test_count": 1, "exit_code": 0}
+            manifest, verdict = run_trial(
+                suite,
+                adapter,
+                "local/muse-glimmer-30b",
+                "hello-world",
+                1,
+                tmp_path / "results",
+                vendor_dir,
+            )
+
+    verify.assert_not_called()
+    assert manifest["exit_code"] == -1
+    assert "pi: command not found" in manifest["error"]
+    assert verdict["adapter_failed"] is True
 
 
 def test_runner_records_terminal_bench_harbor_usage_trace():

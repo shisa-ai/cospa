@@ -238,6 +238,31 @@ def test_runner_main_writes_run_heartbeat():
     assert heartbeat["total_trials"] == 1
 
 
+def test_run_heartbeat_records_process_interruption():
+    """A termination callback must not leave a fresh `running` heartbeat."""
+    import json
+    import signal
+    from harness.runner import RunHeartbeat
+
+    with tempfile.TemporaryDirectory() as tmp:
+        heartbeat = RunHeartbeat(
+            results_dir=Path(tmp),
+            model_id="test/model",
+            adapter_name="pi_vanilla",
+            suite_name="test_suite",
+            run_id="interrupt-test",
+            total_trials=4,
+            concurrency=2,
+        )
+        heartbeat.start()
+        heartbeat.interrupt(signal.SIGTERM)
+        data = json.loads(heartbeat.path.read_text())
+
+    assert data["state"] == "interrupted"
+    assert data["termination_signal"] == signal.SIGTERM
+    assert data["active_trials"] == 0
+
+
 def test_run_with_tty_updates_emits_heartbeat(monkeypatch):
     """Interactive runs should show periodic progress while a trial runs."""
     from harness.runner import run_with_tty_updates

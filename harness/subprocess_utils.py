@@ -14,7 +14,7 @@ import subprocess
 import tempfile
 import threading
 import time
-from collections.abc import Sequence
+from collections.abc import Callable, Sequence
 from pathlib import Path
 from typing import Any
 from urllib.parse import urlparse
@@ -22,6 +22,8 @@ from urllib.parse import urlparse
 
 _ACTIVE_PROCESS_GROUPS: set[int] = set()
 _ACTIVE_LOCK = threading.Lock()
+_TERMINATION_CALLBACKS: set[Callable[[int], None]] = set()
+_TERMINATION_CALLBACKS_LOCK = threading.Lock()
 _PROJECT_ROOT = Path(__file__).resolve().parent.parent
 _NVM_ROOT = Path.home() / ".local" / "share" / "nvm"
 
@@ -406,6 +408,29 @@ def terminate_active_process_groups() -> None:
         terminate_process_group(pgid)
 
 
+def register_termination_callback(callback: Callable[[int], None]) -> None:
+    """Register a best-effort state flush before signal termination."""
+    with _TERMINATION_CALLBACKS_LOCK:
+        _TERMINATION_CALLBACKS.add(callback)
+
+
+def unregister_termination_callback(callback: Callable[[int], None]) -> None:
+    """Remove a previously registered termination callback."""
+    with _TERMINATION_CALLBACKS_LOCK:
+        _TERMINATION_CALLBACKS.discard(callback)
+
+
+def notify_termination_callbacks(signum: int) -> None:
+    """Invoke registered state flushes without blocking later cleanup."""
+    with _TERMINATION_CALLBACKS_LOCK:
+        callbacks = list(_TERMINATION_CALLBACKS)
+    for callback in callbacks:
+        try:
+            callback(signum)
+        except Exception:
+            pass
+
+
 atexit.register(terminate_active_process_groups)
 
 
@@ -459,6 +484,7 @@ def _stop_model_relay(relay: subprocess.Popen | None) -> None:
 
 
 def _termination_signal_handler(signum, frame) -> None:
+    notify_termination_callbacks(signum)
     terminate_active_process_groups()
     signal.signal(signum, signal.SIG_DFL)
     os.kill(os.getpid(), signum)

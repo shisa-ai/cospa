@@ -43,7 +43,12 @@ from harness.behavior import (
 )
 from harness.suites import load_suite
 from harness.path_utils import encode_path_component
-from harness.subprocess_utils import agent_sandbox_cwd, resolve_model_base_url
+from harness.subprocess_utils import (
+    agent_sandbox_cwd,
+    register_termination_callback,
+    resolve_model_base_url,
+    unregister_termination_callback,
+)
 from harness.telemetry import (
     collect_harbor_pi_session_usage,
     collect_pi_session_usage,
@@ -457,6 +462,27 @@ def check_model_reachable(model_id: str, timeout: float = 10.0) -> bool:
         return False
 
 
+def _latest_harbor_agent_exception(jobs_dir: Path | str) -> dict | None:
+    """Return the newest Harbor trial exception, ignoring job summaries."""
+    jobs_dir = Path(jobs_dir)
+    candidates: list[tuple[float, dict]] = []
+    if not jobs_dir.exists():
+        return None
+    for result_file in jobs_dir.rglob("result.json"):
+        try:
+            payload = json.loads(result_file.read_text())
+            if not isinstance(payload, dict) or "exception_info" not in payload:
+                continue
+            candidates.append((result_file.stat().st_mtime, payload))
+        except (OSError, json.JSONDecodeError):
+            continue
+    if not candidates:
+        return None
+    payload = max(candidates, key=lambda item: item[0])[1]
+    exception = payload.get("exception_info")
+    return exception if isinstance(exception, dict) and exception else None
+
+
 def run_trial(
     suite,
     adapter,
@@ -663,6 +689,22 @@ def run_trial(
                 manifest["error"] = harbor_result.get("stderr") or (
                     f"Harbor job exited with code {harbor_result.get('returncode')}"
                 )
+            else:
+                agent_exception = _latest_harbor_agent_exception(jobs_dir)
+                if agent_exception is not None:
+                    exception_type = str(
+                        agent_exception.get("exception_type") or "HarborAgentError"
+                    )
+                    exception_message = str(
+                        agent_exception.get("exception_message") or "agent phase failed"
+                    )
+                    manifest["exit_code"] = -1
+                    manifest["error"] = f"{exception_type}: {exception_message}"
+                    manifest["harbor_agent_exception"] = {
+                        "exception_type": exception_type,
+                        "exception_message": exception_message,
+                    }
+                    adapter_failed = True
         except Exception as e:
             manifest["exit_code"] = -1
             manifest["timing"]["wall_clock_seconds"] = time.time() - start_time
@@ -802,6 +844,11 @@ def run_trial(
     verify_on_failure = getattr(
         suite, "verify_on_adapter_failure", False
     )
+    if manifest.get("harbor_agent_exception"):
+        # A benchmark-native verifier may grade useful work after a generic
+        # adapter exit, but Harbor setup/agent exceptions are infrastructure.
+        # Do not turn a missing agent into a wrong-answer model score.
+        verify_on_failure = False
     verifier_started = time.time()
     if not adapter_failed or verify_on_failure:
         try:
@@ -956,9 +1003,11 @@ class RunHeartbeat:
         self._lock = threading.Lock()
         self._stop = threading.Event()
         self._thread = threading.Thread(target=self._loop, daemon=True)
+        self._termination_callback = self.interrupt
 
     def start(self) -> None:
         self.update(state="running")
+        register_termination_callback(self._termination_callback)
         self._thread.start()
 
     def update(self, **fields) -> None:
@@ -969,10 +1018,19 @@ class RunHeartbeat:
             self._write_locked()
 
     def finish(self, state: str, **fields) -> None:
+        unregister_termination_callback(self._termination_callback)
         self._stop.set()
         self.update(state=state, **fields)
         if self._thread.is_alive():
             self._thread.join(timeout=1)
+
+    def interrupt(self, signum: int) -> None:
+        """Flush an honest terminal state before the process is signaled."""
+        self.finish(
+            "interrupted",
+            termination_signal=int(signum),
+            active_trials=0,
+        )
 
     def _loop(self) -> None:
         while not self._stop.wait(self.interval_seconds):

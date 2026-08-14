@@ -606,8 +606,12 @@ tail latency, setup costs, and failure rates decide whether c=16 is retained.
   calibrated and the original model completion retained for audit.
 - **Cospa protocol:** one OpenAI-compatible user message, no system prompt or
   tools, greedy `n=1`, upstream sanitizer, and calibrated scoring in the
-  immutable network-disabled evaluator. The frozen public prompt spec contains
-  no tests or canonical solutions. Across the pilot15, 15/15 gold solutions
+  immutable network-disabled evaluator. Reasoning models retain the fixed
+  1,280-token completion cap; any model-specific request control needed to
+  preserve final-answer space is pinned in `configs/models.yaml` and recorded
+  in the trial manifest rather than increasing that cap. The frozen public
+  prompt spec contains no tests or canonical solutions. Across the pilot15,
+  15/15 gold solutions
   pass, 15/15 null solutions fail, and the upstream ground-truth rate is 1.000;
   `BigCodeBench/15` repeats each condition cleanly three times.
 - **Cospa decision:** good low-cost orthogonal anchor, never a replacement for

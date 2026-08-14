@@ -146,6 +146,7 @@ def test_bigcodebench_adapter_sends_one_no_tool_chat_request(tmp_path):
         "temperature": 0,
         "top_p": 0.95,
         "max_tokens": 1280,
+        "request_overrides": {"reasoning_effort": "none"},
         "timeout": 30,
     }
 
@@ -181,6 +182,7 @@ def test_bigcodebench_adapter_sends_one_no_tool_chat_request(tmp_path):
         "temperature": 0,
         "top_p": 0.95,
         "max_completion_tokens": 1280,
+        "reasoning_effort": "none",
     }
     assert "tools" not in payload
     assert result.returncode == 0
@@ -192,6 +194,60 @@ def test_bigcodebench_adapter_sends_one_no_tool_chat_request(tmp_path):
         "raw_solution": "```python\ndef task_func():\n    return 1\n```",
     }
     assert "secret" not in (tmp_path / "session.log").read_text()
+
+
+def test_bigcodebench_adapter_retains_reasoning_only_response_without_retry(tmp_path):
+    """A capped reasoning-only response is diagnosable and non-retryable."""
+    adapter = BigCodeBenchOpenAIAdapter()
+    workdir = tmp_path / "work"
+    workdir.mkdir()
+    response = {
+        "id": "chatcmpl-reasoning-only",
+        "choices": [{
+            "index": 0,
+            "message": {
+                "role": "assistant",
+                "content": "",
+                "reasoning_content": "planning until the cap",
+            },
+            "finish_reason": "length",
+        }],
+        "usage": {"prompt_tokens": 10, "completion_tokens": 1280},
+    }
+    task = {
+        "task_id": "BigCodeBench/15",
+        "prompt": "public prompt",
+        "model_id": "local/muse-glimmer-30b",
+        "temperature": 0,
+        "top_p": 0.95,
+        "max_tokens": 1280,
+        "timeout": 30,
+    }
+
+    with mock.patch(
+        "harness.adapters.bigcodebench_openai.load_provider_connection",
+        return_value={
+            "base_url": "http://model.local/v1",
+            "api_key": "",
+            "model": "muse-glimmer-30b",
+        },
+    ), mock.patch(
+        "harness.adapters.bigcodebench_openai.urllib.request.urlopen",
+        return_value=FakeHTTPResponse(response),
+    ):
+        result = adapter.run(
+            task,
+            workdir,
+            tmp_path / "session.log",
+            tmp_path / "stderr.log",
+        )
+
+    assert result.returncode == 2
+    assert "no textual completion" in result.error
+    assert json.loads((workdir / "raw-response.json").read_text())["id"] == (
+        "chatcmpl-reasoning-only"
+    )
+    assert not (workdir / "raw-sample.jsonl").exists()
 
 
 def test_bigcodebench_verifier_uses_pinned_offline_container(tmp_path):
@@ -275,6 +331,7 @@ def test_upstream_failure_mapping_is_not_counted_as_passing_tests():
 
 def test_runner_records_nonagentic_sampling_timing_and_zero_tools(tmp_path):
     suite = BigCodeBenchHardInstructSuite()
+    captured_task = {}
 
     class Adapter:
         name = "bigcodebench_openai"
@@ -283,6 +340,7 @@ def test_runner_records_nonagentic_sampling_timing_and_zero_tools(tmp_path):
         uses_workspace_sandbox = False
 
         def run(self, task_data, workdir, log_file, stderr_file):
+            captured_task.update(task_data)
             (workdir / "raw-sample.jsonl").write_text(
                 json.dumps(
                     {
@@ -316,6 +374,11 @@ def test_runner_records_nonagentic_sampling_timing_and_zero_tools(tmp_path):
                     "temperature": 0.6,
                     "top_p": 0.95,
                     "top_k": 20,
+                },
+                "protocol_overrides": {
+                    "bigcodebench_hard_instruct": {
+                        "request_overrides": {"reasoning_effort": "none"}
+                    }
                 },
             },
         ),
@@ -352,6 +415,14 @@ def test_runner_records_nonagentic_sampling_timing_and_zero_tools(tmp_path):
     assert manifest["suite"]["verifier_image"] == suite.verifier_image
     assert manifest["suite"]["source_revision"] == (
         "09dd993f46c3fbf3a799465bb96d524edcb0b199"
+    )
+    assert captured_task["request_overrides"] == {"reasoning_effort": "none"}
+    assert manifest["suite"]["request_overrides"] == {
+        "reasoning_effort": "none"
+    }
+    assert manifest["sampling"]["reasoning_effort"] == "none"
+    assert manifest["sampling"]["reasoning_effort_source"] == (
+        "model_protocol_override"
     )
 
 

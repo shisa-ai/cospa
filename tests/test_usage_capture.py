@@ -349,6 +349,20 @@ def test_repo_models_include_glm_53_pool_metadata(tmp_path):
     }
 
 
+def test_repo_muse_metadata_disables_reasoning_for_capped_bcb_protocol(tmp_path):
+    """Muse must preserve BCB's 1,280-token final-answer budget."""
+    metadata = load_model_metadata(
+        "local/muse-glimmer-30b",
+        models_json_path=tmp_path / "missing-models.json",
+    )
+
+    assert metadata["protocol_overrides"] == {
+        "bigcodebench_hard_instruct": {
+            "request_overrides": {"reasoning_effort": "none"}
+        }
+    }
+
+
 def test_load_model_metadata_has_qwen_36_repo_pricing():
     """Qwen 3.6 27B pricing should come from the benchmark config."""
     with tempfile.TemporaryDirectory() as tmp:

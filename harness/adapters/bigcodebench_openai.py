@@ -27,6 +27,10 @@ class AdapterResult:
     behavior: Optional[dict[str, Any]] = None
 
 
+class InvalidCompletionError(ValueError):
+    """Provider replied successfully but did not produce a scoreable sample."""
+
+
 def load_provider_connection(model_id: str) -> dict[str, str]:
     """Resolve one pi model entry into an OpenAI-compatible connection."""
     if "/" not in model_id:
@@ -69,7 +73,7 @@ def load_provider_connection(model_id: str) -> dict[str, str]:
 
 def build_chat_request(task_data: dict[str, Any], model: str) -> dict[str, Any]:
     """Build the pinned upstream one-message BigCodeBench request."""
-    return {
+    request = {
         "model": model,
         "messages": [{"role": "user", "content": task_data["prompt"]}],
         "n": 1,
@@ -77,6 +81,12 @@ def build_chat_request(task_data: dict[str, Any], model: str) -> dict[str, Any]:
         "top_p": task_data["top_p"],
         "max_completion_tokens": task_data["max_tokens"],
     }
+    request_overrides = task_data.get("request_overrides")
+    if isinstance(request_overrides, dict):
+        reasoning_effort = request_overrides.get("reasoning_effort")
+        if isinstance(reasoning_effort, str) and reasoning_effort:
+            request["reasoning_effort"] = reasoning_effort
+    return request
 
 
 def _usage_object(response: dict[str, Any]) -> object | None:
@@ -122,20 +132,26 @@ class BigCodeBenchOpenAIAdapter:
         )
 
         started = time.monotonic()
+        decoded: dict[str, Any] | None = None
         try:
             with urllib.request.urlopen(
                 request, timeout=float(task_data.get("timeout", 600))
             ) as response:
                 raw = response.read()
             elapsed = time.monotonic() - started
+            # Preserve even an invalid completion for protocol diagnosis. This
+            # artifact contains only the public prompt response, never tests.
+            (workdir / "raw-response.json").write_bytes(raw)
             decoded = json.loads(raw)
             choices = decoded.get("choices")
             if not isinstance(choices, list) or len(choices) != 1:
-                raise ValueError("Provider returned other than one completion")
+                raise InvalidCompletionError(
+                    "Provider returned other than one completion"
+                )
             message = choices[0].get("message")
             completion = message.get("content") if isinstance(message, dict) else None
             if not isinstance(completion, str) or not completion.strip():
-                raise ValueError("Provider returned no textual completion")
+                raise InvalidCompletionError("Provider returned no textual completion")
 
             (workdir / "raw-response.json").write_text(
                 json.dumps(decoded, indent=2) + "\n"
@@ -188,7 +204,8 @@ class BigCodeBenchOpenAIAdapter:
                     detail = f"HTTP {exc.code}"
             stderr_file.write_text(detail + "\n")
             return AdapterResult(
-                returncode=-1,
+                returncode=2 if isinstance(exc, InvalidCompletionError) else -1,
+                usage=_usage_object(decoded) if isinstance(decoded, dict) else None,
                 error=detail,
                 inference_seconds=elapsed,
                 behavior={

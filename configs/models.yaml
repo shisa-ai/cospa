@@ -116,6 +116,10 @@ models:
       top_k: 64
     sampling_source: https://huggingface.co/meta-models/Muse-Glimmer-30B
     sampling_rationale: model-card-best-practices-agentic-coding
+    protocol_overrides:
+      bigcodebench_hard_instruct:
+        request_overrides:
+          reasoning_effort: none
     cost:
       input: 0.30
       cacheRead: 0.04

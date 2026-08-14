@@ -347,6 +347,12 @@ def _manifest_sampling(
             model_metadata=model_metadata,
         )
     )
+    request_overrides = task_data.get("request_overrides")
+    if isinstance(request_overrides, dict):
+        reasoning_effort = request_overrides.get("reasoning_effort")
+        if isinstance(reasoning_effort, str):
+            sampling["reasoning_effort"] = reasoning_effort
+            sampling["reasoning_effort_source"] = "model_protocol_override"
     return sampling
 
 
@@ -526,9 +532,16 @@ def run_trial(
     for key in ("sampling_source", "sampling_rationale"):
         if key in model_metadata and key not in task_data:
             task_data[key] = model_metadata[key]
-    # Propagate thinking/effort only for protocols that support it. The
-    # non-agentic BigCodeBench arm records an explicit not-applicable value and
-    # sends no reasoning-effort parameter.
+    protocol_overrides = model_metadata.get("protocol_overrides")
+    if isinstance(protocol_overrides, dict):
+        suite_overrides = protocol_overrides.get(suite.name)
+        if isinstance(suite_overrides, dict):
+            request_overrides = suite_overrides.get("request_overrides")
+            if isinstance(request_overrides, dict):
+                task_data["request_overrides"] = dict(request_overrides)
+    # Propagate agent thinking/effort only for protocols that support it. The
+    # non-agentic BigCodeBench arm records agent thinking as not applicable;
+    # any model-specific request override is recorded separately in sampling.
     task_data["thinking"] = (
         "not_applicable"
         if task_data.get("thinking_policy") == "not_applicable"

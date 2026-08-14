@@ -168,6 +168,7 @@ class BigCodeBenchHardInstructSuite:
             "samples_per_task": self.protocol["samples_per_task"],
             "calibrated": self.protocol["calibrated"],
             "tools_enabled": False,
+            "request_overrides": task_data.get("request_overrides", {}),
         }
 
     def _docker_prefix(self, task_data: dict[str, Any], workdir: Path) -> list[str]:

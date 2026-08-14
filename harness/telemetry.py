@@ -356,6 +356,30 @@ def _safe_model_metadata(
         if isinstance(value, str) and value:
             metadata[key] = value
 
+    raw_overrides = model.get("protocol_overrides")
+    if isinstance(raw_overrides, dict):
+        safe_overrides: dict[str, Any] = {}
+        bcb = raw_overrides.get("bigcodebench_hard_instruct")
+        if isinstance(bcb, dict):
+            raw_request = bcb.get("request_overrides")
+            if isinstance(raw_request, dict):
+                reasoning_effort = raw_request.get("reasoning_effort")
+                if reasoning_effort in {
+                    "none",
+                    "minimal",
+                    "low",
+                    "medium",
+                    "high",
+                    "xhigh",
+                }:
+                    safe_overrides["bigcodebench_hard_instruct"] = {
+                        "request_overrides": {
+                            "reasoning_effort": reasoning_effort
+                        }
+                    }
+        if safe_overrides:
+            metadata["protocol_overrides"] = safe_overrides
+
     selected_profile = None
     cost = None
     if pricing_profile:

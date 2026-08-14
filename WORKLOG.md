@@ -1746,3 +1746,25 @@ Append-only development log for the `cospa` repository.
   sessions as the authoritative Harbor behavior source.
 - Next: launch BCB on both models at `c=8`, then matched PolyBench vanilla and
   devstack phases at `c=8` while recording GPU/queue telemetry.
+
+## 2026-08-15 — Preserve Muse BigCodeBench final-answer budget
+
+- Context: the first full `c=8` BCB phase was valid for DeepSeek (3/15) but
+  invalid for Muse: the pool dropped SGLang chat-template kwargs, Muse spent
+  the entire fixed 1,280-token cap in reasoning, and 10/15 final attempts had
+  no textual completion after unnecessary retries.
+- Change: pin a Muse-only BCB request override (`reasoning_effort: none`) in the
+  model config, propagate and record protocol overrides, retain malformed raw
+  provider responses, and make a reasoning-only successful HTTP response
+  non-retryable. Keep the upstream 1,280-token cap unchanged.
+- Evidence: direct pool probes showed chat-template kwargs produced 0 final
+  characters at the length cap while `reasoning_effort: none` produced a final
+  answer in 3.383 seconds. RED tests covered request propagation, manifest
+  provenance, raw-response retention, and retry class. A real runner `c=2`
+  smoke then produced textual completions for both tasks, one resolved and one
+  incorrect. Full pytest: 335 passed with only the two documented unrelated
+  baseline failures.
+- Decision: exclude the original Muse BCB15 cell from scoring and rerun it in a
+  fresh result root; retain the valid DeepSeek BCB15 cell.
+- Next: rerun Muse BCB15 at `c=8`, then proceed to PolyBench vanilla only if all
+  15 trials have textual completions and native verifier verdicts.

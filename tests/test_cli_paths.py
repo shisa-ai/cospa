@@ -11,6 +11,7 @@ See ORNITH-CODER-REVIEW.md follow-up audit item G.
 import sys
 import tempfile
 import io
+import threading
 import time
 from pathlib import Path
 from unittest.mock import patch
@@ -327,3 +328,119 @@ def test_runner_main_rejects_nonpositive_problem_limit():
             assert False, "main() must exit for negative --problems"
 
     mock_suite.assert_not_called()
+
+
+def test_runner_main_rejects_nonpositive_concurrency():
+    """--concurrency must be positive instead of creating a zero-worker run."""
+    import argparse
+    from harness import runner as runner_mod
+
+    args = argparse.Namespace(
+        suite="aider_polyglot",
+        adapter="pi_vanilla",
+        model="test/model",
+        problems=1,
+        k=1,
+        concurrency=0,
+        results_dir=Path(tempfile.mkdtemp()),
+        vendor_dir=Path(tempfile.mkdtemp()),
+        config=Path("/tmp/c"),
+        skip_reachability=True,
+    )
+
+    with patch.object(runner_mod, "parse_args", return_value=args), \
+         patch.object(runner_mod, "load_suite") as mock_suite:
+        try:
+            runner_mod.main()
+        except SystemExit as exc:
+            assert exc.code != 0, f"expected nonzero exit, got {exc.code}"
+        else:
+            assert False, "main() must exit for --concurrency 0"
+
+    mock_suite.assert_not_called()
+
+
+def test_runner_main_bounds_parallel_trials_and_runs_each_once():
+    """Concurrency three must run all k=2 work once with at most three active."""
+    import argparse
+    import json
+    from harness import runner as runner_mod
+
+    with tempfile.TemporaryDirectory() as tmp:
+        tmp_path = Path(tmp)
+        args = argparse.Namespace(
+            suite="aider_polyglot",
+            adapter="pi_vanilla",
+            model="test/model",
+            problems=None,
+            k=2,
+            concurrency=3,
+            results_dir=tmp_path / "results",
+            run_id=None,
+            vendor_dir=tmp_path / "vendor",
+            config=Path("/tmp/c"),
+            skip_reachability=True,
+            thinking=None,
+            retries=0,
+        )
+        lock = threading.Lock()
+        active = 0
+        max_active = 0
+        calls = []
+
+        def fake_run_trial(
+            suite,
+            adapter,
+            model,
+            task_id,
+            trial_k,
+            results_dir,
+            vendor_dir,
+            thinking=None,
+            **kwargs,
+        ):
+            nonlocal active, max_active
+            with lock:
+                active += 1
+                max_active = max(max_active, active)
+                calls.append((task_id, trial_k))
+            time.sleep(0.03)
+            with lock:
+                active -= 1
+            return {"timing": {"wall_clock_seconds": 0.03}}, {"passed": True}
+
+        with patch.object(runner_mod, "parse_args", return_value=args), \
+             patch.object(runner_mod, "load_suite") as mock_suite, \
+             patch.object(runner_mod, "load_adapter") as mock_adapter, \
+             patch.object(
+                 runner_mod,
+                 "run_trial_with_retries",
+                 side_effect=fake_run_trial,
+             ):
+            mock_suite.return_value.name = "aider_polyglot"
+            mock_suite.return_value.get_task_ids.return_value = [
+                "task/a",
+                "task/b",
+                "task/c",
+                "task/d",
+            ]
+            mock_adapter.return_value.name = "pi_vanilla"
+            runner_mod.main()
+
+        heartbeat_path = (
+            args.results_dir
+            / "test%2Fmodel"
+            / "pi_vanilla"
+            / "aider_polyglot"
+            / ".runner-heartbeat.json"
+        )
+        heartbeat = json.loads(heartbeat_path.read_text())
+
+    assert sorted(calls) == sorted(
+        (task_id, trial_k)
+        for task_id in ("task/a", "task/b", "task/c", "task/d")
+        for trial_k in (1, 2)
+    )
+    assert max_active == 3
+    assert heartbeat["completed_trials"] == 8
+    assert heartbeat["concurrency"] == 3

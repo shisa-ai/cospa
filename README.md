@@ -361,13 +361,26 @@ mamba run -n cospa python harness/runner.py \
 wait
 ```
 
-The score viewer recursively discovers those wrappers. Supplying
-`--results-dir` disables the default wrapper and writes exactly to that root;
-use it only for intentional merges. Avoid running two processes against the
-same explicit output directory and same matrix cell, because that will race on
-`trial-<k>` files. Terminal-Bench runs also share Docker and model-serving
-capacity, and SWE Atlas also uses an external judge, so start with low
-concurrency and watch both provider and judge rate limits.
+The score viewer recursively discovers those wrappers. A single runner can
+also bound parallel task trials with `--concurrency N`; each slot owns one
+complete task trial including infrastructure retries:
+
+```bash
+mamba run -n cospa python harness/runner.py \
+  --suite swe_polybench_verified \
+  --adapter pi_vanilla \
+  --model local/deepseek-v4-flash-0731 \
+  --concurrency 8 \
+  --k 1 \
+  --run-id polybench-c8
+```
+
+Supplying `--results-dir` disables the default wrapper and writes exactly to
+that root; use it only for intentional merges. Avoid running two processes
+against the same explicit output directory and same matrix cell, because that
+will race on `trial-<k>` files. Harbor-backed suites share Docker and model-
+serving capacity, and SWE Atlas also uses an external judge, so advance
+concurrency only after measuring endpoint, host, and verifier pressure.
 
 For a full matrix with a stable wrapper name:
 

@@ -26,6 +26,7 @@ import sys
 import threading
 import time
 import uuid
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import datetime, timezone
 from functools import lru_cache
 from pathlib import Path
@@ -55,7 +56,8 @@ def parse_args():
         required=True,
         help=(
             "Suite name (aider_polyglot, terminal_bench, swe_atlas_pilot12, "
-            "bigcodebench_hard_instruct)"
+            "bigcodebench_hard_instruct, swe_polybench_verified, "
+            "multi_swe_bench_flash)"
         ),
     )
     parser.add_argument(
@@ -71,6 +73,12 @@ def parse_args():
     parser.add_argument("--model", required=True, help="Model ID (e.g. nvidia/nemotron-3-ultra-550b-a55b)")
     parser.add_argument("--problems", type=int, default=None, help="Number of problems to run (None = all)")
     parser.add_argument("--k", type=int, default=1, help="Number of trials per problem")
+    parser.add_argument(
+        "--concurrency",
+        type=int,
+        default=1,
+        help="Maximum number of task trials to run concurrently (default: 1)",
+    )
     parser.add_argument(
         "--results-dir",
         default=None,
@@ -127,6 +135,9 @@ def validate_args(args) -> None:
         sys.exit(2)
     if getattr(args, "retries", 2) < 0:
         print("✗ --retries must be zero or greater", file=sys.stderr)
+        sys.exit(2)
+    if getattr(args, "concurrency", 1) < 1:
+        print("✗ --concurrency must be a positive integer", file=sys.stderr)
         sys.exit(2)
 
 
@@ -875,6 +886,7 @@ class RunHeartbeat:
         suite_name: str,
         run_id: str | None,
         total_trials: int,
+        concurrency: int = 1,
         interval_seconds: float = 10.0,
     ):
         from harness.path_utils import encode_model_path
@@ -903,6 +915,8 @@ class RunHeartbeat:
             "current_trial": None,
             "completed_trials": 0,
             "total_trials": total_trials,
+            "concurrency": concurrency,
+            "active_trials": 0,
             "command": sys.argv,
         }
         self.interval_seconds = interval_seconds
@@ -986,8 +1000,10 @@ def main():
         )
         sys.exit(1)
 
+    concurrency = getattr(args, "concurrency", 1)
     print(f"Running {len(task_ids)} tasks x {args.k} trials = {len(task_ids) * args.k} total trials")
     print(f"Suite: {args.suite}, Adapter: {args.adapter}, Model: {args.model}")
+    print(f"Concurrency: {concurrency}")
     if args.run_id:
         print(f"Run ID: {args.run_id}")
     print(f"Results dir: {args.results_dir}")
@@ -1001,44 +1017,111 @@ def main():
         suite_name=suite.name,
         run_id=args.run_id,
         total_trials=total_trials,
+        concurrency=concurrency,
     )
     completed_trials = 0
     heartbeat.start()
 
-    # Run trials
+    jobs = [
+        (task_id, trial_k)
+        for task_id in task_ids
+        for trial_k in range(1, args.k + 1)
+    ]
+
+    def execute_trial(task_id, trial_k):
+        return run_trial_with_retries(
+            suite,
+            adapter,
+            args.model,
+            task_id,
+            trial_k,
+            args.results_dir,
+            args.vendor_dir,
+            thinking=getattr(args, "thinking", None),
+            retries=getattr(args, "retries", 2),
+        )
+
+    # Preserve the simple ordered output path at c=1. At c>1, one worker owns
+    # each complete task trial (including any infrastructure retries), so the
+    # configured bound applies to actual endpoint/Harbor load rather than only
+    # to the first attempt.
     try:
-        for task_id in task_ids:
-            print(f"── Task: {task_id} ──")
-            for k in range(1, args.k + 1):
+        if concurrency == 1:
+            for task_id, trial_k in jobs:
+                print(f"── Task: {task_id} ──")
                 heartbeat.update(
                     state="running",
                     current_task=task_id,
-                    current_trial=k,
+                    current_trial=trial_k,
+                    active_trials=1,
                     completed_trials=completed_trials,
                 )
-                trial_label = f"  Trial {k}/{args.k}"
+                trial_label = f"  Trial {trial_k}/{args.k}"
                 print(f"{trial_label}...", end=" ", flush=True)
                 try:
                     manifest, verdict = run_with_tty_updates(
-                        lambda: run_trial_with_retries(
-                            suite, adapter, args.model, task_id, k,
-                            args.results_dir, args.vendor_dir,
-                            thinking=getattr(args, "thinking", None),
-                            retries=getattr(args, "retries", 2),
+                        lambda task_id=task_id, trial_k=trial_k: execute_trial(
+                            task_id, trial_k
                         ),
                         trial_label,
                     )
                     completed_trials += 1
                     heartbeat.update(completed_trials=completed_trials)
                     status = "✓" if verdict.get("passed") else "✗"
-                    print(f"{status} ({manifest['timing'].get('wall_clock_seconds', 0):.1f}s)")
-                except Exception as e:
-                    print(f"ERROR: {e}")
-            print()
+                    print(
+                        f"{status} "
+                        f"({manifest['timing'].get('wall_clock_seconds', 0):.1f}s)"
+                    )
+                except Exception as exc:
+                    print(f"ERROR: {exc}")
+                print()
+        else:
+            finished_futures = 0
+            with ThreadPoolExecutor(
+                max_workers=concurrency,
+                thread_name_prefix="cospa-trial",
+            ) as executor:
+                futures = {
+                    executor.submit(execute_trial, task_id, trial_k): (
+                        task_id,
+                        trial_k,
+                    )
+                    for task_id, trial_k in jobs
+                }
+                heartbeat.update(
+                    state="running",
+                    current_task=None,
+                    current_trial=None,
+                    active_trials=min(concurrency, len(jobs)),
+                    queued_trials=max(0, len(jobs) - concurrency),
+                )
+                for future in as_completed(futures):
+                    task_id, trial_k = futures[future]
+                    finished_futures += 1
+                    try:
+                        manifest, verdict = future.result()
+                        completed_trials += 1
+                        status = "✓" if verdict.get("passed") else "✗"
+                        print(
+                            f"── {task_id} trial {trial_k}/{args.k}: {status} "
+                            f"({manifest['timing'].get('wall_clock_seconds', 0):.1f}s)"
+                        )
+                    except Exception as exc:
+                        print(
+                            f"── {task_id} trial {trial_k}/{args.k}: "
+                            f"ERROR: {exc}"
+                        )
+                    remaining = len(jobs) - finished_futures
+                    heartbeat.update(
+                        completed_trials=completed_trials,
+                        active_trials=min(concurrency, remaining),
+                        queued_trials=max(0, remaining - concurrency),
+                    )
     except BaseException:
         heartbeat.finish(
             "failed",
             completed_trials=completed_trials,
+            active_trials=0,
         )
         raise
 
@@ -1047,6 +1130,8 @@ def main():
         current_task=None,
         current_trial=None,
         completed_trials=completed_trials,
+        active_trials=0,
+        queued_trials=0,
     )
     print("Done.")
 

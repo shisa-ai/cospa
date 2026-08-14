@@ -1705,3 +1705,21 @@ Append-only development log for the `cospa` repository.
   docs/config-only decision.
 - Next: pin DABstep artifacts, review an outcome-blind task block with all
   three discovery models, and mechanically qualify any nominated tasks.
+
+## 2026-08-15 — Bound concurrent runner trials
+
+- Context: the restarted Muse and DeepSeek servers each expose 16 request
+  slots, but the runner could only execute task trials serially.
+- Change: add `--concurrency` to `harness/runner.py`; each worker owns one
+  complete task trial including infrastructure retries, and the heartbeat now
+  records configured and active concurrency. Document in-cell parallelism.
+- Evidence: RED tests rejected `c=0` and observed only one active task at
+  requested `c=3`; both pass after the change, including exact `k=2` work
+  counts. A real BigCodeBench DeepSeek smoke ran two tasks concurrently and
+  produced two native verifier verdicts (one resolved, one incorrect).
+  Full pytest: 333 passed with only the two documented unrelated baseline
+  failures in `test_check_models.sh` and Terminal-Bench newline handling.
+- Decision: use one runner process per model/suite cell and keep aggregate host
+  trial concurrency at or below 16 for the first campaign.
+- Next: finish the Harbor-backed PolyBench concurrency smoke, then launch the
+  matched `c=8` model cells.

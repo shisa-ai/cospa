@@ -8,7 +8,7 @@ Takes (suite, model, adapter, trial_k) and runs one task:
   4. Writes results/runs/<model-run>/<model>/<adapter>/<suite>/<task_id>/trial-<k>/{manifest.json, out/, verdict.json}
 
 Usage:
-  mamba run -n coding-eval python harness/runner.py \
+  mamba run -n cospa python harness/runner.py \
     --suite aider_polyglot \
     --adapter pi_vanilla \
     --model nvidia/nemotron-3-ultra-550b-a55b \

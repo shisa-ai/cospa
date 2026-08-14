@@ -2,7 +2,7 @@
   "name": "terminal-bench-core",
   "version": "0.1.1",
   "terminal_bench_version": ">=0.2.4",
-  "github_url": "https://github.com/harbor-framework/terminal-bench.git",
+  "github_url": "https://github.com/harbor-framework/terminal-bench-1.git",
   "dataset_path": "tasks",
   "branch": "dataset/terminal-bench-core/v0.1.x",
   "commit_hash": "91e10457b5410f16c44364da1a34cb6de8c488a5",

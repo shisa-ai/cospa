@@ -1411,3 +1411,28 @@ Append-only development log for the `cospa` repository.
   implied by task count, and measure `c=1` versus `c=2` before scaling.
 - Next: create the versioned 225-row contract audit manifest and run the
   Multi-SWE Flash / SWE-bench Multilingual / SWE-PolyBench validity bake-off.
+
+## 2026-08-14 — Repair and pin the evaluation setup path
+
+- Context: the real setup path still targeted the retired `coding-eval` mamba
+  environment, advanced Polyglot from mutable head, referenced the rewritten
+  Terminal-Bench repository that no longer exposes the Core 0.1.1 commit, and
+  installed an unpinned Harbor 0.2.0 CLI incompatible with Cospa's validated
+  Harbor 0.16.1 command contract.
+- Change: setup now verifies the canonical `cospa` Python 3.12 environment,
+  pins Polyglot at `7e0611e77b54e2dea774cdc0aa00cf9f7ed6144f`, clones Core
+  0.1.1 from archived `harbor-framework/terminal-bench-1`, and enforces Harbor
+  0.16.1. The exact Harbor install bypasses a host-level `UV_EXCLUDE_NEWER`
+  cutoff only for that immutable version. PLAN, the dataset manifest, and the
+  runner usage example now agree with the executable setup.
+- Evidence: RED then GREEN `tests/scripts/test_setup.sh` (16 assertions),
+  `bash -n scripts/setup.sh tests/scripts/test_setup.sh`, JSON validation, and
+  `git diff --check`. Two consecutive real setup passes installed/verified
+  Harbor 0.16.1 and pinned Terminal-Bench, SWE Atlas, and Polyglot; real suite
+  discovery returns exactly 80 Terminal-Bench and 12 SWE Atlas tasks.
+- Decision: retain lower-level suite execution as `wired` until fresh Docker
+  smokes pass. A focused Terminal-Bench/SWE Atlas pytest run produced 35 passes
+  and only the already-documented PyYAML `|-` newline fixture failure; it does
+  not block this setup-path correction.
+- Next: freeze the deterministic pilot manifests, validate null/gold/repeat
+  behavior, then run Ornith smoke and concurrency crossover gates.

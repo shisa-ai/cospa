@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# setup.sh — Verify and install coding-eval dependencies.
+# setup.sh — Verify and install cospa dependencies.
 #
 # Does NOT touch models or providers. Model setup is a separate concern.
 #
@@ -61,33 +61,33 @@ if ! little-coder --list-models &>/dev/null; then
     log_warn "little-coder is installed, but --list-models failed. Check ~/.pi/agent/models.json."
 fi
 
-# ── 3. Verify coding-eval mamba env ──────────────────────────────────────
+# ── 3. Verify cospa mamba env ────────────────────────────────────────────
 echo ""
-echo "── Checking coding-eval mamba env ──"
+echo "── Checking cospa mamba env ──"
 if command -v mamba &>/dev/null; then
-    if mamba run -n coding-eval python --version 2>/dev/null; then
-        PY_VER=$(mamba run -n coding-eval python --version 2>/dev/null | grep -oP '\d+\.\d+')
+    if mamba run -n cospa python --version 2>/dev/null; then
+        PY_VER=$(mamba run -n cospa python --version 2>/dev/null | grep -oP '\d+\.\d+')
         if [[ "$PY_VER" == "3.12" ]]; then
-            log_ok "coding-eval env found with python=$PY_VER"
+            log_ok "cospa env found with python=$PY_VER"
         else
-            log_warn "coding-eval env found with python=$PY_VER (expected 3.12)"
+            log_warn "cospa env found with python=$PY_VER (expected 3.12)"
         fi
     else
-        log_err "coding-eval mamba env not found."
-        echo "  Create it with: mamba create -n coding-eval python=3.12"
+        log_err "cospa mamba env not found."
+        echo "  Create it with: mamba create -n cospa python=3.12"
         exit 1
     fi
 elif command -v conda &>/dev/null; then
-    if conda run -n coding-eval python --version 2>/dev/null; then
-        PY_VER=$(conda run -n coding-eval python --version 2>/dev/null | grep -oP '\d+\.\d+')
+    if conda run -n cospa python --version 2>/dev/null; then
+        PY_VER=$(conda run -n cospa python --version 2>/dev/null | grep -oP '\d+\.\d+')
         if [[ "$PY_VER" == "3.12" ]]; then
-            log_ok "coding-eval conda env found with python=$PY_VER"
+            log_ok "cospa conda env found with python=$PY_VER"
         else
-            log_warn "coding-eval env found with python=$PY_VER (expected 3.12)"
+            log_warn "cospa env found with python=$PY_VER (expected 3.12)"
         fi
     else
-        log_err "coding-eval conda env not found."
-        echo "  Create it with: conda create -n coding-eval python=3.12"
+        log_err "cospa conda env not found."
+        echo "  Create it with: conda create -n cospa python=3.12"
         exit 1
     fi
 else
@@ -95,27 +95,39 @@ else
     exit 1
 fi
 
-# ── 4. Install Harbor ────────────────────────────────────────────────────
+# ── 4. Install pinned Harbor ─────────────────────────────────────────────
 echo ""
 echo "── Checking Harbor ──"
+HARBOR_VERSION="0.16.1"
+HARBOR_ACTUAL_VERSION=""
 if command -v harbor &>/dev/null; then
-    log_ok "harbor found: $(harbor --version 2>/dev/null || echo 'unknown')"
-else
-    log_warn "harbor not found. Installing via uv..."
-    if command -v uv &>/dev/null; then
-        uv tool install harbor
-        log_ok "harbor installed"
+    HARBOR_ACTUAL_VERSION=$(harbor --version 2>/dev/null || true)
+fi
+if [[ "$HARBOR_ACTUAL_VERSION" != "$HARBOR_VERSION" ]]; then
+    if [[ -n "$HARBOR_ACTUAL_VERSION" ]]; then
+        log_warn "harbor $HARBOR_ACTUAL_VERSION is incompatible; installing pinned $HARBOR_VERSION..."
     else
-        log_err "uv not found. Install uv first, then: uv tool install harbor"
+        log_warn "harbor not found. Installing pinned $HARBOR_VERSION via uv..."
+    fi
+    if command -v uv &>/dev/null; then
+        env -u UV_EXCLUDE_NEWER uv tool install --force "harbor==$HARBOR_VERSION"
+    else
+        log_err "uv not found. Install uv first, then: uv tool install harbor==$HARBOR_VERSION"
         exit 1
     fi
+    HARBOR_ACTUAL_VERSION=$(harbor --version 2>/dev/null || true)
 fi
+if [[ "$HARBOR_ACTUAL_VERSION" != "$HARBOR_VERSION" ]]; then
+    log_err "Harbor version mismatch: expected $HARBOR_VERSION, got ${HARBOR_ACTUAL_VERSION:-missing}"
+    exit 1
+fi
+log_ok "harbor found: $HARBOR_ACTUAL_VERSION"
 
 # ── 5. Clone Terminal-Bench Core 0.1.1 ──────────────────────────────────
 echo ""
 echo "── Checking Terminal-Bench Core 0.1.1 ──"
 TB_DIR="$VENDOR_DIR/terminal-bench"
-TB_REPO="https://github.com/harbor-framework/terminal-bench.git"
+TB_REPO="https://github.com/harbor-framework/terminal-bench-1.git"
 TB_COMMIT="91e10457b5410f16c44364da1a34cb6de8c488a5"
 if [[ -d "$TB_DIR/.git" ]]; then
     log_ok "Terminal-Bench already cloned at $TB_DIR"
@@ -167,18 +179,17 @@ log_ok "SWE Atlas pinned for pilot12 ($SWE_ATLAS_COMMIT)"
 echo ""
 echo "── Checking Aider Polyglot dataset ──"
 POLY_DIR="$VENDOR_DIR/polyglot-benchmark"
+POLY_REPO="https://github.com/Aider-AI/polyglot-benchmark.git"
+POLY_COMMIT="7e0611e77b54e2dea774cdc0aa00cf9f7ed6144f"
 if [[ -d "$POLY_DIR/.git" ]]; then
     log_ok "Aider Polyglot dataset already cloned at $POLY_DIR"
-    cd "$POLY_DIR"
-    git pull --ff-only || log_warn "Could not pull latest"
-    cd "$PROJECT_DIR"
 else
-    log_warn "Cloning Aider Polyglot dataset (polyglot-benchmark)..."
+    log_warn "Cloning the pinned Aider Polyglot source corpus..."
     mkdir -p "$VENDOR_DIR"
     # Real benchmark: Exercism-sourced exercises across python/go/rust/cpp/
     # java/javascript. Do NOT silently fall back to a placeholder — a missing
     # dataset is a setup failure, not a quiet success.
-    if ! git clone https://github.com/Aider-AI/polyglot-benchmark.git "$POLY_DIR"; then
+    if ! git clone "$POLY_REPO" "$POLY_DIR"; then
         log_err "Failed to clone polyglot-benchmark. The dataset is required."
         log_err "  If you are offline, vendor it manually into: $POLY_DIR"
         rm -rf "$POLY_DIR"
@@ -187,12 +198,23 @@ else
     log_ok "Aider Polyglot dataset at $POLY_DIR"
 fi
 
+cd "$POLY_DIR"
+git fetch origin "$POLY_COMMIT"
+git checkout --detach "$POLY_COMMIT"
+POLY_ACTUAL_COMMIT=$(git rev-parse HEAD)
+cd "$PROJECT_DIR"
+if [[ "$POLY_ACTUAL_COMMIT" != "$POLY_COMMIT" ]]; then
+    log_err "Aider Polyglot checkout mismatch: expected $POLY_COMMIT, got $POLY_ACTUAL_COMMIT"
+    exit 1
+fi
+log_ok "Aider Polyglot pinned to source commit ($POLY_COMMIT)"
+
 # ── Done ──────────────────────────────────────────────────────────────────
 echo ""
 echo "── Setup complete ──"
 echo "  Pi:     $PI_VERSION"
 echo "  Little: $LITTLE_CODER_VERSION"
-echo "  Python: $PY_VER (in coding-eval env)"
+echo "  Python: $PY_VER (in cospa env)"
 echo "  Harbor: $(harbor --version 2>/dev/null || echo 'installed')"
 echo "  TB:     $TB_DIR"
 echo "  SWE Atlas: $SWE_ATLAS_DIR"

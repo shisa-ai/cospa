@@ -30,10 +30,13 @@ reorder — earlier items unblock later ones.
       `vendor/`. README stub.
 - [ ] **P2. Install script (`scripts/setup.sh`).** Verifies pi (≥ some
       version), verifies the `cospa` mamba env (python=3.12) exists
-      and is active, installs Harbor (`uv tool install harbor`), checks out
+      and is active, installs Harbor 0.16.1
+      (`uv tool install --force harbor==0.16.1`), checks out
       Terminal-Bench Core 0.1.1 at commit `91e10457b5410f16c44364da1a34cb6de8c488a5`
       and SWE Atlas at `2cac47d64a9123d915b8f6f6f53763391920f574`,
-      and clones Aider Polyglot under `vendor/`. **Does not** touch models
+      and clones Aider Polyglot at source commit
+      `7e0611e77b54e2dea774cdc0aa00cf9f7ed6144f` under `vendor/`.
+      **Does not** touch models
       or providers — model setup is a separate concern, by design.
 - [ ] **P3. Models check (`scripts/check-models.sh`).** Reads model IDs
       from a `configs/models.yaml` (or `~/.pi/agent/models.json`), pings
@@ -242,7 +245,8 @@ Terminal-Bench Core 0.1.1 is the canonical 80-task set behind the original
 leaderboard. Cospa runs it through Harbor as the immediate external anchor;
 Terminal-Bench 2.1 remains a separate milestone campaign.
 
-- Repo: https://github.com/harbor-framework/terminal-bench
+- Archived Core repository: https://github.com/harbor-framework/terminal-bench-1
+  (the newer `terminal-bench` repository no longer exposes the 0.1.1 commit).
 - Dataset manifest: `configs/terminal_bench_core_0.1.1.json`.
 - Upstream pin: `91e10457b5410f16c44364da1a34cb6de8c488a5` on
   `dataset/terminal-bench-core/v0.1.x`; setup checks it out detached and task

@@ -27,7 +27,7 @@ EOF
 
 cat > "$BIN/mamba" <<'EOF'
 #!/usr/bin/env bash
-if [[ "$*" == "run -n coding-eval python --version" ]]; then
+if [[ "$*" == "run -n cospa python --version" ]]; then
     echo "Python 3.12.13"
     exit 0
 fi
@@ -38,7 +38,21 @@ EOF
 cat > "$BIN/harbor" <<'EOF'
 #!/usr/bin/env bash
 if [[ "${1:-}" == "--version" ]]; then
+    echo "0.2.0"
+fi
+EOF
+
+cat > "$BIN/uv" <<'EOF'
+#!/usr/bin/env bash
+echo "$*" >> "$UV_LOG"
+if [[ "$*" == "tool install --force harbor==0.16.1" ]]; then
+    cat > "$(dirname "$0")/harbor" <<'HARBOR'
+#!/usr/bin/env bash
+if [[ "${1:-}" == "--version" ]]; then
     echo "0.16.1"
+fi
+HARBOR
+    chmod +x "$(dirname "$0")/harbor"
 fi
 EOF
 
@@ -48,6 +62,8 @@ echo "$PWD|$*" >> "$GIT_LOG"
 if [[ "$*" == "rev-parse HEAD" ]]; then
     if [[ "$PWD" == */swe-atlas ]]; then
         echo "2cac47d64a9123d915b8f6f6f53763391920f574"
+    elif [[ "$PWD" == */polyglot-benchmark ]]; then
+        echo "7e0611e77b54e2dea774cdc0aa00cf9f7ed6144f"
     else
         echo "91e10457b5410f16c44364da1a34cb6de8c488a5"
     fi
@@ -71,11 +87,12 @@ LC
 fi
 EOF
 
-chmod +x "$BIN/pi" "$BIN/mamba" "$BIN/harbor" "$BIN/git" "$BIN/npm"
+chmod +x "$BIN/pi" "$BIN/mamba" "$BIN/harbor" "$BIN/git" "$BIN/npm" "$BIN/uv"
 
 NPM_LOG="$TMP/npm.log"
 GIT_LOG="$TMP/git.log"
-export NPM_LOG GIT_LOG
+UV_LOG="$TMP/uv.log"
+export NPM_LOG GIT_LOG UV_LOG
 TEST_PATH="$BIN:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
 OUT=$(PATH="$TEST_PATH" bash "$PROJ/scripts/setup.sh" 2>&1)
 RC=$?
@@ -84,6 +101,13 @@ assert_exit 0 "$RC" "setup exits 0 when npm can install missing little-coder"
 assert_contains "install -g little-coder" "$(cat "$NPM_LOG" 2>/dev/null || true)" \
     "setup installs little-coder when missing"
 assert_contains "little-coder installed" "$OUT" "setup reports little-coder installation"
+assert_contains "tool install --force harbor==0.16.1" "$(cat "$UV_LOG" 2>/dev/null || true)" \
+    "setup replaces an incompatible Harbor version with the pinned CLI"
+assert_contains "harbor found: 0.16.1" "$OUT" \
+    "setup reports the pinned Harbor version after installation"
+assert_contains 'TB_REPO="https://github.com/harbor-framework/terminal-bench-1.git"' \
+    "$(cat "$PROJ/scripts/setup.sh")" \
+    "setup uses the archived Core 0.1.1 repository that still exposes the pin"
 assert_contains "fetch origin 91e10457b5410f16c44364da1a34cb6de8c488a5" \
     "$(cat "$GIT_LOG")" "setup fetches the immutable Terminal-Bench Core 0.1.1 commit"
 assert_contains "checkout --detach 91e10457b5410f16c44364da1a34cb6de8c488a5" \
@@ -96,5 +120,13 @@ assert_contains "checkout --detach 2cac47d64a9123d915b8f6f6f53763391920f574" \
     "$(cat "$GIT_LOG")" "setup checks out SWE Atlas detached"
 assert_not_contains "$PROJ/vendor/swe-atlas|pull --ff-only" "$(cat "$GIT_LOG")" \
     "setup does not advance SWE Atlas to mutable head"
+assert_contains "Checking cospa mamba env" "$OUT" \
+    "setup verifies the canonical cospa environment"
+assert_contains "fetch origin 7e0611e77b54e2dea774cdc0aa00cf9f7ed6144f" \
+    "$(cat "$GIT_LOG")" "setup fetches the immutable Polyglot source commit"
+assert_contains "checkout --detach 7e0611e77b54e2dea774cdc0aa00cf9f7ed6144f" \
+    "$(cat "$GIT_LOG")" "setup checks out Polyglot detached"
+assert_not_contains "$PROJ/vendor/polyglot-benchmark|pull --ff-only" "$(cat "$GIT_LOG")" \
+    "setup does not advance Polyglot to mutable head"
 
 summary

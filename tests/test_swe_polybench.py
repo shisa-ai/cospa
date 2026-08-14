@@ -1,4 +1,5 @@
 import ast
+import concurrent.futures
 import csv
 import json
 import tomllib
@@ -29,6 +30,15 @@ def test_suite_registry_loads_swe_polybench_verified():
     suite = load_suite("swe_polybench_verified")
     assert isinstance(suite, SwePolyBenchVerifiedSuite)
     assert suite.task_count == 38
+
+
+def test_polybench_dataset_loading_is_safe_across_verifier_threads():
+    def load_ids(_):
+        return SwePolyBenchVerifiedSuite().get_task_ids(ROOT / "vendor")
+
+    with concurrent.futures.ThreadPoolExecutor(max_workers=8) as pool:
+        discovered = list(pool.map(load_ids, range(16)))
+    assert all(len(task_ids) == 38 for task_ids in discovered)
 
 
 def test_polybench_discovers_exact_frozen_selected_ids():

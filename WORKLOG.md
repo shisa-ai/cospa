@@ -1562,3 +1562,15 @@ Append-only development log for the `cospa` repository.
   selected tasks and repeat gate pass. Do not report an Ornith score yet.
 - Next: validate gold/null across all 38 selected images, then run repeats and
   the predeclared Ornith smoke if the verifier gate remains clean.
+
+## 2026-08-14 — Make PolyBench dataset loading thread-safe
+
+- Context: the first concurrency-4 real verifier batch raced Python's
+  process-global CSV field limit, causing large dataset rows to fail parsing.
+- Change: serialize field-limit adjustment, full CSV consumption, and limit
+  restoration with a module lock.
+- Evidence: the new 16-load, 8-worker RED test reproduced `_csv.Error`; all 11
+  PolyBench tests now pass. Full pytest reports 311 passed and only the same two
+  documented unrelated baseline failures.
+- Decision: discard the interrupted batch evidence and restart validation from
+  a clean directory; no task verdict from the raced run is accepted.

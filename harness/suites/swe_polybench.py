@@ -15,6 +15,7 @@ import re
 import shlex
 import subprocess
 import sys
+import threading
 from pathlib import Path
 from typing import Any
 
@@ -23,6 +24,7 @@ from harness.suites.terminal_bench import PROJECT_ROOT, TerminalBenchSuite
 
 PILOT_PATH = PROJECT_ROOT / "configs" / "ornith_runtime_pilot_v1.json"
 IMAGE_LOCK_PATH = PROJECT_ROOT / "configs" / "ornith_runtime_pilot_images_v1.json"
+_CSV_FIELD_SIZE_LOCK = threading.Lock()
 
 
 def parse_polybench_test_output(
@@ -138,15 +140,22 @@ class SwePolyBenchVerifiedSuite(TerminalBenchSuite):
         if actual != expected:
             raise ValueError(f"SWE-PolyBench dataset checksum mismatch: {actual}")
         if self._rows is None:
-            previous_limit = csv.field_size_limit()
-            try:
-                csv.field_size_limit(max(previous_limit, dataset_path.stat().st_size))
-                with dataset_path.open(newline="") as handle:
-                    self._rows = {
-                        row["instance_id"]: row for row in csv.DictReader(handle)
-                    }
-            finally:
-                csv.field_size_limit(previous_limit)
+            # csv.field_size_limit is process-global. Hold the lock through
+            # parsing so concurrent verifier workers cannot restore the small
+            # default while another reader is still consuming this 12 MB CSV.
+            with _CSV_FIELD_SIZE_LOCK:
+                previous_limit = csv.field_size_limit()
+                try:
+                    csv.field_size_limit(
+                        max(previous_limit, dataset_path.stat().st_size)
+                    )
+                    with dataset_path.open(newline="") as handle:
+                        self._rows = {
+                            row["instance_id"]: row
+                            for row in csv.DictReader(handle)
+                        }
+                finally:
+                    csv.field_size_limit(previous_limit)
         return self._rows
 
     def get_task_ids(self, vendor_dir: Path | None = None) -> list[str]:

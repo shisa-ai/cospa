@@ -29,7 +29,33 @@ def selected_row(instance_id="google__gson-1989"):
 def test_suite_registry_loads_swe_polybench_verified():
     suite = load_suite("swe_polybench_verified")
     assert isinstance(suite, SwePolyBenchVerifiedSuite)
-    assert suite.task_count == 38
+    assert suite.task_count == 28
+
+
+def test_polybench_manifest_retains_only_repeat_qualified_tasks():
+    suite = SwePolyBenchVerifiedSuite()
+    qualification = suite.pilot["qualification"]
+    exclusions = qualification["excluded"]
+
+    assert suite.pilot["status"] == "ready_smoke"
+    assert suite.pilot["pilot_size"] == suite.task_count == 28
+    assert qualification["screened_size"] == 38
+    assert qualification["observations_per_condition"] == 3
+    assert {item["id"] for item in exclusions} == {
+        "Significant-Gravitas__AutoGPT-4652",
+        "angular__angular-37561",
+        "apache__dubbo-4567",
+        "apache__rocketmq-5008",
+        "huggingface__transformers-29311",
+        "microsoft__vscode-127071",
+        "microsoft__vscode-135805",
+        "microsoft__vscode-136347",
+        "mrdoob__three.js-20991",
+        "trinodb__trino-3859",
+    }
+    assert len(suite.selected) + len(exclusions) == qualification["screened_size"]
+    assert set(suite.selected).isdisjoint(item["id"] for item in exclusions)
+    assert all(item["reason"] for item in exclusions)
 
 
 def test_polybench_dataset_loading_is_safe_across_verifier_threads():
@@ -38,7 +64,7 @@ def test_polybench_dataset_loading_is_safe_across_verifier_threads():
 
     with concurrent.futures.ThreadPoolExecutor(max_workers=8) as pool:
         discovered = list(pool.map(load_ids, range(16)))
-    assert all(len(task_ids) == 38 for task_ids in discovered)
+    assert all(len(task_ids) == 28 for task_ids in discovered)
 
 
 def test_polybench_discovers_exact_frozen_selected_ids():

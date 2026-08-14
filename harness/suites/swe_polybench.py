@@ -130,11 +130,11 @@ def score_polybench_result(
 
 
 class SwePolyBenchVerifiedSuite(TerminalBenchSuite):
-    """Frozen 38-task SWE-PolyBench Verified runtime/validity pilot."""
+    """Repeat-qualified 28-task SWE-PolyBench Verified runtime pilot."""
 
     name = "swe_polybench_verified"
-    version = "0.1"
-    task_count = 38
+    version = "0.2"
+    task_count = 28
     verify_on_adapter_failure = True
 
     def __init__(self) -> None:

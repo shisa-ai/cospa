@@ -1623,3 +1623,23 @@ Append-only development log for the `cospa` repository.
 - Decision: preserve only the explicitly referenced evaluator helper outside
   the agent repository; continue deleting unrelated untracked image files.
 - Next: retain both MUI tasks in the repeat-qualified PolyBench subset.
+
+## 2026-08-14 — Qualify the SWE-PolyBench pilot28
+
+- Context: the outcome-blind 38-task screen included pinned images whose
+  verifier environments could not run hermetically or whose oracle patches
+  regressed declared P2P tests; target-model outcomes were never consulted.
+- Change: retain the 28 tasks that satisfy the null/gold contract, record all
+  ten exclusions and their reasons in the runtime manifest, bump the suite to
+  version 0.2, and remove excluded image requests from the runnable image lock.
+- Evidence: RED then GREEN qualification-manifest tests. Across three
+  observations per condition, all 84 Harbor no-op runs were incorrect with
+  zero-byte model patches and all 84 oracle runs resolved with non-empty
+  patches under the no-network verifier. The two final complete 28-task passes
+  finished 28/28 in 683.339 and 658.264 seconds. Full pytest reports 316 passed
+  and only the two documented unrelated baseline failures.
+- Decision: promote the multilingual 28-task subset to `ready_smoke`; do not
+  weaken verifier isolation or retain tasks whose gold patch is not replayably
+  correct in the pinned image.
+- Next: qualify the remaining repository and feature candidates before running
+  Ornith.

@@ -1,7 +1,7 @@
 {
   "name": "ornith_runtime_pilot_images_v1",
   "source_manifest": "configs/ornith_runtime_pilot_v1.json",
-  "source_manifest_sha256": "66930f87b64930f4da918ff30a26ebacef1e6b852fcf54347111af400bdb502b",
+  "source_manifest_sha256": "a373a02e4da6079e7acf3782cd230d8cc77c8de96a9c52184aea73a502ae6341",
   "platform": {
     "os": "linux",
     "architecture": "amd64"
@@ -17,16 +17,6 @@
       "digest": "sha256:1327bddf60be9bc241648c59e6060cac4ca50248a0588ab735cd0200b17cc8c2",
       "pinned_ref": "bigcodebench/bigcodebench-evaluate@sha256:1327bddf60be9bc241648c59e6060cac4ca50248a0588ab735cd0200b17cc8c2"
     },
-    "ghcr.io/timesler/swe-polybench.eval.x86_64.angular__angular-37561:v1.1": {
-      "suites": [
-        "swe_polybench_verified"
-      ],
-      "task_ids": [
-        "angular__angular-37561"
-      ],
-      "digest": "sha256:63e2e9154cdd1ccbe59567c9b674bb369347feed8dee90747914cdf7f9e1a37d",
-      "pinned_ref": "ghcr.io/timesler/swe-polybench.eval.x86_64.angular__angular-37561@sha256:63e2e9154cdd1ccbe59567c9b674bb369347feed8dee90747914cdf7f9e1a37d"
-    },
     "ghcr.io/timesler/swe-polybench.eval.x86_64.apache__dubbo-3855:v1.1": {
       "suites": [
         "swe_polybench_verified"
@@ -36,26 +26,6 @@
       ],
       "digest": "sha256:8336ea0ec1e7b9af97b0edfefd69177fb1baa673251a9dd56bd85920f02848b3",
       "pinned_ref": "ghcr.io/timesler/swe-polybench.eval.x86_64.apache__dubbo-3855@sha256:8336ea0ec1e7b9af97b0edfefd69177fb1baa673251a9dd56bd85920f02848b3"
-    },
-    "ghcr.io/timesler/swe-polybench.eval.x86_64.apache__dubbo-4567:v1.1": {
-      "suites": [
-        "swe_polybench_verified"
-      ],
-      "task_ids": [
-        "apache__dubbo-4567"
-      ],
-      "digest": "sha256:f76b9daa685181691ab708e3bf2c9939fbacee90eea98fa50f04e79667340917",
-      "pinned_ref": "ghcr.io/timesler/swe-polybench.eval.x86_64.apache__dubbo-4567@sha256:f76b9daa685181691ab708e3bf2c9939fbacee90eea98fa50f04e79667340917"
-    },
-    "ghcr.io/timesler/swe-polybench.eval.x86_64.apache__rocketmq-5008:v1.1": {
-      "suites": [
-        "swe_polybench_verified"
-      ],
-      "task_ids": [
-        "apache__rocketmq-5008"
-      ],
-      "digest": "sha256:d0251bf1157e008ebb28acdfffb722bf68031d1bf6e69a285500b251349fa5d9",
-      "pinned_ref": "ghcr.io/timesler/swe-polybench.eval.x86_64.apache__rocketmq-5008@sha256:d0251bf1157e008ebb28acdfffb722bf68031d1bf6e69a285500b251349fa5d9"
     },
     "ghcr.io/timesler/swe-polybench.eval.x86_64.apolloconfig__apollo-4568:v1.1": {
       "suites": [
@@ -147,16 +117,6 @@
       "digest": "sha256:8425d3c16b11e8c94db1b25bcbd6d0db6ffc746e14f84ecb596272e542879f15",
       "pinned_ref": "ghcr.io/timesler/swe-polybench.eval.x86_64.huggingface__transformers-27463@sha256:8425d3c16b11e8c94db1b25bcbd6d0db6ffc746e14f84ecb596272e542879f15"
     },
-    "ghcr.io/timesler/swe-polybench.eval.x86_64.huggingface__transformers-29311:v1.1": {
-      "suites": [
-        "swe_polybench_verified"
-      ],
-      "task_ids": [
-        "huggingface__transformers-29311"
-      ],
-      "digest": "sha256:6eb2042a4610dff4cb3af553dfcdd26d9727e565d921f6824584e035a32086d8",
-      "pinned_ref": "ghcr.io/timesler/swe-polybench.eval.x86_64.huggingface__transformers-29311@sha256:6eb2042a4610dff4cb3af553dfcdd26d9727e565d921f6824584e035a32086d8"
-    },
     "ghcr.io/timesler/swe-polybench.eval.x86_64.keras-team__keras-19773:v1.1": {
       "suites": [
         "swe_polybench_verified"
@@ -187,36 +147,6 @@
       "digest": "sha256:8776685cbf063474d57dfb19e61ce068f1a25c6aa3cdb36fdd4ef55c4a7fd3d2",
       "pinned_ref": "ghcr.io/timesler/swe-polybench.eval.x86_64.langchain-ai__langchain-5625@sha256:8776685cbf063474d57dfb19e61ce068f1a25c6aa3cdb36fdd4ef55c4a7fd3d2"
     },
-    "ghcr.io/timesler/swe-polybench.eval.x86_64.microsoft__vscode-127071:v1.1": {
-      "suites": [
-        "swe_polybench_verified"
-      ],
-      "task_ids": [
-        "microsoft__vscode-127071"
-      ],
-      "digest": "sha256:bcc203c253b63a86299a0b09399f9ffc031a8843f4f30d68187a2912dbcfd017",
-      "pinned_ref": "ghcr.io/timesler/swe-polybench.eval.x86_64.microsoft__vscode-127071@sha256:bcc203c253b63a86299a0b09399f9ffc031a8843f4f30d68187a2912dbcfd017"
-    },
-    "ghcr.io/timesler/swe-polybench.eval.x86_64.microsoft__vscode-135805:v1.1": {
-      "suites": [
-        "swe_polybench_verified"
-      ],
-      "task_ids": [
-        "microsoft__vscode-135805"
-      ],
-      "digest": "sha256:cde0971bc27970b586820216010344845a68b8694c9a3eaa2225d12c575188da",
-      "pinned_ref": "ghcr.io/timesler/swe-polybench.eval.x86_64.microsoft__vscode-135805@sha256:cde0971bc27970b586820216010344845a68b8694c9a3eaa2225d12c575188da"
-    },
-    "ghcr.io/timesler/swe-polybench.eval.x86_64.microsoft__vscode-136347:v1.1": {
-      "suites": [
-        "swe_polybench_verified"
-      ],
-      "task_ids": [
-        "microsoft__vscode-136347"
-      ],
-      "digest": "sha256:2388ebcc73d506fd65f0458d12a5358167d7b9e32b073439b95b523b85d0e96e",
-      "pinned_ref": "ghcr.io/timesler/swe-polybench.eval.x86_64.microsoft__vscode-136347@sha256:2388ebcc73d506fd65f0458d12a5358167d7b9e32b073439b95b523b85d0e96e"
-    },
     "ghcr.io/timesler/swe-polybench.eval.x86_64.microsoft__vscode-189223:v1.1": {
       "suites": [
         "swe_polybench_verified"
@@ -236,16 +166,6 @@
       ],
       "digest": "sha256:2fa7c4f933a614a8c1dfc0a739e31c2937347a0890779150224c0c07f2eca856",
       "pinned_ref": "ghcr.io/timesler/swe-polybench.eval.x86_64.mrdoob__three.js-14836@sha256:2fa7c4f933a614a8c1dfc0a739e31c2937347a0890779150224c0c07f2eca856"
-    },
-    "ghcr.io/timesler/swe-polybench.eval.x86_64.mrdoob__three.js-20991:v1.1": {
-      "suites": [
-        "swe_polybench_verified"
-      ],
-      "task_ids": [
-        "mrdoob__three.js-20991"
-      ],
-      "digest": "sha256:407b592eed04fb2d051a5ee3dc2afe918fdff03e05cf8c270ca79cce3b0534bc",
-      "pinned_ref": "ghcr.io/timesler/swe-polybench.eval.x86_64.mrdoob__three.js-20991@sha256:407b592eed04fb2d051a5ee3dc2afe918fdff03e05cf8c270ca79cce3b0534bc"
     },
     "ghcr.io/timesler/swe-polybench.eval.x86_64.mui__material-ui-15534:v1.1": {
       "suites": [
@@ -307,16 +227,6 @@
       "digest": "sha256:a2da0c1140a98cf03fef58fe5945a296fabb0e8624c360e6342449f197bf7a92",
       "pinned_ref": "ghcr.io/timesler/swe-polybench.eval.x86_64.serverless__serverless-6827@sha256:a2da0c1140a98cf03fef58fe5945a296fabb0e8624c360e6342449f197bf7a92"
     },
-    "ghcr.io/timesler/swe-polybench.eval.x86_64.significant-gravitas__autogpt-4652:v1.1": {
-      "suites": [
-        "swe_polybench_verified"
-      ],
-      "task_ids": [
-        "Significant-Gravitas__AutoGPT-4652"
-      ],
-      "digest": "sha256:690d760e5d6703107850dac89f37e59d0e7e2a011aa4b4ad1f8c1ade262371fa",
-      "pinned_ref": "ghcr.io/timesler/swe-polybench.eval.x86_64.significant-gravitas__autogpt-4652@sha256:690d760e5d6703107850dac89f37e59d0e7e2a011aa4b4ad1f8c1ade262371fa"
-    },
     "ghcr.io/timesler/swe-polybench.eval.x86_64.sveltejs__svelte-1227:v1.1": {
       "suites": [
         "swe_polybench_verified"
@@ -376,16 +286,6 @@
       ],
       "digest": "sha256:9d4db2eb6b00b70f43e6f8ef72e9059669bfac6a91e7f0003a722bb3c944126d",
       "pinned_ref": "ghcr.io/timesler/swe-polybench.eval.x86_64.tailwindlabs__tailwindcss-853@sha256:9d4db2eb6b00b70f43e6f8ef72e9059669bfac6a91e7f0003a722bb3c944126d"
-    },
-    "ghcr.io/timesler/swe-polybench.eval.x86_64.trinodb__trino-3859:v1.1": {
-      "suites": [
-        "swe_polybench_verified"
-      ],
-      "task_ids": [
-        "trinodb__trino-3859"
-      ],
-      "digest": "sha256:019100e9257d74af3d6bb4bfd56c2b5ec333e4811454cb95af3a97c0177d08f4",
-      "pinned_ref": "ghcr.io/timesler/swe-polybench.eval.x86_64.trinodb__trino-3859@sha256:019100e9257d74af3d6bb4bfd56c2b5ec333e4811454cb95af3a97c0177d08f4"
     },
     "ghcr.io/timesler/swe-polybench.eval.x86_64.yt-dlp__yt-dlp-9862:v1.1": {
       "suites": [

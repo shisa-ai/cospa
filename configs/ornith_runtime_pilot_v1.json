@@ -766,8 +766,57 @@
       "image_digest_status": "resolved"
     },
     "swe_polybench_verified": {
-      "status": "blocked_gold_null_validation",
-      "pilot_size": 38,
+      "status": "ready_smoke",
+      "pilot_size": 28,
+      "qualification": {
+        "screened_size": 38,
+        "observations_per_condition": 3,
+        "null_policy": "No-op must be incorrect with an empty captured model patch and executable F2P evidence.",
+        "gold_policy": "Oracle patch must be non-empty and resolve all F2P without a P2P regression under the no-network verifier.",
+        "completed_at": "2026-08-14",
+        "excluded": [
+          {
+            "id": "apache__dubbo-4567",
+            "reason": "Verifier requires Maven plugins absent from the pinned image's offline cache."
+          },
+          {
+            "id": "apache__rocketmq-5008",
+            "reason": "Verifier requires Maven plugins absent from the pinned image's offline cache."
+          },
+          {
+            "id": "trinodb__trino-3859",
+            "reason": "Verifier requires an uncached Maven wrapper download."
+          },
+          {
+            "id": "mrdoob__three.js-20991",
+            "reason": "The gold patch leaves a declared P2P test failing in the pinned image."
+          },
+          {
+            "id": "Significant-Gravitas__AutoGPT-4652",
+            "reason": "Verifier requires an uncached tiktoken vocabulary download."
+          },
+          {
+            "id": "huggingface__transformers-29311",
+            "reason": "The gold patch leaves declared P2P tests failing in the pinned image."
+          },
+          {
+            "id": "angular__angular-37561",
+            "reason": "Verifier requires an uncached Bazel binary download."
+          },
+          {
+            "id": "microsoft__vscode-127071",
+            "reason": "Verifier requires an uncached Electron build download."
+          },
+          {
+            "id": "microsoft__vscode-135805",
+            "reason": "Verifier requires an uncached Electron build download."
+          },
+          {
+            "id": "microsoft__vscode-136347",
+            "reason": "Verifier requires an uncached Electron build download."
+          }
+        ]
+      },
       "source": {
         "repository": "https://github.com/amazon-science/SWE-PolyBench.git",
         "revision": "9c836c5d7f3cb991934132b77d29e6941d912a07",
@@ -789,24 +838,6 @@
           "patch_bytes": 2417,
           "test_patch_bytes": 6533,
           "image_ref": "ghcr.io/timesler/swe-polybench.eval.x86_64.apache__dubbo-3855:v1.1"
-        },
-        {
-          "id": "apache__dubbo-4567",
-          "language": "java",
-          "repository": "apache/dubbo",
-          "task_type": "Bug Fix",
-          "patch_bytes": 717,
-          "test_patch_bytes": 834,
-          "image_ref": "ghcr.io/timesler/swe-polybench.eval.x86_64.apache__dubbo-4567:v1.1"
-        },
-        {
-          "id": "apache__rocketmq-5008",
-          "language": "java",
-          "repository": "apache/rocketmq",
-          "task_type": "Bug Fix",
-          "patch_bytes": 19464,
-          "test_patch_bytes": 1934,
-          "image_ref": "ghcr.io/timesler/swe-polybench.eval.x86_64.apache__rocketmq-5008:v1.1"
         },
         {
           "id": "apolloconfig__apollo-4568",
@@ -836,15 +867,6 @@
           "image_ref": "ghcr.io/timesler/swe-polybench.eval.x86_64.google__guava-3971:v1.1"
         },
         {
-          "id": "trinodb__trino-3859",
-          "language": "java",
-          "repository": "trinodb/trino",
-          "task_type": "Bug Fix",
-          "patch_bytes": 2020,
-          "test_patch_bytes": 2769,
-          "image_ref": "ghcr.io/timesler/swe-polybench.eval.x86_64.trinodb__trino-3859:v1.1"
-        },
-        {
           "id": "mrdoob__three.js-14836",
           "language": "javascript",
           "repository": "mrdoob/three.js",
@@ -852,15 +874,6 @@
           "patch_bytes": 294,
           "test_patch_bytes": 1300,
           "image_ref": "ghcr.io/timesler/swe-polybench.eval.x86_64.mrdoob__three.js-14836:v1.1"
-        },
-        {
-          "id": "mrdoob__three.js-20991",
-          "language": "javascript",
-          "repository": "mrdoob/three.js",
-          "task_type": "Feature",
-          "patch_bytes": 2431,
-          "test_patch_bytes": 982,
-          "image_ref": "ghcr.io/timesler/swe-polybench.eval.x86_64.mrdoob__three.js-20991:v1.1"
         },
         {
           "id": "prettier__prettier-9850",
@@ -935,15 +948,6 @@
           "image_ref": "ghcr.io/timesler/swe-polybench.eval.x86_64.sveltejs__svelte-6564:v1.1"
         },
         {
-          "id": "Significant-Gravitas__AutoGPT-4652",
-          "language": "python",
-          "repository": "Significant-Gravitas/AutoGPT",
-          "task_type": "Bug Fix",
-          "patch_bytes": 3395,
-          "test_patch_bytes": 9214,
-          "image_ref": "ghcr.io/timesler/swe-polybench.eval.x86_64.significant-gravitas__autogpt-4652:v1.1"
-        },
-        {
           "id": "huggingface__transformers-21345",
           "language": "python",
           "repository": "huggingface/transformers",
@@ -989,15 +993,6 @@
           "image_ref": "ghcr.io/timesler/swe-polybench.eval.x86_64.huggingface__transformers-27463:v1.1"
         },
         {
-          "id": "huggingface__transformers-29311",
-          "language": "python",
-          "repository": "huggingface/transformers",
-          "task_type": "Bug Fix",
-          "patch_bytes": 1232,
-          "test_patch_bytes": 2463,
-          "image_ref": "ghcr.io/timesler/swe-polybench.eval.x86_64.huggingface__transformers-29311:v1.1"
-        },
-        {
           "id": "keras-team__keras-19773",
           "language": "python",
           "repository": "keras-team/keras",
@@ -1034,15 +1029,6 @@
           "image_ref": "ghcr.io/timesler/swe-polybench.eval.x86_64.yt-dlp__yt-dlp-9862:v1.1"
         },
         {
-          "id": "angular__angular-37561",
-          "language": "typescript",
-          "repository": "angular/angular",
-          "task_type": "Bug Fix",
-          "patch_bytes": 2289,
-          "test_patch_bytes": 6068,
-          "image_ref": "ghcr.io/timesler/swe-polybench.eval.x86_64.angular__angular-37561:v1.1"
-        },
-        {
           "id": "coder__code-server-6278",
           "language": "typescript",
           "repository": "coder/code-server",
@@ -1050,33 +1036,6 @@
           "patch_bytes": 1722,
           "test_patch_bytes": 1688,
           "image_ref": "ghcr.io/timesler/swe-polybench.eval.x86_64.coder__code-server-6278:v1.1"
-        },
-        {
-          "id": "microsoft__vscode-127071",
-          "language": "typescript",
-          "repository": "microsoft/vscode",
-          "task_type": "Bug Fix",
-          "patch_bytes": 796,
-          "test_patch_bytes": 1963,
-          "image_ref": "ghcr.io/timesler/swe-polybench.eval.x86_64.microsoft__vscode-127071:v1.1"
-        },
-        {
-          "id": "microsoft__vscode-135805",
-          "language": "typescript",
-          "repository": "microsoft/vscode",
-          "task_type": "Feature",
-          "patch_bytes": 929,
-          "test_patch_bytes": 1462,
-          "image_ref": "ghcr.io/timesler/swe-polybench.eval.x86_64.microsoft__vscode-135805:v1.1"
-        },
-        {
-          "id": "microsoft__vscode-136347",
-          "language": "typescript",
-          "repository": "microsoft/vscode",
-          "task_type": "Bug Fix",
-          "patch_bytes": 6123,
-          "test_patch_bytes": 1334,
-          "image_ref": "ghcr.io/timesler/swe-polybench.eval.x86_64.microsoft__vscode-136347:v1.1"
         },
         {
           "id": "microsoft__vscode-189223",

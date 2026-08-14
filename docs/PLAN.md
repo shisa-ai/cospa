@@ -112,15 +112,17 @@ reorder — earlier items unblock later ones.
       Linux/amd64 verifier image. Public prompts are committed; hidden tests
       and canonical solutions remain in the pinned parquet and enter only the
       post-generation, network-disabled verifier container.
-- [ ] **P11d. Suite: SWE-PolyBench Verified pilot38.**
-      `harness/suites/swe_polybench.py` materializes the outcome-blind 38-task
-      slice as Harbor tasks over digest-pinned images. A derived image resets
-      each repository to its declared base commit before the agent; hidden test
-      and gold patches enter only their Harbor phases. Verification replays the
-      captured model patch after hidden tests, runs without network (using the
-      pinned Maven cache for Java), and scores with the pinned upstream parser.
-      The representative Gson null/gold path is verified end-to-end; all 38
-      selected tasks remain gated on gold/null/repeat validation.
+- [ ] **P11d. Suite: SWE-PolyBench Verified pilot28.**
+      `harness/suites/swe_polybench.py` materializes the 28 tasks retained from
+      an outcome-blind 38-task screen as Harbor tasks over digest-pinned images.
+      A derived image resets each repository to its declared base commit before
+      the agent; hidden test and gold patches enter only their Harbor phases.
+      Verification replays the captured model patch after hidden tests, runs
+      without network (using pinned image caches), and scores with the pinned
+      upstream parser. All 28 retained tasks have three clean null/gold
+      observations. Ten tasks were excluded before model evaluation because
+      their pinned verifier environments required uncached network artifacts or
+      because their gold patches failed declared P2P tests.
 - [ ] **P12. Score viewer (`view-scores/`).** Static HTML + a tiny
       `server.py` that walks `results/` and renders a table:
       rows = `(model, adapter, suite)`, cells = pass-rate with CI,

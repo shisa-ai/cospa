@@ -337,23 +337,27 @@ rules, and a `c=1/2/4/8/16` ladder. The pilot sizes are:
 | SWE Atlas pilot12 | 12 / 12 | Pinned tasks ready; judge credentials/endpoint required |
 | Multi-SWE-bench Flash | 30 / 300 | Dataset and 30 image digests locked; gold/null/repeat validation pending |
 | SWE-bench Multilingual | 30 / 300 | Dataset and 30 image digests locked; gold/null/repeat validation pending |
-| SWE-PolyBench Verified | 38 / 382 | Harbor adapter ready; representative Gson gold passes and null fails offline; remaining 37 plus repeats pending |
+| SWE-PolyBench Verified | 28 / 382 (38 screened) | Ready for Ornith smoke; all retained tasks passed the three-observation null/gold gate offline |
 | FeatureBench Lite | 6 / 30 | Dataset and 6 image digests locked; gold/null/repeat validation pending |
 | BigCodeBench-Hard Instruct | 15 / 148 | Non-agentic adapter ready; 15/15 gold pass and 15/15 null fail; Ornith smoke pending |
 
 **Measured setup state, 2026-08-14:** the host has 683 GiB free on `/`; all
 listed source repositories and external dataset files are present at the
-manifested revisions/checksums. All 105 selected Linux/amd64 task/verifier
-images resolve to immutable platform-manifest digests in
-`configs/ornith_runtime_pilot_images_v1.json`. This is setup evidence, not
+manifested revisions/checksums. All 105 initially screened Linux/amd64
+images resolved to immutable platform-manifest digests; after the ten
+PolyBench exclusions, `configs/ornith_runtime_pilot_images_v1.json` retains
+95 runnable task/verifier pins. This is setup evidence, not
 verifier evidence: do not run a target model on a repository suite until its
-selected images survive repeated null/gold checks. BigCodeBench is the first
-suite through that gate: its shared verifier passed all 15 selected gold/null
-pairs, with three clean repeats of each condition on `BigCodeBench/15`.
-SWE-PolyBench now has representative end-to-end Harbor evidence on
-`google__gson-1989`: the clean null fails F2P with 4/6 tests passing and an
-empty model patch, while gold resolves 6/6 with the verifier offline. This
-proves the adapter path, not the remaining 37 selected images or repeat gate.
+selected images survive repeated null/gold checks. BigCodeBench passed that
+gate first: its shared verifier passed all 15 selected gold/null pairs, with
+three clean repeats of each condition on
+`BigCodeBench/15`. SWE-PolyBench then screened all 38 selected images and
+retained 28 tasks (4 Java, 9 JavaScript, 9 Python, and 6 TypeScript). Across
+three observations per condition, all 84 no-op runs were incorrect with empty
+model patches and all 84 oracle runs resolved with non-empty patches while the
+verifier had no network. Ten tasks were excluded before target-model runs:
+eight require uncached verifier dependencies and two have gold patches that
+fail declared P2P tests in their pinned images.
 
 The operational goal is a result within 12 hours with 20% reserve, so the
 campaign budget is 9.6 hours. If c=16 scaled perfectly, the maximum mean task
@@ -437,7 +441,10 @@ tail latency, setup costs, and failure rates decide whether c=16 is retained.
   pinning gate.
 - **Evaluation:** F2P + P2P resolved rate, plus optional file- and concrete
   syntax-tree-node localization metrics. Public prebuilt instance images are
-  expected to pass gold patches.
+  expected to pass gold patches. Cospa's pinned screen retained 28/38 tasks;
+  each retained task has three clean null and three clean gold observations
+  under the no-network verifier. The retained stratum is 4 Java, 9 JavaScript,
+  9 Python, and 6 TypeScript tasks.
 - **Strength:** explicit task-type balance in PB500, useful localization
   diagnostics, and more multi-file work than SWE-bench Verified.
 - **Risk:** only four languages; task categories and issue informativeness are

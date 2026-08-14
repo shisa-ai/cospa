@@ -36,7 +36,7 @@ def test_first_wave_has_every_non_eliminated_candidate():
         "swe_atlas_pilot12": 12,
         "multi_swe_bench_flash": 30,
         "swe_bench_multilingual": 30,
-        "swe_polybench_verified": 38,
+        "swe_polybench_verified": 28,
         "featurebench_lite": 6,
         "bigcodebench_hard_instruct": 15,
     }
@@ -98,10 +98,10 @@ def test_repository_pilots_cover_declared_language_strata():
             "typescript": 2,
         },
         "swe_polybench_verified": {
-            "java": 7,
-            "javascript": 10,
-            "python": 11,
-            "typescript": 10,
+            "java": 4,
+            "javascript": 9,
+            "python": 9,
+            "typescript": 6,
         },
     }
     for name, language_counts in expected.items():
@@ -119,8 +119,8 @@ def test_selection_manifest_contains_no_target_model_outcomes():
 def test_polybench_preserves_task_type_mix():
     tasks = load_pilot()["suites"]["swe_polybench_verified"]["tasks"]
     assert Counter(task["task_type"] for task in tasks) == {
-        "Bug Fix": 30,
-        "Feature": 7,
+        "Bug Fix": 22,
+        "Feature": 5,
         "Refactoring": 1,
     }
 
@@ -150,8 +150,12 @@ def test_selected_images_are_digest_pinned_before_model_runs():
         "bigcodebench_hard_instruct",
     ):
         assert suites[name]["image_digest_status"] == "resolved"
-        if name != "bigcodebench_hard_instruct":
-            assert suites[name]["status"] == "blocked_gold_null_validation"
+        expected_status = (
+            "ready_smoke"
+            if name in {"swe_polybench_verified", "bigcodebench_hard_instruct"}
+            else "blocked_gold_null_validation"
+        )
+        assert suites[name]["status"] == expected_status
         selected_task_count += sum(
             1 for task in suites[name].get("tasks", []) if task.get("image_ref")
         )
@@ -160,7 +164,7 @@ def test_selected_images_are_digest_pinned_before_model_runs():
     # verifier image. Every selected task/verifier must have one immutable pin.
     selected_task_count += suites["multi_swe_bench_flash"]["pilot_size"]
     selected_task_count += 1
-    assert len(lock["images"]) == selected_task_count == 105
+    assert len(lock["images"]) == selected_task_count == 95
     assert lock["source_manifest_sha256"] == hashlib.sha256(pilot_bytes).hexdigest()
     assert lock["platform"] == {"os": "linux", "architecture": "amd64"}
     for image in lock["images"].values():

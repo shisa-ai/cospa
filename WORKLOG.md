@@ -1814,3 +1814,25 @@ Append-only development log for the `cospa` repository.
   two score namespaces never merge.
 - Next: launch fresh `c=8` vanilla cells for agentic BCB15 and PolyBench28 on
   both models, validate all artifacts, then run matched devstack cells.
+
+## 2026-08-15 — Fail closed on effective thinking-level drift
+
+- Context: trace review found PolyBench manifests requested `xhigh`, while every
+  copied Harbor pi session recorded `thinkingLevel: high`. The custom container
+  model config propagated sampling but omitted model-specific
+  `thinkingLevelMap`/`compat`, and case-sensitive model matching missed the host
+  entries entirely.
+- Change: match provider model IDs canonically, propagate thinking maps and pi
+  compatibility settings into Harbor, and reject a trial as infrastructure
+  before verification whenever observed session thinking differs from the
+  requested level.
+- Evidence: RED tests reproduced missing config and a requested-xhigh/observed-
+  high session. A real DS4 Keras PolyBench smoke then recorded requested and
+  observed `xhigh`, reached the native verifier, and resolved in 61.48 seconds.
+  Full pytest: 345 passed with only the documented unrelated Terminal-Bench
+  newline fixture failure.
+- Decision: do not treat the completed PolyBench vanilla cells as xhigh or
+  launch matched devstack yet; preserve them as high-thinking diagnostics and
+  run controlled corrected ablations before interpreting model quality.
+- Next: finish the trace disagreement audit, relabel the affected artifacts
+  honestly, and run a true-xhigh disagreement panel before the full matrix.

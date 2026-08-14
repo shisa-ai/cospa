@@ -811,6 +811,24 @@ def run_trial(
         # containers where the host adapter's compact trace extension is not
         # loaded. Recover counts and message-bound wall timings from the copied
         # session so tool behavior is still comparable across adapter arms.
+        requested_thinking = task_data.get("thinking")
+        observed_thinking = session_usage.get("thinking")
+        if (
+            requested_thinking
+            and requested_thinking != "default"
+            and observed_thinking
+            and observed_thinking != requested_thinking
+        ):
+            manifest["thinking_mismatch"] = {
+                "requested": requested_thinking,
+                "observed": observed_thinking,
+            }
+            manifest["exit_code"] = -1
+            manifest["error"] = (
+                "Thinking level mismatch: requested "
+                f"{requested_thinking}, observed {observed_thinking}"
+            )
+            adapter_failed = True
         if is_harbor_suite:
             trace_files = session_usage.get("trace_files")
             if isinstance(trace_files, list):
@@ -844,10 +862,10 @@ def run_trial(
     verify_on_failure = getattr(
         suite, "verify_on_adapter_failure", False
     )
-    if manifest.get("harbor_agent_exception"):
+    if manifest.get("harbor_agent_exception") or manifest.get("thinking_mismatch"):
         # A benchmark-native verifier may grade useful work after a generic
-        # adapter exit, but Harbor setup/agent exceptions are infrastructure.
-        # Do not turn a missing agent into a wrong-answer model score.
+        # adapter exit, but Harbor setup/agent exceptions and protocol drift are
+        # infrastructure. Do not turn either into a model score.
         verify_on_failure = False
     verifier_started = time.time()
     if not adapter_failed or verify_on_failure:

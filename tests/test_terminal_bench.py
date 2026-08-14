@@ -652,6 +652,14 @@ def test_harbor_env_exports_repo_sampling_profile(tmp_path):
                 "models": [{
                     "id": "Muse-Glimmer-30B",
                     "name": "Muse Glimmer 30B",
+                    "thinkingLevelMap": {
+                        "high": "high",
+                        "xhigh": "xhigh",
+                    },
+                    "compat": {
+                        "supportsReasoningEffort": True,
+                        "maxTokensField": "max_tokens",
+                    },
                 }],
             }
         }
@@ -667,6 +675,14 @@ def test_harbor_env_exports_repo_sampling_profile(tmp_path):
     }
     assert env["CODING_EVAL_PI_CONTEXT_WINDOW"] == "131072"
     assert env["CODING_EVAL_PI_MAX_TOKENS"] == "65536"
+    assert json.loads(env["CODING_EVAL_PI_THINKING_LEVEL_MAP"]) == {
+        "high": "high",
+        "xhigh": "xhigh",
+    }
+    assert json.loads(env["CODING_EVAL_PI_COMPAT"]) == {
+        "supportsReasoningEffort": True,
+        "maxTokensField": "max_tokens",
+    }
 
 
 def _import_harbor_agents_with_fake_native_harbor(monkeypatch):
@@ -726,6 +742,13 @@ def test_native_harbor_agent_bootstrap_supports_non_debian_images(monkeypatch):
             "top_p": 0.95,
             "top_k": 64,
         }),
+        "CODING_EVAL_PI_THINKING_LEVEL_MAP": json.dumps({
+            "high": "high",
+            "xhigh": "xhigh",
+        }),
+        "CODING_EVAL_PI_COMPAT": json.dumps({
+            "supportsReasoningEffort": True,
+        }),
     }):
         asyncio.run(agent.install(object()))
 
@@ -740,6 +763,9 @@ def test_native_harbor_agent_bootstrap_supports_non_debian_images(monkeypatch):
     config_command = agent.agent_commands[-1]
     assert "CODING_EVAL_PI_SAMPLING_PARAMS" in config_command
     assert "samplingParams" in config_command
+    assert "CODING_EVAL_PI_THINKING_LEVEL_MAP" in config_command
+    assert "thinkingLevelMap" in config_command
+    assert "CODING_EVAL_PI_COMPAT" in config_command
 
     asyncio.run(agent.run("fix it", object(), object()))
     run_command = agent.agent_commands[-1]
@@ -1010,6 +1036,73 @@ def test_runner_treats_harbor_agent_exception_as_infrastructure():
     assert manifest["exit_code"] == -1
     assert "pi: command not found" in manifest["error"]
     assert verdict["adapter_failed"] is True
+
+
+def test_runner_rejects_observed_thinking_level_mismatch():
+    """A requested xhigh run must not be scored when pi silently uses high."""
+    from harness.adapters.pi_vanilla import PiVanillaAdapter
+    from harness.runner import run_trial
+
+    suite = TerminalBenchSuite()
+    adapter = PiVanillaAdapter()
+
+    def fake_harbor(
+        self,
+        task_id,
+        model_id,
+        adapter_name,
+        workdir,
+        jobs_dir,
+        n_attempts=1,
+        vendor_dir=None,
+        thinking=None,
+    ):
+        trial_dir = Path(jobs_dir) / "job" / "trial"
+        session_path = trial_dir / "artifacts" / "pi-sessions" / "session.jsonl"
+        _write_pi_session_trace(session_path)
+        events = [json.loads(line) for line in session_path.read_text().splitlines()]
+        events.insert(1, {
+            "type": "thinking_level_change",
+            "timestamp": "2026-07-05T10:00:00Z",
+            "thinkingLevel": "high",
+        })
+        session_path.write_text(
+            "\n".join(json.dumps(event) for event in events) + "\n"
+        )
+        (trial_dir / "result.json").write_text(json.dumps({
+            "task_name": task_id,
+            "agent_result": {"output": "done"},
+            "verifier_result": {"rewards": {"reward": 1.0}},
+            "exception_info": None,
+        }))
+        return {"returncode": 0, "stdout": "", "stderr": ""}
+
+    with tempfile.TemporaryDirectory() as tmp:
+        tmp_path = Path(tmp)
+        vendor_dir = tmp_path / "vendor"
+        _make_task_yaml_task(vendor_dir, "hello-world")
+        with patch.object(TerminalBenchSuite, "run_harbor_job", fake_harbor), \
+             patch.object(suite, "verify") as verify:
+            verify.return_value = {"passed": True, "test_count": 1, "exit_code": 0}
+            manifest, verdict = run_trial(
+                suite,
+                adapter,
+                "local/muse-glimmer-30b",
+                "hello-world",
+                1,
+                tmp_path / "results",
+                vendor_dir,
+                thinking="xhigh",
+            )
+
+    verify.assert_not_called()
+    assert manifest["exit_code"] == -1
+    assert manifest["thinking_mismatch"] == {
+        "requested": "xhigh",
+        "observed": "high",
+    }
+    assert verdict["adapter_failed"] is True
+    assert "thinking level mismatch" in verdict["grader_output"].lower()
 
 
 def test_runner_records_terminal_bench_harbor_usage_trace():

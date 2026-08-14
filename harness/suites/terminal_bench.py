@@ -191,12 +191,17 @@ class TerminalBenchSuite:
             return env
 
         model_entry = {}
+        wanted_models = {
+            re.sub(r"[^a-z0-9]", "", provider_model.lower()),
+            re.sub(r"[^a-z0-9]", "", model_id.lower()),
+        }
         for item in provider_cfg.get("models", []):
             if isinstance(item, dict):
                 candidate = item.get("id") or item.get("name")
             else:
                 candidate = item
-            if candidate in (provider_model, model_id):
+            normalized = re.sub(r"[^a-z0-9]", "", str(candidate).lower())
+            if normalized in wanted_models:
                 model_entry = item if isinstance(item, dict) else {"id": item}
                 break
 
@@ -228,6 +233,14 @@ class TerminalBenchSuite:
             env["CODING_EVAL_PI_MAX_TOKENS"] = str(
                 model_metadata["max_tokens"]
             )
+        thinking_level_map = model_entry.get("thinkingLevelMap")
+        if isinstance(thinking_level_map, dict) and thinking_level_map:
+            env["CODING_EVAL_PI_THINKING_LEVEL_MAP"] = json.dumps(
+                thinking_level_map, sort_keys=True
+            )
+        compat = model_entry.get("compat")
+        if isinstance(compat, dict) and compat:
+            env["CODING_EVAL_PI_COMPAT"] = json.dumps(compat, sort_keys=True)
         if provider_name == "local":
             env["CODING_EVAL_LOCAL_BASE_URL"] = base_url
             if api_key:

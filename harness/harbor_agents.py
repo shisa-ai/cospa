@@ -92,6 +92,8 @@ _CODING_EVAL_AGENT_ENV_KEYS = (
     "CODING_EVAL_PI_SAMPLING_PARAMS",
     "CODING_EVAL_PI_CONTEXT_WINDOW",
     "CODING_EVAL_PI_MAX_TOKENS",
+    "CODING_EVAL_PI_THINKING_LEVEL_MAP",
+    "CODING_EVAL_PI_COMPAT",
     "CODING_EVAL_THINKING",
     "CODING_EVAL_REASONING_EFFORT",
 )
@@ -248,12 +250,16 @@ const modelId = process.env.CODING_EVAL_PI_PROVIDER_MODEL_ID || 'ornith-1.0-35b'
 const modelName = process.env.CODING_EVAL_PI_PROVIDER_MODEL_NAME || modelId;
 const contextWindow = Number(process.env.CODING_EVAL_PI_CONTEXT_WINDOW || 262144);
 const maxTokens = Number(process.env.CODING_EVAL_PI_MAX_TOKENS || 81920);
-let samplingParams = {};
-try {
-  samplingParams = JSON.parse(process.env.CODING_EVAL_PI_SAMPLING_PARAMS || '{}');
-} catch (error) {
-  throw new Error(`Invalid CODING_EVAL_PI_SAMPLING_PARAMS: ${error.message}`);
+function parseJsonEnv(name) {
+  try {
+    return JSON.parse(process.env[name] || '{}');
+  } catch (error) {
+    throw new Error(`Invalid ${name}: ${error.message}`);
+  }
 }
+const samplingParams = parseJsonEnv('CODING_EVAL_PI_SAMPLING_PARAMS');
+const thinkingLevelMap = parseJsonEnv('CODING_EVAL_PI_THINKING_LEVEL_MAP');
+const compat = parseJsonEnv('CODING_EVAL_PI_COMPAT');
 const models = [
   {
     id: modelId,
@@ -263,6 +269,8 @@ const models = [
     contextWindow,
     maxTokens,
     samplingParams,
+    thinkingLevelMap,
+    compat,
     cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0 }
   }
 ];
@@ -277,6 +285,8 @@ if (providerName === 'local') {
         contextWindow,
         maxTokens,
         samplingParams,
+        thinkingLevelMap,
+        compat,
         cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0 }
       });
     }

@@ -127,6 +127,20 @@ def test_polybench_pinned_parsers_cover_each_selected_language(
     assert failed in parsed["failed_tests"]
 
 
+@pytest.mark.parametrize(
+    "repo",
+    ["mrdoob/three.js", "sveltejs/svelte", "serverless/serverless"],
+)
+def test_polybench_javascript_parsers_accept_raw_harbor_output(repo):
+    output = (
+        ROOT / "tests/fixtures/swe_polybench/javascript_mocha.log"
+    ).read_text().split("Container exited", 1)[0].rstrip("\n")
+    assert "Container exited" not in output
+    parsed = parse_polybench_test_output(repo, output, ROOT / "vendor")
+    assert parsed["passed_tests"] == ["Source > Maths > Vector3 > length/lengthSq"]
+    assert parsed["failed_tests"] == ["Source > Maths > Box3 > intersectsPlane"]
+
+
 def test_polybench_parser_and_score_require_all_f2p_and_no_p2p_failure():
     row = selected_row()
     f2p = ast.literal_eval(row["F2P"])

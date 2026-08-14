@@ -1574,3 +1574,19 @@ Append-only development log for the `cospa` repository.
   documented unrelated baseline failures.
 - Decision: discard the interrupted batch evidence and restart validation from
   a clean directory; no task verdict from the raced run is accepted.
+
+## 2026-08-14 — Parse raw Harbor JavaScript verifier output
+
+- Context: the real PolyBench batch produced complete Mocha JSON, but the
+  pinned upstream JavaScript parsers returned zero tests because they expect
+  their Docker runner's trailing `Container exited` framing sentinel.
+- Change: recreate that runner boundary only when Harbor's raw verifier output
+  lacks it, without changing the test command or test content.
+- Evidence: the RED test failed for all three selected JavaScript parser
+  mappings and is GREEN. Re-parsing real Harbor artifacts recovers valid
+  null/gold outcomes for two Serverless and two Svelte tasks (13, 195, 770,
+  and 2,748 tests). Full pytest reports 314 passed and only the two documented
+  baseline failures.
+- Decision: preserve the pinned upstream parsers rather than forking their
+  result logic; normalize only the execution-wrapper framing Cospa replaced.
+- Next: rerun the 38-task null/gold gate with corrected parser framing.

@@ -64,9 +64,20 @@ if not parser_name or not hasattr(parsers, parser_name):
 parsed = getattr(parsers, parser_name)(test_content=sys.stdin.read()).parse()
 print(json.dumps(parsed))
 '''
+    # Upstream parsers receive DockerManager logs, which always add this
+    # sentinel after command output. Harbor exposes raw verifier stdout, and
+    # several JSON parsers otherwise truncate the final byte while searching
+    # for that boundary. Recreate only the runner framing, not test content.
+    parser_output = output
+    if "Container exited with status code:" not in parser_output:
+        parser_output = (
+            parser_output.rstrip("\n")
+            + "\nContainer exited with status code: unknown\n"
+        )
+
     completed = subprocess.run(
         [sys.executable, "-c", parser_program, str(package_root), repo],
-        input=output,
+        input=parser_output,
         capture_output=True,
         text=True,
         timeout=30,

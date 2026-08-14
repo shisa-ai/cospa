@@ -17,6 +17,7 @@ PROJECT_ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(PROJECT_ROOT))
 
 from harness.adapters.pi_vanilla import AdapterResult
+from harness.adapters.session_utils import trial_session_dir
 from harness.runner import run_trial
 from harness.subprocess_utils import agent_sandbox_cwd
 from harness.telemetry import (
@@ -170,6 +171,16 @@ def test_collect_pi_session_usage_copies_raw_trace_by_workdir():
         assert summary["status"] == "observed"
         assert summary["trace_files"] == ["out/pi_session.jsonl"]
         assert summary["prompt_tokens"] == 300
+
+
+def test_trial_session_dir_resolves_relative_result_paths(tmp_path, monkeypatch):
+    """Relative --results-dir paths must not write sessions inside workdir."""
+    monkeypatch.chdir(tmp_path)
+
+    session_dir = trial_session_dir(Path("results/run/out/session.log"))
+
+    assert session_dir == (tmp_path / "results/run/out/pi-sessions").resolve()
+    assert session_dir.is_absolute()
 
 
 def test_collect_pi_session_usage_reads_explicit_trial_session_dir():

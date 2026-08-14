@@ -19,6 +19,7 @@ from pathlib import Path
 from typing import Any, Dict, List
 
 from harness.subprocess_utils import run_command
+from harness.telemetry import load_model_metadata
 
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
@@ -213,6 +214,20 @@ class TerminalBenchSuite:
         )
         if api_key:
             env["CODING_EVAL_PI_PROVIDER_API_KEY"] = api_key
+        model_metadata = load_model_metadata(model_id)
+        sampling_params = model_metadata.get("sampling_params")
+        if isinstance(sampling_params, dict) and sampling_params:
+            env["CODING_EVAL_PI_SAMPLING_PARAMS"] = json.dumps(
+                sampling_params, sort_keys=True
+            )
+        if model_metadata.get("context_window") is not None:
+            env["CODING_EVAL_PI_CONTEXT_WINDOW"] = str(
+                model_metadata["context_window"]
+            )
+        if model_metadata.get("max_tokens") is not None:
+            env["CODING_EVAL_PI_MAX_TOKENS"] = str(
+                model_metadata["max_tokens"]
+            )
         if provider_name == "local":
             env["CODING_EVAL_LOCAL_BASE_URL"] = base_url
             if api_key:

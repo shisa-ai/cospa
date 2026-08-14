@@ -34,7 +34,7 @@ def trial_session_dir(log_file: Path | str) -> Path:
     filename component. Deep result roots can exceed Linux NAME_MAX (255
     bytes), so benchmark adapters always select an explicit directory instead.
     """
-    return Path(log_file).parent / "pi-sessions"
+    return Path(log_file).resolve().parent / "pi-sessions"
 
 
 def trial_session_args(log_file: Path | str) -> list[str]:

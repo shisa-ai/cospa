@@ -376,6 +376,7 @@ rules, and a `c=1/2/4/8/16` ladder. The pilot sizes are:
 | SWE-PolyBench Verified | 28 / 382 (38 screened) | Ready for Ornith smoke; all retained tasks passed the three-observation null/gold gate offline |
 | FeatureBench Lite | 6 / 30 | Dataset and 6 image digests locked; gold/null/repeat validation pending |
 | BigCodeBench-Hard Instruct | 15 / 148 | Non-agentic adapter ready; 15/15 gold pass and 15/15 null fail; Ornith smoke pending |
+| BigCodeBench-Hard agentic | 15 / 148 | Cospa scaffold adaptation ready; representative native null/gold gate passed 3/3 and both local-model agent paths reached native verdicts |
 
 **Measured setup state, 2026-08-14:** the host has 683 GiB free on `/`; all
 listed source repositories and external dataset files are present at the
@@ -614,8 +615,15 @@ tail latency, setup costs, and failure rates decide whether c=16 is retained.
   15/15 gold solutions
   pass, 15/15 null solutions fail, and the upstream ground-truth rate is 1.000;
   `BigCodeBench/15` repeats each condition cleanly three times.
-- **Cospa decision:** good low-cost orthogonal anchor, never a replacement for
-  `aider_cospa` or `cospa_repo`, and never an arm in the scaffold matrix.
+- **Cospa scaffold adaptation:** `bigcodebench_hard_agentic` reuses the frozen
+  pilot15 public task IDs and the same pinned, network-disabled native evaluator,
+  but directs each coding agent to implement `solution.py` under normal
+  model-card sampling and tool access. This is explicitly not an official
+  BigCodeBench Instruct Pass@1 protocol; it exists only for matched
+  `pi_vanilla`/`pi_devstack` scaffold comparisons.
+- **Cospa decision:** retain the official arm as a low-cost orthogonal anchor
+  and report the separately labeled agentic adaptation as a scaffold diagnostic;
+  neither replaces `aider_cospa` or `cospa_repo`, and their scores never merge.
 
 ### LiveCodeBench
 

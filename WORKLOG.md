@@ -1790,3 +1790,27 @@ Append-only development log for the `cospa` repository.
   resume their mixed retry artifacts.
 - Next: add the separately labeled agentic BigCodeBench workspace suite, then
   start fresh vanilla and devstack cells for agentic BCB and PolyBench.
+
+## 2026-08-15 — Adapt BigCodeBench for scaffold comparison
+
+- Context: the requested experiment compares `pi_vanilla` and `pi_devstack`,
+  while the existing official BigCodeBench arm intentionally bypasses both and
+  therefore cannot answer the scaffold question.
+- Change: add separately labeled `bigcodebench_hard_agentic`, reusing the same
+  public pilot15 and pinned hidden evaluator while directing agents to implement
+  `solution.py` under model-card sampling and normal tools. Keep official BCB
+  results separate. Export the same sampling/max-token config into Harbor, and
+  resolve relative trial session paths so generic runs retain behavior traces.
+- Evidence: unit tests cover public-only materialization, suite/adapter
+  distinctness, unchanged-starter rejection, native submission packaging, and
+  model-card sampling. `BigCodeBench/15` passed native null/gold qualification
+  for three of three repeats per condition. Real Muse and DeepSeek vanilla
+  agents both edited the workspace and reached native verdicts; a final
+  DeepSeek smoke recorded 25,020 tokens, five turns/tools, and 38.98/0.03
+  seconds inference/tool time. Full pytest: 343 passed with only the two
+  documented unrelated baseline failures.
+- Decision: official `bigcodebench_hard_instruct` remains an orthogonal anchor;
+  only `bigcodebench_hard_agentic` enters the vanilla/devstack matrix, and the
+  two score namespaces never merge.
+- Next: launch fresh `c=8` vanilla cells for agentic BCB15 and PolyBench28 on
+  both models, validate all artifacts, then run matched devstack cells.

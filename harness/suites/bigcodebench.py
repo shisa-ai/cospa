@@ -307,3 +307,107 @@ class BigCodeBenchHardInstructSuite:
             "groundtruth_pass_rate": gt_rate,
             "details": details,
         }
+
+
+AGENTIC_SOLUTION_FILE = "solution.py"
+AGENTIC_STARTER_SOLUTION = (
+    "# Implement the complete self-contained Python solution below.\n"
+)
+
+
+class BigCodeBenchHardAgenticSuite(BigCodeBenchHardInstructSuite):
+    """BigCodeBench-Hard tasks adapted to Cospa's scaffold comparison."""
+
+    name = "bigcodebench_hard_agentic"
+    version = "0.1"
+
+    def materialize_task(
+        self,
+        task_id: str,
+        workdir: Path,
+        vendor_dir: Path | None = None,
+    ) -> dict[str, Any]:
+        task_data = super().materialize_task(task_id, workdir, vendor_dir)
+        public_prompt = self.tasks[task_id]["instruct_prompt"].strip()
+        prompt = (
+            "Work in the provided workspace and implement the complete "
+            "self-contained Python solution in `solution.py`. Only the contents "
+            "of `solution.py` will be submitted to the native evaluator; do not "
+            "only describe the answer in chat. You may inspect and execute your "
+            "own visible files, but hidden tests and reference solutions are "
+            "unavailable.\n\nPublic task:\n"
+            f"{public_prompt}"
+        )
+        workdir = Path(workdir)
+        (workdir / "prompt.txt").write_text(prompt + "\n")
+        (workdir / AGENTIC_SOLUTION_FILE).write_text(AGENTIC_STARTER_SOLUTION)
+
+        task_data.update(
+            {
+                "prompt": prompt,
+                "problem": task_id.replace("/", "_"),
+                "solution_file": AGENTIC_SOLUTION_FILE,
+                "timeout": 1800,
+            }
+        )
+        for key in (
+            "required_adapter",
+            "tool_call_parser",
+            "temperature",
+            "top_p",
+            "top_k",
+            "max_tokens",
+            "thinking_policy",
+            "sampling_source",
+            "sampling_rationale",
+        ):
+            task_data.pop(key, None)
+        return task_data
+
+    def manifest_metadata(self, task_data: dict[str, Any]) -> dict[str, Any]:
+        metadata = super().manifest_metadata(task_data)
+        metadata.update(
+            {
+                "protocol": "bigcodebench_hard_agentic_workspace",
+                "tools_enabled": True,
+                "solution_file": AGENTIC_SOLUTION_FILE,
+                "scaffold_comparison": True,
+                "request_overrides": {},
+            }
+        )
+        return metadata
+
+    def verify(self, task_data: dict[str, Any], workdir: Path) -> dict[str, Any]:
+        workdir = Path(workdir)
+        solution_path = workdir / task_data.get(
+            "solution_file", AGENTIC_SOLUTION_FILE
+        )
+        try:
+            solution = solution_path.read_text()
+        except OSError as exc:
+            return {
+                "passed": False,
+                "test_count": 0,
+                "grader_output": f"Missing agentic solution file: {exc}",
+                "exit_code": 1,
+                "failure_class": "incorrect",
+            }
+        if not solution.strip() or solution.strip() == AGENTIC_STARTER_SOLUTION.strip():
+            return {
+                "passed": False,
+                "test_count": 0,
+                "grader_output": "Agent left the solution file unchanged",
+                "exit_code": 1,
+                "failure_class": "incorrect",
+            }
+
+        (workdir / "raw-sample.jsonl").write_text(
+            json.dumps(
+                {
+                    "task_id": task_data["task_id"],
+                    "raw_solution": solution,
+                }
+            )
+            + "\n"
+        )
+        return super().verify(task_data, workdir)

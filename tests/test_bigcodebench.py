@@ -9,6 +9,7 @@ import pytest
 
 from harness.adapters.bigcodebench_openai import BigCodeBenchOpenAIAdapter
 from harness.runner import run_trial, validate_required_adapter
+from harness.suites import bigcodebench as bigcodebench_module
 from harness.suites.bigcodebench import (
     BigCodeBenchHardInstructSuite,
     evaluation_counts,
@@ -248,6 +249,167 @@ def test_bigcodebench_adapter_retains_reasoning_only_response_without_retry(tmp_
         "chatcmpl-reasoning-only"
     )
     assert not (workdir / "raw-sample.jsonl").exists()
+
+
+def test_agentic_bigcodebench_materializes_distinct_public_workspace(tmp_path):
+    """The scaffold arm must be distinct without exposing hidden artifacts."""
+    suite_class = getattr(
+        bigcodebench_module, "BigCodeBenchHardAgenticSuite", None
+    )
+    assert suite_class is not None, "agentic BigCodeBench suite is not implemented"
+    from harness.suites import load_suite
+
+    suite = suite_class()
+    assert isinstance(load_suite("bigcodebench_hard_agentic"), suite_class)
+    workdir = tmp_path / "work"
+
+    task = suite.materialize_task("BigCodeBench/15", workdir, ROOT / "vendor")
+
+    assert suite.name == "bigcodebench_hard_agentic"
+    assert suite.get_task_ids(ROOT / "vendor") == (
+        BigCodeBenchHardInstructSuite().get_task_ids(ROOT / "vendor")
+    )
+    assert "required_adapter" not in task
+    assert "thinking_policy" not in task
+    assert "temperature" not in task
+    assert "top_p" not in task
+    assert "max_tokens" not in task
+    assert task["solution_file"] == "solution.py"
+    assert task["timeout"] == 1800
+    assert task["prompt"].startswith("Work in the provided workspace")
+    assert "Execute a list of shell commands" in task["prompt"]
+    assert (workdir / "solution.py").read_text().startswith(
+        "# Implement the complete self-contained Python solution below."
+    )
+    assert sorted(path.name for path in workdir.iterdir()) == [
+        "prompt.txt",
+        "solution.py",
+    ]
+    assert "canonical_solution" not in task
+    assert "test" not in task
+
+    metadata = suite.manifest_metadata(task)
+    assert metadata["protocol"] == "bigcodebench_hard_agentic_workspace"
+    assert metadata["tools_enabled"] is True
+    assert metadata["solution_file"] == "solution.py"
+
+
+def test_agentic_bigcodebench_packages_workspace_solution_for_native_verifier(
+    tmp_path,
+):
+    suite_class = getattr(
+        bigcodebench_module, "BigCodeBenchHardAgenticSuite", None
+    )
+    assert suite_class is not None, "agentic BigCodeBench suite is not implemented"
+    suite = suite_class()
+    workdir = tmp_path / "work"
+    task = suite.materialize_task("BigCodeBench/15", workdir, ROOT / "vendor")
+    solution = "def task_func(commands):\n    return ['ok']\n"
+    (workdir / "solution.py").write_text(solution)
+
+    with mock.patch.object(
+        suite,
+        "_verify",
+        return_value={
+            "passed": True,
+            "test_count": 1,
+            "failure_class": "resolved",
+            "exit_code": 0,
+        },
+    ) as verify:
+        verdict = suite.verify(task, workdir)
+
+    assert verdict["passed"] is True
+    verify.assert_called_once_with(task, workdir)
+    sample = json.loads((workdir / "raw-sample.jsonl").read_text())
+    assert sample == {"task_id": "BigCodeBench/15", "raw_solution": solution}
+
+
+def test_agentic_bigcodebench_rejects_unchanged_starter_without_docker(tmp_path):
+    suite_class = getattr(
+        bigcodebench_module, "BigCodeBenchHardAgenticSuite", None
+    )
+    assert suite_class is not None, "agentic BigCodeBench suite is not implemented"
+    suite = suite_class()
+    workdir = tmp_path / "work"
+    task = suite.materialize_task("BigCodeBench/15", workdir, ROOT / "vendor")
+
+    verdict = suite.verify(task, workdir)
+
+    assert verdict["passed"] is False
+    assert verdict["failure_class"] == "incorrect"
+    assert verdict["exit_code"] == 1
+    assert not verdict.get("verifier_failed")
+
+
+def test_runner_agentic_bigcodebench_uses_model_scaffold_sampling(tmp_path):
+    suite_class = getattr(
+        bigcodebench_module, "BigCodeBenchHardAgenticSuite", None
+    )
+    assert suite_class is not None
+    suite = suite_class()
+    captured_task = {}
+
+    class Adapter:
+        name = "pi_vanilla"
+        version = "test"
+        uses_pi_session = False
+        uses_workspace_sandbox = True
+
+        def run(self, task_data, workdir, log_file, stderr_file):
+            captured_task.update(task_data)
+            (workdir / "solution.py").write_text(
+                "def task_func(commands):\n    return ['ok']\n"
+            )
+            return SimpleNamespace(
+                returncode=0,
+                error=None,
+                usage=None,
+                inference_seconds=1.0,
+                behavior={"status": "observed", "tool_calls": 1},
+            )
+
+    with mock.patch(
+        "harness.runner.load_model_metadata",
+        return_value={
+            "max_tokens": 65536,
+            "sampling_params": {
+                "temperature": 1.0,
+                "top_p": 0.95,
+                "top_k": 64,
+            },
+            "sampling_source": "model-card",
+        },
+    ), mock.patch.object(
+        suite,
+        "verify",
+        return_value={"passed": True, "test_count": 1, "exit_code": 0},
+    ):
+        manifest, verdict = run_trial(
+            suite,
+            Adapter(),
+            "local/muse-glimmer-30b",
+            "BigCodeBench/15",
+            1,
+            tmp_path / "results",
+            ROOT / "vendor",
+            thinking="xhigh",
+        )
+
+    assert verdict["passed"] is True
+    assert captured_task["thinking"] == "xhigh"
+    assert manifest["sampling"] == {
+        "temperature": 1.0,
+        "top_p": 0.95,
+        "top_k": 64,
+        "max_tokens": 65536,
+        "source": "model-card",
+        "thinking": "xhigh",
+        "thinking_token_budget": 12000,
+        "thinking_token_budget_source": "coding-eval",
+    }
+    assert manifest["suite"]["tools_enabled"] is True
+    assert manifest["suite"]["scaffold_comparison"] is True
 
 
 def test_bigcodebench_verifier_uses_pinned_offline_container(tmp_path):

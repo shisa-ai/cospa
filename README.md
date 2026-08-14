@@ -302,6 +302,25 @@ mamba run -n cospa python harness/runner.py \
 The first verifier pull is about 15 GB. This protocol records zero tool calls
 by construction and must not be substituted into the agent scaffold matrix.
 
+For a scaffold comparison over the same public pilot15 and pinned hidden
+verifier, use the separately labeled workspace adaptation. It directs the
+agent to implement `solution.py` and uses normal model-card sampling and tool
+access:
+
+```bash
+mamba run -n cospa python harness/runner.py \
+  --suite bigcodebench_hard_agentic \
+  --adapter pi_vanilla \
+  --model local/muse-glimmer-30b \
+  --thinking xhigh \
+  --concurrency 8 \
+  --k 1
+```
+
+Run the same suite with `pi_devstack` for the matched scaffold arm. Agentic
+scores are a Cospa adapter diagnostic and are never merged with official
+BigCodeBench Instruct Pass@1 rows.
+
 ## Runner Output
 
 Interactive `harness/runner.py` runs print a lightweight elapsed-time heartbeat

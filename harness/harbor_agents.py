@@ -89,6 +89,9 @@ _CODING_EVAL_AGENT_ENV_KEYS = (
     "CODING_EVAL_PI_PROVIDER_API",
     "CODING_EVAL_PI_PROVIDER_MODEL_ID",
     "CODING_EVAL_PI_PROVIDER_MODEL_NAME",
+    "CODING_EVAL_PI_SAMPLING_PARAMS",
+    "CODING_EVAL_PI_CONTEXT_WINDOW",
+    "CODING_EVAL_PI_MAX_TOKENS",
     "CODING_EVAL_THINKING",
     "CODING_EVAL_REASONING_EFFORT",
 )
@@ -243,14 +246,23 @@ const apiKey = (
 const api = process.env.CODING_EVAL_PI_PROVIDER_API || 'openai-completions';
 const modelId = process.env.CODING_EVAL_PI_PROVIDER_MODEL_ID || 'ornith-1.0-35b';
 const modelName = process.env.CODING_EVAL_PI_PROVIDER_MODEL_NAME || modelId;
+const contextWindow = Number(process.env.CODING_EVAL_PI_CONTEXT_WINDOW || 262144);
+const maxTokens = Number(process.env.CODING_EVAL_PI_MAX_TOKENS || 81920);
+let samplingParams = {};
+try {
+  samplingParams = JSON.parse(process.env.CODING_EVAL_PI_SAMPLING_PARAMS || '{}');
+} catch (error) {
+  throw new Error(`Invalid CODING_EVAL_PI_SAMPLING_PARAMS: ${error.message}`);
+}
 const models = [
   {
     id: modelId,
     name: modelName,
     reasoning: true,
     input: ['text'],
-    contextWindow: 262144,
-    maxTokens: 81920,
+    contextWindow,
+    maxTokens,
+    samplingParams,
     cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0 }
   }
 ];
@@ -262,8 +274,9 @@ if (providerName === 'local') {
         name: 'Ornith 1.0 35B',
         reasoning: true,
         input: ['text'],
-        contextWindow: 262144,
-        maxTokens: 81920,
+        contextWindow,
+        maxTokens,
+        samplingParams,
         cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0 }
       });
     }

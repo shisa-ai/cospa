@@ -640,6 +640,35 @@ def test_run_harbor_job_exports_thinking_to_container_agent_env():
     assert captured["env"]["CODING_EVAL_REASONING_EFFORT"] == "high"
 
 
+def test_harbor_env_exports_repo_sampling_profile(tmp_path):
+    """Container pi config must use the same profile recorded by the runner."""
+    home = tmp_path / "home"
+    models_dir = home / ".pi" / "agent"
+    models_dir.mkdir(parents=True)
+    (models_dir / "models.json").write_text(json.dumps({
+        "providers": {
+            "local": {
+                "baseUrl": "http://model-relay:8013/v1",
+                "models": [{
+                    "id": "Muse-Glimmer-30B",
+                    "name": "Muse Glimmer 30B",
+                }],
+            }
+        }
+    }))
+
+    with patch("harness.suites.terminal_bench.Path.home", return_value=home):
+        env = TerminalBenchSuite()._harbor_env("local/muse-glimmer-30b")
+
+    assert json.loads(env["CODING_EVAL_PI_SAMPLING_PARAMS"]) == {
+        "temperature": 1.0,
+        "top_p": 0.95,
+        "top_k": 64,
+    }
+    assert env["CODING_EVAL_PI_CONTEXT_WINDOW"] == "131072"
+    assert env["CODING_EVAL_PI_MAX_TOKENS"] == "65536"
+
+
 def _import_harbor_agents_with_fake_native_harbor(monkeypatch):
     """Import the modern Harbor agent branch without Harbor installed."""
     for name in list(sys.modules):
@@ -690,7 +719,15 @@ def test_native_harbor_agent_bootstrap_supports_non_debian_images(monkeypatch):
     harbor_agents = _import_harbor_agents_with_fake_native_harbor(monkeypatch)
     agent = harbor_agents.PiVanillaHarborAgent("local/muse-glimmer-30b")
 
-    asyncio.run(agent.install(object()))
+    with patch.dict(os.environ, {
+        "CODING_EVAL_PI_PROVIDER_BASE_URL": "http://model-relay:8013/v1",
+        "CODING_EVAL_PI_SAMPLING_PARAMS": json.dumps({
+            "temperature": 1.0,
+            "top_p": 0.95,
+            "top_k": 64,
+        }),
+    }):
+        asyncio.run(agent.install(object()))
 
     dependency_command = agent.root_commands[0]
     assert "command -v curl" in dependency_command
@@ -700,6 +737,9 @@ def test_native_harbor_agent_bootstrap_supports_non_debian_images(monkeypatch):
     install_command = agent.agent_commands[0]
     assert 'nvm_dir="${NVM_DIR:-$HOME/.nvm}"' in install_command
     assert '. "$nvm_dir/nvm.sh"' in install_command
+    config_command = agent.agent_commands[-1]
+    assert "CODING_EVAL_PI_SAMPLING_PARAMS" in config_command
+    assert "samplingParams" in config_command
 
     asyncio.run(agent.run("fix it", object(), object()))
     run_command = agent.agent_commands[-1]

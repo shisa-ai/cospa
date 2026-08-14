@@ -64,8 +64,8 @@ def parse_args():
         required=True,
         help=(
             "Suite name (aider_polyglot, terminal_bench, swe_atlas_pilot12, "
-            "bigcodebench_hard_instruct, swe_polybench_verified, "
-            "multi_swe_bench_flash)"
+            "bigcodebench_hard_instruct, bigcodebench_hard_agentic, "
+            "swe_polybench_verified, multi_swe_bench_flash)"
         ),
     )
     parser.add_argument(

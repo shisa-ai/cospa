@@ -111,7 +111,10 @@ reorder — earlier items unblock later ones.
       `n=1`, upstream sanitization, and calibrated evaluation in the immutable
       Linux/amd64 verifier image. Public prompts are committed; hidden tests
       and canonical solutions remain in the pinned parquet and enter only the
-      post-generation, network-disabled verifier container.
+      post-generation, network-disabled verifier container. The separately
+      labeled `bigcodebench_hard_agentic` suite reuses pilot15 and that verifier
+      but materializes an editable `solution.py` workspace for matched scaffold
+      comparisons; its scores never merge with the official protocol anchor.
 - [ ] **P11d. Suite: SWE-PolyBench Verified pilot28.**
       `harness/suites/swe_polybench.py` materializes the 28 tasks retained from
       an outcome-blind 38-task screen as Harbor tasks over digest-pinned images.

@@ -1836,3 +1836,19 @@ Append-only development log for the `cospa` repository.
   run controlled corrected ablations before interpreting model quality.
 - Next: finish the trace disagreement audit, relabel the affected artifacts
   honestly, and run a true-xhigh disagreement panel before the full matrix.
+
+## 2026-08-15 — Keep validation artifacts out of default scores
+
+- Context: default `./view` merged c1 validation smokes and preflight trials into
+  campaign token, cost, and costed-trial totals, producing rows such as 17/17
+  costed trials for a 15-task BCB campaign.
+- Change: hide `results/validation` and preflight paths alongside smoke/probe
+  paths in the default view while preserving explicit `--all` visibility.
+- Evidence: a RED viewer fixture showed validation and preflight rows leaking;
+  all 50 viewer tests pass. Against live artifacts, default `results` output is
+  now exactly equal to `--results-dir results/runs` across all six campaign
+  rows, including task, token, and costed-trial counts.
+- Decision: scored campaign rows come from `results/runs`; qualification and
+  diagnostic artifacts remain durable and available only through `--all`.
+- Next: complete controlled thinking and test-overlap sensitivity checks before
+  starting the corrected devstack matrix.

@@ -591,8 +591,12 @@ class ScoreHandler(SimpleHTTPRequestHandler):
     ) -> bool:
         run_path = str(parts.get("run_path", ""))
         run_path_lower = run_path.lower()
+        run_segments = set(Path(run_path_lower).parts)
         if not include_smoke and (
-            "smoke" in run_path_lower or "probe" in run_path_lower
+            "smoke" in run_path_lower
+            or "probe" in run_path_lower
+            or "preflight" in run_path_lower
+            or "validation" in run_segments
         ):
             return False
         search_text = cls._trial_search_text(parts)
@@ -2062,7 +2066,7 @@ def main(argv: list[str] | None = None) -> int:
         dest="include_smoke",
         action="store_true",
         default=False,
-        help="Include smoke/probe runs (hidden by default)",
+        help="Include smoke/probe/preflight/validation runs (hidden by default)",
     )
     common.add_argument(
         "--filter",

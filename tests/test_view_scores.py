@@ -374,8 +374,8 @@ def test_get_scores_reads_named_run_wrapper_tree():
     assert {task["task_id"] for task in details["tasks"]} == {task_id, task_id2}
 
 
-def test_get_scores_hides_smoke_and_probe_runs_by_default_and_all_restores_them():
-    """Default terminal view should focus on real runs, with --all for probes."""
+def test_get_scores_hides_noncampaign_runs_by_default_and_all_restores_them():
+    """Default view should exclude smoke, probe, validation, and preflight rows."""
     with tempfile.TemporaryDirectory() as tmp:
         results_dir = Path(tmp) / "results"
         _write_single_row(
@@ -391,6 +391,18 @@ def test_get_scores_hides_smoke_and_probe_runs_by_default_and_all_restores_them(
             task_id="python/probe",
         )
         _write_single_row(
+            results_dir / "validation" / "bcb-agentic-c1-20260704",
+            adapter="little_coder",
+            suite="terminal_bench",
+            task_id="validation/task",
+        )
+        _write_single_row(
+            results_dir / "campaign-preflight-c2-20260704",
+            adapter="pi_vanilla",
+            suite="aider_polyglot",
+            task_id="python/preflight",
+        )
+        _write_single_row(
             results_dir / "runs" / "ornith-high-20260704",
             adapter="pi_devstack",
             suite="aider_polyglot",
@@ -402,7 +414,9 @@ def test_get_scores_hides_smoke_and_probe_runs_by_default_and_all_restores_them(
         all_scores = h.get_scores(include_smoke=True)
 
     assert {row["adapter"] for row in default_scores} == {"pi_devstack"}
+    assert len(all_scores) == 5
     assert {row["adapter"] for row in all_scores} == {
+        "little_coder",
         "pi_devstack",
         "pi_superpowers",
         "pi_vanilla",

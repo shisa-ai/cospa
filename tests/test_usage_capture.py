@@ -350,6 +350,7 @@ def test_repo_models_include_glm_53_pool_metadata(tmp_path):
         "context_window": 1000000,
         "max_tokens": 128000,
         "reasoning": True,
+        "reasoning_effort_source": "zai-thinking-level-map",
         "cost": {
             "input": 0,
             "cacheRead": 0,

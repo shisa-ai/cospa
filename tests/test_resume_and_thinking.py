@@ -33,7 +33,23 @@ from harness.adapters.pi_devstack_superpowers import PiDevstackSuperpowersAdapte
 from harness.adapters.pi_superpowers import PiSuperpowersAdapter
 from harness.adapters.pi_vanilla import PiVanillaAdapter, AdapterResult
 from harness.suites.aider_polyglot import AiderPolyglotSuite
-from harness.runner import run_trial
+from harness.runner import parse_args, run_trial
+
+
+def test_runner_accepts_pi_max_thinking_level():
+    argv = [
+        "runner.py",
+        "--suite",
+        "bigcodebench_hard_agentic",
+        "--adapter",
+        "pi_vanilla",
+        "--model",
+        "codex/gpt-5.6-sol",
+        "--thinking",
+        "max",
+    ]
+    with patch.object(sys, "argv", argv):
+        assert parse_args().thinking == "max"
 
 
 def _make_aider_problem(vendor_dir: Path):

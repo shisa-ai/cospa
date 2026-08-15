@@ -47,6 +47,23 @@ def test_model_cards_have_explicit_sampling_profiles(model_id, expected):
     assert metadata["sampling_source"]
 
 
+@pytest.mark.parametrize(
+    "model_id",
+    [
+        "codex/gpt-5.6-luna",
+        "codex/gpt-5.6-terra",
+        "codex/gpt-5.6-sol",
+        "zai/glm-5.3",
+    ],
+)
+def test_proprietary_campaign_models_have_explicit_limits(model_id):
+    metadata = load_model_metadata(model_id)
+    assert metadata["reasoning"] is True
+    assert metadata["context_window"] >= 372000
+    assert metadata["max_tokens"] == 128000
+    assert metadata["reasoning_effort_source"]
+
+
 def test_manifest_records_configured_profile_not_server_default():
     metadata = {
         "sampling_params": {"temperature": 1.0, "top_p": 0.95, "top_k": 64},

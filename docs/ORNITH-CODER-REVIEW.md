@@ -996,8 +996,11 @@ The model preflight and score viewer have been tightened after the live smoke:
   `nvidia/nemotron-3-ultra-550b-a55b` are probed correctly
   (`fixed (shell test + live preflight)`).
 - `harness.runner.check_model_reachable()` now uses the same authenticated
-  provider config path before starting a matrix cell
-  (`fixed (unit test)`).
+  provider config path before starting a matrix cell. The 2026-08-15
+  proprietary-model preflight also closed a protocol gap: providers such as
+  `openai-codex-responses` are checked through Pi's native API implementation
+  instead of being mis-probed at `/chat/completions`
+  (`fixed (unit test + live preflight)`).
 - `configs/models.yaml` is aligned with the provider keys/model IDs present in
   `~/.pi/agent/models.json` (`zai/glm-5.2`,
   `aiand/qwen/qwen3.6-27b`, `minimax/MiniMax-M3`,

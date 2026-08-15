@@ -1964,3 +1964,28 @@ Append-only development log for the `cospa` repository.
   vanilla without requiring browser/TUI initialization in headless containers.
 - Next: rerun the invalid DS4 PolyBench devstack cell and the full Qwen
   vanilla/devstack reasoning grid sequentially at client c=16.
+
+## 2026-08-15 — Prepare proprietary-model comparison cells
+
+- Context: add a curiosity comparison for GPT-5.6 Luna, Terra, Sol, and GLM 5.3
+  on the same agentic BigCodeBench/PolyBench vanilla and devstack protocols at
+  client c=2, using each model's highest configured reasoning level.
+- Change: add explicit GPT-5.6 catalog limits, record the GLM reasoning-map
+  source, accept Pi's `max` thinking level, and route non-Chat-Completions
+  reachability checks through Pi's native provider implementation instead of
+  falsely probing every provider at `/chat/completions`.
+- Evidence: all four existing configured routes returned `OK` with authenticated
+  Pi requests and exact served identities (`gpt-5.6-{luna,terra,sol}` and
+  `glm-5.3`). Session traces recorded `max` for all GPT variants and `xhigh` for
+  GLM; its provider map translates `xhigh` to `max`. Direct localhost:8989
+  controls failed (`fetch failed` / connection error), so the established
+  `stg04.local:8989` topology remains unchanged. All 18 targeted tests pass;
+  full pytest reports 352 passed with the same two documented unrelated
+  shell-port and Terminal-Bench newline fixture failures.
+- Decision: use `max` for Luna/Terra/Sol and `xhigh` for GLM 5.3. Preserve the
+  preflight traces under `results/qualification/`, which remains excluded from
+  default scores. Catalog cost stays zero because the generated pool entries
+  advertise zero client-side pricing; compare token counts directly rather than
+  inferring external billing.
+- Next: launch 16 sequential cells (four models x two suites x two adapters) at
+  c=2 with fail-closed manifest, route, profile, and thinking checks.

@@ -114,7 +114,15 @@ def parse_args():
     parser.add_argument(
         "--thinking",
         default=None,
-        choices=["off", "minimal", "low", "medium", "high", "xhigh"],
+        choices=[
+            "off",
+            "minimal",
+            "low",
+            "medium",
+            "high",
+            "xhigh",
+            "max",
+        ],
         help=(
             "Thinking/effort level passed through to the adapter "
             "(pi --thinking). When unset, the adapter invokes pi with no "
@@ -424,6 +432,31 @@ def check_model_reachable(model_id: str, timeout: float = 10.0) -> bool:
     )
     if api_key_env and os.environ.get(api_key_env):
         api_key = os.environ[api_key_env]
+
+    api = prov_cfg.get("api")
+    if api and api != "openai-completions":
+        env = os.environ.copy()
+        env["PI_OFFLINE"] = "1"
+        try:
+            result = subprocess.run(
+                [
+                    "pi",
+                    "--no-extensions",
+                    "--no-skills",
+                    "--no-session",
+                    "--print",
+                    "--model",
+                    model_id,
+                    "Reply with exactly: OK",
+                ],
+                capture_output=True,
+                text=True,
+                timeout=timeout,
+                env=env,
+            )
+        except (OSError, subprocess.SubprocessError):
+            return False
+        return result.returncode == 0
 
     provider_models = []
     for item in prov_cfg.get("models", []):

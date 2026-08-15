@@ -70,6 +70,45 @@ def test_check_model_reachable_sends_provider_api_key(monkeypatch, tmp_path):
     assert json.loads(requests[0].data.decode())["model"] == "test/model-one"
 
 
+def test_codex_reachability_uses_pi_native_protocol(monkeypatch, tmp_path):
+    """Codex Responses providers must not be probed as Chat Completions."""
+    models_json = tmp_path / ".pi" / "agent" / "models.json"
+    models_json.parent.mkdir(parents=True)
+    models_json.write_text(json.dumps({
+        "providers": {
+            "codex": {
+                "baseUrl": "http://pool.test/backend-api",
+                "api": "openai-codex-responses",
+                "apiKey": "token",
+                "models": [{"id": "gpt-5.6-sol"}],
+            }
+        }
+    }))
+    monkeypatch.setenv("HOME", str(tmp_path))
+
+    import subprocess as sp
+    with patch(
+        "urllib.request.urlopen",
+        side_effect=AssertionError("must not use /chat/completions"),
+    ), patch(
+        "subprocess.run",
+        return_value=sp.CompletedProcess(
+            args=[], returncode=0, stdout="OK\n", stderr=""
+        ),
+    ) as run:
+        assert check_model_reachable("codex/gpt-5.6-sol") is True
+
+    command = run.call_args.args[0]
+    assert command[:4] == [
+        "pi",
+        "--no-extensions",
+        "--no-skills",
+        "--no-session",
+    ]
+    assert command[command.index("--model") + 1] == "codex/gpt-5.6-sol"
+    assert run.call_args.kwargs["env"]["PI_OFFLINE"] == "1"
+
+
 def test_should_run_reachability_check_default_true():
     """By default (no --skip-reachability), the check is enabled."""
     assert should_run_reachability_check(skip=False) is True

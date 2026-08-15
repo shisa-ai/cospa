@@ -23,7 +23,9 @@ from harness.path_utils import encode_model_path, encode_task_path
 def _write_trial(trial_dir: Path, *, passed: bool, wall_clock=10.0, exit_code=0,
                  test_count=1, adapter_failed=False, task_id="python/hello",
                  pending=False, model_id="nvidia/nemotron-3-ultra-550b-a55b",
-                 token_usage=None, model_cost=None, behavior=None):
+                 token_usage=None, model_cost=None, behavior=None,
+                 verdict_score=None, score_type=None, headline_metric=None,
+                 failure_class=None):
     """Write a manifest.json + verdict.json pair into a trial dir."""
     trial_dir.mkdir(parents=True, exist_ok=True)
     (trial_dir / "manifest.json").write_text(json.dumps({
@@ -34,7 +36,16 @@ def _write_trial(trial_dir: Path, *, passed: bool, wall_clock=10.0, exit_code=0,
             **({"cost": model_cost} if model_cost is not None else {}),
         },
         "adapter": {"id": "PiVanillaAdapter", "version": "vanilla"},
-        "suite": {"id": "AiderPolyglotSuite", "task_id": task_id},
+        "suite": {
+            "id": "AiderPolyglotSuite",
+            "task_id": task_id,
+            **({"score_type": score_type} if score_type is not None else {}),
+            **(
+                {"headline_metric": headline_metric}
+                if headline_metric is not None
+                else {}
+            ),
+        },
         "trial": 1,
         "timing": {"wall_clock_seconds": wall_clock},
         "token_usage": token_usage or {},
@@ -48,6 +59,14 @@ def _write_trial(trial_dir: Path, *, passed: bool, wall_clock=10.0, exit_code=0,
         "exit_code": exit_code,
         "adapter_failed": adapter_failed,
         "pending": pending,
+        **({"score": verdict_score} if verdict_score is not None else {}),
+        **({"score_type": score_type} if score_type is not None else {}),
+        **({"failure_class": failure_class} if failure_class is not None else {}),
+        **(
+            {"headline_metric": headline_metric}
+            if headline_metric is not None
+            else {}
+        ),
     }, indent=2))
 
 
@@ -173,6 +192,90 @@ def test_get_scores_reads_encoded_tree():
     assert row["total_tasks"] == 2, row
     assert row["passed_tasks"] == 1, row
     assert 0 < row["pass_rate"] <= 100, row
+
+
+def test_get_scores_keeps_continuous_diagnostics_separate_from_pass_rate():
+    """Continuous diagnostics use task-macro score without becoming resolution."""
+    with tempfile.TemporaryDirectory() as tmp:
+        results_dir = Path(tmp) / "results"
+        model_id = "local/diagnostic-model"
+        adapter = "pi_vanilla"
+        suite = "swe_explore_verified12"
+        common = {
+            "passed": True,
+            "model_id": model_id,
+            "score_type": "continuous_non_coding",
+            "headline_metric": "weighted_core_coverage",
+        }
+        for task_id, scores in (("repo/one", (0.2, 0.4)), ("repo/two", (0.9,))):
+            base = (
+                results_dir
+                / encode_model_path(model_id)
+                / adapter
+                / suite
+                / encode_task_path(task_id)
+            )
+            for index, score in enumerate(scores, start=1):
+                _write_trial(
+                    base / f"trial-{index}",
+                    task_id=task_id,
+                    verdict_score=score,
+                    **common,
+                )
+
+        h, server_mod = _make_handler(results_dir)
+        row = h.get_scores()[0]
+        terminal = server_mod.format_scores_terminal([row], results_dir=results_dir)
+        browser_html = h.generate_html()
+
+    assert row["score_type"] == "continuous_non_coding"
+    assert row["headline_metric"] == "weighted_core_coverage"
+    assert row["headline_score"] == pytest.approx(0.6)
+    assert row["score"] == pytest.approx(60.0)
+    assert row["pass_rate"] == 100.0
+    assert row["method"] == "task-macro mean weighted_core_coverage"
+    assert "60.0% WCC" in terminal
+    assert "60.0% WCC" in browser_html
+
+
+def test_get_scores_counts_legacy_invalid_continuous_output_as_zero():
+    """A capability-invalid diagnostic answer must not disappear from its mean."""
+    with tempfile.TemporaryDirectory() as tmp:
+        results_dir = Path(tmp) / "results"
+        common = {
+            "model_id": "local/diagnostic-model",
+            "score_type": "continuous_non_coding",
+            "headline_metric": "weighted_core_coverage",
+        }
+        root = (
+            results_dir
+            / encode_model_path(common["model_id"])
+            / "pi_vanilla"
+            / "swe_explore_verified12"
+        )
+        _write_trial(
+            root / encode_task_path("repo/hit") / "trial-1",
+            passed=True,
+            task_id="repo/hit",
+            verdict_score=0.6,
+            **common,
+        )
+        _write_trial(
+            root / encode_task_path("repo/invalid") / "trial-1",
+            passed=False,
+            task_id="repo/invalid",
+            failure_class="invalid_output",
+            **common,
+        )
+
+        h, _ = _make_handler(results_dir)
+        row = h.get_scores()[0]
+
+    assert row["headline_score"] == pytest.approx(0.3)
+    assert row["score"] == pytest.approx(30.0)
+    assert row["scored_tasks"] == 2
+    assert row["score_missing_tasks"] == 0
+    assert row["pass_rate"] == 50.0
 
 
 def test_verbose_scores_average_response_turns_across_trials():

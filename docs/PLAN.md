@@ -169,14 +169,27 @@ reorder — earlier items unblock later ones.
       null observations fail offline. Keep this Cospa panel distinct from the
       official Lite30 score, and require new mechanical qualification before
       claiming broader Lite or Fast100 coverage.
+- [ ] **P11g. Suite: SWE-Explore Verified12 diagnostic.**
+      `harness/suites/swe_explore.py` freezes one mechanically valid
+      Verified-derived task from each of 12 Python repositories without using
+      target-model outcomes. Agents explore immutable base-commit snapshots and
+      emit at most five ranked file/line regions; ground truth stays outside the
+      sandbox and the pinned official evaluator reports continuous weighted
+      core coverage. Thirty-six oracle observations score 1.0 and 36 null
+      observations score 0.0. The DS4 bake-off run selected this suite over the
+      slower third-party DABstep Harbor conversion. Keep the task-macro
+      continuous headline, any-core-line-hit diagnostic, and binary coding
+      resolution as distinct quantities.
 - [ ] **P12. Score viewer (`view-scores/`).** Static HTML + a tiny
       `server.py` that walks `results/` and renders a table:
-      rows = `(model, adapter, suite)`, cells = pass-rate with CI,
-      drill-down to per-task verdicts. Verbose terminal and HTML views expose
-      weighted inference/tool percentages plus mean tool/search calls; score
-      and task APIs retain aggregate exact tool/category maps, error/long-call
-      counts, slowest calls, and per-trial behavior rollups. Missing legacy
-      timing remains `-`, never inferred from ambiguous session timestamps.
+      rows = `(model, adapter, suite)`, cells = pass-rate with CI for binary
+      suites or task-macro headline score for explicitly continuous non-coding
+      diagnostics, drill-down to per-task verdicts. Verbose terminal and HTML
+      views expose weighted inference/tool percentages plus mean tool/search
+      calls; score and task APIs retain aggregate exact tool/category maps,
+      error/long-call counts, slowest calls, and per-trial behavior rollups.
+      Missing legacy timing remains `-`, never inferred from ambiguous session
+      timestamps.
       Borrow the *shape* from multieval's viewer; this is a clean-room write,
       not a port.
 - [ ] **P13. Cost-gated campaigns.** Do not launch a full Cartesian matrix.

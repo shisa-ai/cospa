@@ -1,0 +1,213 @@
+{
+  "name": "swe-explore-verified12-v1",
+  "version": "2026-08-16",
+  "source": {
+    "repository": "https://github.com/Qiushao-E/SWE-Explore-Bench.git",
+    "revision": "3c12dc5a551937038afcbdb6eb6bbf19f3ddd8c1",
+    "license": "MIT",
+    "evaluator_path": "eval.py",
+    "evaluator_sha256": "feea0a7fe67b08e68c940e10887d5b4feaae0b8c58e256eb09f253e65492d745"
+  },
+  "dataset": {
+    "repository": "https://huggingface.co/datasets/SWE-Explore-Bench/SWE-Explore-Bench",
+    "revision": "bdb0ae45d7c337d9e1dc3ebfe2a0af6bc7c1fbd9",
+    "license": "CC-BY-NC-ND-4.0",
+    "local_path": "vendor/eval-data/swe-explore/bench.final.public.jsonl",
+    "sha256": "dc4f114ececd0bfb987361c26ae5e2440456e2cccb36adfccb09ea5385aec202"
+  },
+  "issue_dataset": {
+    "repository": "https://huggingface.co/datasets/princeton-nlp/SWE-bench_Verified",
+    "revision": "c104f840cc67f8b6eec6f759ebc8b2693d585d4a",
+    "source_parquet_sha256": "a45b1fe4e2f0c8390b2b2938ac83e92ed5979000856808f3679c07812e9e6dcd",
+    "local_projection": "vendor/eval-data/swe-explore/swe-bench-verified-issues.jsonl",
+    "local_projection_sha256": "76711380a6bf13dfce75ea78baf98dbad79ea7b62ccdbf0caf18a1e4d4f63793"
+  },
+  "selection": {
+    "source_dataset": "verified",
+    "seed": "cospa-swe-explore-verified12-v1",
+    "uses_target_model_outcomes": false,
+    "policy": "Within each repository, take the minimum SHA-256 task rank whose official core paths and inclusive line spans are valid in the declared base-commit snapshot.",
+    "mechanical_gate": "Every core region path exists and 1 <= start <= end <= file line count in the pinned base-commit snapshot.",
+    "mechanically_rejected": {
+      "astropy/astropy": [
+        "astropy__astropy-13033"
+      ]
+    },
+    "source_task_count": 451,
+    "panel_size": 12,
+    "repository_count": 12,
+    "tasks_per_repository": 1
+  },
+  "protocol": {
+    "top_k_regions": 5,
+    "headline_metric": "weighted_core_coverage",
+    "score_type": "continuous_non_coding",
+    "secondary_metrics": [
+      "precision",
+      "recall",
+      "f1_score",
+      "hit_file_rate",
+      "noise_file_rate",
+      "hit_region_rate",
+      "noise_region_rate",
+      "context_efficiency",
+      "optional_coverage",
+      "ndcg_at_100",
+      "ndcg_at_300",
+      "ndcg_at_500",
+      "recall_at_100",
+      "recall_at_300",
+      "recall_at_500",
+      "first_useful_hit"
+    ],
+    "merge_with_coding_resolution": false
+  },
+  "task_ids": [
+    "astropy__astropy-12907",
+    "django__django-16315",
+    "matplotlib__matplotlib-20488",
+    "mwaskom__seaborn-3069",
+    "pallets__flask-5014",
+    "psf__requests-5414",
+    "pydata__xarray-3095",
+    "pylint-dev__pylint-4551",
+    "pytest-dev__pytest-7432",
+    "scikit-learn__scikit-learn-25931",
+    "sphinx-doc__sphinx-7910",
+    "sympy__sympy-15017"
+  ],
+  "tasks": [
+    {
+      "task_id": "astropy__astropy-12907",
+      "repository": "astropy/astropy",
+      "base_commit": "d16bfe05a744909de4b27f5875fe0d4ed41ce607",
+      "source_dataset": "verified",
+      "problem_statement_sha256": "c01334ec1b21a089c650cf2e7b96ab974469076bf1260d23885799e1f0a7551f",
+      "ground_truth_sha256": "6a3c5a9e1f38a3441af12c05a9f2dbf3fa7905fef6b68f17ef85dda64a6fc93c",
+      "snapshot_path": "vendor/eval-data/swe-explore/repos/astropy__astropy-12907",
+      "snapshot_sha256": "4d02894fbac91d28e219b82a6847965942c9203b1057921d544275de2c64066a",
+      "selection_hash": "225a39be90e012828b63816c491b85756305cda31a065e067c23222da04396c5"
+    },
+    {
+      "task_id": "django__django-16315",
+      "repository": "django/django",
+      "base_commit": "7d5329852f19c6ae78c6f6f3d3e41835377bf295",
+      "source_dataset": "verified",
+      "problem_statement_sha256": "1e77d04330a04cec33e1085c3641b845bddc133ae3c5102cdd71b9fd61023fa9",
+      "ground_truth_sha256": "cf3eea4bbea8940670edb95cd21ca9e8ad8af580270e491158ef8cbfd835eac1",
+      "snapshot_path": "vendor/eval-data/swe-explore/repos/django__django-16315",
+      "snapshot_sha256": "e479bfec0efcb724351e71091bc50194f6d3bf7ed98a9e8b0bc7a2d33c2ff60a",
+      "selection_hash": "01320cadb52db10ba9f57628c1bdbb3977c5e03a53edaf2c093833c9245f8e08"
+    },
+    {
+      "task_id": "matplotlib__matplotlib-20488",
+      "repository": "matplotlib/matplotlib",
+      "base_commit": "b7ce415c15eb39b026a097a2865da73fbcf15c9c",
+      "source_dataset": "verified",
+      "problem_statement_sha256": "12056807682e586594be117be56e64ed357f0907510f7d7fb645a4241e4fa165",
+      "ground_truth_sha256": "2a22d2ab5160a2f80dc3afa5fc918ff88b7bc50dbe43716137d7560af5669f60",
+      "snapshot_path": "vendor/eval-data/swe-explore/repos/matplotlib__matplotlib-20488",
+      "snapshot_sha256": "0cab22fbb5d970953c8049829619e3648cdb25dc6b6fe005bcbccecc1ea8bb4c",
+      "selection_hash": "0a0d2afb012a97f77a7c668fe3bbf273c0fad56785df61ff8c4b3f9752f3e1d1"
+    },
+    {
+      "task_id": "mwaskom__seaborn-3069",
+      "repository": "mwaskom/seaborn",
+      "base_commit": "54cab15bdacfaa05a88fbc5502a5b322d99f148e",
+      "source_dataset": "verified",
+      "problem_statement_sha256": "739f9b2e6297497555d4d850e066137b282ad7c5bbcdee814e957ef0f81a9b1e",
+      "ground_truth_sha256": "f0d008825a1d4421a8ae26f4050d645913ed5cc16f675ab7824a10f5cdb4ff64",
+      "snapshot_path": "vendor/eval-data/swe-explore/repos/mwaskom__seaborn-3069",
+      "snapshot_sha256": "909cf7e8d6368d18656bb5c0fa809dfae05168c889ffd683d0655e374af576d6",
+      "selection_hash": "5f61d698c10662422afdaa3ad58bbad3462db834a050e7a91764e2ac9c98b5fa"
+    },
+    {
+      "task_id": "pallets__flask-5014",
+      "repository": "pallets/flask",
+      "base_commit": "7ee9ceb71e868944a46e1ff00b506772a53a4f1d",
+      "source_dataset": "verified",
+      "problem_statement_sha256": "f77d8eab7dd608172aa78b3b50dfa7e0e9b3a6a1c52d14a1cb02417eb5a0ab00",
+      "ground_truth_sha256": "c65498264fe6bc4c6cfee727b885e98130aaab3ada9efd7750769ae7f49674a0",
+      "snapshot_path": "vendor/eval-data/swe-explore/repos/pallets__flask-5014",
+      "snapshot_sha256": "e38aa84e8e1685f2b99371cbee815b05d80ffb21a7ba2a2e2a0a4c03e491a7bc",
+      "selection_hash": "38f1b3929bcea3a5663410853925be537a1e0329ccb60f2dabefad6f3185f25c"
+    },
+    {
+      "task_id": "psf__requests-5414",
+      "repository": "psf/requests",
+      "base_commit": "39d0fdd9096f7dceccbc8f82e1eda7dd64717a8e",
+      "source_dataset": "verified",
+      "problem_statement_sha256": "08faa0ea47836476b5f4b3709c06a00569996ccc654011299f9c8587cd7007ba",
+      "ground_truth_sha256": "edaf614cd6fbf38d028a389adc8b2761b506c9e5dc49e0d98e7622d2210e87b9",
+      "snapshot_path": "vendor/eval-data/swe-explore/repos/psf__requests-5414",
+      "snapshot_sha256": "1bf7ebcc7bc4e15f84449458f894c126a088c027dd362dfa8ec81d8885b362d9",
+      "selection_hash": "0551834eabb595092c50421f6a392fec0262492e5a56a7c7299fe86cf11d3345"
+    },
+    {
+      "task_id": "pydata__xarray-3095",
+      "repository": "pydata/xarray",
+      "base_commit": "1757dffac2fa493d7b9a074b84cf8c830a706688",
+      "source_dataset": "verified",
+      "problem_statement_sha256": "3d8f2d8422b56bd5980ec478be1413ef87805484446fc15dbd482342a59abb25",
+      "ground_truth_sha256": "2f7145b0a625ad094f215b2efc6591a34c6701b89dd72dd77d2d13d7ac49afde",
+      "snapshot_path": "vendor/eval-data/swe-explore/repos/pydata__xarray-3095",
+      "snapshot_sha256": "0a4a1f5402ceeb8c11f0e07ce79189cfff161f2c1e9dd4f6f796b67919e83951",
+      "selection_hash": "13e36d45d4c97adf481bcd4d5094f560143a524b343be785acdd8fc6986a52f8"
+    },
+    {
+      "task_id": "pylint-dev__pylint-4551",
+      "repository": "pylint-dev/pylint",
+      "base_commit": "99589b08de8c5a2c6cc61e13a37420a868c80599",
+      "source_dataset": "verified",
+      "problem_statement_sha256": "28e19b9ac4f2a25215824cc162bb26d6ef73d661478746cd0cfc2e0432fadb18",
+      "ground_truth_sha256": "e9d45b106a423ee157b23bb00b178b4b422da9a6c174cad3f32c0c5ec74ceca2",
+      "snapshot_path": "vendor/eval-data/swe-explore/repos/pylint-dev__pylint-4551",
+      "snapshot_sha256": "5d794b36620e94c495448aa7b7a138c536748848f9576458be87aaa62d7e2bf6",
+      "selection_hash": "104abccebb459142b25e530421351c672242e9cd01172487b2bc9a11c8a2ccce"
+    },
+    {
+      "task_id": "pytest-dev__pytest-7432",
+      "repository": "pytest-dev/pytest",
+      "base_commit": "e6e300e729dd33956e5448d8be9a0b1540b4e53a",
+      "source_dataset": "verified",
+      "problem_statement_sha256": "f8453cfb1e017be81d0fd5ac8fc5b6faeff6045f71763c81e7fd51537a81ef31",
+      "ground_truth_sha256": "2c67dd6b818c72860f09a25d10fb172b62970f3b1960dad6197cca4151ea07ae",
+      "snapshot_path": "vendor/eval-data/swe-explore/repos/pytest-dev__pytest-7432",
+      "snapshot_sha256": "c0c8207fcfdfa07cb1bf342783e694293612a8e648060c297755cede6f867986",
+      "selection_hash": "04c61fb7dbdfb936449e09ff92f7a18651707a5b1251461329db991597406337"
+    },
+    {
+      "task_id": "scikit-learn__scikit-learn-25931",
+      "repository": "scikit-learn/scikit-learn",
+      "base_commit": "e3d1f9ac39e4bf0f31430e779acc50fb05fe1b64",
+      "source_dataset": "verified",
+      "problem_statement_sha256": "4412b74c4fee9ba3b565d1aafd5f3f2e77b29f2ac2146b59ea84e7fe15777c36",
+      "ground_truth_sha256": "562a3673268e7f741447f1853843df5e024a9a743a14f94c2dd56c0f2304758d",
+      "snapshot_path": "vendor/eval-data/swe-explore/repos/scikit-learn__scikit-learn-25931",
+      "snapshot_sha256": "c4bf7eed93a8dfd2d7588d1eb089c6c3aba5b7bb28c119c052b08179e496ae21",
+      "selection_hash": "18ff17f8cf9e52c59e196f9fb990db406cf230f4bc9ba158ae6eddbec56582bb"
+    },
+    {
+      "task_id": "sphinx-doc__sphinx-7910",
+      "repository": "sphinx-doc/sphinx",
+      "base_commit": "27ac10de04697e2372d31db5548e56a7c6d9265d",
+      "source_dataset": "verified",
+      "problem_statement_sha256": "c3d99aeda62cf24ce56a14f0f21c0dc80ac1a4afb3e43e50dbf7bf32a548aa5b",
+      "ground_truth_sha256": "bc9be029c6d255f7b74fe679f1fbb3328178ee1e25b0a59494b9c563441fcf0c",
+      "snapshot_path": "vendor/eval-data/swe-explore/repos/sphinx-doc__sphinx-7910",
+      "snapshot_sha256": "7a9d763eeb90ea02cbe99f56902a81a315c359c0e80d93ce2beb7738921f2b06",
+      "selection_hash": "03ffe3f70ca58c5f090fcd5bc92ad009b927f0d2492460f7e58362ab725e0c69"
+    },
+    {
+      "task_id": "sympy__sympy-15017",
+      "repository": "sympy/sympy",
+      "base_commit": "6810dee426943c1a2fe85b5002dd0d4cf2246a05",
+      "source_dataset": "verified",
+      "problem_statement_sha256": "b106dd1aed96c16195e44e41b0d863086366cf9c597e31787a38816ae04efb2a",
+      "ground_truth_sha256": "3a97c0f057ee6463ff3ba4d21289ab3448338e55afec25b6cb89e5284e0efd1a",
+      "snapshot_path": "vendor/eval-data/swe-explore/repos/sympy__sympy-15017",
+      "snapshot_sha256": "73471ec4a4d7ba4720c7900beb4b507fb89733f656c2c02e3d7b862fe5c3ee01",
+      "selection_hash": "03580c0972a08b942ca5a539308f5bacc3b1f4d5f9ba6822a33a390838cde65f"
+    }
+  ]
+}

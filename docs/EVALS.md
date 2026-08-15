@@ -1,6 +1,6 @@
 # Cospa evaluation portfolio and methodology
 
-_Last reviewed: 2026-08-15_
+_Last reviewed: 2026-08-16_
 
 This document defines what Cospa should measure, how benchmark protocols are
 reviewed, which external evaluations are worth adopting, and how long campaigns
@@ -34,7 +34,7 @@ a portfolio whose components have distinct jobs:
 | Harness-sensitive investigation/testing | **SWE Atlas Q&A + Test Writing** | Deferred from the current campaign because the headline path requires an LLM judge; retain as a separately labeled future diagnostic |
 | Freshness audit | **SWE-bench-Live MultiLang** or a genuinely post-cutoff rolling set | Freeze each evaluated release; use as an audit, not a stable longitudinal score |
 | Cheap orthogonal code-generation anchor | **BigCodeBench-Hard Instruct** and/or a post-cutoff LiveCodeBench window | Keep separate from agentic/repository scores |
-| Low-cost agent diagnostic | **DABStep versus SWE-Explore bake-off** | Qualify small matched slices and implement the best executable cost/discrimination tradeoff first; never merge with coding resolution |
+| Low-cost agent diagnostic | **`swe_explore_verified12`** | Bake-off winner: task-macro weighted core coverage over a fixed 12-repository panel; never merge with coding resolution |
 
 The current operational matrix, nested task counts, DS4 `pi_vanilla` `c=8`
 baseline, measured projections, and promotion gates are frozen in
@@ -272,12 +272,33 @@ adjudication cannot waive a failed mechanical gate. Raw reviews,
 disagreements, and reason codes remain durable evidence rather than being
 collapsed into an unexplained majority vote.
 
-DABstep is the selected expansion candidate for task-level discovery.
-KernelBench-Verified is skipped because a dedicated evaluation GPU cannot be
-assumed available, and DS-1000 Matplotlib is skipped because its one-shot
-anchor role is unnecessary alongside existing coverage. DABstep review must
-not delay target-model smokes on suites that are already mechanically
-qualified.
+DABstep was the selected source-review candidate for task-level discovery,
+but the executable 12+12 diagnostic bake-off selected SWE-Explore instead.
+The available DABstep Harbor conversion is a third-party 450-task wrapper at
+`7b8511ba7efb81c3b8b961ade38ec4429cf706f1`: its public gold answers use one
+pinned deterministic scorer adapted from the official DABstep scorer, rather
+than an LLM judge. Ten official-dev-derived wrappers passed the gold/null gate,
+and the provisional outcome-blind 12-task slice also produced 12/12 oracle
+passes and 12/12 null failures. Its first ten completed DS4 trials nevertheless
+averaged 266 seconds and 274,091 tokens, resolved 3/10, and left two long-running
+trials that were canceled once it could no longer win the cost/discrimination
+gate.
+
+SWE-Explore uses the official source evaluator at
+`3c12dc5a551937038afcbdb6eb6bbf19f3ddd8c1` and official dataset revision
+`bdb0ae45d7c337d9e1dc3ebfe2a0af6bc7c1fbd9`. The frozen
+`swe_explore_verified12` panel selects one mechanically valid Verified-derived
+task from each of 12 Python repositories without target-model outcomes. All 36
+pinned-oracle observations scored 1.0 and all 36 null observations scored 0.0.
+The DS4 `pi_vanilla` high-thinking c=8 run produced a 0.0968 task-macro mean
+weighted-core-coverage score when two invalid outputs are counted as zero, with
+core-line hits on 10/12 tasks, 132-second mean task wall time, and 170,709 mean
+tokens. This continuous localization score is the diagnostic headline and must
+never be merged with binary coding resolution.
+
+KernelBench-Verified remains skipped because a dedicated evaluation GPU cannot
+be assumed available, and DS-1000 Matplotlib remains skipped because its
+one-shot anchor role is unnecessary alongside existing coverage.
 
 ## Time and budget methodology
 
@@ -356,6 +377,7 @@ publish end-to-end elapsed time, so a local pilot is required.
 | SWE-bench Multilingual | 300 × `k=1` | Baseline used a $2.50/task cost limit; time unknown | Same 150 h / 75 h / 18.8 h planning ceiling under a 30-minute policy |
 | SWE-PolyBench Verified | README says 382; dataset card has stale conflicting count | Harness recommends 10–12 evaluator threads on 16 cores/64 GB; inference time unknown | At 382 × 30 minutes: 191 serial h; 95.5 h ideal `c=2`; 23.9 h ideal `c=8` |
 | FeatureBench Lite / Full | Pareto12 / 30 / 200 | Default task timeout 3,600 s; published OpenHands runs allow 500 steps and consume 2.6M–9.0M input tokens/task on Lite | **Measured here:** raw DS4 Pareto12 c=8 used 2h40m elapsed and 10h52m task-attempt wall after retries; broader panels require new mechanical qualification |
+| SWE-Explore Verified12 | 12 × `k=1` | **Measured here:** DS4 used 26m26s task wall and 5m28s c=8 elapsed | 0.0968 task-macro weighted core coverage; 10/12 any-core-line hits; $0.0432 estimated cost |
 | SWE-bench-Live MultiLang | 743 in current README | Runtime unknown; large multilingual builds/tests | At 30 minutes/task: 371.5 serial h; 185.8 h ideal `c=2`; 46.4 h ideal `c=8` |
 | SWE-bench Pro public | Currently 730 leaderboard tasks; 250-turn uncapped model runs | Published task intent is hours to days for humans; agent wall distribution not published | Not a routine local run. Pilot required; use public trajectories before generating new ones |
 | BigCodeBench-Hard | 148 official; 143 in Cospa's no-network subset | **Published verifier time for the whole set:** 4–5 min on hosted Gradio or 15–20 min on default E2B | Cospa excludes five tasks whose gold solutions fail without external URL/NLTK state; DS4 c=8 projects to about 52 minutes for 143 Agentic tasks |
@@ -381,6 +403,7 @@ rules, and a `c=1/2/4/8/16` ladder. The pilot sizes are:
 | SWE-bench Multilingual | 30 / 300 | Dataset and 30 image digests locked; gold/null/repeat validation pending |
 | SWE-PolyBench Verified | balanced64 / 135 support candidates / 382 source | `swe_polybench_verified_balanced64`: 192/192 gold passed and 192/192 null failed; balanced96 remains unclaimed |
 | FeatureBench Lite | Pareto12 / 30 | `featurebench_lite_pareto12` spans 11 repositories; 36/36 gold passed and 36/36 null failed. DS4 resolved 2/12 with 9 incorrect and 1 timeout after an isolated transport repair |
+| SWE-Explore | Verified12 / 451 Verified-derived source rows | 36/36 oracle observations scored 1.0 and 36/36 null observations scored 0.0; DS4 scored 0.0968 task-macro weighted core coverage with 10/12 any-hits |
 | BigCodeBench-Hard Instruct | 15 pilot / 143 retained / 148 screened | `bigcodebench_hard_instruct_hermetic143`: 429/429 gold passed and 429/429 null failed; five no-network failures excluded |
 | BigCodeBench-Hard agentic | Pareto60 / hermetic143 | Separate Agentic suite IDs ready; DS4/Muse/Qwen pilot cells and DS4 thinking ablations measured; expand favorable panels to hermetic143 |
 
@@ -735,7 +758,7 @@ priority, and no active campaign phase should require judge credentials.
 | FreshBrew | Java/Maven JDK 8→17/21 migration with compile, tests, and coverage guard | 228 repos, up to 100 steps | Strong deterministic specialist fallback |
 | RACE-bench | Feature planning and intermediate reasoning | 100-task Lite; published medians about 156–1,121 seconds and 145K–3.49M tokens/task | Planning diagnostic, not routine matrix |
 | SWE-Cycle | Environment, implementation, test generation, and full lifecycle | 489 issues; FullCycle permits three hours/task and an execution-capable judge | Long-horizon milestone |
-| SWE-Explore | Repository exploration/localization without patch generation | 848 issues, ten languages; runtime distribution unknown | Useful exploration A/B, score separately |
+| SWE-Explore | Repository exploration/localization without patch generation | 848 issues overall; frozen Verified12 covers 12 Python repositories and measured 132-second mean DS4 wall time | Selected low-cost diagnostic; report weighted core coverage separately |
 | SWT-Bench Verified | Issue-to-test generation | 433 Python tasks; specialized systems near saturation | External testing anchor; SWE Atlas is broader |
 | ProgramBench | Black-box clean-room reimplementation | 200 programs, 248K tests; near floor and some reported runs cost thousands of dollars | Future frontier, not current screening |
 
@@ -791,8 +814,9 @@ weights, and do not imply equivalence to any source leaderboard.
 
 - Run FeatureBench pilot6, then choose Lite30 or Fast100 from measured
   cost/discrimination evidence with the winning one or two scaffolds.
-- Bake off small DABStep and SWE-Explore slices; implement the best verified
-  low-cost diagnostic first and report it separately from coding resolution.
+- Use the frozen `swe_explore_verified12` winner from the completed DABStep /
+  SWE-Explore bake-off; report task-macro weighted core coverage separately
+  from coding resolution.
 - Freeze a post-cutoff SWE-bench-Live MultiLang slice only when freshness is a
   deployment question.
 - Continue Terminal-Bench as a separate terminal signal. Preserve SWE Atlas as

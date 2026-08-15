@@ -2214,3 +2214,32 @@ Append-only development log for the `cospa` repository.
   begin the mechanically qualified DS4 baseline wave.
 - Validation: full pytest reports 382 passed with only the pre-existing
   `test_check_models.sh` shell-fixture failure.
+
+## 2026-08-16 — Select SWE-Explore Verified12 diagnostic
+
+- Context: the Pareto campaign required an executable, outcome-blind 12+12
+  DABstep/SWE-Explore bake-off and a grader-provenance audit before adding a
+  low-cost non-coding diagnostic.
+- Change: freeze one mechanically valid Verified-derived task from each of 12
+  Python repositories, pin the official SWE-Explore dataset, evaluator, issue
+  projection, and immutable base-commit snapshots, and register
+  `swe_explore_verified12`. Agents emit at most five ranked regions while
+  ground truth remains outside the sandbox. The viewer now reports task-macro
+  weighted core coverage separately from pass rate and counts malformed
+  diagnostic outputs as zero rather than silently dropping them.
+- Evidence: 36/36 pinned-oracle observations scored 1.0 and 36/36 null
+  observations scored 0.0. The DS4 `pi_vanilla` high-thinking c=8 run scored
+  0.0968 panel-macro weighted core coverage with core-line hits on 10/12 tasks,
+  132-second mean task wall time, 170,709 mean tokens, and no infrastructure or
+  verifier failure. DABstep's third-party public-gold Harbor wrapper uses one
+  deterministic official-derived scorer; its first ten completed provisional
+  trials resolved 3/10 while averaging 266 seconds and 274,091 tokens, so the
+  two remaining long trials were canceled after the gate was decided.
+- Decision: select SWE-Explore for the diagnostic slot. Keep weighted core
+  coverage, any-core-line hit rate, and coding resolution distinct; DABstep
+  qualification artifacts remain provenance evidence, not a scored Cospa
+  suite. RED tests demonstrated both invalid-output scoring defects; 52 focused
+  SWE-Explore/viewer tests pass. Full pytest reports 390 passed with only the
+  pre-existing `test_check_models.sh` shell-fixture failure.
+- Next: begin the qualified DS4 baseline screening wave, then run matched
+  scaffold ablations on fixed panels.

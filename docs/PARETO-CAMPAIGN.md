@@ -1,6 +1,6 @@
 # Cospa Pareto evaluation campaign
 
-_Last reviewed: 2026-08-15_
+_Last reviewed: 2026-08-16_
 
 This document is the operational campaign plan for obtaining the most useful
 model/scaffold discrimination per unit of generation time, verifier time, and
@@ -104,6 +104,7 @@ billing.
 | SWE-PolyBench pilot28, vanilla `high` | 5/28 | 2h30m | 2h05m | $0.3201 |
 | Terminal-Bench Core pilot8, vanilla `high` | 3/8 | 37m42s | 10m31s | $0.0157 on 5/8 token-covered tasks |
 | FeatureBench Lite Pareto12, vanilla `high` | 2/12 raw | 10h52m including retries | 2h40m | $1.02 estimated from all observed retry traces |
+| SWE-Explore Verified12, vanilla `high` | 0.0968 weighted core coverage; 10/12 any-hit | 26m26s | 5m28s | $0.0432 |
 
 Linear projections preserve the observed per-task throughput and are planning
 estimates, not promises:
@@ -181,6 +182,16 @@ these raw numbers are a conservative stress measurement, not a clean c=8
 throughput baseline. FeatureBench clears the capability utility band, but
 scaffold promotion should retain an isolated repair policy and treat its long
 wall/cost as milestone evidence rather than routine matrix cost.
+
+The completed diagnostic bake-off selected SWE-Explore Verified12. Its DS4
+c=8 run produced a 0.0968 task-macro weighted-core-coverage score after two
+invalid answers were counted as zero, with core-line hits on 10/12 tasks, no
+infrastructure/verifier failures, 26m26s summed task wall, 5m28s elapsed, 2.05M
+total observed tokens, and $0.0432 estimated cost. DABstep's first ten completed
+provisional tasks averaged roughly twice the wall time and 1.6 times the tokens,
+while resolving only 3/10; its remaining two long tasks were canceled after the
+predeclared cost/discrimination decision was already fixed. Weighted core
+coverage remains separate from any-hit rate and all coding-resolution scores.
 
 ## Pareto rules
 
@@ -267,7 +278,7 @@ protocol comparability.
 | BCB-Hard Agentic | Pareto60 | hermetic143 | Function implementation + scaffold sensitivity |
 | Terminal-Bench Core | completed pilot8 | Pareto20, then full80 | Broad terminal/tool competence |
 | FeatureBench | qualified Pareto12 | broader Lite/Full only after new qualification | Long feature implementation + F2P diagnostic |
-| Diagnostic bake-off | 12 DABStep + 12 SWE-Explore | select one fixed panel | Cheap tool or localization signal |
+| SWE-Explore diagnostic | selected Verified12 | broader official strata only after a new gate | Continuous repository-localization signal |
 
 BCB Agentic is cheap enough that DS4 vanilla should normally continue from the
 Pareto60 panel to all 143 hermetic tasks. Other adapters first run the same 60
@@ -324,8 +335,9 @@ rates, task/campaign time, tokens, and cost.
    any balanced96 claim.
 6. Run the qualified FeatureBench Pareto12 panel; add new mechanically stable
    rows before any broader Lite or Fast100 claim.
-7. Run the DABStep/SWE-Explore 12+12 diagnostic bake-off and implement only the
-   winner first.
+7. Use the completed DABStep/SWE-Explore 12+12 bake-off winner:
+   `swe_explore_verified12`, scored by task-macro weighted core coverage and
+   reported separately from coding resolution.
 8. Execute DS4 `pi_vanilla`, `high`, `c=8`, `k=1` suite by suite.
 9. Run matched scaffold panels, then stability repeats and full finalists.
 

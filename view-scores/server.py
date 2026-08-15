@@ -75,6 +75,17 @@ def _score_class(pass_rate: float) -> str:
     return "score-low"
 
 
+def _score_display(row: dict) -> tuple[float, str]:
+    value = float(row.get("score", row.get("pass_rate", 0.0)))
+    if row.get("score_type") == "continuous_non_coding":
+        metric = str(row.get("headline_metric") or "diagnostic")
+        label = {
+            "weighted_core_coverage": "WCC",
+        }.get(metric, metric)
+        return value, f"{value:.1f}% {label}"
+    return value, f"{value:.1f}%"
+
+
 def _format_duration(seconds: float | int | None) -> str:
     if seconds is None:
         return "-"
@@ -172,7 +183,7 @@ def _matches_any(patterns: tuple[str, ...] | list[str], text: str) -> bool:
 
 SORT_ALIASES = {
     "pass": "pass_rate",
-    "score": "pass_rate",
+    "score": "score",
     "pass_rate": "pass_rate",
     "passed": "passed_tasks",
     "passed_tasks": "passed_tasks",
@@ -215,6 +226,7 @@ SORT_ALIASES = {
 }
 
 SORT_DEFAULT_DIRECTIONS = {
+    "score": "desc",
     "pass_rate": "desc",
     "passed_tasks": "desc",
     "passed_tasks_per_usd": "desc",
@@ -431,9 +443,8 @@ def format_scores_terminal(
 
     rows = []
     for score in scores:
-        pass_rate = float(score["pass_rate"])
-        score_text = f"{pass_rate:.1f}%"
-        score_text = _ansi(score_text, _score_color(pass_rate), color)
+        display_score, score_text = _score_display(score)
+        score_text = _ansi(score_text, _score_color(display_score), color)
         if verbose:
             completed = int(score.get("completed_tasks", score["total_tasks"]))
             expected = int(score.get("expected_tasks", completed))
@@ -1018,14 +1029,14 @@ class ScoreHandler(SimpleHTTPRequestHandler):
                     "suite": str(score["suite"]),
                 }
             )
-            pass_rate = float(score["pass_rate"])
-            score_class = _score_class(pass_rate)
+            display_score, score_text = _score_display(score)
+            score_class = _score_class(display_score)
             rows += f"""
             <tr>
                 <td>{model}</td>
                 <td>{adapter}</td>
                 <td>{suite}</td>
-                <td class="{score_class}">{pass_rate:.1f}%</td>
+                <td class="{score_class}">{html.escape(score_text)}</td>
                 <td>{score['passed_tasks']}/{score['total_tasks']}</td>
                 <td>{score['total_tasks']}</td>
                 <td>{html.escape(_format_percent(score.get("inference_percent")))}</td>
@@ -1477,6 +1488,8 @@ class ScoreHandler(SimpleHTTPRequestHandler):
         sort_by = DEFAULT_SORT_BY if sort_by is None else sort_by
 
         grouped_trials = {}
+        grouped_continuous_scores = {}
+        grouped_score_metadata = {}
         grouped_times = {}
         grouped_turns = {}
         grouped_behavior = {}
@@ -1565,9 +1578,47 @@ class ScoreHandler(SimpleHTTPRequestHandler):
             started_tasks.setdefault(key, set()).add(parts["task_id"])
             if trial is None:
                 continue
+            verdict = trial["verdict"]
             grouped_trials.setdefault(key, {}).setdefault(parts["task_id"], []).append(
-                trial["verdict"].get("passed", False)
+                verdict.get("passed", False)
             )
+            suite_metadata = trial["manifest"].get("suite", {})
+            score_type = verdict.get("score_type") or suite_metadata.get("score_type")
+            headline_metric = verdict.get("headline_metric") or suite_metadata.get(
+                "headline_metric"
+            )
+            continuous_score = verdict.get("score")
+            if (
+                score_type == "continuous_non_coding"
+                and continuous_score is None
+                and verdict.get("failure_class") == "invalid_output"
+                and not verdict.get("verifier_failed")
+                and not verdict.get("adapter_failed")
+            ):
+                # Older diagnostic verdicts omitted a numeric score for malformed
+                # agent answers. They are capability misses, not missing data.
+                continuous_score = 0.0
+            if (
+                score_type == "continuous_non_coding"
+                and isinstance(continuous_score, (int, float))
+                and not isinstance(continuous_score, bool)
+                and isinstance(headline_metric, str)
+                and headline_metric
+            ):
+                metadata = grouped_score_metadata.setdefault(
+                    key,
+                    {
+                        "score_type": score_type,
+                        "headline_metric": headline_metric,
+                    },
+                )
+                if metadata == {
+                    "score_type": score_type,
+                    "headline_metric": headline_metric,
+                }:
+                    grouped_continuous_scores.setdefault(key, {}).setdefault(
+                        parts["task_id"], []
+                    ).append(float(continuous_score))
             seconds = trial["manifest"].get("timing", {}).get("wall_clock_seconds")
             if isinstance(seconds, (int, float)):
                 grouped_times.setdefault(key, {}).setdefault(parts["task_id"], []).append(
@@ -1728,6 +1779,33 @@ class ScoreHandler(SimpleHTTPRequestHandler):
                 if sum(1 for t in trials if t) > len(trials) / 2
             )
             pass_rate = (passed_tasks / total_tasks) * 100 if total_tasks > 0 else 0
+            score_metadata = grouped_score_metadata.get(key5)
+            continuous_task_scores = grouped_continuous_scores.get(key5, {})
+            if score_metadata and continuous_task_scores:
+                task_macro_scores = [
+                    statistics.fmean(trials)
+                    for trials in continuous_task_scores.values()
+                    if trials
+                ]
+                headline_score = (
+                    statistics.fmean(task_macro_scores)
+                    if task_macro_scores
+                    else None
+                )
+                display_score = (
+                    headline_score * 100 if headline_score is not None else 0.0
+                )
+                score_type = score_metadata["score_type"]
+                headline_metric = score_metadata["headline_metric"]
+                score_method = f"task-macro mean {headline_metric}"
+                scored_tasks = len(task_macro_scores)
+            else:
+                headline_score = None
+                display_score = pass_rate
+                score_type = "binary_resolution"
+                headline_metric = "pass_rate"
+                score_method = "pass@k majority"
+                scored_tasks = 0
             task_times = [
                 sum(trial_times)
                 for trial_times in grouped_times.get(
@@ -1885,7 +1963,14 @@ class ScoreHandler(SimpleHTTPRequestHandler):
                 # These let the viewer distinguish rows that would otherwise merge.
                 "thinking": thinking,
                 "provider": provider,
-                "score": pass_rate,
+                "score": display_score,
+                "score_type": score_type,
+                "headline_metric": headline_metric,
+                "headline_score": headline_score,
+                "scored_tasks": scored_tasks,
+                "score_missing_tasks": (
+                    total_tasks - scored_tasks if headline_score is not None else 0
+                ),
                 "pass_rate": pass_rate,
                 "ci_lower": ci_lower,
                 "ci_upper": ci_upper,
@@ -1946,7 +2031,7 @@ class ScoreHandler(SimpleHTTPRequestHandler):
                 "output_cost_per_million_usd": output_cost_per_million_usd,
                 "cache_read_cost_per_million_usd": cache_read_cost_per_million_usd,
                 "cache_write_cost_per_million_usd": cache_write_cost_per_million_usd,
-                "method": "pass@k majority",
+                "method": score_method,
             })
 
         # Apply dimensional filters (thinking, provider). These are

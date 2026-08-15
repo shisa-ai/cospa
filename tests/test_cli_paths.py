@@ -187,6 +187,64 @@ def test_runner_main_uses_default_model_run_results_wrapper():
     ]
 
 
+def test_runner_main_runs_only_explicit_task_ids_in_requested_order():
+    """A frozen sentinel must run exact IDs rather than a result-selected prefix."""
+    import argparse
+    from harness import runner as runner_mod
+
+    with tempfile.TemporaryDirectory() as tmp:
+        tmp = Path(tmp)
+        args = argparse.Namespace(
+            suite="aider_polyglot",
+            adapter="pi_vanilla",
+            model="test/model",
+            problems=None,
+            task_ids=["python/three", "python/one"],
+            k=1,
+            concurrency=1,
+            retries=0,
+            thinking="high",
+            results_dir=tmp / "results",
+            run_id=None,
+            vendor_dir=tmp / "vendor",
+            config=Path("/tmp/c"),
+            skip_reachability=True,
+        )
+        captured = []
+
+        def fake_run_trial(
+            suite,
+            adapter,
+            model,
+            task_id,
+            trial_k,
+            results_dir,
+            vendor_dir,
+            **kwargs,
+        ):
+            captured.append(task_id)
+            return {"timing": {"wall_clock_seconds": 0}}, {"passed": True}
+
+        with patch.object(runner_mod, "parse_args", return_value=args), \
+             patch.object(runner_mod, "load_suite") as mock_suite, \
+             patch.object(runner_mod, "load_adapter") as mock_adapter, \
+             patch.object(
+                 runner_mod,
+                 "run_trial_with_retries",
+                 side_effect=fake_run_trial,
+             ):
+            mock_suite.return_value.name = "aider_polyglot"
+            mock_suite.return_value.get_task_ids.return_value = [
+                "python/one",
+                "python/two",
+                "python/three",
+            ]
+            mock_adapter.return_value.name = "pi_vanilla"
+            runner_mod.main()
+
+    assert captured == ["python/three", "python/one"]
+
+
 def test_runner_main_writes_run_heartbeat():
     """The runner should leave a cell-level heartbeat/status artifact."""
     import argparse

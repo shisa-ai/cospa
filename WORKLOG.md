@@ -2303,3 +2303,25 @@ Append-only development log for the `cospa` repository.
   exact shared task IDs and a seeded 50,000-resample bootstrap.
 - Next: freeze and run the outcome-blind 32-task k=3 stability sentinel on the
   retained vanilla scaffold.
+
+## 2026-08-16 — Freeze outcome-blind Stability32 sentinel
+
+- Context: the matched scaffold gate retained only DS4 `pi_vanilla high`, but
+  stochastic measurement required a cross-suite panel declared before any
+  repeat outcomes and exact non-prefix task selection in the generic runner.
+- Change: add repeatable `--task-id` selection with fail-closed membership and
+  order preservation, plus a deterministic selector and frozen
+  `configs/pareto_stability32_v1.json`. The panel allocates 8 BCB, 7 Multi-SWE,
+  5 Terminal, 8 PolyBench, and 4 FeatureBench tasks across the predeclared
+  strata for 32 tasks and 96 independent `k=3` attempts.
+- Evidence: RED tests failed because the runner ignored explicit IDs and the
+  frozen manifest did not exist. GREEN tests reproduce the byte-stable manifest,
+  assert all allocations/languages/difficulties/categories/task types/repository
+  constraints, and prove the runner executes only requested IDs in their given
+  order. The focused three tests pass; full pytest reports 393 passes with only
+  the pre-existing `test_check_models.sh` port-8080 fixture failure.
+- Decision: use only mechanically qualified source manifests and seeded SHA-256
+  ranks; neither baseline nor repeat outcomes may alter membership. Report mean
+  pass probability and outcome-flip rate, never best-of-three as Pass@1.
+- Next: commit this freeze before outcomes exist, run its five suite slices at
+  c=8, validate all 96 authoritative attempts, and publish stability metrics.

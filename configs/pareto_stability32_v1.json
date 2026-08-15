@@ -1,0 +1,323 @@
+{
+  "name": "pareto-stability32-v1",
+  "version": "2026-08-16",
+  "selection": {
+    "seed": "cospa-pareto-stability32-v1",
+    "uses_target_model_outcomes": false,
+    "uses_baseline_outcomes": false,
+    "policy": "Select only from mechanically qualified fixed panels using seeded SHA-256 ranks and predeclared suite/stratum allocations.",
+    "task_count": 32
+  },
+  "execution": {
+    "model": "local/deepseek-v4-flash-0731",
+    "adapter": "pi_vanilla",
+    "thinking": "high",
+    "concurrency": 8
+  },
+  "protocol": {
+    "independent_trials_per_task": 3,
+    "report_best_of_k": false,
+    "primary_stability_metrics": [
+      "mean_pass_probability",
+      "outcome_flip_rate"
+    ],
+    "suite_scores_remain_separate": true
+  },
+  "suites": {
+    "bigcodebench_hard_agentic_pareto60": {
+      "allocation": 8,
+      "source_manifest": "configs/bigcodebench_hard_agentic_pareto60.json",
+      "source_manifest_sha256": "fdcd8ce70885091d6dc0d419ae5cbfdd155aae3b76b05756164fa28a76ab133f",
+      "selection_policy": "Take the minimum seeded SHA-256 rank in every non-empty library-count by prompt-size stratum.",
+      "task_ids": [
+        "BigCodeBench/15",
+        "BigCodeBench/162",
+        "BigCodeBench/503",
+        "BigCodeBench/999",
+        "BigCodeBench/637",
+        "BigCodeBench/526",
+        "BigCodeBench/82",
+        "BigCodeBench/594"
+      ],
+      "tasks": [
+        {
+          "task_id": "BigCodeBench/15",
+          "library_count_bucket": "3",
+          "prompt_size_tertile": "long",
+          "selection_hash": "1b4e427d11a4414dd149b8a0d2d42a06a1c08b11eacaff6d60de094ddb16dcb5"
+        },
+        {
+          "task_id": "BigCodeBench/162",
+          "library_count_bucket": "3",
+          "prompt_size_tertile": "medium",
+          "selection_hash": "05194c4f7e36a49454ed765486bdfe7facb04de23151ea8b1a5e816c5d93567a"
+        },
+        {
+          "task_id": "BigCodeBench/503",
+          "library_count_bucket": "3",
+          "prompt_size_tertile": "short",
+          "selection_hash": "07cabc3db3366bd8b285c6cc5d3f686779a4fd1846a0afa5d115a67a43586898"
+        },
+        {
+          "task_id": "BigCodeBench/999",
+          "library_count_bucket": "4",
+          "prompt_size_tertile": "long",
+          "selection_hash": "021530e5dc55c9a32d17751a754f3c7c3bbc697f5b99970a34d700ad44021e36"
+        },
+        {
+          "task_id": "BigCodeBench/637",
+          "library_count_bucket": "4",
+          "prompt_size_tertile": "medium",
+          "selection_hash": "1cc41e203fe5545e8d6814492a67f2a411ad6b123af25cf28c3075ea1f2fdf1b"
+        },
+        {
+          "task_id": "BigCodeBench/526",
+          "library_count_bucket": "4",
+          "prompt_size_tertile": "short",
+          "selection_hash": "1389d0286996d69c60a74579f6859ddd71b9e1e166f2116d266a7dd62fef3b2f"
+        },
+        {
+          "task_id": "BigCodeBench/82",
+          "library_count_bucket": "5_plus",
+          "prompt_size_tertile": "long",
+          "selection_hash": "6a10068c05e21321709e4a8803d5625c83534c52534447e5f228b7e60ab428a4"
+        },
+        {
+          "task_id": "BigCodeBench/594",
+          "library_count_bucket": "5_plus",
+          "prompt_size_tertile": "short",
+          "selection_hash": "4b5bd6e9d3e526e0f4930299c0d00c33e7e2e99d5c7d09ce38cfc41495029212"
+        }
+      ]
+    },
+    "multi_swe_bench_flash_hermetic25": {
+      "allocation": 7,
+      "source_manifest": "configs/multi_swe_bench_flash_hermetic25.json",
+      "source_manifest_sha256": "e4cfe92758fac336e4ce7fc80c2822b47e89baa4e3ed6f34c040a569ec096d0c",
+      "selection_policy": "Take the minimum seeded SHA-256 rank independently in each retained language.",
+      "task_ids": [
+        "jqlang__jq-2821",
+        "nlohmann__json-609",
+        "cli__cli-1642",
+        "google__gson-1555",
+        "anuraghazra__github-readme-stats-99",
+        "tokio-rs__bytes-547",
+        "darkreader__darkreader-6747"
+      ],
+      "tasks": [
+        {
+          "task_id": "jqlang__jq-2821",
+          "language": "c",
+          "repository": "jqlang/jq",
+          "selection_hash": "5cb67a164c0012826a4cc953a01c597ed9575a959391305ee1f237260c976cf1"
+        },
+        {
+          "task_id": "nlohmann__json-609",
+          "language": "c++",
+          "repository": "nlohmann/json",
+          "selection_hash": "1fbacbc6e5cb11fe38e4486f0fd6739d23bc30db4b79638187e7a7c44c855470"
+        },
+        {
+          "task_id": "cli__cli-1642",
+          "language": "go",
+          "repository": "cli/cli",
+          "selection_hash": "4493c031d4f64ee2819c19feb0976373a23a256a22f35a0a7ac271613e98fd5d"
+        },
+        {
+          "task_id": "google__gson-1555",
+          "language": "java",
+          "repository": "google/gson",
+          "selection_hash": "72fd3a8886e46038451007527b7bb07ff11fa9fef6632b347881d728a86498fc"
+        },
+        {
+          "task_id": "anuraghazra__github-readme-stats-99",
+          "language": "javascript",
+          "repository": "anuraghazra/github-readme-stats",
+          "selection_hash": "25726594ae0b95e584ebacd23df2ec2ca0de005193bc20614aa9858e26840e0e"
+        },
+        {
+          "task_id": "tokio-rs__bytes-547",
+          "language": "rust",
+          "repository": "tokio-rs/bytes",
+          "selection_hash": "49f959dfe7787b8a2039bde5f5e37898d48d1a263e28573a9418ecae804c7af6"
+        },
+        {
+          "task_id": "darkreader__darkreader-6747",
+          "language": "typescript",
+          "repository": "darkreader/darkreader",
+          "selection_hash": "0afe75d3480cdd8e14134b09d649d58a656b08cc7d00be0e459a0504909d9bc3"
+        }
+      ]
+    },
+    "terminal_bench_core_pareto20": {
+      "allocation": 5,
+      "source_manifest": "configs/terminal_bench_core_pareto20_v1.json",
+      "source_manifest_sha256": "38f0d9fed3040abd9de194f922abc5fa6604c13a08c8cabef8f658fb94f49c85",
+      "selection_policy": "Allocate 2 easy, 2 medium, and 1 hard task by seeded SHA-256 while requiring five distinct categories.",
+      "task_ids": [
+        "grid-pattern-transform",
+        "csv-to-parquet",
+        "sqlite-with-gcov",
+        "tmux-advanced-workflow",
+        "blind-maze-explorer-5x5"
+      ],
+      "tasks": [
+        {
+          "task_id": "grid-pattern-transform",
+          "category": "software-engineering",
+          "difficulty": "easy",
+          "runtime_bucket": "medium",
+          "selection_hash": "04370bc41975390a9e060f22b8fc1024084aa377e9cfe4107d4696b54b5416e9"
+        },
+        {
+          "task_id": "csv-to-parquet",
+          "category": "data-science",
+          "difficulty": "easy",
+          "runtime_bucket": "short",
+          "selection_hash": "0e174729fd1d26f0b710f97ed797815acf493af8887ea98fef374039c312ec58"
+        },
+        {
+          "task_id": "sqlite-with-gcov",
+          "category": "system-administration",
+          "difficulty": "medium",
+          "runtime_bucket": "short",
+          "selection_hash": "0e7b9b66739893f8712f3f115a036ed28e2b59b52b4ba789ea11f3653d30edf7"
+        },
+        {
+          "task_id": "tmux-advanced-workflow",
+          "category": "debugging",
+          "difficulty": "medium",
+          "runtime_bucket": "short",
+          "selection_hash": "8b4f7cb689efe74cdde3c60ae3871a9b540c424de66e53d93eabd5ec564049df"
+        },
+        {
+          "task_id": "blind-maze-explorer-5x5",
+          "category": "games",
+          "difficulty": "hard",
+          "runtime_bucket": "medium",
+          "selection_hash": "121cc8568fe3f9b4f5ae8959e08a1bf382f5f7c29261d8a78b83fdc6f40d5a1e"
+        }
+      ]
+    },
+    "swe_polybench_verified_balanced64": {
+      "allocation": 8,
+      "source_manifest": "configs/swe_polybench_verified_balanced64_v1.json",
+      "source_manifest_sha256": "789758414af9873d94b26bb5fb1885809c37d8b7e5c377ec4543e58bdf84307e",
+      "selection_policy": "Take two seeded tasks per language with distinct task types and, when available, distinct repositories.",
+      "task_ids": [
+        "apache__rocketmq-7563",
+        "google__guava-3971",
+        "serverless__serverless-6827",
+        "sveltejs__svelte-6525",
+        "langchain-ai__langchain-4646",
+        "keras-team__keras-18871",
+        "tailwindlabs__tailwindcss-550",
+        "coder__code-server-4923"
+      ],
+      "tasks": [
+        {
+          "task_id": "apache__rocketmq-7563",
+          "language": "java",
+          "repository": "apache/rocketmq",
+          "task_type": "Bug Fix",
+          "patch_size_tertile": "medium",
+          "selection_hash": "12b38f22a67f70167b760b3c861a9afe6b6f1c8335c696d66f19b70c0fb7665b"
+        },
+        {
+          "task_id": "google__guava-3971",
+          "language": "java",
+          "repository": "google/guava",
+          "task_type": "Feature",
+          "patch_size_tertile": "large",
+          "selection_hash": "231ef583c2b8151c2468d152afa9fcb70df5f16bcdf4a57c3f3219a683d8b600"
+        },
+        {
+          "task_id": "serverless__serverless-6827",
+          "language": "javascript",
+          "repository": "serverless/serverless",
+          "task_type": "Bug Fix",
+          "patch_size_tertile": "medium",
+          "selection_hash": "0d825fda1058cdbea7347c9b1669564dc9915bb1510861a50a69210b279d8930"
+        },
+        {
+          "task_id": "sveltejs__svelte-6525",
+          "language": "javascript",
+          "repository": "sveltejs/svelte",
+          "task_type": "Refactoring",
+          "patch_size_tertile": "large",
+          "selection_hash": "10346201803c479889ef619470ee687a9bd31f29becec162dbc79d78818a29a7"
+        },
+        {
+          "task_id": "langchain-ai__langchain-4646",
+          "language": "python",
+          "repository": "langchain-ai/langchain",
+          "task_type": "Bug Fix",
+          "patch_size_tertile": "small",
+          "selection_hash": "020b5414b736379462c441369f025a6748c1fd34856f4747ea8158fc5e214f1c"
+        },
+        {
+          "task_id": "keras-team__keras-18871",
+          "language": "python",
+          "repository": "keras-team/keras",
+          "task_type": "Refactoring",
+          "patch_size_tertile": "large",
+          "selection_hash": "476686ba67eb708e258e2e76ee78c65c618fecd68fa2de7c4c983d647580a0c6"
+        },
+        {
+          "task_id": "tailwindlabs__tailwindcss-550",
+          "language": "typescript",
+          "repository": "tailwindlabs/tailwindcss",
+          "task_type": "Bug Fix",
+          "patch_size_tertile": "small",
+          "selection_hash": "1a7001df02fa88967ace591a99374c67cae071f3e971b71c59ff0e31f91f5af4"
+        },
+        {
+          "task_id": "coder__code-server-4923",
+          "language": "typescript",
+          "repository": "coder/code-server",
+          "task_type": "Feature",
+          "patch_size_tertile": "medium",
+          "selection_hash": "2dafb0a140eea6e3aa5f2eb9c157a960eb40dc8b28bf86849c6e6776757a36ac"
+        }
+      ]
+    },
+    "featurebench_lite_pareto12": {
+      "allocation": 4,
+      "source_manifest": "configs/featurebench_lite_pareto12_v1.json",
+      "source_manifest_sha256": "581bae8979cf71def1a98a2de8b80d71183d85e6ba2ef0c652687353a81d9357",
+      "selection_policy": "Take the first four seeded SHA-256 ranks with distinct repositories.",
+      "task_ids": [
+        "sympy__sympy.c1097516.test_nullspace.f14fc970.lv1",
+        "huggingface__transformers.e2e8dbed.test_serve.4e7860c7.lv1",
+        "mwaskom__seaborn.7001ebe7.test_regression.ce8c62e2.lv1",
+        "Lightning-AI__pytorch-lightning.126fa6f1.test_data.c8b292af.lv1"
+      ],
+      "tasks": [
+        {
+          "task_id": "sympy__sympy.c1097516.test_nullspace.f14fc970.lv1",
+          "repository": "sympy/sympy",
+          "level": 1,
+          "selection_hash": "09cbf957d50825f4cd7142ea0f20b94c70c1f167e6b74a4bbc5cb3c988425c49"
+        },
+        {
+          "task_id": "huggingface__transformers.e2e8dbed.test_serve.4e7860c7.lv1",
+          "repository": "huggingface/transformers",
+          "level": 1,
+          "selection_hash": "2e99b9c6b7e0fa777298968274a71ee2445e02258cfd5b831be0299991c64691"
+        },
+        {
+          "task_id": "mwaskom__seaborn.7001ebe7.test_regression.ce8c62e2.lv1",
+          "repository": "mwaskom/seaborn",
+          "level": 1,
+          "selection_hash": "4afb34cede9cd357163a846ccd2955bc91c774543f6cf3661d5a353dfac575a8"
+        },
+        {
+          "task_id": "Lightning-AI__pytorch-lightning.126fa6f1.test_data.c8b292af.lv1",
+          "repository": "Lightning-AI/pytorch-lightning",
+          "level": 1,
+          "selection_hash": "617699f01913cc0f3daa916f1bda7e708049512b2055b238ce05575d9492f46c"
+        }
+      ]
+    }
+  }
+}

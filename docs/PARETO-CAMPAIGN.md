@@ -356,15 +356,27 @@ reason to launch a Cartesian matrix.
 
 ### Phase D — stability and finalist campaigns
 
-Run the 32-task `k=3` sentinel, then promote only Pareto finalists to BCB
-hermetic143, full PolyBench, full Terminal-Bench, FeatureBench Fast/full, or a
-frozen freshness campaign. Publish paired effects, standalone uncertainty,
-language/repository/task-type cuts, partial executable diagnostics, failure
-rates, task/campaign time, tokens, and cost.
+The outcome-blind sentinel is frozen as `configs/pareto_stability32_v1.json`
+before repeat outcomes exist. Its 32 tasks allocate 8 BCB tasks across every
+non-empty library-count/prompt-size stratum, one retained Multi-SWE task in
+each of seven languages, five Terminal tasks across a 2 easy / 2 medium / 1
+hard mix and five categories, two PolyBench tasks in each of four languages
+with distinct task types, and four FeatureBench tasks from distinct
+repositories. Seeded SHA-256 ranks select rows only from the mechanically
+qualified fixed panels; DS4 baseline outcomes are not selection inputs.
+
+Run every selected task as three independent `pi_vanilla high` trials at c=8.
+Report all 96 attempts, per-task mean pass probability, and outcome-flip rate;
+do not convert any-pass/best-of-three into Pass@1. Then promote only Pareto
+finalists to BCB hermetic143, full PolyBench, full Terminal-Bench, FeatureBench
+Fast/full, or a frozen freshness campaign. Publish paired effects, standalone
+uncertainty, language/repository/task-type cuts, partial executable diagnostics,
+failure rates, task/campaign time, tokens, and cost.
 
 ## Implementation order
 
-Items 1–8 are complete as of 2026-08-16; item 9 is the active phase.
+Items 1–8 and the matched scaffold gate in item 9 are complete as of
+2026-08-16; the stability repeats are active.
 
 1. Freeze this campaign and its nested manifests.
 2. Run the qualified BCB Pareto60 and hermetic143 suite IDs.

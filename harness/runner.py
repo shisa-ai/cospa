@@ -77,6 +77,16 @@ def parse_args():
     )
     parser.add_argument("--model", required=True, help="Model ID (e.g. nvidia/nemotron-3-ultra-550b-a55b)")
     parser.add_argument("--problems", type=int, default=None, help="Number of problems to run (None = all)")
+    parser.add_argument(
+        "--task-id",
+        action="append",
+        dest="task_ids",
+        default=None,
+        help=(
+            "Run this exact suite task ID. Repeat --task-id to preserve a "
+            "predeclared panel order; mutually exclusive with --problems."
+        ),
+    )
     parser.add_argument("--k", type=int, default=1, help="Number of trials per problem")
     parser.add_argument(
         "--concurrency",
@@ -145,6 +155,13 @@ def validate_args(args) -> None:
         sys.exit(2)
     if args.problems is not None and args.problems < 1:
         print("✗ --problems must be a positive integer", file=sys.stderr)
+        sys.exit(2)
+    task_ids = getattr(args, "task_ids", None) or []
+    if args.problems is not None and task_ids:
+        print("✗ --problems and --task-id are mutually exclusive", file=sys.stderr)
+        sys.exit(2)
+    if len(task_ids) != len(set(task_ids)):
+        print("✗ --task-id values must be unique", file=sys.stderr)
         sys.exit(2)
     if getattr(args, "retries", 2) < 0:
         print("✗ --retries must be zero or greater", file=sys.stderr)
@@ -1157,12 +1174,27 @@ def main():
     adapter = load_adapter(args.adapter)
     prepare_suite_runtime(suite)
 
-    # Get task list from suite
-    task_ids = suite.get_task_ids(vendor_dir=args.vendor_dir)
-
-    # Filter by --problems if specified
-    if args.problems:
-        task_ids = task_ids[:args.problems]
+    # Get task list from suite. Explicit IDs support fixed, outcome-blind panels
+    # whose members are not necessarily a prefix of the source suite.
+    discovered_task_ids = suite.get_task_ids(vendor_dir=args.vendor_dir)
+    requested_task_ids = getattr(args, "task_ids", None) or []
+    if requested_task_ids:
+        unknown = [
+            task_id
+            for task_id in requested_task_ids
+            if task_id not in set(discovered_task_ids)
+        ]
+        if unknown:
+            print(
+                f"✗ Unknown --task-id values for suite '{args.suite}': {unknown}",
+                file=sys.stderr,
+            )
+            sys.exit(2)
+        task_ids = list(requested_task_ids)
+    else:
+        task_ids = discovered_task_ids
+        if args.problems:
+            task_ids = task_ids[:args.problems]
 
     if not task_ids:
         print(

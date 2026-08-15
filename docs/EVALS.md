@@ -721,9 +721,12 @@ cost, and failure taxonomy rather than assuming ideal scaling.
 - **Cospa decision:** retain the qualified Instruct arm as a low-cost orthogonal
   anchor and report the separately labeled Agentic adaptation as a scaffold
   diagnostic. DS4 resolved 17/143 Instruct and 22/60 Agentic with complete cost
-  coverage and no infrastructure failure. Neither replaces `aider_cospa` or
-  `cospa_repo`, and their scores never merge. Do not call hermetic143 an
-  official full148 score.
+  coverage and no infrastructure failure. On Agentic Pareto60, matched devstack
+  `high` lost 4-to-7 discordant tasks versus vanilla `high`; devstack `xhigh`
+  gained only 8-to-3 over devstack `off` while costing 3.27 times as much. No
+  devstack arm passes the promotion gate, so vanilla `high` remains the
+  scaffold. Neither BCB protocol replaces `aider_cospa` or `cospa_repo`, and
+  their scores never merge. Do not call hermetic143 an official full148 score.
 
 ### LiveCodeBench
 

@@ -2276,3 +2276,30 @@ Append-only development log for the `cospa` repository.
   zero.
 - Next: run matched scaffold ablations, then select a fixed 32-task stability
   sentinel without using repeat outcomes.
+
+## 2026-08-16 — Reject devstack at the matched Pareto60 gate
+
+- Context: the 15-task pilot gave identical devstack `off` and `xhigh` solves,
+  so no expensive scaffold arm could advance until a broader fixed panel tested
+  both reasoning value and scaffold value against vanilla.
+- Evidence: all four BCB Pareto60 arms have 60 authoritative verdicts and no
+  infrastructure, verifier, or budget failure. Vanilla `high` resolved 22,
+  devstack `off` 16, devstack `high` 19, and devstack `xhigh` 21. At matched
+  `high`, devstack had four wins and seven losses versus vanilla (exact McNemar
+  p=0.549; paired-bootstrap 95% effect interval -15 to +5 points) while costing
+  8% more. Devstack `xhigh` versus `off` had eight wins and three losses
+  (p=0.227; interval -1.7 to +18.3 points), but used 3.86 times the task wall
+  and cost 3.27 times as much. Devstack `high` versus `off` was likewise
+  inconclusive at five wins and two losses.
+- Decision: retain `pi_vanilla high`. Devstack `xhigh` fails all predeclared
+  promotion routes: less than +10 points, wins:losses below 3:1, interval
+  crossing zero, and incremental cost above 1.5x. Do not spend Multi-SWE,
+  Terminal, PolyBench, FeatureBench, or SWE-Explore budget on any devstack arm.
+  Superpowers/Little Coder remain optional future studies, not active Cartesian
+  axes.
+- Validation: model, panel, task IDs, adapter, thinking level, and result
+  completeness were checked across all 240 manifest/verdict pairs. Costs and
+  timing were recomputed through the score viewer; paired outcomes used the 60
+  exact shared task IDs and a seeded 50,000-resample bootstrap.
+- Next: freeze and run the outcome-blind 32-task k=3 stability sentinel on the
+  retained vanilla scaffold.

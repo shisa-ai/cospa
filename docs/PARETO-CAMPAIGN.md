@@ -22,10 +22,10 @@ The common baseline for new campaign qualification is:
 | Headline oracle | Deterministic executable grading |
 
 BigCodeBench-Hard Instruct remains a protocol exception: it uses one greedy,
-no-tool generation with thinking disabled. Existing BCB Agentic timing at
-`xhigh` is retained as a conservative projection, but new Pareto baseline runs
-use `high`. Any `xhigh` arm must first beat `high` or `off` on a matched fixed
-panel; a reasoning label alone is not evidence of benefit.
+no-tool generation with thinking disabled. Agentic baseline runs use `high`.
+The completed matched Pareto60 gate rejected devstack `xhigh`: its small,
+inconclusive gain over `off` cost more than three times as much. No `xhigh` arm
+advances; a reasoning label alone is not evidence of benefit.
 
 SWE Atlas is deferred from this campaign. Its Q&A and Test Writing tasks are
 valuable, but their headline path requires a rubric LLM judge. Cospa will first
@@ -65,9 +65,9 @@ comparison. Scaffold and thinking arms must use identical tasks and be analyzed
 with paired wins/losses, an exact McNemar test or paired bootstrap, and a paired
 effect interval.
 
-### What the completed tasks actually showed
+### What the earlier pilot tasks showed
 
-The current BCB pilot is concentrated on very few discriminating tasks:
+The original BCB pilot was concentrated on very few discriminating tasks:
 
 - DS4 `pi_devstack` at `off` and `xhigh` both resolved exactly
   `BigCodeBench/162`, `/502`, and `/879`; `xhigh` cost about 3.9 times as much.
@@ -75,8 +75,8 @@ The current BCB pilot is concentrated on very few discriminating tasks:
   Qwen added `/287`.
 - DS4 Instruct resolved `/162`, `/502`, and `/879`; Muse resolved only `/162`.
 
-The current aggregate differences therefore depend on two to four tasks.
-`xhigh` is dominated by `off` on the matched DS4 devstack pilot: equal outcome,
+Those pilot differences therefore depended on two to four tasks. `xhigh` was
+dominated by `off` on the matched DS4 devstack pilot: equal outcome,
 higher time and cost. This is a stop signal for that arm, not proof that
 thinking never helps on the other 133 tasks.
 
@@ -327,11 +327,32 @@ visible rather than being silently reweighted.
 
 ### Phase C — scaffold ablations
 
-Use DS4 and the fixed panels to compare `pi_vanilla` with shortlisted adapters.
-Start with lower-cost thinking. The existing DS4 devstack `off`/`xhigh` BCB
-result blocks `xhigh` expansion until a new matched panel demonstrates added
-wins. Compare models only on baseline or winning scaffolds; do not launch the
-full model × adapter Cartesian product.
+The matched BCB Pareto60 gate is complete. All arms used identical task IDs,
+DS4, c=8, and k=1:
+
+| Arm | Resolved | Task wall | Elapsed | Tokens | Cost |
+| --- | ---: | ---: | ---: | ---: | ---: |
+| `pi_vanilla high` | 22/60 | 1h00m27s | split smoke/resume | 1.82M | $0.0705 |
+| `pi_devstack off` | 16/60 | 49m37s | 7m24s | 6.57M | $0.0792 |
+| `pi_devstack high` | 19/60 | 56m00s | 8m13s | 6.19M | $0.0761 |
+| `pi_devstack xhigh` | 21/60 | 3h11m31s | 47m27s | 16.74M | $0.2587 |
+
+At matched `high`, devstack lost five percentage points to vanilla: four paired
+wins, seven paired losses, 49 ties, exact McNemar `p=0.549`, and a seeded paired
+bootstrap 95% effect interval of -15 to +5 points. It also cost 8% more. Within
+devstack, `xhigh` beat `off` by 8.3 points, with eight wins, three losses, exact
+`p=0.227`, and a -1.7 to +18.3 point bootstrap interval, but cost 3.27 times as
+much and used 3.86 times the task wall. It fails every predeclared promotion
+route: the interval crosses zero, improvement is below 10 points, wins:losses
+is below 3:1, and cost exceeds 1.5 times baseline. `high` versus `off` was also
+inconclusive (+5 points; five wins, two losses; `p=0.453`).
+
+No devstack arm advances to Multi-SWE, Terminal, PolyBench, FeatureBench, or
+SWE-Explore. `pi_vanilla high` remains the campaign scaffold. Preserve the
+ablation roots under
+`results/runs/ds4-bcb-pareto60-pi_devstack-{off,high,xhigh}-c8-20260815T1830Z`.
+Superpowers and Little Coder remain optional future ablations rather than a
+reason to launch a Cartesian matrix.
 
 ### Phase D — stability and finalist campaigns
 

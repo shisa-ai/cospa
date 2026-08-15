@@ -206,10 +206,13 @@ reorder — earlier items unblock later ones.
       breadth-first wave covers BCB Instruct143, BCB Agentic60, Multi-SWE25,
       Terminal20, PolyBench64, FeatureBench12, and SWE-Explore12;
       suite-specific outcomes, costs, nested expansion, and Pareto promotion
-      rules live in `docs/PARETO-CAMPAIGN.md`. Use the baseline model to compare
-      adapters, then compare models only on the winning one or two adapters.
-      Reserve full repository/feature suites and `k>1` for cells that pass
-      those gates; report independent repetitions rather than best-of-k.
+      rules live in `docs/PARETO-CAMPAIGN.md`. The matched BCB Pareto60 gate
+      retained `pi_vanilla high`: devstack `high` lost 4-to-7 discordant tasks,
+      while devstack `xhigh` cost 3.27 times `off` for an inconclusive 8-to-3
+      paired gain. No devstack arm advances to expensive suites. Compare models
+      only on the retained baseline scaffold. Reserve full repository/feature
+      suites and `k>1` for cells that pass those gates; report independent
+      repetitions rather than best-of-k.
 - [ ] **P14. Superpowers ablation (2×2).** Add adapters `pi_superpowers`
       and `little_coder_superpowers`. For bench runs, **strip interactive
       skill-check flows** (no user present to answer clarifying questions)

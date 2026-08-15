@@ -27,7 +27,7 @@ from unittest.mock import patch
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(PROJECT_ROOT))
 
-from harness.suites.terminal_bench import TerminalBenchSuite
+from harness.suites.terminal_bench import TerminalBenchSuite, _parse_task_yaml
 
 
 def _make_task_yaml_task(vendor_dir: Path, task_id="hello-world"):
@@ -123,6 +123,17 @@ def _make_local_harbor_task(workdir: Path) -> None:
     (workdir / "task.toml").write_text('name = "test-task"\n')
 
 
+def test_task_yaml_fallback_matches_yaml_chomping_semantics():
+    cases = (
+        ("instruction: |-\n  Do the thing.\n", "Do the thing."),
+        ("instruction: |\n  Do the thing.\n", "Do the thing.\n"),
+    )
+    for payload, expected in cases:
+        with patch.dict(sys.modules, {"yaml": None}):
+            parsed = _parse_task_yaml(payload)
+        assert parsed["instruction"] == expected
+
+
 def test_materialize_task_reads_task_yaml_instruction():
     """materialize_task must extract the prompt from task.yaml `instruction`."""
     suite = TerminalBenchSuite()
@@ -152,7 +163,7 @@ def test_materialize_task_does_not_raise_on_missing_optional_files():
         # Must not raise
         task_data = suite.materialize_task("minimal", workdir, vendor_dir)
 
-    assert task_data["prompt"] == "Do the thing.\n", task_data["prompt"]
+    assert task_data["prompt"] == "Do the thing.", task_data["prompt"]
 
 
 def test_run_harbor_job_uses_correct_flags():

@@ -2078,3 +2078,16 @@ Append-only development log for the `cospa` repository.
   22 Java / 22 JavaScript / 21 Python / 17 TypeScript gold-stable pools.
 - Next: freeze Terminal-Bench Pareto20, qualify FeatureBench and the low-cost
   diagnostic bake-off, then launch the matched DS4 baseline wave.
+
+## 2026-08-15 — Normalize Terminal-Bench YAML prompt chomping
+
+- Context: prompt extraction depended on whether PyYAML was installed: the
+  fallback added a newline even for YAML's `|-` strip-chomping indicator.
+- Change: make the dependency-free parser honor strip versus clip chomping and
+  align the real materialization assertion with YAML semantics.
+- Evidence: the new fallback parity test is RED before the fix; all 32
+  Terminal-Bench tests pass afterward. Full pytest reports 365 passed with only
+  the unrelated `check-models.sh` shell-fixture failure remaining.
+- Decision: keep PyYAML optional while requiring identical prompt bytes for the
+  literal block styles used by the pinned Core tasks.
+- Next: freeze and smoke the Terminal-Bench Pareto20 panel.

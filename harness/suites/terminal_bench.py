@@ -82,7 +82,10 @@ def _parse_task_yaml(text: str) -> Dict[str, Any]:
                     break
                 block_lines.append(bl[block_indent:])
                 i += 1
-            result["instruction"] = "\n".join(block_lines).rstrip() + "\n"
+            value = "\n".join(block_lines).rstrip("\n")
+            if not m_instr.group(1).endswith("-"):
+                value += "\n"
+            result["instruction"] = value
             continue
         # Plain `key: value`
         m_kv = re.match(r"^([A-Za-z_][A-Za-z0-9_]*)\s*:\s*(.*)$", line)

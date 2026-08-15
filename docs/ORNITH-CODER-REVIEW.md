@@ -1137,6 +1137,14 @@ behaviorally equivalent to `pi_vanilla` except for an inert omission of
   pi-zentui (headless stale-context crash) through package resource filters;
   this preserves the intended headless benchmark scaffold and is recorded in
   the profile manifest rather than silently mutating the workstation profile.
+- A 2026-08-15 campaign exposed that the earlier qualification's explicit
+  snapshot override was not durable: the default path still mounted mutable
+  workstation settings, so Camoufox reappeared and repeatedly failed in
+  no-network PolyBench containers. The default path now creates a deterministic
+  read-only settings snapshot with Camoufox and pi-zentui resources filtered;
+  explicit pre-sanitized profile overrides remain unchanged. A real DS4
+  PolyBench devstack retry completed 29 model responses and passed all 17 native
+  tests (`fixed (unit test + end-to-end)`).
 - Docker-backed `hello-world` then passed with Ornith and `pi_devstack`; the
   result is under
   `results/e2e-smoke-terminal-bench-devstack-profile-v5-20260716T034155Z/`.

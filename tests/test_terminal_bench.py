@@ -565,6 +565,43 @@ def test_run_harbor_job_mounts_runtime_for_all_and_profile_only_for_devstack():
         ]
 
 
+def test_default_harbor_devstack_profile_disables_headless_unsafe_packages(tmp_path):
+    """No-network containers must not initialize browser/TUI-only extensions."""
+    home = tmp_path / "home"
+    profile = home / ".pi" / "agent"
+    (profile / "npm").mkdir(parents=True)
+    (profile / "git").mkdir()
+    original_settings = {
+        "defaultProvider": "local",
+        "packages": [
+            "npm:pi-context-prune",
+            "npm:@the-forge-flow/camoufox-pi@0.2.1",
+            "https://github.com/lhl/pi-zentui",
+        ],
+    }
+    (profile / "settings.json").write_text(json.dumps(original_settings))
+
+    with patch.dict(
+        os.environ, {"CODING_EVAL_DEVSTACK_PROFILE_DIR": ""}
+    ), patch("harness.suites.terminal_bench.Path.home", return_value=home):
+        mounts = TerminalBenchSuite()._devstack_mounts("pi_devstack")
+
+    settings_mount = next(
+        mount
+        for mount in mounts
+        if mount["target"] == "/opt/coding-eval-devstack/settings.json"
+    )
+    assert settings_mount["source"] != str(profile / "settings.json")
+    sanitized = json.loads(Path(settings_mount["source"]).read_text())
+    assert sanitized["defaultProvider"] == "local"
+    assert sanitized["packages"][0] == "npm:pi-context-prune"
+    for entry in sanitized["packages"][1:]:
+        assert entry["extensions"] == []
+        assert entry["skills"] == []
+        assert entry["prompts"] == []
+        assert entry["themes"] == []
+
+
 def test_run_harbor_job_sets_pythonpath_for_custom_agent_import():
     """The Harbor subprocess must be able to import harness.* custom agents."""
     suite = TerminalBenchSuite()

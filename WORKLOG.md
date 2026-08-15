@@ -1939,3 +1939,28 @@ Append-only development log for the `cospa` repository.
   Keep these `k=1` passes as plumbing evidence, not a capability estimate.
 - Next: run the full Qwen vanilla cells at the validated concurrency, then the
   matched devstack cells without mixing qualification artifacts into scores.
+
+## 2026-08-15 — Keep headless devstack profiles deterministic
+
+- Context: the DS4 PolyBench devstack c=16 cell repeatedly failed before model
+  execution because the default Harbor path mounted mutable workstation
+  settings and Camoufox attempted to fetch its browser inside no-network task
+  containers. The earlier qualification's explicit sanitized-profile override
+  had hidden this default-path regression.
+- Change: derive a content-addressed settings snapshot from the canonical host
+  profile, preserve all normal devstack packages, and disable only Camoufox and
+  pi-zentui resources through Pi's documented package filters. Explicit pinned
+  profile overrides remain untouched.
+- Evidence: the RED test showed the original workstation settings mounted
+  directly. The GREEN unit test verifies deterministic filtering without
+  mutating the source profile. A real DS4 `apache__dubbo-3855` PolyBench
+  devstack retry completed 29 model responses in 544.9 seconds and passed all
+  17 native tests, with no Camoufox, fetch, or agent exception signatures.
+  Full pytest reports 346 passed with only the two documented unrelated
+  shell-port and Terminal-Bench newline fixture failures.
+- Decision: preserve the interrupted artifacts under `results/validation/` and
+  remove their 30 orphaned Harbor containers. Use the sanitized default profile
+  for corrected PB campaigns; the profile remains behaviorally distinct from
+  vanilla without requiring browser/TUI initialization in headless containers.
+- Next: rerun the invalid DS4 PolyBench devstack cell and the full Qwen
+  vanilla/devstack reasoning grid sequentially at client c=16.

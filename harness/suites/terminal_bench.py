@@ -8,11 +8,13 @@ Harbor jobs with the appropriate agent and model.
 Reference: vendor/terminal-bench/CLAUDE.md
 """
 
+import hashlib
 import json
 import os
 import re
 import shutil
 import subprocess
+import tempfile
 import time
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -112,6 +114,10 @@ class TerminalBenchSuite:
         "pi_devstack",
         "pi_devstack_superpowers",
     })
+    HEADLESS_DISABLED_PACKAGE_FRAGMENTS = (
+        "npm:@the-forge-flow/camoufox-pi",
+        "github.com/lhl/pi-zentui",
+    )
 
     AGENT_MAP = {
         "pi_vanilla": "harness.harbor_agents:PiVanillaHarborAgent",
@@ -292,6 +298,62 @@ class TerminalBenchSuite:
             }
         ]
 
+    @classmethod
+    def _sanitized_devstack_settings(cls, profile_dir: Path) -> Path:
+        """Snapshot host settings with headless-unsafe resources disabled."""
+        source_path = profile_dir / "settings.json"
+        try:
+            settings = json.loads(source_path.read_text())
+        except (OSError, json.JSONDecodeError) as exc:
+            raise ValueError(f"Invalid devstack settings: {source_path}") from exc
+        if not isinstance(settings, dict):
+            raise ValueError(f"Invalid devstack settings object: {source_path}")
+
+        packages = settings.get("packages", [])
+        if not isinstance(packages, list):
+            raise ValueError(f"Invalid devstack packages list: {source_path}")
+        sanitized_packages = []
+        for entry in packages:
+            package_source = (
+                entry.get("source") if isinstance(entry, dict) else entry
+            )
+            if not isinstance(package_source, str) or not any(
+                fragment in package_source
+                for fragment in cls.HEADLESS_DISABLED_PACKAGE_FRAGMENTS
+            ):
+                sanitized_packages.append(entry)
+                continue
+            filtered = dict(entry) if isinstance(entry, dict) else {
+                "source": package_source,
+            }
+            filtered.update({
+                "extensions": [],
+                "skills": [],
+                "prompts": [],
+                "themes": [],
+            })
+            sanitized_packages.append(filtered)
+        settings["packages"] = sanitized_packages
+
+        payload = json.dumps(settings, indent=2, sort_keys=True) + "\n"
+        digest = hashlib.sha256(payload.encode()).hexdigest()[:16]
+        snapshot_dir = profile_dir / ".cospa-devstack" / digest
+        snapshot_dir.mkdir(parents=True, exist_ok=True)
+        snapshot_path = snapshot_dir / "settings.json"
+        if not snapshot_path.is_file() or snapshot_path.read_text() != payload:
+            with tempfile.NamedTemporaryFile(
+                mode="w",
+                dir=snapshot_dir,
+                prefix=".settings.",
+                delete=False,
+            ) as handle:
+                handle.write(payload)
+                handle.flush()
+                os.fsync(handle.fileno())
+                temporary_path = Path(handle.name)
+            os.replace(temporary_path, snapshot_path)
+        return snapshot_path
+
     def _devstack_mounts(
         self,
         adapter_name: str,
@@ -313,20 +375,29 @@ class TerminalBenchSuite:
             if configured
             else Path.home() / ".pi" / "agent"
         ).resolve()
-        sources = (
-            (profile_dir / "npm", "/opt/coding-eval-devstack/npm"),
-            (profile_dir / "git", "/opt/coding-eval-devstack/git"),
-            (
-                profile_dir / "settings.json",
-                "/opt/coding-eval-devstack/settings.json",
-            ),
+        required_sources = (
+            profile_dir / "npm",
+            profile_dir / "git",
+            profile_dir / "settings.json",
         )
-        missing = [str(source) for source, _ in sources if not source.exists()]
+        missing = [
+            str(source) for source in required_sources if not source.exists()
+        ]
         if missing:
             raise FileNotFoundError(
                 "Terminal-Bench devstack profile is incomplete; missing: "
                 + ", ".join(missing)
             )
+        settings_source = (
+            profile_dir / "settings.json"
+            if configured
+            else self._sanitized_devstack_settings(profile_dir)
+        )
+        sources = (
+            (profile_dir / "npm", "/opt/coding-eval-devstack/npm"),
+            (profile_dir / "git", "/opt/coding-eval-devstack/git"),
+            (settings_source, "/opt/coding-eval-devstack/settings.json"),
+        )
         return [
             {
                 "type": "bind",

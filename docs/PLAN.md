@@ -2,9 +2,11 @@
 
 > Clean-room harness for evaluating **small local coding models** across
 > **agent harness variants** using a portfolio: the contract-complete
-> **`aider_cospa`** protocol, pinned **Terminal-Bench Core**, the pinned
-> **SWE Atlas Q&A + Test Writing pilot**, and later cost-gated repository and
-> feature suites selected under `docs/EVALS.md`.
+> **`aider_cospa`** protocol, pinned **Terminal-Bench Core**, the cheap
+> **BigCodeBench-Hard** anchor, and cost-gated deterministic repository,
+> feature, and diagnostic suites selected under `docs/EVALS.md`. The pinned
+> SWE Atlas pilot is preserved but deferred because its headline requires an
+> LLM judge.
 >
 > Scope is deliberately narrow: no model serving, no vLLM/SGLang config, no
 > training. Models are an *input* (provider IDs in `models.json`); results are
@@ -99,11 +101,12 @@ reorder — earlier items unblock later ones.
       `terminal-bench-core==0.1.1` manifest and immutable upstream commit.
       Each adapter uses a distinct custom Harbor agent. Start with k=1 on a
       5-task slice to measure wall-clock before committing to full runs.
-- [ ] **P11b. Suite: SWE Atlas pilot12.**
-      `harness/suites/swe_atlas.py` runs a predeclared Harbor-native slice:
+- [ ] **P11b. Suite: SWE Atlas pilot12 (deferred).**
+      `harness/suites/swe_atlas.py` preserves a predeclared Harbor-native slice:
       eight Test Writing and four Codebase Q&A tasks, with three total tasks
-      per Go/Python/C/TypeScript stratum. Preserve upstream verification,
-      pin the rubric judge, and qualify cost/reliability at k=1 before k=2.
+      per Go/Python/C/TypeScript stratum. Keep its upstream and rubric-judge
+      pins, but do not make it an active Pareto-campaign dependency: the current
+      campaign prefers deterministic executable headline graders.
 - [ ] **P11c. Suite: BigCodeBench-Hard Instruct pilot15.**
       `harness/suites/bigcodebench.py` and the protocol-specific
       `bigcodebench_openai` adapter preserve a separate non-agentic baseline:
@@ -137,14 +140,15 @@ reorder — earlier items unblock later ones.
       Borrow the *shape* from multieval's viewer; this is a clean-room write,
       not a port.
 - [ ] **P13. Cost-gated campaigns.** Do not launch a full Cartesian matrix.
-      First gate one fixed `aider_cospa` task block at serving concurrency
-      `c=1` and `c=2`, then advance one rung at a time through `c=4`, `c=8`,
-      and the intended production point `c=16` only while throughput and tail
-      error gates pass. Use one representative model to compare adapters, then
-      compare models only on the winning one or two adapters. Reserve
-      `aider_cospa_full`, `k>1`, Terminal-Bench 2.x, repository, and feature
-      campaigns for configurations that pass the runtime/token/validity gates
-      in `docs/EVALS.md`; report independent repetitions rather than best-of-k.
+      Concurrency qualification still begins on fixed `c=1`/`c=2` blocks and
+      advances only while throughput and tail-error gates pass. The current
+      operational baseline has now been fixed to DS4 + `pi_vanilla` + `c=8`
+      after measured runs; suite-specific task counts, `high` thinking policy,
+      projections, nested expansion, and Pareto promotion rules live in
+      `docs/PARETO-CAMPAIGN.md`. Use the baseline model to compare adapters,
+      then compare models only on the winning one or two adapters. Reserve
+      full repository/feature suites and `k>1` for cells that pass those gates;
+      report independent repetitions rather than best-of-k.
 - [ ] **P14. Superpowers ablation (2×2).** Add adapters `pi_superpowers`
       and `little_coder_superpowers`. For bench runs, **strip interactive
       skill-check flows** (no user present to answer clarifying questions)
@@ -296,10 +300,12 @@ Terminal-Bench 2.1 remains a separate milestone campaign.
   measure time, *then* decide k for the real matrix. TB on small models
   is slow; we don't want to discover a 40-hour run after launching it.
 
-### SWE Atlas pilot12 (P11b, third)
+### SWE Atlas pilot12 (P11b, preserved but deferred)
 
-The first new harness-discrimination suite is the cost/reliability pilot from
-`docs/EVALS.md`, not a full SWE Atlas leaderboard reproduction.
+This cost/reliability pilot remains implemented and pinned, but it is not an
+active dependency of the deterministic Pareto campaign in
+`docs/PARETO-CAMPAIGN.md`. Its headline requires an LLM rubric judge, so current
+campaign budget goes first to executable-oracle suites.
 
 - Upstream repository: https://github.com/scaleapi/SWE-Atlas at immutable
   commit `2cac47d64a9123d915b8f6f6f53763391920f574`.
@@ -323,9 +329,10 @@ The first new harness-discrimination suite is the cost/reliability pilot from
 - Status: `wired (unit test + real pinned artifact)`. All 12 tasks discover and
   materialize from the real checkout; a real rubric-scoring path is still
   required before upgrading this to `fixed (end-to-end)`.
-- Campaign: one representative model with `pi_vanilla`, all 12 at k=1. Apply
-  the runtime/token/telemetry/infrastructure/difficulty gates in `docs/EVALS.md`
-  before a matched k=2 pass or any adapter expansion.
+- Campaign: deferred. If judge-based diagnostics are explicitly restored,
+  start with one representative model using `pi_vanilla`, all 12 at k=1, and
+  apply the runtime/token/telemetry/infrastructure/difficulty gates in
+  `docs/EVALS.md` before a matched k=2 pass or adapter expansion.
 
 ## 4. Reproducibility & results layout
 

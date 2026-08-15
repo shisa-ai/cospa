@@ -1,6 +1,6 @@
 # Cospa evaluation portfolio and methodology
 
-_Last reviewed: 2026-08-14_
+_Last reviewed: 2026-08-15_
 
 This document defines what Cospa should measure, how benchmark protocols are
 reviewed, which external evaluations are worth adopting, and how long campaigns
@@ -31,9 +31,15 @@ a portfolio whose components have distinct jobs:
 | Real repository issue resolution | **`cospa_repo`**, selected after a source bake-off | Curate from pinned, revalidated multilingual SWE sources; keep source benchmark IDs and report source-specific results |
 | Feature implementation | **FeatureBench Lite**, then selected full tasks | Milestone suite; too expensive for a Cartesian model × adapter matrix |
 | Terminal and broad tool competence | **Terminal-Bench Core 0.1.1 now; 2.x at milestones** | Preserve as a separate external anchor with exact task IDs and protocol |
-| Harness-sensitive investigation/testing | **SWE Atlas Q&A + Test Writing** | Continue the existing 12-task cost/reliability pilot before expanding |
+| Harness-sensitive investigation/testing | **SWE Atlas Q&A + Test Writing** | Deferred from the current campaign because the headline path requires an LLM judge; retain as a separately labeled future diagnostic |
 | Freshness audit | **SWE-bench-Live MultiLang** or a genuinely post-cutoff rolling set | Freeze each evaluated release; use as an audit, not a stable longitudinal score |
 | Cheap orthogonal code-generation anchor | **BigCodeBench-Hard Instruct** and/or a post-cutoff LiveCodeBench window | Keep separate from agentic/repository scores |
+| Low-cost agent diagnostic | **DABStep versus SWE-Explore bake-off** | Qualify small matched slices and implement the best executable cost/discrimination tradeoff first; never merge with coding resolution |
+
+The current operational matrix, nested task counts, DS4 `pi_vanilla` `c=8`
+baseline, measured projections, and promotion gates are frozen in
+`docs/PARETO-CAMPAIGN.md`. That campaign prefers deterministic executable
+oracles and defers suites whose headline requires an LLM judge.
 
 `aider_cospa` is a protocol design target, not merely a rename of the current
 suite. The current Aider suite already hides official tests and reference
@@ -345,7 +351,7 @@ publish end-to-end elapsed time, so a local pilot is required.
 | `aider_cospa_full` | 225 × `k=1` | Cospa currently has a 10-minute safety wall | Provisional measured projections above; absolute cap is 37.5 serial hours |
 | Terminal-Bench Core 0.1.1 | 80 × `k=1` in Cospa | No complete local row | At a hypothetical 30-minute episode ceiling: 40 serial h, 20 h ideal `c=2`, 5 h ideal `c=8`; pilot required |
 | Terminal-Bench 2.x | 89 tasks; official campaigns commonly repeat | **Published:** most agent trials finish under 20 minutes; extremes reach two hours | If every trial took 20 minutes: 29.7 serial h for `k=1`; 148.3 h for `k=5`. Actual distribution and compatible task list must be pinned |
-| SWE Atlas pilot | 12 × `k=1`, then matched `k=2` if promoted | Published cost for selected Q&A/Test Writing systems is about $0.35–$1.90/task; wall time unknown | Cospa gate: ≤2 h summed agent time and ≤4 h setup+agent+judge for first 12; pilot required |
+| SWE Atlas pilot | 12 × `k=1`, then matched `k=2` if promoted | Published cost for selected Q&A/Test Writing systems is about $0.35–$1.90/task; wall time unknown | Deferred from the deterministic Pareto campaign because the headline requires a rubric LLM judge |
 | Multi-SWE-bench Flash | 300 × `k=1` | No published E2E runtime | At a 30-minute Cospa episode ceiling: 150 serial h; 75 h ideal `c=2`; 18.8 h ideal `c=8`, plus verification |
 | SWE-bench Multilingual | 300 × `k=1` | Baseline used a $2.50/task cost limit; time unknown | Same 150 h / 75 h / 18.8 h planning ceiling under a 30-minute policy |
 | SWE-PolyBench Verified | README says 382; dataset card has stale conflicting count | Harness recommends 10–12 evaluator threads on 16 cores/64 GB; inference time unknown | At 382 × 30 minutes: 191 serial h; 95.5 h ideal `c=2`; 23.9 h ideal `c=8` |
@@ -370,13 +376,13 @@ rules, and a `c=1/2/4/8/16` ladder. The pilot sizes are:
 | --- | ---: | --- |
 | Aider source corpus | 23 / 225 | Blocked until the contract audit freezes eligible tasks |
 | Terminal-Bench Core 0.1.1 | 8 / 80 | Source and Harbor 0.16.1 ready; fresh Docker smoke required |
-| SWE Atlas pilot12 | 12 / 12 | Pinned tasks ready; judge credentials/endpoint required |
+| SWE Atlas pilot12 | 12 / 12 | Mechanically pinned but deferred; current campaign does not require an LLM judge |
 | Multi-SWE-bench Flash | 30 / 300 | Dataset and 30 image digests locked; gold/null/repeat validation pending |
 | SWE-bench Multilingual | 30 / 300 | Dataset and 30 image digests locked; gold/null/repeat validation pending |
-| SWE-PolyBench Verified | 28 / 382 (38 screened) | Ready for Ornith smoke; all retained tasks passed the three-observation null/gold gate offline |
+| SWE-PolyBench Verified | 28 / 382 (38 screened) | Three-observation null/gold gate passed; complete DS4 and historical Muse vanilla cells measured; balanced64/96 expansion is next |
 | FeatureBench Lite | 6 / 30 | Dataset and 6 image digests locked; gold/null/repeat validation pending |
-| BigCodeBench-Hard Instruct | 15 / 148 | Non-agentic adapter ready; 15/15 gold pass and 15/15 null fail; Ornith smoke pending |
-| BigCodeBench-Hard agentic | 15 / 148 | Cospa scaffold adaptation ready; representative native null/gold gate passed 3/3 and both local-model agent paths reached native verdicts |
+| BigCodeBench-Hard Instruct | 15 / 148 | 15/15 gold pass and null fail; complete DS4 and historical Muse model cells measured; expand to full148 |
+| BigCodeBench-Hard agentic | 15 / 148 | Complete DS4/Muse/Qwen vanilla cells and DS4 devstack thinking ablations measured; freeze nested60 then expand finalists to full148 |
 
 **Measured setup state, 2026-08-14:** the host has 683 GiB free on `/`; all
 listed source repositories and external dataset files are present at the
@@ -396,12 +402,12 @@ verifier had no network. Ten tasks were excluded before target-model runs:
 eight require uncached verifier dependencies and two have gold patches that
 fail declared P2P tests in their pinned images.
 
-The operational goal is a result within 12 hours with 20% reserve, so the
-campaign budget is 9.6 hours. If c=16 scaled perfectly, the maximum mean task
-walls for a full campaign would be about 41.0 minutes for 225 tasks, 115.2 for
-80, 30.7 for 300, 24.1 for 382, 307.2 for 30, and 62.3 for 148. These are
-feasibility thresholds, **not runtime estimates**. Measured throughput,
-tail latency, setup costs, and failure rates decide whether c=16 is retained.
+The original runtime pilot targeted a result within 12 hours with 20% reserve,
+so its campaign budget was 9.6 hours. Its c=16 feasibility thresholds were not
+runtime estimates. Measured 2026-08-15 runs now supersede that intended
+production point for the active campaign: `docs/PARETO-CAMPAIGN.md` fixes DS4
++ `pi_vanilla` + c=8, retains the 9.6-hour working budget, and records observed
+makespan rather than assuming ideal scaling.
 
 ## Methodology review of leading candidates
 
@@ -653,7 +659,9 @@ tasks: 124 Q&A, 90 Test Writing, and 70 Refactoring. Harbor-native environments
 make scaffold substitution practical, but scoring combines deterministic checks
 with a pinned LLM rubric judge. Published leaderboard protocols use `k=3`, up
 to 250 steps, and long sandbox ceilings; actual wall-time distributions are not
-published. Complete the real judge-backed 12-task run before expanding.
+published. Preserve the implementation and pins, but defer execution from the
+current Pareto campaign: deterministic executable headline graders take
+priority, and no active campaign phase should require judge credentials.
 
 ### Other high-value but non-routine suites
 
@@ -716,13 +724,16 @@ Choose one source benchmark intact when external comparability matters. If
 Cospa combines sources, name the result `cospa_repo`, publish the manifest and
 weights, and do not imply equivalence to any source leaderboard.
 
-### 4. Add feature and freshness campaigns only after the repo panel is stable
+### 4. Add feature and diagnostics only after the repo panel is stable
 
-- Run FeatureBench Lite with the winning one or two scaffolds.
+- Run FeatureBench pilot6, then choose Lite30 or Fast100 from measured
+  cost/discrimination evidence with the winning one or two scaffolds.
+- Bake off small DABStep and SWE-Explore slices; implement the best verified
+  low-cost diagnostic first and report it separately from coding resolution.
 - Freeze a post-cutoff SWE-bench-Live MultiLang slice only when freshness is a
   deployment question.
-- Continue Terminal-Bench and SWE Atlas as separate terminal/investigation
-  signals rather than averaging them into one coding score.
+- Continue Terminal-Bench as a separate terminal signal. Preserve SWE Atlas as
+  a future judge-based diagnostic, but do not make it an active dependency.
 
 ## Reporting requirements
 

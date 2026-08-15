@@ -1989,3 +1989,22 @@ Append-only development log for the `cospa` repository.
   inferring external billing.
 - Next: launch 16 sequential cells (four models x two suites x two adapters) at
   c=2 with fail-closed manifest, route, profile, and thinking checks.
+
+## 2026-08-15 — Freeze the Pareto evaluation campaign
+
+- Context: pilot15 BCB and pilot28 PolyBench scores had 15–22 point Wilson
+  half-widths and concentrated their apparent discrimination in a few tasks;
+  the original runtime pilot was not a ranking-quality matrix.
+- Evidence: durable DS4 c=8 cells measured 24.5 seconds elapsed for BCB Instruct
+  pilot15, 5m25s for BCB Agentic pilot15, and 2h05m for PolyBench pilot28.
+  Recomputed task overlap shows no DS4 devstack `xhigh` gain over `off` on BCB
+  despite about 3.9x estimated cost, while Muse had seven one-way PolyBench wins
+  over DS4 on the fixed panel.
+- Decision: fix DS4 + `pi_vanilla` + c=8 + k=1 as the campaign baseline, use
+  `high` thinking for new agentic baselines, expand through nested outcome-blind
+  panels, prefer executable headline graders, and defer SWE Atlas because it
+  requires an LLM judge. `docs/PARETO-CAMPAIGN.md` records the measured
+  projections and paired cost/discrimination promotion gates.
+- Next: expand BCB to full148, finish Multi-SWE qualification, freeze
+  Terminal-Bench Pareto20 and PolyBench balanced64/96, then qualify FeatureBench
+  and the low-cost DABStep/SWE-Explore diagnostic bake-off.

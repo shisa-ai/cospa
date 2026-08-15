@@ -1915,3 +1915,27 @@ Append-only development log for the `cospa` repository.
   reasoning for the 1,280-token BigCodeBench Instruct protocol.
 - Next: validate effective xhigh control and run one Qwen agentic BigCodeBench
   and PolyBench smoke before launching the full scaffold matrix.
+
+## 2026-08-15 — Qualify Qwen 3.8 for scaffold evaluation
+
+- Context: Qwen needed real-artifact validation of the generated provider route,
+  sampling metadata, thinking control, Harbor container path, and native graders
+  before replacing Muse in any full campaign.
+- Evidence: at observed `xhigh`, vanilla Qwen resolved BigCodeBench/15 in 48.5
+  agent seconds (7 turns, 9 tools, 3,511 input / 7,170 output / 36,992 cached
+  tokens) and resolved PolyBench `apache__dubbo-3855` with all 17 target tests
+  passing in 723.8 wall seconds (63 turns, 73 tools, 36,868 input / 27,677
+  output / 2,083,392 cached tokens). Both traces report served model
+  `qwen38-27b-nvfp4-mtp`, explicit thinking blocks, and an observed `xhigh`
+  level change.
+- Change: treat `results/qualification/` as a diagnostic root hidden from the
+  default score table, while retaining it under `view --all`; the two Qwen
+  smokes now stay durable without contaminating campaign rows.
+- Validation: the viewer RED test exposed qualification rows in the default
+  table, then passed after the filter change; all 50 viewer tests pass. Full
+  pytest passes 345 tests with only the same two unrelated shell-port and
+  Terminal-Bench newline fixture failures.
+- Decision: the Qwen vanilla path is qualified for a full xhigh scaffold cell.
+  Keep these `k=1` passes as plumbing evidence, not a capability estimate.
+- Next: run the full Qwen vanilla cells at the validated concurrency, then the
+  matched devstack cells without mixing qualification artifacts into scores.

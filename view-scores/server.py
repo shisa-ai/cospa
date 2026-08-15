@@ -596,6 +596,7 @@ class ScoreHandler(SimpleHTTPRequestHandler):
             "smoke" in run_path_lower
             or "probe" in run_path_lower
             or "preflight" in run_path_lower
+            or "qualification" in run_segments
             or "validation" in run_segments
         ):
             return False
@@ -2066,7 +2067,10 @@ def main(argv: list[str] | None = None) -> int:
         dest="include_smoke",
         action="store_true",
         default=False,
-        help="Include smoke/probe/preflight/validation runs (hidden by default)",
+        help=(
+            "Include smoke/probe/preflight/qualification/validation runs "
+            "(hidden by default)"
+        ),
     )
     common.add_argument(
         "--filter",

@@ -375,7 +375,7 @@ def test_get_scores_reads_named_run_wrapper_tree():
 
 
 def test_get_scores_hides_noncampaign_runs_by_default_and_all_restores_them():
-    """Default view should exclude smoke, probe, validation, and preflight rows."""
+    """Default view should exclude smoke, probe, qualification, and validation."""
     with tempfile.TemporaryDirectory() as tmp:
         results_dir = Path(tmp) / "results"
         _write_single_row(
@@ -397,6 +397,12 @@ def test_get_scores_hides_noncampaign_runs_by_default_and_all_restores_them():
             task_id="validation/task",
         )
         _write_single_row(
+            results_dir / "qualification" / "qwen38-polybench-xhigh",
+            adapter="bigcodebench_openai",
+            suite="swe_polybench_verified",
+            task_id="qualification/task",
+        )
+        _write_single_row(
             results_dir / "campaign-preflight-c2-20260704",
             adapter="pi_vanilla",
             suite="aider_polyglot",
@@ -414,8 +420,9 @@ def test_get_scores_hides_noncampaign_runs_by_default_and_all_restores_them():
         all_scores = h.get_scores(include_smoke=True)
 
     assert {row["adapter"] for row in default_scores} == {"pi_devstack"}
-    assert len(all_scores) == 5
+    assert len(all_scores) == 6
     assert {row["adapter"] for row in all_scores} == {
+        "bigcodebench_openai",
         "little_coder",
         "pi_devstack",
         "pi_superpowers",

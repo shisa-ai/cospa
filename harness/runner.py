@@ -62,11 +62,7 @@ def parse_args():
     parser.add_argument(
         "--suite",
         required=True,
-        help=(
-            "Suite name (aider_polyglot, terminal_bench, swe_atlas_pilot12, "
-            "bigcodebench_hard_instruct, bigcodebench_hard_agentic, "
-            "swe_polybench_verified, multi_swe_bench_flash)"
-        ),
+        help="Suite name registered in harness.suites.SUITES",
     )
     parser.add_argument(
         "--adapter",
@@ -593,7 +589,8 @@ def run_trial(
             task_data[key] = model_metadata[key]
     protocol_overrides = model_metadata.get("protocol_overrides")
     if isinstance(protocol_overrides, dict):
-        suite_overrides = protocol_overrides.get(suite.name)
+        override_name = getattr(suite, "protocol_override_name", suite.name)
+        suite_overrides = protocol_overrides.get(override_name)
         if isinstance(suite_overrides, dict):
             request_overrides = suite_overrides.get("request_overrides")
             if isinstance(request_overrides, dict):

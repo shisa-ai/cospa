@@ -107,17 +107,22 @@ reorder — earlier items unblock later ones.
       per Go/Python/C/TypeScript stratum. Keep its upstream and rubric-judge
       pins, but do not make it an active Pareto-campaign dependency: the current
       campaign prefers deterministic executable headline graders.
-- [ ] **P11c. Suite: BigCodeBench-Hard Instruct pilot15.**
+- [ ] **P11c. Suite: BigCodeBench-Hard hermetic143 + Pareto60.**
       `harness/suites/bigcodebench.py` and the protocol-specific
       `bigcodebench_openai` adapter preserve a separate non-agentic baseline:
       one OpenAI-compatible user message, no system/tools/context, greedy
       `n=1`, upstream sanitization, and calibrated evaluation in the immutable
-      Linux/amd64 verifier image. Public prompts are committed; hidden tests
-      and canonical solutions remain in the pinned parquet and enter only the
-      post-generation, network-disabled verifier container. The separately
-      labeled `bigcodebench_hard_agentic` suite reuses pilot15 and that verifier
-      but materializes an editable `solution.py` workspace for matched scaffold
-      comparisons; its scores never merge with the official protocol anchor.
+      Linux/amd64 verifier image. The full148 public prompt projection contains
+      no tests or solutions. A no-network gold screen excluded five tasks that
+      require external URLs or unavailable NLTK data; each of the 143 retained
+      tasks then passed three gold observations and failed three null
+      observations. Distinct
+      `bigcodebench_hard_instruct_hermetic143`,
+      `bigcodebench_hard_agentic_hermetic143`, and nested
+      `bigcodebench_hard_agentic_pareto60` suite IDs prevent protocol or panel
+      merging. Agentic suites materialize editable `solution.py` workspaces;
+      their scores never merge with the Instruct anchor or claim full148
+      comparability.
 - [ ] **P11d. Suite: SWE-PolyBench Verified pilot28.**
       `harness/suites/swe_polybench.py` materializes the 28 tasks retained from
       an outcome-blind 38-task screen as Harbor tasks over digest-pinned images.

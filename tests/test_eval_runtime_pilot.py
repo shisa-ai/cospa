@@ -155,9 +155,19 @@ def test_selected_images_are_digest_pinned_before_model_runs():
             "swe_bench_multilingual": "blocked_gold_null_validation",
             "swe_polybench_verified": "ready_smoke",
             "featurebench_lite": "blocked_gold_null_validation",
-            "bigcodebench_hard_instruct": "ready_smoke",
+            "bigcodebench_hard_instruct": "qualified_expansion_ready",
         }[name]
         assert suites[name]["status"] == expected_status
+        if name == "bigcodebench_hard_instruct":
+            assert suites[name]["qualified_expansion"] == {
+                "manifest": "configs/bigcodebench_hard_hermetic143.json",
+                "screened_tasks": 148,
+                "retained_tasks": 143,
+                "observations_per_condition": 3,
+                "gold_resolved": "429/429",
+                "null_resolved": "0/429",
+                "completed_at": "2026-08-15",
+            }
         if name == "multi_swe_bench_flash":
             assert suites[name]["qualified_subset"] == {
                 "manifest": "configs/multi_swe_bench_flash_hermetic25.json",

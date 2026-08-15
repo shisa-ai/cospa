@@ -358,7 +358,7 @@ publish end-to-end elapsed time, so a local pilot is required.
 | FeatureBench Lite / Full | 30 / 200 | Default task timeout 3,600 s; published OpenHands runs allow 500 steps and consume 2.6M–9.0M input tokens/task on Lite | Timeout ceiling: 30 / 200 serial h; ideal `c=8`: 3.75 / 25 h, before cold setup and contention |
 | SWE-bench-Live MultiLang | 743 in current README | Runtime unknown; large multilingual builds/tests | At 30 minutes/task: 371.5 serial h; 185.8 h ideal `c=2`; 46.4 h ideal `c=8` |
 | SWE-bench Pro public | Currently 730 leaderboard tasks; 250-turn uncapped model runs | Published task intent is hours to days for humans; agent wall distribution not published | Not a routine local run. Pilot required; use public trajectories before generating new ones |
-| BigCodeBench-Hard | 148, normally one generated program/sample for Pass@1 | **Published verifier time for the whole set:** 4–5 min on hosted Gradio or 15–20 min on default E2B | Generation time is model/server dependent; verification itself is cheap |
+| BigCodeBench-Hard | 148 official; 143 in Cospa's no-network subset | **Published verifier time for the whole set:** 4–5 min on hosted Gradio or 15–20 min on default E2B | Cospa excludes five tasks whose gold solutions fail without external URL/NLTK state; DS4 c=8 projects to about 52 minutes for 143 Agentic tasks |
 | LiveCodeBench v6 | 1,055 problems; official setup defaults to `n=10` samples | Runtime not published; authors warn timeout settings can move score by <0.5 points | 10,550 generations before repair scenarios. Use `n=1` only if explicitly defining a different protocol |
 
 A 30-minute row is a **planning ceiling**, not a recommendation that every
@@ -377,12 +377,12 @@ rules, and a `c=1/2/4/8/16` ladder. The pilot sizes are:
 | Aider source corpus | 23 / 225 | Blocked until the contract audit freezes eligible tasks |
 | Terminal-Bench Core 0.1.1 | 8 / 80 | Source and Harbor 0.16.1 ready; fresh Docker smoke required |
 | SWE Atlas pilot12 | 12 / 12 | Mechanically pinned but deferred; current campaign does not require an LLM judge |
-| Multi-SWE-bench Flash | 25 retained / 30 screened / 300 | `multi_swe_bench_flash_hermetic25` passed 75/75 gold and 75/75 null observations under the no-network verifier; ready for DS4 smoke |
+| Multi-SWE-bench Flash | 25 retained / 30 screened / 300 | `multi_swe_bench_flash_hermetic25`: 75/75 gold passed and 75/75 null failed under the no-network verifier; ready for DS4 smoke |
 | SWE-bench Multilingual | 30 / 300 | Dataset and 30 image digests locked; gold/null/repeat validation pending |
 | SWE-PolyBench Verified | 28 / 382 (38 screened) | Three-observation null/gold gate passed; complete DS4 and historical Muse vanilla cells measured; balanced64/96 expansion is next |
 | FeatureBench Lite | 6 / 30 | Dataset and 6 image digests locked; gold/null/repeat validation pending |
-| BigCodeBench-Hard Instruct | 15 / 148 | 15/15 gold pass and null fail; complete DS4 and historical Muse model cells measured; expand to full148 |
-| BigCodeBench-Hard agentic | 15 / 148 | Complete DS4/Muse/Qwen vanilla cells and DS4 devstack thinking ablations measured; freeze nested60 then expand finalists to full148 |
+| BigCodeBench-Hard Instruct | 15 pilot / 143 retained / 148 screened | `bigcodebench_hard_instruct_hermetic143`: 429/429 gold passed and 429/429 null failed; five no-network failures excluded |
+| BigCodeBench-Hard agentic | Pareto60 / hermetic143 | Separate Agentic suite IDs ready; DS4/Muse/Qwen pilot cells and DS4 thinking ablations measured; expand favorable panels to hermetic143 |
 
 **Measured setup state, 2026-08-14:** the host has 683 GiB free on `/`; all
 listed source repositories and external dataset files are present at the
@@ -637,9 +637,18 @@ makespan rather than assuming ideal scaling.
   model-card sampling and tool access. This is explicitly not an official
   BigCodeBench Instruct Pass@1 protocol; it exists only for matched
   `pi_vanilla`/`pi_devstack` scaffold comparisons.
-- **Cospa decision:** retain the official arm as a low-cost orthogonal anchor
-  and report the separately labeled agentic adaptation as a scaffold diagnostic;
-  neither replaces `aider_cospa` or `cospa_repo`, and their scores never merge.
+- **Cospa no-network qualification:** all 148 public Hard prompts were projected
+  without tests or solutions, then screened with the pinned ground truth inside
+  the network-disabled evaluator. Tasks `/101`, `/1012`, `/177`, `/590`, and
+  `/655` failed because they require external URLs or unavailable NLTK data.
+  The outcome-blind `bigcodebench_hard_*_hermetic143` suites exclude exactly
+  those five. Across three observations per condition, all 429 retained gold
+  runs passed and all 429 null runs failed. The nested Agentic Pareto60 panel
+  preserves pilot15 and stratifies library count and prompt size.
+- **Cospa decision:** retain the qualified Instruct arm as a low-cost orthogonal
+  anchor and report the separately labeled Agentic adaptation as a scaffold
+  diagnostic; neither replaces `aider_cospa` or `cospa_repo`, and their scores
+  never merge. Do not call hermetic143 an official full148 score.
 
 ### LiveCodeBench
 

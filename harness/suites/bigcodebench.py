@@ -17,7 +17,10 @@ from typing import Any
 
 
 ROOT = Path(__file__).resolve().parents[2]
-SPEC_PATH = ROOT / "configs" / "bigcodebench_hard_instruct_pilot15.json"
+PILOT_SPEC_PATH = ROOT / "configs" / "bigcodebench_hard_instruct_pilot15.json"
+FULL_SPEC_PATH = ROOT / "configs" / "bigcodebench_hard_instruct_full148.json"
+HERMETIC143_PATH = ROOT / "configs" / "bigcodebench_hard_hermetic143.json"
+PARETO60_PATH = ROOT / "configs" / "bigcodebench_hard_agentic_pareto60.json"
 IMAGE_LOCK_PATH = ROOT / "configs" / "ornith_runtime_pilot_images_v1.json"
 IMAGE_TAG = "bigcodebench/bigcodebench-evaluate:latest"
 
@@ -84,9 +87,12 @@ class BigCodeBenchHardInstructSuite:
 
     name = "bigcodebench_hard_instruct"
     version = "0.1"
+    task_count = 15
+    spec_path = PILOT_SPEC_PATH
+    protocol_override_name = "bigcodebench_hard_instruct"
 
     def __init__(self) -> None:
-        self.spec = json.loads(SPEC_PATH.read_text())
+        self.spec = json.loads(self.spec_path.read_text())
         self.protocol = self.spec["protocol"]
         self.tasks = {task["task_id"]: task for task in self.spec["tasks"]}
         lock = json.loads(IMAGE_LOCK_PATH.read_text())
@@ -309,6 +315,58 @@ class BigCodeBenchHardInstructSuite:
         }
 
 
+class _BigCodeBenchHardInstructFullSuite(BigCodeBenchHardInstructSuite):
+    """Public full148 projection used to construct qualified subsets."""
+
+    name = "bigcodebench_hard_instruct_full"
+    version = "0.2"
+    task_count = 148
+    spec_path = FULL_SPEC_PATH
+
+
+class _TaskManifestMixin:
+    """Restrict a full public spec to one immutable outcome-blind manifest."""
+
+    task_manifest_path: Path
+
+    def __init__(self) -> None:
+        super().__init__()
+        self.task_manifest = json.loads(self.task_manifest_path.read_text())
+        selected = [task["task_id"] for task in self.task_manifest["tasks"]]
+        if len(selected) != self.task_count or len(set(selected)) != len(selected):
+            raise ValueError(f"Invalid {self.name} task manifest")
+        missing = set(selected).difference(self.tasks)
+        if missing:
+            raise ValueError(f"Missing {self.name} tasks: {sorted(missing)}")
+        self.tasks = {task_id: self.tasks[task_id] for task_id in selected}
+
+    def manifest_metadata(self, task_data: dict[str, Any]) -> dict[str, Any]:
+        metadata = super().manifest_metadata(task_data)
+        metadata.update(
+            {
+                "panel": self.task_manifest["name"],
+                "panel_version": self.task_manifest["version"],
+                "panel_size": self.task_count,
+                "panel_selection": self.task_manifest["selection"],
+            }
+        )
+        if "qualification" in self.task_manifest:
+            metadata["panel_qualification"] = self.task_manifest["qualification"]
+        return metadata
+
+
+class BigCodeBenchHardInstructHermeticSuite(
+    _TaskManifestMixin,
+    _BigCodeBenchHardInstructFullSuite,
+):
+    """Network-disabled Instruct protocol over 143 qualified Hard tasks."""
+
+    name = "bigcodebench_hard_instruct_hermetic143"
+    version = "2026-08-15"
+    task_count = 143
+    task_manifest_path = HERMETIC143_PATH
+
+
 AGENTIC_SOLUTION_FILE = "solution.py"
 AGENTIC_STARTER_SOLUTION = (
     "# Implement the complete self-contained Python solution below.\n"
@@ -411,3 +469,36 @@ class BigCodeBenchHardAgenticSuite(BigCodeBenchHardInstructSuite):
             + "\n"
         )
         return super().verify(task_data, workdir)
+
+
+class _BigCodeBenchHardAgenticFullSuite(BigCodeBenchHardAgenticSuite):
+    """Full148 agentic projection used to construct qualified subsets."""
+
+    name = "bigcodebench_hard_agentic_full"
+    version = "0.2"
+    task_count = 148
+    spec_path = FULL_SPEC_PATH
+
+
+class BigCodeBenchHardAgenticHermeticSuite(
+    _TaskManifestMixin,
+    _BigCodeBenchHardAgenticFullSuite,
+):
+    """Agentic workspace protocol over 143 network-disabled qualified tasks."""
+
+    name = "bigcodebench_hard_agentic_hermetic143"
+    version = "2026-08-15"
+    task_count = 143
+    task_manifest_path = HERMETIC143_PATH
+
+
+class BigCodeBenchHardAgenticPareto60Suite(
+    _TaskManifestMixin,
+    _BigCodeBenchHardAgenticFullSuite,
+):
+    """Outcome-blind nested 60-task scaffold-discrimination panel."""
+
+    name = "bigcodebench_hard_agentic_pareto60"
+    version = "2026-08-15"
+    task_count = 60
+    task_manifest_path = PARETO60_PATH

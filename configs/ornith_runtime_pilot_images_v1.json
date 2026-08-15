@@ -1,7 +1,7 @@
 {
   "name": "ornith_runtime_pilot_images_v1",
   "source_manifest": "configs/ornith_runtime_pilot_v1.json",
-  "source_manifest_sha256": "f6c06433324fe7e20d681f9d8fa140933bd70ce3b3f02d572e22b3370de54ca9",
+  "source_manifest_sha256": "87b3f4dab7202f735ee99cd3b37fbae7b2bbb4df0922cf93370e68c53d53f225",
   "platform": {
     "os": "linux",
     "architecture": "amd64"

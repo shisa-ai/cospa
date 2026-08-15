@@ -110,13 +110,23 @@ estimates, not promises:
 | --- | ---: | ---: | ---: |
 | BCB Agentic 60 | 1h56m | 21m40s | $0.14 |
 | BCB Agentic 75 | 2h25m | 27m05s | $0.18 |
-| BCB Agentic full148 | 4h47m | 53m27s | $0.35 |
+| BCB Agentic hermetic143 | 4h37m | 51m38s | $0.33 |
 | PolyBench balanced64 | 5h43m | 4h46m | $0.73 |
 | PolyBench balanced96 | 8h35m | 7h09m | $1.10 |
 | PolyBench full382 | 34h08m | 28h25m | $4.37 |
 
 The BCB Agentic projection uses the observed `xhigh` cell and should be an
-upper-bound directionally if `high` is cheaper. The PolyBench projection assumes
+upper-bound directionally if `high` is cheaper. The full 148-task public spec
+was screened in the pinned no-network verifier: 143 ground-truth solutions
+passed, while five tasks depended on external URLs or unavailable NLTK data.
+`bigcodebench_hard_*_hermetic143` is therefore the largest scored Cospa
+expansion; “full148” remains only a public source projection and is not silently
+scored with verifier failures. The 143 retained tasks then had 429/429 gold
+observations pass and 429/429 null observations fail. A post-integration DS4
+`pi_vanilla` `high` c=8 smoke produced eight authoritative native verdicts in
+about 61 seconds elapsed (0/8 resolved, 335 summed task seconds, no
+infrastructure/verifier failures).
+That smoke validates the path, not capability. The PolyBench projection assumes
 newly qualified tasks have similar setup and repository costs; qualification
 must measure that assumption.
 
@@ -201,15 +211,17 @@ protocol comparability.
 
 | Suite | First block | Expansion | Purpose |
 | --- | ---: | ---: | --- |
-| BCB-Hard Instruct | full 148 | none | Cheap model-only protocol anchor |
-| BCB-Hard Agentic | 60 | full 148 | Function implementation + scaffold sensitivity |
+| BCB-Hard Instruct | hermetic143 | none | Cheap model-only protocol anchor |
+| BCB-Hard Agentic | Pareto60 | hermetic143 | Function implementation + scaffold sensitivity |
 | Terminal-Bench Core | existing 8 | Pareto20, then full80 | Broad terminal/tool competence |
 | FeatureBench | existing 6 | Lite30; Fast100 only if promoted | Long feature implementation |
 | Diagnostic bake-off | 12 DABStep + 12 SWE-Explore | select one fixed panel | Cheap tool or localization signal |
 
-BCB Agentic is cheap enough that DS4 vanilla should normally continue from 60
-to all 148. Other adapters first run the same 60 and expand only when paired
-evidence is unresolved or favorable.
+BCB Agentic is cheap enough that DS4 vanilla should normally continue from the
+Pareto60 panel to all 143 hermetic tasks. Other adapters first run the same 60
+and expand only when paired evidence is unresolved or favorable. The five
+full148 exclusions are mechanical no-network failures, not target-model
+outcome selection.
 
 ### Phase B — repository breadth
 
@@ -241,8 +253,8 @@ full model × adapter Cartesian product.
 
 ### Phase D — stability and finalist campaigns
 
-Run the 32-task `k=3` sentinel, then promote only Pareto finalists to full BCB
-Agentic, full PolyBench, full Terminal-Bench, FeatureBench Fast/full, or a
+Run the 32-task `k=3` sentinel, then promote only Pareto finalists to BCB
+hermetic143, full PolyBench, full Terminal-Bench, FeatureBench Fast/full, or a
 frozen freshness campaign. Publish paired effects, standalone uncertainty,
 language/repository/task-type cuts, partial executable diagnostics, failure
 rates, task/campaign time, tokens, and cost.
@@ -250,7 +262,7 @@ rates, task/campaign time, tokens, and cost.
 ## Implementation order
 
 1. Freeze this campaign and its nested manifests.
-2. Expand BCB public prompts and suite IDs to full148.
+2. Run the qualified BCB Pareto60 and hermetic143 suite IDs.
 3. Run the qualified Multi-SWE hermetic25 DS4 baseline.
 4. Freeze Terminal-Bench Pareto20.
 5. Select and qualify PolyBench balanced64 plus its nested 96 extension.

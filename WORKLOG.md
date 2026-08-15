@@ -2033,3 +2033,26 @@ Append-only development log for the `cospa` repository.
   score.
 - Next: run the DS4 baseline after BCB registration is complete, then use paired
   outcomes to decide whether this suite earns scaffold expansion.
+
+## 2026-08-15 — Expand BigCodeBench to hermetic143
+
+- Context: pilot15 was too coarse for ranking, but exposing all 148 tasks without
+  qualification would convert benchmark network/data assumptions into incorrect
+  model outcomes under Cospa's offline verifier.
+- Change: project all 148 public Instruct prompts without hidden tests or
+  solutions, add distinct Instruct hermetic143, Agentic hermetic143, and nested
+  outcome-blind Agentic Pareto60 suite IDs, and reuse the original Instruct
+  protocol-override key for the expanded no-tool arm.
+- Evidence: the first no-network gold screen passed 143/148 tasks. Excluded
+  `/101`, `/1012`, `/177`, `/590`, and `/655` require external URLs or missing
+  NLTK state. Across the retained set, 429/429 gold observations passed and
+  429/429 null observations failed. A DS4 `pi_vanilla` high-thinking c=8 smoke
+  produced eight authoritative native verdicts in about 61 seconds campaign
+  elapsed (0/8 resolved, 335 summed task seconds, no infrastructure/verifier
+  failures); all traces recorded the correct served model and an observed
+  `thinking_level_change` to `high`.
+- Decision: use Pareto60 for broad scaffold screening and hermetic143 for DS4 or
+  promoted finalists. Keep full148 only as a public source projection and never
+  report hermetic143 as the official complete score.
+- Next: run the complete DS4 Pareto60 baseline, then expand to hermetic143 if the
+  score and paired-discrimination gates remain useful.

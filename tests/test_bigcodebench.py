@@ -41,7 +41,16 @@ def test_public_pilot_specs_match_frozen_ids_without_hidden_artifacts():
     pilot = json.loads((ROOT / "configs" / "ornith_runtime_pilot_v1.json").read_text())
     pilot_suite = pilot["suites"]["bigcodebench_hard_instruct"]
     expected = [task["id"] for task in pilot_suite["tasks"]]
-    assert pilot_suite["status"] == "ready_smoke"
+    assert pilot_suite["status"] == "qualified_expansion_ready"
+    assert pilot_suite["qualified_expansion"] == {
+        "manifest": "configs/bigcodebench_hard_hermetic143.json",
+        "screened_tasks": 148,
+        "retained_tasks": 143,
+        "observations_per_condition": 3,
+        "gold_resolved": "429/429",
+        "null_resolved": "0/429",
+        "completed_at": "2026-08-15",
+    }
     assert pilot_suite["protocol_spec"] == (
         "configs/bigcodebench_hard_instruct_pilot15.json"
     )
@@ -91,6 +100,144 @@ def test_public_pilot_specs_match_frozen_ids_without_hidden_artifacts():
         ]["prompt_bytes"]
         assert "canonical_solution" not in task
         assert "test" not in task
+
+
+def test_full148_specs_are_public_and_preserve_the_pilot_tasks():
+    specs = json.loads(
+        (ROOT / "configs" / "bigcodebench_hard_instruct_full148.json").read_text()
+    )
+    pilot = json.loads(
+        (ROOT / "configs" / "bigcodebench_hard_instruct_pilot15.json").read_text()
+    )
+
+    task_ids = [task["task_id"] for task in specs["tasks"]]
+    assert specs["name"] == "bigcodebench_hard_instruct_full"
+    assert len(task_ids) == len(set(task_ids)) == 148
+    assert set(task["task_id"] for task in pilot["tasks"]).issubset(task_ids)
+    assert specs["source_harness"] == pilot["source_harness"]
+    assert specs["source_dataset"] == pilot["source_dataset"]
+    assert specs["protocol"] == pilot["protocol"]
+    for task in specs["tasks"]:
+        assert set(task) == {
+            "task_id",
+            "entry_point",
+            "instruct_prompt",
+            "instruct_prompt_sha256",
+        }
+        assert hashlib.sha256(task["instruct_prompt"].encode()).hexdigest() == (
+            task["instruct_prompt_sha256"]
+        )
+        assert "canonical_solution" not in task
+        assert "test" not in task
+
+
+def test_agentic_pareto60_is_outcome_blind_and_nested_in_hermetic143():
+    pareto_class = getattr(
+        bigcodebench_module, "BigCodeBenchHardAgenticPareto60Suite", None
+    )
+    hermetic_class = getattr(
+        bigcodebench_module, "BigCodeBenchHardAgenticHermeticSuite", None
+    )
+    assert pareto_class is not None, "Pareto60 Agentic suite is not implemented"
+    assert hermetic_class is not None, "hermetic143 Agentic suite is not implemented"
+
+    pareto = pareto_class()
+    hermetic = hermetic_class()
+    panel = json.loads(
+        (ROOT / "configs" / "bigcodebench_hard_agentic_pareto60.json").read_text()
+    )
+    qualification = json.loads(
+        (ROOT / "configs" / "bigcodebench_hard_hermetic143.json").read_text()
+    )
+    pilot = BigCodeBenchHardInstructSuite().get_task_ids(ROOT / "vendor")
+    pareto_ids = pareto.get_task_ids(ROOT / "vendor")
+    hermetic_ids = hermetic.get_task_ids(ROOT / "vendor")
+
+    assert pareto.name == "bigcodebench_hard_agentic_pareto60"
+    assert hermetic.name == "bigcodebench_hard_agentic_hermetic143"
+    assert pareto.task_count == 60
+    assert hermetic.task_count == 143
+    assert pareto_ids == [task["task_id"] for task in panel["tasks"]]
+    assert len(pareto_ids) == len(set(pareto_ids)) == 60
+    assert set(pilot).issubset(pareto_ids)
+    assert set(pareto_ids).issubset(hermetic_ids)
+    assert qualification["selection"]["outcome_blind"] is True
+    assert qualification["selection"]["excluded_tasks"] == [
+        "BigCodeBench/101",
+        "BigCodeBench/1012",
+        "BigCodeBench/177",
+        "BigCodeBench/590",
+        "BigCodeBench/655",
+    ]
+    assert not set(qualification["selection"]["excluded_tasks"]).intersection(
+        pareto_ids
+    )
+    assert panel["selection"]["outcome_blind"] is True
+    assert panel["selection"]["seed"] == (
+        "cospa-bcb-hard-hermetic-pareto60-v1"
+    )
+    assert panel["selection"]["stratify_by"] == [
+        "library_count_bucket",
+        "prompt_size_tertile",
+    ]
+    assert set(panel) == {
+        "name",
+        "version",
+        "source_spec",
+        "selection",
+        "tasks",
+    }
+    for task in panel["tasks"]:
+        assert set(task) == {
+            "task_id",
+            "library_count",
+            "library_count_bucket",
+            "prompt_bytes",
+            "prompt_size_tertile",
+        }
+
+
+def test_hermetic_agentic_materializes_a_task_outside_pilot15(tmp_path):
+    suite_class = getattr(
+        bigcodebench_module, "BigCodeBenchHardAgenticHermeticSuite", None
+    )
+    assert suite_class is not None, "hermetic143 Agentic suite is not implemented"
+    suite = suite_class()
+    pilot_ids = set(BigCodeBenchHardInstructSuite().get_task_ids(ROOT / "vendor"))
+    task_id = next(
+        candidate
+        for candidate in suite.get_task_ids(ROOT / "vendor")
+        if candidate not in pilot_ids
+    )
+
+    task = suite.materialize_task(task_id, tmp_path / "work", ROOT / "vendor")
+
+    assert task["task_id"] == task_id
+    assert task["solution_file"] == "solution.py"
+    assert (tmp_path / "work" / "solution.py").is_file()
+    assert "required_adapter" not in task
+    assert "canonical_solution" not in task
+    assert "test" not in task
+
+
+def test_qualified_bigcodebench_suite_registry_ids():
+    from harness.suites import load_suite
+
+    instruct = load_suite("bigcodebench_hard_instruct_hermetic143")
+    agentic = load_suite("bigcodebench_hard_agentic_hermetic143")
+    pareto = load_suite("bigcodebench_hard_agentic_pareto60")
+
+    assert isinstance(
+        instruct, bigcodebench_module.BigCodeBenchHardInstructHermeticSuite
+    )
+    assert isinstance(
+        agentic, bigcodebench_module.BigCodeBenchHardAgenticHermeticSuite
+    )
+    assert isinstance(
+        pareto, bigcodebench_module.BigCodeBenchHardAgenticPareto60Suite
+    )
+    assert instruct.task_count == agentic.task_count == 143
+    assert pareto.task_count == 60
 
 
 def test_materialize_exposes_only_the_public_instruct_prompt(tmp_path):
@@ -586,6 +733,67 @@ def test_runner_records_nonagentic_sampling_timing_and_zero_tools(tmp_path):
     assert manifest["sampling"]["reasoning_effort_source"] == (
         "model_protocol_override"
     )
+
+
+def test_hermetic_instruct_reuses_the_pinned_protocol_override_key(tmp_path):
+    suite = bigcodebench_module.BigCodeBenchHardInstructHermeticSuite()
+    captured_task = {}
+
+    class Adapter:
+        name = "bigcodebench_openai"
+        version = "test"
+        uses_pi_session = False
+        uses_workspace_sandbox = False
+
+        def run(self, task_data, workdir, log_file, stderr_file):
+            captured_task.update(task_data)
+            (workdir / "raw-sample.jsonl").write_text(
+                json.dumps(
+                    {
+                        "task_id": task_data["task_id"],
+                        "raw_solution": "def task_func():\n    return 1",
+                    }
+                )
+                + "\n"
+            )
+            return SimpleNamespace(
+                returncode=0,
+                error=None,
+                usage=None,
+                inference_seconds=0.1,
+                behavior={"status": "observed", "total_tool_calls": 0},
+            )
+
+    with mock.patch(
+        "harness.runner.load_model_metadata",
+        return_value={
+            "protocol_overrides": {
+                "bigcodebench_hard_instruct": {
+                    "request_overrides": {"reasoning_effort": "none"}
+                }
+            }
+        },
+    ), mock.patch.object(
+        suite,
+        "verify",
+        return_value={"passed": True, "test_count": 1, "exit_code": 0},
+    ):
+        manifest, verdict = run_trial(
+            suite,
+            Adapter(),
+            "local/deepseek-v4-flash-0731",
+            suite.get_task_ids(ROOT / "vendor")[0],
+            1,
+            tmp_path / "results",
+            ROOT / "vendor",
+            thinking="xhigh",
+        )
+
+    assert verdict["passed"] is True
+    assert suite.name == "bigcodebench_hard_instruct_hermetic143"
+    assert captured_task["request_overrides"] == {"reasoning_effort": "none"}
+    assert manifest["sampling"]["thinking"] == "not_applicable"
+    assert manifest["sampling"]["reasoning_effort"] == "none"
 
 
 def test_runner_rejects_wrong_adapter_for_nonagentic_protocol():

@@ -1168,8 +1168,17 @@
       "image_digest_status": "resolved"
     },
     "bigcodebench_hard_instruct": {
-      "status": "ready_smoke",
+      "status": "qualified_expansion_ready",
       "pilot_size": 15,
+      "qualified_expansion": {
+        "manifest": "configs/bigcodebench_hard_hermetic143.json",
+        "screened_tasks": 148,
+        "retained_tasks": 143,
+        "observations_per_condition": 3,
+        "gold_resolved": "429/429",
+        "null_resolved": "0/429",
+        "completed_at": "2026-08-15"
+      },
       "source": {
         "repository": "https://github.com/bigcode-project/bigcodebench.git",
         "revision": "09dd993f46c3fbf3a799465bb96d524edcb0b199",

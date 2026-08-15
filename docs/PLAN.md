@@ -106,8 +106,10 @@ reorder — earlier items unblock later ones.
       The nested `terminal_bench_core_pareto20` panel preserves pilot8 and
       targets 9 capability categories, 5 easy / 9 medium / 6 hard tasks, and
       15 short / 3 medium / 2 long declared-runtime buckets without using
-      target-model outcomes. Keep the official 80-task suite under
-      `terminal_bench`; run Pareto20 next and reserve full80 for finalists.
+      target-model outcomes. Its DS4 baseline resolved 11/20, returned seven
+      ordinary incorrect outcomes and two budget expirations, and had no
+      infrastructure/verifier failure. Keep the official 80-task suite under
+      `terminal_bench` and reserve full80 for finalists.
 - [ ] **P11b. Suite: SWE Atlas pilot12 (deferred).**
       `harness/suites/swe_atlas.py` preserves a predeclared Harbor-native slice:
       eight Test Writing and four Codebase Q&A tasks, with three total tasks
@@ -129,7 +131,8 @@ reorder — earlier items unblock later ones.
       `bigcodebench_hard_agentic_pareto60` suite IDs prevent protocol or panel
       merging. Agentic suites materialize editable `solution.py` workspaces;
       their scores never merge with the Instruct anchor or claim full148
-      comparability.
+      comparability. DS4 resolved 17/143 Instruct and 22/60 Agentic Pareto tasks
+      with no infrastructure, verifier, or budget failure.
 - [ ] **P11d. Suite: SWE-PolyBench Verified pilot28 + balanced64.**
       `harness/suites/swe_polybench.py` retains the original repeat-qualified
       pilot28 and adds the distinct `swe_polybench_verified_balanced64` routine
@@ -145,7 +148,9 @@ reorder — earlier items unblock later ones.
       remain support artifacts, not scored suites, and no balanced96 score is
       claimed. Derived images reset repositories to declared base commits;
       hidden tests and gold patches enter only their Harbor phases, and scoring
-      uses the pinned upstream parser.
+      uses the pinned upstream parser. The DS4 balanced64 baseline resolved
+      15/64, returned 47 ordinary incorrect outcomes and two budget expirations,
+      and had no infrastructure/verifier failure.
 - [ ] **P11e. Suite: Multi-SWE-bench Flash hermetic25.**
       `harness/suites/multi_swe_bench.py` materializes an outcome-blind
       seven-language screen over digest-pinned upstream images, removes
@@ -154,8 +159,10 @@ reorder — earlier items unblock later ones.
       pinned upstream transition parsers. The scored suite retains 25 of 30
       screened tasks after three clean null/gold observations: three Java tasks
       required uncached verifier dependencies and two TypeScript tasks had
-      unrelated flaky gold failures. Keep the source score separate and disclose
-      the retained 4 C / 4 C++ / 5 Go / 1 Java / 5 JavaScript / 4 Rust /
+      unrelated flaky gold failures. The DS4 baseline resolved 9/25, returned
+      15 ordinary incorrect outcomes and one budget expiration, and had no
+      infrastructure/verifier failure. Keep the source score separate and
+      disclose the retained 4 C / 4 C++ / 5 Go / 1 Java / 5 JavaScript / 4 Rust /
       2 TypeScript distribution.
 - [ ] **P11f. Suite: FeatureBench Lite Pareto12.**
       `harness/suites/featurebench.py` materializes digest-pinned official Lite
@@ -195,13 +202,14 @@ reorder — earlier items unblock later ones.
 - [ ] **P13. Cost-gated campaigns.** Do not launch a full Cartesian matrix.
       Concurrency qualification still begins on fixed `c=1`/`c=2` blocks and
       advances only while throughput and tail-error gates pass. The current
-      operational baseline has now been fixed to DS4 + `pi_vanilla` + `c=8`
-      after measured runs; suite-specific task counts, `high` thinking policy,
-      projections, nested expansion, and Pareto promotion rules live in
-      `docs/PARETO-CAMPAIGN.md`. Use the baseline model to compare adapters,
-      then compare models only on the winning one or two adapters. Reserve
-      full repository/feature suites and `k>1` for cells that pass those gates;
-      report independent repetitions rather than best-of-k.
+      operational baseline is DS4 + `pi_vanilla` + `c=8`. The completed
+      breadth-first wave covers BCB Instruct143, BCB Agentic60, Multi-SWE25,
+      Terminal20, PolyBench64, FeatureBench12, and SWE-Explore12;
+      suite-specific outcomes, costs, nested expansion, and Pareto promotion
+      rules live in `docs/PARETO-CAMPAIGN.md`. Use the baseline model to compare
+      adapters, then compare models only on the winning one or two adapters.
+      Reserve full repository/feature suites and `k>1` for cells that pass
+      those gates; report independent repetitions rather than best-of-k.
 - [ ] **P14. Superpowers ablation (2×2).** Add adapters `pi_superpowers`
       and `little_coder_superpowers`. For bench runs, **strip interactive
       skill-check flows** (no user present to answer clarifying questions)
@@ -351,10 +359,10 @@ Terminal-Bench 2.1 remains a separate milestone campaign.
   fallback is disabled because it cannot guarantee the patch. Host-loopback
   model URLs require `CODING_EVAL_HARBOR_MODEL_BASE_URL` set to a
   container-reachable relay address.
-- **Measured gate.** The DS4 `pi_vanilla` pilot8 completed in 10m31s at c=8:
-  3 resolved, 1 incorrect, and 4 official agent-timeout outcomes. Run the
-  frozen Pareto20 at k=1 next; add repetitions or full80 only after its paired
-  discrimination and budget-exhaustion profile justify the cost.
+- **Measured gate.** The DS4 `pi_vanilla` Pareto20 completed in 17m24s at c=8:
+  11 resolved, 7 incorrect, and 2 official agent-budget expirations, with no
+  infrastructure/verifier failure. Add repetitions or full80 only after a
+  matched scaffold arm and the stability gate justify the cost.
 
 ### SWE Atlas pilot12 (P11b, preserved but deferred)
 

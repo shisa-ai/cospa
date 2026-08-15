@@ -95,42 +95,50 @@ is summed per-task model wall time. `Campaign elapsed` is latest task end minus
 earliest task start for the matching cell; it includes the observed c=8
 scheduling and contention. Estimated dollars use the viewer's current
 checked-in pricing metadata, even when an older manifest recorded zero local
-billing.
+billing. `CI` is the standalone 95% Wilson interval for the binary rate; WCC
+itself is continuous and its any-hit interval is shown only as a secondary
+diagnostic.
 
 | Suite / observed policy | Result | Task wall | Campaign elapsed | Estimated cost |
 | --- | ---: | ---: | ---: | ---: |
-| BCB-Hard Instruct pilot15, no thinking | 3/15 | 1m43s | 24.5s | $0.0023 |
-| BCB-Hard Agentic pilot15, vanilla `xhigh` | 2/15 | 29m04s | 5m25s | $0.0350 |
-| SWE-PolyBench pilot28, vanilla `high` | 5/28 | 2h30m | 2h05m | $0.3201 |
-| Terminal-Bench Core pilot8, vanilla `high` | 3/8 | 37m42s | 10m31s | $0.0157 on 5/8 token-covered tasks |
-| FeatureBench Lite Pareto12, vanilla `high` | 2/12 raw | 10h52m including retries | 2h40m | $1.02 estimated from all observed retry traces |
-| SWE-Explore Verified12, vanilla `high` | 0.0968 weighted core coverage; 10/12 any-hit | 26m26s | 5m28s | $0.0432 |
+| BCB-Hard Instruct hermetic143, no thinking | 17/143 (11.9%, CI 7.6–18.2) | 41m56s | 7m10s | $0.0430 |
+| BCB-Hard Agentic Pareto60, vanilla `high` | 22/60 (36.7%, CI 25.6–49.3) | 1h00m27s | 7m43s for final52 + 1m01s smoke8 | $0.0705 |
+| Multi-SWE Flash hermetic25, vanilla `high` | 9/25 (36.0%, CI 20.2–55.5) + 1 budget-exhausted | 3h06m19s | 30m36s | $0.2779 on 24/25 token-covered tasks |
+| Terminal-Bench Pareto20, vanilla `high` | 11/20 (55.0%, CI 34.2–74.2) + 2 budget-exhausted | 1h25m25s | 17m24s | $0.0758 on 18/20 token-covered tasks |
+| PolyBench balanced64, vanilla `high` | 15/64 (23.4%, CI 14.7–35.1) + 2 budget-exhausted | 7h32m51s | 59m49s | $0.9187 on 63/64 token-covered tasks |
+| FeatureBench Lite Pareto12, vanilla `high` | 2/12 (16.7%, CI 4.7–44.8) | 10h52m raw attempts | 2h40m raw + isolated repair | $1.02 raw + $0.30 repair |
+| SWE-Explore Verified12, vanilla `high` | 0.0968 WCC; 10/12 any-hit (CI 55.2–95.3) | 26m26s | 5m28s | $0.0432 |
 
-Linear projections preserve the observed per-task throughput and are planning
-estimates, not promises:
+Durable result roots for this baseline are:
+
+- `results/qualification/bcb-agentic-pareto60-ds4-vanilla-high-c8-smoke-20260815`
+- `results/runs/ds4-bcb-instruct-hermetic143-c8-20260816T0300Z`
+- `results/runs/ds4-multiswe-hermetic25-c8-20260816T0300Z`
+- `results/runs/ds4-terminal-pareto20-c8-20260816T0300Z`
+- `results/runs/ds4-polybench-balanced64-c8-20260816T0300Z`
+- `results/runs/ds4-featurebench-pareto12-c8-20260815T2300Z` plus
+  `results/runs/ds4-featurebench-pareto12-sympy-repair-20260816T0115Z`
+- `results/runs/ds4-swe-explore-verified12-c8-20260816T0240Z`
+
+Linear finalist projections preserve each completed panel's measured throughput
+and are planning estimates, not promises:
 
 | Proposed run | Projected task wall | Projected c=8 elapsed | Projected cost |
 | --- | ---: | ---: | ---: |
-| BCB Agentic 60 | 1h56m | 21m40s | $0.14 |
-| BCB Agentic 75 | 2h25m | 27m05s | $0.18 |
-| BCB Agentic hermetic143 | 4h37m | 51m38s | $0.33 |
-| Terminal-Bench Pareto20 | 1h34m | 26m17s | Partially costed; pilot projection only |
-| PolyBench balanced64 | 5h43m | 4h46m | $0.73 |
-| PolyBench balanced96 | 8h35m | 7h09m | $1.10 |
-| PolyBench full382 | 34h08m | 28h25m | $4.37 |
+| BCB Agentic hermetic143 | 2h24m | about 21m | $0.17 |
+| Terminal-Bench full80 | 5h42m | about 1h10m | $0.30, subject to token coverage |
+| PolyBench full382 | 45h03m | about 5h57m | $5.48, subject to token coverage |
 
-The BCB Agentic projection uses the observed `xhigh` cell and should be an
-upper-bound directionally if `high` is cheaper. The full 148-task public spec
-was screened in the pinned no-network verifier: 143 ground-truth solutions
-passed, while five tasks depended on external URLs or unavailable NLTK data.
-`bigcodebench_hard_*_hermetic143` is therefore the largest scored Cospa
-expansion; “full148” remains only a public source projection and is not silently
-scored with verifier failures. The 143 retained tasks then had 429/429 gold
-observations pass and 429/429 null observations fail. A post-integration DS4
-`pi_vanilla` `high` c=8 smoke produced eight authoritative native verdicts in
-about 61 seconds elapsed (0/8 resolved, 335 summed task seconds, no
-infrastructure/verifier failures). That smoke validates the path, not
-capability.
+The full 148-task BCB public spec was screened in the pinned no-network
+verifier: 143 ground-truth solutions passed, while five tasks depended on
+external URLs or unavailable NLTK data. `bigcodebench_hard_*_hermetic143` is
+therefore the largest scored Cospa expansion; “full148” remains only a public
+source projection. The retained set had 429/429 gold observations pass and
+429/429 null observations fail. DS4 then resolved 17/143 under the separate
+no-tool Instruct protocol and 22/60 on Agentic Pareto60. Both cells produced
+complete token/cost coverage and no infrastructure, verifier, or budget
+failure. Agentic Pareto60 used 1.82M tokens and $0.0705; its 36.7% rate clears
+the utility band, but its protocol remains separate from Instruct.
 
 PolyBench qualification froze 135 support candidates without target-model
 outcomes: the candidate96, a 32-task adaptive Java extension, and the final
@@ -142,19 +150,27 @@ verifier. Repository caps had to relax to seven Gson tasks in Java and nine MUI
 tasks in TypeScript, which remain explicit limitations. The stable pools are
 only 22 Java / 22 JavaScript / 21 Python / 17 TypeScript, so a balanced96 score
 is not available and will not be fabricated from mechanically failing tasks.
-The measured DS4 c=8 baseline will determine whether balanced64's earlier
-projection remains useful.
+The completed balanced64 baseline resolved 15/64: four each in Java,
+JavaScript, and Python and three in TypeScript. Forty-seven tasks were ordinary
+incorrect outcomes and two exhausted their 1,800-second agent budgets; there
+were no infrastructure or verifier failures. It consumed 7h32m51s summed task
+wall, 59m49s elapsed, 60.17M observed tokens on 63/64 tasks, and at least
+$0.9187. The 23.4% rate clears the utility band. Balanced96 remains unavailable;
+full382 is a finalist-only expansion.
 
-Terminal-Bench's corrected DS4 c=8 pilot resolved 3/8 tasks, produced one
-ordinary incorrect verifier outcome, and hit four official agent timeouts, with
-no setup, transport, or verifier failures. The 37.5% resolved rate is in the
-utility band and the timeouts are retained as `budget_exhausted`, not silently
-reclassified as wrong solutions. Five tasks exported token traces; their
-partial estimated cost was $0.0157. The 10m31s elapsed time overlapped two
-unrelated GPT-5.6 PolyBench workers, so the 26m17s Pareto20 projection is
-conservative plumbing evidence rather than a clean throughput baseline.
-Pareto20 is frozen for the matched baseline wave, where timing must be measured
-again without unrelated host load.
+Multi-SWE hermetic25 resolved 9/25 across six of seven languages: 2/4 C, 1/4
+C++, 1/5 Go, 1/1 Java, 1/5 JavaScript, 3/4 Rust, and 0/2 TypeScript. Fifteen
+outcomes were ordinary incorrect and one C++ task exhausted its 1,800-second
+budget; there were no infrastructure or verifier failures. The cell used
+3h06m19s summed task wall, 30m36s elapsed, 27.70M observed tokens on 24/25
+trials, and at least $0.2779. Keep this source score separate from balanced64.
+
+Terminal-Bench Pareto20 resolved 11/20, with seven ordinary incorrect outcomes
+and two official agent-budget expirations. It had no setup, transport, or
+verifier failure, used 1h25m25s summed task wall and 17m24s elapsed, and recorded
+4.03M tokens / at least $0.0758 on 18/20 tasks. The 55% rate clears the utility
+band and supersedes the earlier pilot8 projection; full80 remains a
+finalist-only expansion.
 
 FeatureBench's complete official Lite30 split was pinned before target-model
 outcomes. Four Level 2 tasks have no released gold patch, and only 21 of the 26
@@ -274,11 +290,11 @@ protocol comparability.
 
 | Suite | First block | Expansion | Purpose |
 | --- | ---: | ---: | --- |
-| BCB-Hard Instruct | hermetic143 | none | Cheap model-only protocol anchor |
-| BCB-Hard Agentic | Pareto60 | hermetic143 | Function implementation + scaffold sensitivity |
-| Terminal-Bench Core | completed pilot8 | Pareto20, then full80 | Broad terminal/tool competence |
-| FeatureBench | qualified Pareto12 | broader Lite/Full only after new qualification | Long feature implementation + F2P diagnostic |
-| SWE-Explore diagnostic | selected Verified12 | broader official strata only after a new gate | Continuous repository-localization signal |
+| BCB-Hard Instruct | completed hermetic143 | none | Cheap model-only protocol anchor |
+| BCB-Hard Agentic | completed Pareto60 | hermetic143 | Function implementation + scaffold sensitivity |
+| Terminal-Bench Core | completed Pareto20 | full80 finalists | Broad terminal/tool competence |
+| FeatureBench | completed Pareto12 | broader Lite/Full only after new qualification | Long feature implementation + F2P diagnostic |
+| SWE-Explore diagnostic | completed Verified12 | broader official strata only after a new gate | Continuous repository-localization signal |
 
 BCB Agentic is cheap enough that DS4 vanilla should normally continue from the
 Pareto60 panel to all 143 hermetic tasks. Other adapters first run the same 60
@@ -290,8 +306,8 @@ outcome selection.
 
 | Suite | Routine block | Expansion | Purpose |
 | --- | ---: | ---: | --- |
-| Multi-SWE-bench Flash | qualified hermetic25 | larger source only after utility gate | C/C++/Go/Java/JS/Rust/TS issue repair |
-| SWE-PolyBench Verified | balanced64 | new qualification before balanced96; full382 finalists | Four-language bug/feature/refactor work |
+| Multi-SWE-bench Flash | completed hermetic25 | larger source only after utility gate | C/C++/Go/Java/JS/Rust/TS issue repair |
+| SWE-PolyBench Verified | completed balanced64 | new qualification before balanced96; full382 finalists | Four-language bug/feature/refactor work |
 
 The qualified PolyBench panel has equal language slots (16 each), all three
 task types per language, and near-equal patch-size tertiles. Mechanical
@@ -327,6 +343,8 @@ rates, task/campaign time, tokens, and cost.
 
 ## Implementation order
 
+Items 1–8 are complete as of 2026-08-16; item 9 is the active phase.
+
 1. Freeze this campaign and its nested manifests.
 2. Run the qualified BCB Pareto60 and hermetic143 suite IDs.
 3. Run the qualified Multi-SWE hermetic25 DS4 baseline.
@@ -338,7 +356,8 @@ rates, task/campaign time, tokens, and cost.
 7. Use the completed DABStep/SWE-Explore 12+12 bake-off winner:
    `swe_explore_verified12`, scored by task-macro weighted core coverage and
    reported separately from coding resolution.
-8. Execute DS4 `pi_vanilla`, `high`, `c=8`, `k=1` suite by suite.
+8. Execute DS4 `pi_vanilla`, `high`, `c=8`, `k=1` suite by suite; retain
+   BigCodeBench Instruct as the declared no-thinking/no-tool exception.
 9. Run matched scaffold panels, then stability repeats and full finalists.
 
 The live structured task list tracks these units and their dependencies. Every

@@ -2243,3 +2243,36 @@ Append-only development log for the `cospa` repository.
   pre-existing `test_check_models.sh` shell-fixture failure.
 - Next: begin the qualified DS4 baseline screening wave, then run matched
   scaffold ablations on fixed panels.
+
+## 2026-08-16 — Complete DS4 Pareto baseline wave
+
+- Context: the breadth-first campaign required every mechanically qualified
+  fixed panel under DS4, the declared baseline scaffold, c=8, and k=1 before
+  spending budget on scaffold ablations or stochastic repeats.
+- Evidence: BCB Instruct hermetic143 resolved 17/143 and BCB Agentic Pareto60
+  resolved 22/60. Multi-SWE hermetic25 produced 9 resolved, 15 incorrect, and 1
+  budget-exhausted; Terminal Pareto20 produced 11/7/2; PolyBench balanced64
+  produced 15/47/2; FeatureBench Pareto12 produced 2/9/1 after the isolated
+  SymPy repair. None of those 324 binary task outcomes remains an
+  infrastructure or verifier failure. SWE-Explore Verified12 separately scored
+  0.0968 task-macro weighted core coverage with 10/12 any-core-line hits and
+  two invalid outputs counted as zero.
+- Cost/timing: the four new completed cells used 7m10s c=8 elapsed for Instruct,
+  30m36s for Multi-SWE, 17m24s for Terminal, and 59m49s for PolyBench. Across
+  all retained baseline artifacts plus FeatureBench's repair, observed token
+  volume is 309.7M and estimated cost is at least $2.75; Multi-SWE, Terminal,
+  and PolyBench each lack token coverage for budget-expired tasks. Exact result
+  roots and suite-specific task wall, token coverage, and costs are recorded in
+  `docs/PARETO-CAMPAIGN.md` and remain durable under `results/`.
+- Decision: all routine panels clear either the 10–70% binary utility band or
+  the predeclared continuous-diagnostic exception. Never aggregate their 324
+  binary outcomes into one capability score. Proceed to matched scaffold
+  ablations on identical task IDs; reserve full-suite promotion and k>1 for the
+  later gates.
+- Validation: every expected result root contains exactly 143, 60, 25, 20, 64,
+  12, or 12 authoritative task verdicts respectively. Model, adapter, thinking
+  policy, protocol metadata, hidden-artifact boundary, and failure taxonomy
+  were checked from each manifest/verdict pair; all newly queued runners exited
+  zero.
+- Next: run matched scaffold ablations, then select a fixed 32-task stability
+  sentinel without using repeat outcomes.

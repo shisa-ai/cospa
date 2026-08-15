@@ -370,17 +370,17 @@ publish end-to-end elapsed time, so a local pilot is required.
 | Evaluation | Size / official repetition | Published timing or budget evidence | Practical one-pass planning |
 | --- | --- | --- | --- |
 | `aider_cospa_full` | 225 × `k=1` | Cospa currently has a 10-minute safety wall | Provisional measured projections above; absolute cap is 37.5 serial hours |
-| Terminal-Bench Core 0.1.1 | Pareto20 routine / 80 official | **Measured here:** DS4 pilot8 used 37m42s task wall and 10m31s c=8 elapsed | Linear Pareto20 projection: 1h34m task wall / 26m17s c=8; long-task mix and concurrent host work make a fresh measurement mandatory |
+| Terminal-Bench Core 0.1.1 | Pareto20 routine / 80 official | **Measured here:** DS4 Pareto20 used 1h25m task wall and 17m24s c=8 elapsed | 11/20 resolved, 7 incorrect, 2 budget-exhausted, no infrastructure/verifier failures; at least $0.0758 |
 | Terminal-Bench 2.x | 89 tasks; official campaigns commonly repeat | **Published:** most agent trials finish under 20 minutes; extremes reach two hours | If every trial took 20 minutes: 29.7 serial h for `k=1`; 148.3 h for `k=5`. Actual distribution and compatible task list must be pinned |
 | SWE Atlas pilot | 12 × `k=1`, then matched `k=2` if promoted | Published cost for selected Q&A/Test Writing systems is about $0.35–$1.90/task; wall time unknown | Deferred from the deterministic Pareto campaign because the headline requires a rubric LLM judge |
-| Multi-SWE-bench Flash | 300 × `k=1` | No published E2E runtime | At a 30-minute Cospa episode ceiling: 150 serial h; 75 h ideal `c=2`; 18.8 h ideal `c=8`, plus verification |
+| Multi-SWE-bench Flash | hermetic25 routine / 300 source | **Measured here:** DS4 hermetic25 used 3h06m task wall and 30m36s c=8 elapsed | 9/25 resolved, 15 incorrect, 1 budget-exhausted; at least $0.2779 |
 | SWE-bench Multilingual | 300 × `k=1` | Baseline used a $2.50/task cost limit; time unknown | Same 150 h / 75 h / 18.8 h planning ceiling under a 30-minute policy |
-| SWE-PolyBench Verified | README says 382; dataset card has stale conflicting count | Harness recommends 10–12 evaluator threads on 16 cores/64 GB; inference time unknown | At 382 × 30 minutes: 191 serial h; 95.5 h ideal `c=2`; 23.9 h ideal `c=8` |
+| SWE-PolyBench Verified | balanced64 routine / 382 source | **Measured here:** DS4 balanced64 used 7h33m task wall and 59m49s c=8 elapsed | 15/64 resolved, 47 incorrect, 2 budget-exhausted; full382 projects to about 5h57m c=8 / $5.48 |
 | FeatureBench Lite / Full | Pareto12 / 30 / 200 | Default task timeout 3,600 s; published OpenHands runs allow 500 steps and consume 2.6M–9.0M input tokens/task on Lite | **Measured here:** raw DS4 Pareto12 c=8 used 2h40m elapsed and 10h52m task-attempt wall after retries; broader panels require new mechanical qualification |
 | SWE-Explore Verified12 | 12 × `k=1` | **Measured here:** DS4 used 26m26s task wall and 5m28s c=8 elapsed | 0.0968 task-macro weighted core coverage; 10/12 any-core-line hits; $0.0432 estimated cost |
 | SWE-bench-Live MultiLang | 743 in current README | Runtime unknown; large multilingual builds/tests | At 30 minutes/task: 371.5 serial h; 185.8 h ideal `c=2`; 46.4 h ideal `c=8` |
 | SWE-bench Pro public | Currently 730 leaderboard tasks; 250-turn uncapped model runs | Published task intent is hours to days for humans; agent wall distribution not published | Not a routine local run. Pilot required; use public trajectories before generating new ones |
-| BigCodeBench-Hard | 148 official; 143 in Cospa's no-network subset | **Published verifier time for the whole set:** 4–5 min on hosted Gradio or 15–20 min on default E2B | Cospa excludes five tasks whose gold solutions fail without external URL/NLTK state; DS4 c=8 projects to about 52 minutes for 143 Agentic tasks |
+| BigCodeBench-Hard | 148 official; 143 in Cospa's no-network subset | **Measured here:** DS4 Instruct143 used 41m56s generation wall / 7m10s c=8; Agentic60 used 1h task wall | 17/143 Instruct and 22/60 Agentic resolved; complete costs $0.0430 and $0.0705 respectively |
 | LiveCodeBench v6 | 1,055 problems; official setup defaults to `n=10` samples | Runtime not published; authors warn timeout settings can move score by <0.5 points | 10,550 generations before repair scenarios. Use `n=1` only if explicitly defining a different protocol |
 
 A 30-minute row is a **planning ceiling**, not a recommendation that every
@@ -397,15 +397,15 @@ rules, and a `c=1/2/4/8/16` ladder. The pilot sizes are:
 | Evaluation | Pilot | Current gate |
 | --- | ---: | --- |
 | Aider source corpus | 23 / 225 | Blocked until the contract audit freezes eligible tasks |
-| Terminal-Bench Core 0.1.1 | pilot8 / Pareto20 / full80 | DS4 pilot8 completed 3/8 with 1 incorrect, 4 budget-exhausted, and 0 infrastructure failures; Pareto20 is frozen for baseline |
+| Terminal-Bench Core 0.1.1 | pilot8 / Pareto20 / full80 | DS4 Pareto20 completed 11 resolved, 7 incorrect, 2 budget-exhausted, and 0 infrastructure/verifier failures |
 | SWE Atlas pilot12 | 12 / 12 | Mechanically pinned but deferred; current campaign does not require an LLM judge |
-| Multi-SWE-bench Flash | 25 retained / 30 screened / 300 | `multi_swe_bench_flash_hermetic25`: 75/75 gold passed and 75/75 null failed under the no-network verifier; ready for DS4 smoke |
+| Multi-SWE-bench Flash | 25 retained / 30 screened / 300 | 75/75 gold passed and 75/75 null failed; DS4 hermetic25 completed 9 resolved, 15 incorrect, and 1 budget-exhausted |
 | SWE-bench Multilingual | 30 / 300 | Dataset and 30 image digests locked; gold/null/repeat validation pending |
-| SWE-PolyBench Verified | balanced64 / 135 support candidates / 382 source | `swe_polybench_verified_balanced64`: 192/192 gold passed and 192/192 null failed; balanced96 remains unclaimed |
+| SWE-PolyBench Verified | balanced64 / 135 support candidates / 382 source | 192/192 gold passed and 192/192 null failed; DS4 balanced64 completed 15 resolved, 47 incorrect, and 2 budget-exhausted |
 | FeatureBench Lite | Pareto12 / 30 | `featurebench_lite_pareto12` spans 11 repositories; 36/36 gold passed and 36/36 null failed. DS4 resolved 2/12 with 9 incorrect and 1 timeout after an isolated transport repair |
 | SWE-Explore | Verified12 / 451 Verified-derived source rows | 36/36 oracle observations scored 1.0 and 36/36 null observations scored 0.0; DS4 scored 0.0968 task-macro weighted core coverage with 10/12 any-hits |
-| BigCodeBench-Hard Instruct | 15 pilot / 143 retained / 148 screened | `bigcodebench_hard_instruct_hermetic143`: 429/429 gold passed and 429/429 null failed; five no-network failures excluded |
-| BigCodeBench-Hard agentic | Pareto60 / hermetic143 | Separate Agentic suite IDs ready; DS4/Muse/Qwen pilot cells and DS4 thinking ablations measured; expand favorable panels to hermetic143 |
+| BigCodeBench-Hard Instruct | 15 pilot / 143 retained / 148 screened | 429/429 gold passed and 429/429 null failed; DS4 Instruct hermetic143 resolved 17/143 without infrastructure failures |
+| BigCodeBench-Hard agentic | Pareto60 / hermetic143 | DS4 Pareto60 resolved 22/60 without infrastructure failures; use matched scaffold evidence before full143 promotion |
 
 **Measured setup state, 2026-08-14:** the host has 683 GiB free on `/`; all
 listed source repositories and external dataset files are present at the
@@ -434,7 +434,10 @@ untouched, and supplies fixed 2-CPU / 8-GiB / `/tests` defaults. The corrected c
 resolved 3/8, produced one ordinary incorrect result and four official agent
 timeouts, and had zero infrastructure failures. Pareto20 was selected before
 these outcomes across all nine source categories, all three difficulties, and
-short/medium/long declared-timeout strata.
+short/medium/long declared-timeout strata. Its completed DS4 baseline then
+resolved 11/20, returned seven ordinary incorrect outcomes and two budget
+expirations, and had no infrastructure or verifier failure. The cell used
+1h25m task wall, 17m24s c=8 elapsed, and at least $0.0758.
 
 The balanced expansion froze 96 candidates before target-model outcomes. Its
 first mechanical gold pass retained 41 of the 68 tasks beyond pilot28, leaving
@@ -462,10 +465,11 @@ time as conservative stress evidence, not clean throughput.
 
 The original runtime pilot targeted a result within 12 hours with 20% reserve,
 so its campaign budget was 9.6 hours. Its c=16 feasibility thresholds were not
-runtime estimates. Measured 2026-08-15 runs now supersede that intended
-production point for the active campaign: `docs/PARETO-CAMPAIGN.md` fixes DS4
-+ `pi_vanilla` + c=8, retains the 9.6-hour working budget, and records observed
-makespan rather than assuming ideal scaling.
+runtime estimates. The completed breadth-first DS4 baseline now supersedes the
+pilot projections: Instruct143, Agentic60, Multi-SWE25, Terminal20,
+PolyBench64, FeatureBench12, and SWE-Explore12 all have authoritative outcomes.
+`docs/PARETO-CAMPAIGN.md` records their measured makespan, token coverage,
+cost, and failure taxonomy rather than assuming ideal scaling.
 
 ## Methodology review of leading candidates
 
@@ -514,10 +518,11 @@ makespan rather than assuming ideal scaling.
   two TypeScript tasks were excluded after unrelated timing tests flipped across
   clean gold runs. The retained language counts are 4 C, 4 C++, 5 Go, 1 Java,
   5 JavaScript, 4 Rust, and 2 TypeScript.
-- **Cospa decision:** this qualified 25-task suite is ready for the DS4
-  `pi_vanilla` c=8 baseline. It remains a separately labeled source score; the
-  reduced Java/TypeScript strata must be disclosed and supplemented by
-  PolyBench rather than hidden by one combined repository percentage.
+- **Cospa decision:** retain hermetic25 as a routine matched scaffold panel.
+  DS4 `pi_vanilla` c=8 resolved 9/25 with one budget exhaustion and no
+  infrastructure/verifier failure. Keep its source score and reduced
+  Java/TypeScript strata separate from PolyBench rather than hiding them in one
+  combined repository percentage.
 
 ### SWE-bench Multilingual
 
@@ -562,13 +567,14 @@ makespan rather than assuming ideal scaling.
 - **Risk:** only four languages; task categories and issue informativeness are
   LLM-classified; new-file exclusion biases feature coverage; maintainers have
   already corrected images and duplicate-like entries.
-- **Cospa decision:** use balanced64 as the routine DS4/scaffold panel and keep
-  pilot28 only for historical comparability. Report it under its distinct suite
-  ID rather than as the official 382-task Verified score. Java necessarily has
-  seven Gson tasks and TypeScript nine MUI tasks after mechanical qualification;
-  keep those concentrations visible. Do not report candidate96 as balanced96:
-  the gold-stable pools contain only 22 Java, 22 JavaScript, 21 Python, and 17
-  TypeScript tasks.
+- **Cospa decision:** use balanced64 as the routine matched scaffold panel and
+  keep pilot28 only for historical comparability. DS4 `pi_vanilla` c=8 resolved
+  15/64 with two budget exhaustions and no infrastructure/verifier failure.
+  Report it under its distinct suite ID rather than as the official 382-task
+  Verified score. Java necessarily has seven Gson tasks and TypeScript nine MUI
+  tasks after mechanical qualification; keep those concentrations visible. Do
+  not report candidate96 as balanced96: the gold-stable pools contain only 22
+  Java, 22 JavaScript, 21 Python, and 17 TypeScript tasks.
 
 ### FeatureBench
 
@@ -714,8 +720,10 @@ makespan rather than assuming ideal scaling.
   preserves pilot15 and stratifies library count and prompt size.
 - **Cospa decision:** retain the qualified Instruct arm as a low-cost orthogonal
   anchor and report the separately labeled Agentic adaptation as a scaffold
-  diagnostic; neither replaces `aider_cospa` or `cospa_repo`, and their scores
-  never merge. Do not call hermetic143 an official full148 score.
+  diagnostic. DS4 resolved 17/143 Instruct and 22/60 Agentic with complete cost
+  coverage and no infrastructure failure. Neither replaces `aider_cospa` or
+  `cospa_repo`, and their scores never merge. Do not call hermetic143 an
+  official full148 score.
 
 ### LiveCodeBench
 
@@ -812,8 +820,8 @@ weights, and do not imply equivalence to any source leaderboard.
 
 ### 4. Add feature and diagnostics only after the repo panel is stable
 
-- Run FeatureBench pilot6, then choose Lite30 or Fast100 from measured
-  cost/discrimination evidence with the winning one or two scaffolds.
+- Use the repeat-qualified FeatureBench Pareto12 for promoted scaffold arms;
+  require new mechanical qualification before broader Lite or Fast100 runs.
 - Use the frozen `swe_explore_verified12` winner from the completed DABStep /
   SWE-Explore bake-off; report task-macro weighted core coverage separately
   from coding resolution.

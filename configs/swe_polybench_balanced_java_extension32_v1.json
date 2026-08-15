@@ -1,0 +1,464 @@
+{
+  "name": "swe_polybench_balanced_java_extension32_v1",
+  "version": "2026-08-15",
+  "source": {
+    "repository": "https://github.com/amazon-science/SWE-PolyBench.git",
+    "revision": "9c836c5d7f3cb991934132b77d29e6941d912a07",
+    "license": "MIT"
+  },
+  "dataset": {
+    "repository": "https://huggingface.co/datasets/AmazonScience/SWE-PolyBench_Verified",
+    "revision": "b3fca77b637379f0c01ad86d18753a7ac1998b53",
+    "sha256": "0c8138e73c34fa29a5276b675b146b72d78ce001fcc4560d76302c908b4808a5",
+    "local_path": "vendor/eval-data/swe-polybench-verified/test.csv",
+    "license": "MIT"
+  },
+  "selection": {
+    "outcome_blind": true,
+    "seed": "cospa-polybench-balanced-v1",
+    "adaptive_reason": "The first mechanical candidate screen retained only nine Java tasks; select additional Java candidates without using any target-model outcomes.",
+    "uses_target_model_outcomes": false,
+    "candidate_size": 32,
+    "task_type_targets": {
+      "Bug Fix": 20,
+      "Feature": 8,
+      "Refactoring": 4
+    },
+    "patch_size_tertiles": [
+      10,
+      11,
+      11
+    ],
+    "repository_cap": 10,
+    "excluded_candidate96_and_prior_mechanical_failures": true
+  },
+  "qualification": {
+    "status": "support_candidates_screened_not_scored",
+    "target_observations_per_condition": 3,
+    "evidence": "configs/swe_polybench_balanced_qualification_v1.json"
+  },
+  "suites": {
+    "swe_polybench_balanced_java_extension32": {
+      "tasks": [
+        {
+          "id": "google__gson-2498",
+          "image_ref": "ghcr.io/timesler/swe-polybench.eval.x86_64.google__gson-2498:v1.1"
+        },
+        {
+          "id": "apache__rocketmq-7563",
+          "image_ref": "ghcr.io/timesler/swe-polybench.eval.x86_64.apache__rocketmq-7563:v1.1"
+        },
+        {
+          "id": "google__gson-2376",
+          "image_ref": "ghcr.io/timesler/swe-polybench.eval.x86_64.google__gson-2376:v1.1"
+        },
+        {
+          "id": "apolloconfig__apollo-4207",
+          "image_ref": "ghcr.io/timesler/swe-polybench.eval.x86_64.apolloconfig__apollo-4207:v1.1"
+        },
+        {
+          "id": "google__gson-1904",
+          "image_ref": "ghcr.io/timesler/swe-polybench.eval.x86_64.google__gson-1904:v1.1"
+        },
+        {
+          "id": "google__gson-2345",
+          "image_ref": "ghcr.io/timesler/swe-polybench.eval.x86_64.google__gson-2345:v1.1"
+        },
+        {
+          "id": "google__gson-2060",
+          "image_ref": "ghcr.io/timesler/swe-polybench.eval.x86_64.google__gson-2060:v1.1"
+        },
+        {
+          "id": "apache__dubbo-3622",
+          "image_ref": "ghcr.io/timesler/swe-polybench.eval.x86_64.apache__dubbo-3622:v1.1"
+        },
+        {
+          "id": "google__gson-2701",
+          "image_ref": "ghcr.io/timesler/swe-polybench.eval.x86_64.google__gson-2701:v1.1"
+        },
+        {
+          "id": "google__gson-2158",
+          "image_ref": "ghcr.io/timesler/swe-polybench.eval.x86_64.google__gson-2158:v1.1"
+        },
+        {
+          "id": "apache__dubbo-8623",
+          "image_ref": "ghcr.io/timesler/swe-polybench.eval.x86_64.apache__dubbo-8623:v1.1"
+        },
+        {
+          "id": "apolloconfig__apollo-4464",
+          "image_ref": "ghcr.io/timesler/swe-polybench.eval.x86_64.apolloconfig__apollo-4464:v1.1"
+        },
+        {
+          "id": "google__gson-2420",
+          "image_ref": "ghcr.io/timesler/swe-polybench.eval.x86_64.google__gson-2420:v1.1"
+        },
+        {
+          "id": "apache__dubbo-5783",
+          "image_ref": "ghcr.io/timesler/swe-polybench.eval.x86_64.apache__dubbo-5783:v1.1"
+        },
+        {
+          "id": "apache__rocketmq-7346",
+          "image_ref": "ghcr.io/timesler/swe-polybench.eval.x86_64.apache__rocketmq-7346:v1.1"
+        },
+        {
+          "id": "apache__dubbo-5356",
+          "image_ref": "ghcr.io/timesler/swe-polybench.eval.x86_64.apache__dubbo-5356:v1.1"
+        },
+        {
+          "id": "apache__dubbo-8126",
+          "image_ref": "ghcr.io/timesler/swe-polybench.eval.x86_64.apache__dubbo-8126:v1.1"
+        },
+        {
+          "id": "apache__rocketmq-5841",
+          "image_ref": "ghcr.io/timesler/swe-polybench.eval.x86_64.apache__rocketmq-5841:v1.1"
+        },
+        {
+          "id": "apache__rocketmq-7426",
+          "image_ref": "ghcr.io/timesler/swe-polybench.eval.x86_64.apache__rocketmq-7426:v1.1"
+        },
+        {
+          "id": "apache__dubbo-6498",
+          "image_ref": "ghcr.io/timesler/swe-polybench.eval.x86_64.apache__dubbo-6498:v1.1"
+        },
+        {
+          "id": "apache__rocketmq-7420",
+          "image_ref": "ghcr.io/timesler/swe-polybench.eval.x86_64.apache__rocketmq-7420:v1.1"
+        },
+        {
+          "id": "apache__rocketmq-4122",
+          "image_ref": "ghcr.io/timesler/swe-polybench.eval.x86_64.apache__rocketmq-4122:v1.1"
+        },
+        {
+          "id": "apache__rocketmq-7712",
+          "image_ref": "ghcr.io/timesler/swe-polybench.eval.x86_64.apache__rocketmq-7712:v1.1"
+        },
+        {
+          "id": "apache__rocketmq-1636",
+          "image_ref": "ghcr.io/timesler/swe-polybench.eval.x86_64.apache__rocketmq-1636:v1.1"
+        },
+        {
+          "id": "apache__dubbo-4678",
+          "image_ref": "ghcr.io/timesler/swe-polybench.eval.x86_64.apache__dubbo-4678:v1.1"
+        },
+        {
+          "id": "apache__rocketmq-5037",
+          "image_ref": "ghcr.io/timesler/swe-polybench.eval.x86_64.apache__rocketmq-5037:v1.1"
+        },
+        {
+          "id": "apache__dubbo-4026",
+          "image_ref": "ghcr.io/timesler/swe-polybench.eval.x86_64.apache__dubbo-4026:v1.1"
+        },
+        {
+          "id": "trinodb__trino-4393",
+          "image_ref": "ghcr.io/timesler/swe-polybench.eval.x86_64.trinodb__trino-4393:v1.1"
+        },
+        {
+          "id": "trinodb__trino-2081",
+          "image_ref": "ghcr.io/timesler/swe-polybench.eval.x86_64.trinodb__trino-2081:v1.1"
+        },
+        {
+          "id": "trinodb__trino-3603",
+          "image_ref": "ghcr.io/timesler/swe-polybench.eval.x86_64.trinodb__trino-3603:v1.1"
+        },
+        {
+          "id": "trinodb__trino-2768",
+          "image_ref": "ghcr.io/timesler/swe-polybench.eval.x86_64.trinodb__trino-2768:v1.1"
+        },
+        {
+          "id": "trinodb__trino-3599",
+          "image_ref": "ghcr.io/timesler/swe-polybench.eval.x86_64.trinodb__trino-3599:v1.1"
+        }
+      ]
+    }
+  },
+  "tasks": [
+    {
+      "task_id": "google__gson-2498",
+      "image_ref": "ghcr.io/timesler/swe-polybench.eval.x86_64.google__gson-2498:v1.1",
+      "language": "java",
+      "task_type": "Feature",
+      "repository": "google/gson",
+      "patch_changes": 97,
+      "patch_size_tertile": "large"
+    },
+    {
+      "task_id": "apache__rocketmq-7563",
+      "image_ref": "ghcr.io/timesler/swe-polybench.eval.x86_64.apache__rocketmq-7563:v1.1",
+      "language": "java",
+      "task_type": "Bug Fix",
+      "repository": "apache/rocketmq",
+      "patch_changes": 19,
+      "patch_size_tertile": "medium"
+    },
+    {
+      "task_id": "google__gson-2376",
+      "image_ref": "ghcr.io/timesler/swe-polybench.eval.x86_64.google__gson-2376:v1.1",
+      "language": "java",
+      "task_type": "Bug Fix",
+      "repository": "google/gson",
+      "patch_changes": 90,
+      "patch_size_tertile": "large"
+    },
+    {
+      "task_id": "apolloconfig__apollo-4207",
+      "image_ref": "ghcr.io/timesler/swe-polybench.eval.x86_64.apolloconfig__apollo-4207:v1.1",
+      "language": "java",
+      "task_type": "Feature",
+      "repository": "apolloconfig/apollo",
+      "patch_changes": 46,
+      "patch_size_tertile": "large"
+    },
+    {
+      "task_id": "google__gson-1904",
+      "image_ref": "ghcr.io/timesler/swe-polybench.eval.x86_64.google__gson-1904:v1.1",
+      "language": "java",
+      "task_type": "Feature",
+      "repository": "google/gson",
+      "patch_changes": 92,
+      "patch_size_tertile": "large"
+    },
+    {
+      "task_id": "google__gson-2345",
+      "image_ref": "ghcr.io/timesler/swe-polybench.eval.x86_64.google__gson-2345:v1.1",
+      "language": "java",
+      "task_type": "Feature",
+      "repository": "google/gson",
+      "patch_changes": 153,
+      "patch_size_tertile": "large"
+    },
+    {
+      "task_id": "google__gson-2060",
+      "image_ref": "ghcr.io/timesler/swe-polybench.eval.x86_64.google__gson-2060:v1.1",
+      "language": "java",
+      "task_type": "Bug Fix",
+      "repository": "google/gson",
+      "patch_changes": 61,
+      "patch_size_tertile": "large"
+    },
+    {
+      "task_id": "apache__dubbo-3622",
+      "image_ref": "ghcr.io/timesler/swe-polybench.eval.x86_64.apache__dubbo-3622:v1.1",
+      "language": "java",
+      "task_type": "Bug Fix",
+      "repository": "apache/dubbo",
+      "patch_changes": 19,
+      "patch_size_tertile": "medium"
+    },
+    {
+      "task_id": "google__gson-2701",
+      "image_ref": "ghcr.io/timesler/swe-polybench.eval.x86_64.google__gson-2701:v1.1",
+      "language": "java",
+      "task_type": "Feature",
+      "repository": "google/gson",
+      "patch_changes": 53,
+      "patch_size_tertile": "large"
+    },
+    {
+      "task_id": "google__gson-2158",
+      "image_ref": "ghcr.io/timesler/swe-polybench.eval.x86_64.google__gson-2158:v1.1",
+      "language": "java",
+      "task_type": "Bug Fix",
+      "repository": "google/gson",
+      "patch_changes": 46,
+      "patch_size_tertile": "large"
+    },
+    {
+      "task_id": "apache__dubbo-8623",
+      "image_ref": "ghcr.io/timesler/swe-polybench.eval.x86_64.apache__dubbo-8623:v1.1",
+      "language": "java",
+      "task_type": "Bug Fix",
+      "repository": "apache/dubbo",
+      "patch_changes": 7,
+      "patch_size_tertile": "small"
+    },
+    {
+      "task_id": "apolloconfig__apollo-4464",
+      "image_ref": "ghcr.io/timesler/swe-polybench.eval.x86_64.apolloconfig__apollo-4464:v1.1",
+      "language": "java",
+      "task_type": "Feature",
+      "repository": "apolloconfig/apollo",
+      "patch_changes": 414,
+      "patch_size_tertile": "large"
+    },
+    {
+      "task_id": "google__gson-2420",
+      "image_ref": "ghcr.io/timesler/swe-polybench.eval.x86_64.google__gson-2420:v1.1",
+      "language": "java",
+      "task_type": "Feature",
+      "repository": "google/gson",
+      "patch_changes": 120,
+      "patch_size_tertile": "large"
+    },
+    {
+      "task_id": "apache__dubbo-5783",
+      "image_ref": "ghcr.io/timesler/swe-polybench.eval.x86_64.apache__dubbo-5783:v1.1",
+      "language": "java",
+      "task_type": "Bug Fix",
+      "repository": "apache/dubbo",
+      "patch_changes": 13,
+      "patch_size_tertile": "small"
+    },
+    {
+      "task_id": "apache__rocketmq-7346",
+      "image_ref": "ghcr.io/timesler/swe-polybench.eval.x86_64.apache__rocketmq-7346:v1.1",
+      "language": "java",
+      "task_type": "Bug Fix",
+      "repository": "apache/rocketmq",
+      "patch_changes": 5,
+      "patch_size_tertile": "small"
+    },
+    {
+      "task_id": "apache__dubbo-5356",
+      "image_ref": "ghcr.io/timesler/swe-polybench.eval.x86_64.apache__dubbo-5356:v1.1",
+      "language": "java",
+      "task_type": "Refactoring",
+      "repository": "apache/dubbo",
+      "patch_changes": 250,
+      "patch_size_tertile": "large"
+    },
+    {
+      "task_id": "apache__dubbo-8126",
+      "image_ref": "ghcr.io/timesler/swe-polybench.eval.x86_64.apache__dubbo-8126:v1.1",
+      "language": "java",
+      "task_type": "Bug Fix",
+      "repository": "apache/dubbo",
+      "patch_changes": 29,
+      "patch_size_tertile": "medium"
+    },
+    {
+      "task_id": "apache__rocketmq-5841",
+      "image_ref": "ghcr.io/timesler/swe-polybench.eval.x86_64.apache__rocketmq-5841:v1.1",
+      "language": "java",
+      "task_type": "Bug Fix",
+      "repository": "apache/rocketmq",
+      "patch_changes": 7,
+      "patch_size_tertile": "small"
+    },
+    {
+      "task_id": "apache__rocketmq-7426",
+      "image_ref": "ghcr.io/timesler/swe-polybench.eval.x86_64.apache__rocketmq-7426:v1.1",
+      "language": "java",
+      "task_type": "Bug Fix",
+      "repository": "apache/rocketmq",
+      "patch_changes": 31,
+      "patch_size_tertile": "medium"
+    },
+    {
+      "task_id": "apache__dubbo-6498",
+      "image_ref": "ghcr.io/timesler/swe-polybench.eval.x86_64.apache__dubbo-6498:v1.1",
+      "language": "java",
+      "task_type": "Bug Fix",
+      "repository": "apache/dubbo",
+      "patch_changes": 14,
+      "patch_size_tertile": "small"
+    },
+    {
+      "task_id": "apache__rocketmq-7420",
+      "image_ref": "ghcr.io/timesler/swe-polybench.eval.x86_64.apache__rocketmq-7420:v1.1",
+      "language": "java",
+      "task_type": "Refactoring",
+      "repository": "apache/rocketmq",
+      "patch_changes": 4,
+      "patch_size_tertile": "small"
+    },
+    {
+      "task_id": "apache__rocketmq-4122",
+      "image_ref": "ghcr.io/timesler/swe-polybench.eval.x86_64.apache__rocketmq-4122:v1.1",
+      "language": "java",
+      "task_type": "Feature",
+      "repository": "apache/rocketmq",
+      "patch_changes": 19,
+      "patch_size_tertile": "medium"
+    },
+    {
+      "task_id": "apache__rocketmq-7712",
+      "image_ref": "ghcr.io/timesler/swe-polybench.eval.x86_64.apache__rocketmq-7712:v1.1",
+      "language": "java",
+      "task_type": "Bug Fix",
+      "repository": "apache/rocketmq",
+      "patch_changes": 5,
+      "patch_size_tertile": "small"
+    },
+    {
+      "task_id": "apache__rocketmq-1636",
+      "image_ref": "ghcr.io/timesler/swe-polybench.eval.x86_64.apache__rocketmq-1636:v1.1",
+      "language": "java",
+      "task_type": "Bug Fix",
+      "repository": "apache/rocketmq",
+      "patch_changes": 6,
+      "patch_size_tertile": "small"
+    },
+    {
+      "task_id": "apache__dubbo-4678",
+      "image_ref": "ghcr.io/timesler/swe-polybench.eval.x86_64.apache__dubbo-4678:v1.1",
+      "language": "java",
+      "task_type": "Bug Fix",
+      "repository": "apache/dubbo",
+      "patch_changes": 37,
+      "patch_size_tertile": "medium"
+    },
+    {
+      "task_id": "apache__rocketmq-5037",
+      "image_ref": "ghcr.io/timesler/swe-polybench.eval.x86_64.apache__rocketmq-5037:v1.1",
+      "language": "java",
+      "task_type": "Refactoring",
+      "repository": "apache/rocketmq",
+      "patch_changes": 18,
+      "patch_size_tertile": "medium"
+    },
+    {
+      "task_id": "apache__dubbo-4026",
+      "image_ref": "ghcr.io/timesler/swe-polybench.eval.x86_64.apache__dubbo-4026:v1.1",
+      "language": "java",
+      "task_type": "Bug Fix",
+      "repository": "apache/dubbo",
+      "patch_changes": 19,
+      "patch_size_tertile": "medium"
+    },
+    {
+      "task_id": "trinodb__trino-4393",
+      "image_ref": "ghcr.io/timesler/swe-polybench.eval.x86_64.trinodb__trino-4393:v1.1",
+      "language": "java",
+      "task_type": "Bug Fix",
+      "repository": "trinodb/trino",
+      "patch_changes": 24,
+      "patch_size_tertile": "medium"
+    },
+    {
+      "task_id": "trinodb__trino-2081",
+      "image_ref": "ghcr.io/timesler/swe-polybench.eval.x86_64.trinodb__trino-2081:v1.1",
+      "language": "java",
+      "task_type": "Bug Fix",
+      "repository": "trinodb/trino",
+      "patch_changes": 3,
+      "patch_size_tertile": "small"
+    },
+    {
+      "task_id": "trinodb__trino-3603",
+      "image_ref": "ghcr.io/timesler/swe-polybench.eval.x86_64.trinodb__trino-3603:v1.1",
+      "language": "java",
+      "task_type": "Refactoring",
+      "repository": "trinodb/trino",
+      "patch_changes": 41,
+      "patch_size_tertile": "medium"
+    },
+    {
+      "task_id": "trinodb__trino-2768",
+      "image_ref": "ghcr.io/timesler/swe-polybench.eval.x86_64.trinodb__trino-2768:v1.1",
+      "language": "java",
+      "task_type": "Bug Fix",
+      "repository": "trinodb/trino",
+      "patch_changes": 32,
+      "patch_size_tertile": "medium"
+    },
+    {
+      "task_id": "trinodb__trino-3599",
+      "image_ref": "ghcr.io/timesler/swe-polybench.eval.x86_64.trinodb__trino-3599:v1.1",
+      "language": "java",
+      "task_type": "Bug Fix",
+      "repository": "trinodb/trino",
+      "patch_changes": 12,
+      "patch_size_tertile": "small"
+    }
+  ]
+}

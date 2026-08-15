@@ -1,0 +1,131 @@
+{
+  "name": "swe_polybench_balanced_java_strata_extension7_v1",
+  "version": "2026-08-15",
+  "source": {
+    "repository": "https://github.com/amazon-science/SWE-PolyBench.git",
+    "revision": "9c836c5d7f3cb991934132b77d29e6941d912a07",
+    "license": "MIT"
+  },
+  "dataset": {
+    "repository": "https://huggingface.co/datasets/AmazonScience/SWE-PolyBench_Verified",
+    "revision": "b3fca77b637379f0c01ad86d18753a7ac1998b53",
+    "sha256": "0c8138e73c34fa29a5276b675b146b72d78ce001fcc4560d76302c908b4808a5",
+    "local_path": "vendor/eval-data/swe-polybench-verified/test.csv",
+    "license": "MIT"
+  },
+  "selection": {
+    "outcome_blind": true,
+    "uses_target_model_outcomes": false,
+    "adaptive_reason": "Mechanical candidate screens left only four qualified small and four qualified medium Java tasks. Screen every remaining eligible task in those source strata before relaxing balance.",
+    "candidate_size": 7,
+    "patch_size_tertiles": {
+      "small": 4,
+      "medium": 3
+    },
+    "excluded_prior_candidates_and_mechanical_failures": true
+  },
+  "qualification": {
+    "status": "support_candidates_screened_not_scored",
+    "target_observations_per_condition": 3,
+    "evidence": "configs/swe_polybench_balanced_qualification_v1.json"
+  },
+  "suites": {
+    "swe_polybench_balanced_java_strata_extension7": {
+      "tasks": [
+        {
+          "id": "google__gson-2134",
+          "image_ref": "ghcr.io/timesler/swe-polybench.eval.x86_64.google__gson-2134:v1.1"
+        },
+        {
+          "id": "google__gson-2337",
+          "image_ref": "ghcr.io/timesler/swe-polybench.eval.x86_64.google__gson-2337:v1.1"
+        },
+        {
+          "id": "apache__dubbo-5708",
+          "image_ref": "ghcr.io/timesler/swe-polybench.eval.x86_64.apache__dubbo-5708:v1.1"
+        },
+        {
+          "id": "apache__rocketmq-7823",
+          "image_ref": "ghcr.io/timesler/swe-polybench.eval.x86_64.apache__rocketmq-7823:v1.1"
+        },
+        {
+          "id": "google__gson-2549",
+          "image_ref": "ghcr.io/timesler/swe-polybench.eval.x86_64.google__gson-2549:v1.1"
+        },
+        {
+          "id": "google__gson-2071",
+          "image_ref": "ghcr.io/timesler/swe-polybench.eval.x86_64.google__gson-2071:v1.1"
+        },
+        {
+          "id": "google__gson-1703",
+          "image_ref": "ghcr.io/timesler/swe-polybench.eval.x86_64.google__gson-1703:v1.1"
+        }
+      ]
+    }
+  },
+  "tasks": [
+    {
+      "task_id": "google__gson-2134",
+      "image_ref": "ghcr.io/timesler/swe-polybench.eval.x86_64.google__gson-2134:v1.1",
+      "language": "java",
+      "task_type": "Bug Fix",
+      "repository": "google/gson",
+      "patch_changes": 9,
+      "patch_size_tertile": "small"
+    },
+    {
+      "task_id": "google__gson-2337",
+      "image_ref": "ghcr.io/timesler/swe-polybench.eval.x86_64.google__gson-2337:v1.1",
+      "language": "java",
+      "task_type": "Bug Fix",
+      "repository": "google/gson",
+      "patch_changes": 4,
+      "patch_size_tertile": "small"
+    },
+    {
+      "task_id": "apache__dubbo-5708",
+      "image_ref": "ghcr.io/timesler/swe-polybench.eval.x86_64.apache__dubbo-5708:v1.1",
+      "language": "java",
+      "task_type": "Bug Fix",
+      "repository": "apache/dubbo",
+      "patch_changes": 2,
+      "patch_size_tertile": "small"
+    },
+    {
+      "task_id": "apache__rocketmq-7823",
+      "image_ref": "ghcr.io/timesler/swe-polybench.eval.x86_64.apache__rocketmq-7823:v1.1",
+      "language": "java",
+      "task_type": "Bug Fix",
+      "repository": "apache/rocketmq",
+      "patch_changes": 5,
+      "patch_size_tertile": "small"
+    },
+    {
+      "task_id": "google__gson-2549",
+      "image_ref": "ghcr.io/timesler/swe-polybench.eval.x86_64.google__gson-2549:v1.1",
+      "language": "java",
+      "task_type": "Bug Fix",
+      "repository": "google/gson",
+      "patch_changes": 36,
+      "patch_size_tertile": "medium"
+    },
+    {
+      "task_id": "google__gson-2071",
+      "image_ref": "ghcr.io/timesler/swe-polybench.eval.x86_64.google__gson-2071:v1.1",
+      "language": "java",
+      "task_type": "Bug Fix",
+      "repository": "google/gson",
+      "patch_changes": 22,
+      "patch_size_tertile": "medium"
+    },
+    {
+      "task_id": "google__gson-1703",
+      "image_ref": "ghcr.io/timesler/swe-polybench.eval.x86_64.google__gson-1703:v1.1",
+      "language": "java",
+      "task_type": "Bug Fix",
+      "repository": "google/gson",
+      "patch_changes": 22,
+      "patch_size_tertile": "medium"
+    }
+  ]
+}

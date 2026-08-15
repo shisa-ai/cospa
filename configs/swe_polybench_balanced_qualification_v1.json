@@ -1,0 +1,1356 @@
+{
+  "completed_at": "2026-08-15",
+  "evidence": {
+    "gold_first": [
+      "results/qualification/polybench-balanced-candidate96-gold1-20260815T1900Z/summary.json",
+      "results/qualification/polybench-balanced-java-extension32-gold1-20260815T1945Z/summary.json",
+      "results/qualification/polybench-balanced-java-strata-extension7-gold1-20260815T2000Z/summary.json"
+    ],
+    "gold_repeat": [
+      "results/qualification/polybench-balanced64-repeat-gold2-20260815T1950Z/summary.json",
+      "results/qualification/polybench-balanced-java-strata-extension7-repeat-gold2-20260815T2005Z/summary.json"
+    ],
+    "null_selected": "results/qualification/polybench-balanced64-selected-null3-20260815T2010Z/summary.json",
+    "selection": "results/qualification/polybench-balanced64-selected-null3-20260815T2010Z/provisional-manifest.json"
+  },
+  "name": "swe_polybench_balanced_qualification_v1",
+  "policy": {
+    "gold": "Three oracle observations must resolve with non-empty captured patches.",
+    "minimum_observations_per_condition": 3,
+    "null": "Three no-op observations must remain unresolved with empty captured patches.",
+    "uses_target_model_outcomes": false,
+    "verifier_network": "no-network"
+  },
+  "summary": {
+    "gold_stable_candidates": 82,
+    "repeat_qualified_candidates": 64,
+    "selected_nonpilot_null_observations": 108,
+    "selected_nonpilot_null_resolved": 0,
+    "source_candidates": 135
+  },
+  "tasks": [
+    {
+      "gold_observations": 1,
+      "gold_passes": 0,
+      "gold_verifier_seconds": 2.357209,
+      "null_failures": 0,
+      "null_observations": 0,
+      "null_verifier_seconds": 0,
+      "source": "candidate96",
+      "task_id": "apache__dubbo-3317"
+    },
+    {
+      "gold_observations": 3,
+      "gold_passes": 3,
+      "gold_verifier_seconds": 0.0,
+      "null_failures": 3,
+      "null_observations": 3,
+      "source": "pilot28_repeat_qualification",
+      "task_id": "apolloconfig__apollo-4568"
+    },
+    {
+      "gold_observations": 1,
+      "gold_passes": 0,
+      "gold_verifier_seconds": 3.466552,
+      "null_failures": 0,
+      "null_observations": 0,
+      "null_verifier_seconds": 0,
+      "source": "candidate96",
+      "task_id": "google__gson-2410"
+    },
+    {
+      "gold_observations": 3,
+      "gold_passes": 3,
+      "gold_verifier_seconds": 242.722556,
+      "null_failures": 0,
+      "null_observations": 0,
+      "null_verifier_seconds": 0,
+      "source": "candidate96",
+      "task_id": "google__gson-2475"
+    },
+    {
+      "gold_observations": 3,
+      "gold_passes": 3,
+      "gold_verifier_seconds": 0.0,
+      "null_failures": 3,
+      "null_observations": 3,
+      "source": "pilot28_repeat_qualification",
+      "task_id": "apache__dubbo-3855"
+    },
+    {
+      "gold_observations": 1,
+      "gold_passes": 0,
+      "gold_verifier_seconds": 2.278669,
+      "null_failures": 0,
+      "null_observations": 0,
+      "null_verifier_seconds": 0,
+      "source": "candidate96",
+      "task_id": "google__gson-2479"
+    },
+    {
+      "gold_observations": 1,
+      "gold_passes": 0,
+      "gold_verifier_seconds": 21.677506,
+      "null_failures": 0,
+      "null_observations": 0,
+      "null_verifier_seconds": 0,
+      "source": "candidate96",
+      "task_id": "apache__dubbo-3093"
+    },
+    {
+      "gold_observations": 3,
+      "gold_passes": 3,
+      "gold_verifier_seconds": 0.0,
+      "null_failures": 3,
+      "null_observations": 3,
+      "source": "pilot28_repeat_qualification",
+      "task_id": "google__guava-3971"
+    },
+    {
+      "gold_observations": 3,
+      "gold_passes": 3,
+      "gold_verifier_seconds": 79.57006,
+      "null_failures": 3,
+      "null_observations": 3,
+      "null_verifier_seconds": 42.345617,
+      "source": "candidate96",
+      "task_id": "google__gson-2167"
+    },
+    {
+      "gold_observations": 3,
+      "gold_passes": 3,
+      "gold_verifier_seconds": 99.139212,
+      "null_failures": 3,
+      "null_observations": 3,
+      "null_verifier_seconds": 99.007936,
+      "source": "candidate96",
+      "task_id": "apolloconfig__apollo-1894"
+    },
+    {
+      "gold_observations": 1,
+      "gold_passes": 0,
+      "gold_verifier_seconds": 476.08374,
+      "null_failures": 0,
+      "null_observations": 0,
+      "null_verifier_seconds": 0,
+      "source": "candidate96",
+      "task_id": "apache__rocketmq-7532"
+    },
+    {
+      "gold_observations": 3,
+      "gold_passes": 3,
+      "gold_verifier_seconds": 123.291237,
+      "null_failures": 3,
+      "null_observations": 3,
+      "null_verifier_seconds": 113.72251,
+      "source": "candidate96",
+      "task_id": "google__guava-5696"
+    },
+    {
+      "gold_observations": 3,
+      "gold_passes": 3,
+      "gold_verifier_seconds": 0.0,
+      "null_failures": 3,
+      "null_observations": 3,
+      "source": "pilot28_repeat_qualification",
+      "task_id": "google__gson-1989"
+    },
+    {
+      "gold_observations": 3,
+      "gold_passes": 3,
+      "gold_verifier_seconds": 1457.041692,
+      "null_failures": 3,
+      "null_observations": 3,
+      "null_verifier_seconds": 111.160128,
+      "source": "candidate96",
+      "task_id": "apache__rocketmq-7655"
+    },
+    {
+      "gold_observations": 1,
+      "gold_passes": 0,
+      "gold_verifier_seconds": 5.507715,
+      "null_failures": 0,
+      "null_observations": 0,
+      "null_verifier_seconds": 0,
+      "source": "candidate96",
+      "task_id": "apache__dubbo-4515"
+    },
+    {
+      "gold_observations": 1,
+      "gold_passes": 0,
+      "gold_verifier_seconds": 3.786248,
+      "null_failures": 0,
+      "null_observations": 0,
+      "null_verifier_seconds": 0,
+      "source": "candidate96",
+      "task_id": "apache__rocketmq-7964"
+    },
+    {
+      "gold_observations": 1,
+      "gold_passes": 0,
+      "gold_verifier_seconds": 5.148613,
+      "null_failures": 0,
+      "null_observations": 0,
+      "null_verifier_seconds": 0,
+      "source": "candidate96",
+      "task_id": "apache__dubbo-8414"
+    },
+    {
+      "gold_observations": 1,
+      "gold_passes": 0,
+      "gold_verifier_seconds": 3.665138,
+      "null_failures": 0,
+      "null_observations": 0,
+      "null_verifier_seconds": 0,
+      "source": "candidate96",
+      "task_id": "apache__rocketmq-5062"
+    },
+    {
+      "gold_observations": 1,
+      "gold_passes": 0,
+      "gold_verifier_seconds": 3.539695,
+      "null_failures": 0,
+      "null_observations": 0,
+      "null_verifier_seconds": 0,
+      "source": "candidate96",
+      "task_id": "apache__rocketmq-516"
+    },
+    {
+      "gold_observations": 1,
+      "gold_passes": 0,
+      "gold_verifier_seconds": 2.896294,
+      "null_failures": 0,
+      "null_observations": 0,
+      "null_verifier_seconds": 0,
+      "source": "candidate96",
+      "task_id": "trinodb__trino-2707"
+    },
+    {
+      "gold_observations": 1,
+      "gold_passes": 0,
+      "gold_verifier_seconds": 2.69658,
+      "null_failures": 0,
+      "null_observations": 0,
+      "null_verifier_seconds": 0,
+      "source": "candidate96",
+      "task_id": "trinodb__trino-3208"
+    },
+    {
+      "gold_observations": 1,
+      "gold_passes": 0,
+      "gold_verifier_seconds": 2.887686,
+      "null_failures": 0,
+      "null_observations": 0,
+      "null_verifier_seconds": 0,
+      "source": "candidate96",
+      "task_id": "trinodb__trino-1512"
+    },
+    {
+      "gold_observations": 1,
+      "gold_passes": 0,
+      "gold_verifier_seconds": 2.809559,
+      "null_failures": 0,
+      "null_observations": 0,
+      "null_verifier_seconds": 0,
+      "source": "candidate96",
+      "task_id": "trinodb__trino-3392"
+    },
+    {
+      "gold_observations": 1,
+      "gold_passes": 0,
+      "gold_verifier_seconds": 2.902218,
+      "null_failures": 0,
+      "null_observations": 0,
+      "null_verifier_seconds": 0,
+      "source": "candidate96",
+      "task_id": "trinodb__trino-2575"
+    },
+    {
+      "gold_observations": 3,
+      "gold_passes": 3,
+      "gold_verifier_seconds": 0.0,
+      "null_failures": 3,
+      "null_observations": 3,
+      "source": "pilot28_repeat_qualification",
+      "task_id": "mrdoob__three.js-14836"
+    },
+    {
+      "gold_observations": 1,
+      "gold_passes": 0,
+      "gold_verifier_seconds": 9.77645,
+      "null_failures": 0,
+      "null_observations": 0,
+      "null_verifier_seconds": 0,
+      "source": "candidate96",
+      "task_id": "mrdoob__three.js-18648"
+    },
+    {
+      "gold_observations": 1,
+      "gold_passes": 0,
+      "gold_verifier_seconds": 4.189436,
+      "null_failures": 0,
+      "null_observations": 0,
+      "null_verifier_seconds": 0,
+      "source": "candidate96",
+      "task_id": "mrdoob__three.js-24461"
+    },
+    {
+      "gold_observations": 3,
+      "gold_passes": 3,
+      "gold_verifier_seconds": 32.893944,
+      "null_failures": 0,
+      "null_observations": 0,
+      "null_verifier_seconds": 0,
+      "source": "candidate96",
+      "task_id": "sveltejs__svelte-477"
+    },
+    {
+      "gold_observations": 3,
+      "gold_passes": 3,
+      "gold_verifier_seconds": 0.0,
+      "null_failures": 3,
+      "null_observations": 3,
+      "source": "pilot28_repeat_qualification",
+      "task_id": "sveltejs__svelte-630"
+    },
+    {
+      "gold_observations": 3,
+      "gold_passes": 3,
+      "gold_verifier_seconds": 0.0,
+      "null_failures": 3,
+      "null_observations": 3,
+      "source": "pilot28_repeat_qualification",
+      "task_id": "sveltejs__svelte-1227"
+    },
+    {
+      "gold_observations": 3,
+      "gold_passes": 3,
+      "gold_verifier_seconds": 0.0,
+      "null_failures": 3,
+      "null_observations": 3,
+      "source": "pilot28_repeat_qualification",
+      "task_id": "sveltejs__svelte-4454"
+    },
+    {
+      "gold_observations": 3,
+      "gold_passes": 3,
+      "gold_verifier_seconds": 80.234303,
+      "null_failures": 0,
+      "null_observations": 0,
+      "null_verifier_seconds": 0,
+      "source": "candidate96",
+      "task_id": "sveltejs__svelte-5616"
+    },
+    {
+      "gold_observations": 3,
+      "gold_passes": 3,
+      "gold_verifier_seconds": 113.379173,
+      "null_failures": 3,
+      "null_observations": 3,
+      "null_verifier_seconds": 109.492778,
+      "source": "candidate96",
+      "task_id": "sveltejs__svelte-6525"
+    },
+    {
+      "gold_observations": 3,
+      "gold_passes": 3,
+      "gold_verifier_seconds": 0.0,
+      "null_failures": 3,
+      "null_observations": 3,
+      "source": "pilot28_repeat_qualification",
+      "task_id": "sveltejs__svelte-6564"
+    },
+    {
+      "gold_observations": 3,
+      "gold_passes": 3,
+      "gold_verifier_seconds": 14.356195,
+      "null_failures": 3,
+      "null_observations": 3,
+      "null_verifier_seconds": 14.956469,
+      "source": "candidate96",
+      "task_id": "prettier__prettier-11637"
+    },
+    {
+      "gold_observations": 3,
+      "gold_passes": 3,
+      "gold_verifier_seconds": 0.0,
+      "null_failures": 3,
+      "null_observations": 3,
+      "source": "pilot28_repeat_qualification",
+      "task_id": "prettier__prettier-9850"
+    },
+    {
+      "gold_observations": 3,
+      "gold_passes": 3,
+      "gold_verifier_seconds": 15.052458,
+      "null_failures": 3,
+      "null_observations": 3,
+      "null_verifier_seconds": 17.598603,
+      "source": "candidate96",
+      "task_id": "prettier__prettier-6604"
+    },
+    {
+      "gold_observations": 3,
+      "gold_passes": 3,
+      "gold_verifier_seconds": 13.818525,
+      "null_failures": 3,
+      "null_observations": 3,
+      "null_verifier_seconds": 16.182395,
+      "source": "candidate96",
+      "task_id": "prettier__prettier-4667"
+    },
+    {
+      "gold_observations": 3,
+      "gold_passes": 3,
+      "gold_verifier_seconds": 12.556307,
+      "null_failures": 3,
+      "null_observations": 3,
+      "null_verifier_seconds": 17.115268,
+      "source": "candidate96",
+      "task_id": "prettier__prettier-3515"
+    },
+    {
+      "gold_observations": 3,
+      "gold_passes": 3,
+      "gold_verifier_seconds": 12.274502,
+      "null_failures": 0,
+      "null_observations": 0,
+      "null_verifier_seconds": 0,
+      "source": "candidate96",
+      "task_id": "prettier__prettier-361"
+    },
+    {
+      "gold_observations": 3,
+      "gold_passes": 3,
+      "gold_verifier_seconds": 11.208522,
+      "null_failures": 0,
+      "null_observations": 0,
+      "null_verifier_seconds": 0,
+      "source": "candidate96",
+      "task_id": "serverless__serverless-7587"
+    },
+    {
+      "gold_observations": 3,
+      "gold_passes": 3,
+      "gold_verifier_seconds": 0.0,
+      "null_failures": 3,
+      "null_observations": 3,
+      "source": "pilot28_repeat_qualification",
+      "task_id": "serverless__serverless-6827"
+    },
+    {
+      "gold_observations": 3,
+      "gold_passes": 3,
+      "gold_verifier_seconds": 15.419602,
+      "null_failures": 0,
+      "null_observations": 0,
+      "null_verifier_seconds": 0,
+      "source": "candidate96",
+      "task_id": "serverless__serverless-6366"
+    },
+    {
+      "gold_observations": 3,
+      "gold_passes": 3,
+      "gold_verifier_seconds": 0.0,
+      "null_failures": 3,
+      "null_observations": 3,
+      "source": "pilot28_repeat_qualification",
+      "task_id": "serverless__serverless-5775"
+    },
+    {
+      "gold_observations": 3,
+      "gold_passes": 3,
+      "gold_verifier_seconds": 9.787815,
+      "null_failures": 0,
+      "null_observations": 0,
+      "null_verifier_seconds": 0,
+      "source": "candidate96",
+      "task_id": "serverless__serverless-3187"
+    },
+    {
+      "gold_observations": 3,
+      "gold_passes": 3,
+      "gold_verifier_seconds": 0.0,
+      "null_failures": 3,
+      "null_observations": 3,
+      "source": "pilot28_repeat_qualification",
+      "task_id": "serverless__serverless-2952"
+    },
+    {
+      "gold_observations": 3,
+      "gold_passes": 3,
+      "gold_verifier_seconds": 9.861893,
+      "null_failures": 3,
+      "null_observations": 3,
+      "null_verifier_seconds": 10.220704,
+      "source": "candidate96",
+      "task_id": "serverless__serverless-2842"
+    },
+    {
+      "gold_observations": 3,
+      "gold_passes": 3,
+      "gold_verifier_seconds": 9.188608,
+      "null_failures": 3,
+      "null_observations": 3,
+      "null_verifier_seconds": 9.250943,
+      "source": "candidate96",
+      "task_id": "serverless__serverless-2576"
+    },
+    {
+      "gold_observations": 1,
+      "gold_passes": 0,
+      "gold_verifier_seconds": 93.631818,
+      "null_failures": 0,
+      "null_observations": 0,
+      "null_verifier_seconds": 0,
+      "source": "candidate96",
+      "task_id": "microsoft__vscode-108964"
+    },
+    {
+      "gold_observations": 1,
+      "gold_passes": 0,
+      "gold_verifier_seconds": 90.001983,
+      "null_failures": 0,
+      "null_observations": 0,
+      "null_verifier_seconds": 0,
+      "source": "candidate96",
+      "task_id": "microsoft__vscode-110094"
+    },
+    {
+      "gold_observations": 1,
+      "gold_passes": 0,
+      "gold_verifier_seconds": 97.808668,
+      "null_failures": 0,
+      "null_observations": 0,
+      "null_verifier_seconds": 0,
+      "source": "candidate96",
+      "task_id": "microsoft__vscode-113837"
+    },
+    {
+      "gold_observations": 1,
+      "gold_passes": 0,
+      "gold_verifier_seconds": 97.261171,
+      "null_failures": 0,
+      "null_observations": 0,
+      "null_verifier_seconds": 0,
+      "source": "candidate96",
+      "task_id": "microsoft__vscode-122991"
+    },
+    {
+      "gold_observations": 1,
+      "gold_passes": 0,
+      "gold_verifier_seconds": 99.800979,
+      "null_failures": 0,
+      "null_observations": 0,
+      "null_verifier_seconds": 0,
+      "source": "candidate96",
+      "task_id": "microsoft__vscode-123294"
+    },
+    {
+      "gold_observations": 1,
+      "gold_passes": 0,
+      "gold_verifier_seconds": 79.557072,
+      "null_failures": 0,
+      "null_observations": 0,
+      "null_verifier_seconds": 0,
+      "source": "candidate96",
+      "task_id": "microsoft__vscode-148971"
+    },
+    {
+      "gold_observations": 1,
+      "gold_passes": 0,
+      "gold_verifier_seconds": 84.574814,
+      "null_failures": 0,
+      "null_observations": 0,
+      "null_verifier_seconds": 0,
+      "source": "candidate96",
+      "task_id": "microsoft__vscode-164396"
+    },
+    {
+      "gold_observations": 3,
+      "gold_passes": 3,
+      "gold_verifier_seconds": 0.0,
+      "null_failures": 3,
+      "null_observations": 3,
+      "source": "pilot28_repeat_qualification",
+      "task_id": "microsoft__vscode-189223"
+    },
+    {
+      "gold_observations": 3,
+      "gold_passes": 3,
+      "gold_verifier_seconds": 12.703877,
+      "null_failures": 3,
+      "null_observations": 3,
+      "null_verifier_seconds": 13.323015,
+      "source": "candidate96",
+      "task_id": "mui__material-ui-11858"
+    },
+    {
+      "gold_observations": 3,
+      "gold_passes": 3,
+      "gold_verifier_seconds": 14.345217,
+      "null_failures": 3,
+      "null_observations": 3,
+      "null_verifier_seconds": 14.374964,
+      "source": "candidate96",
+      "task_id": "mui__material-ui-13690"
+    },
+    {
+      "gold_observations": 3,
+      "gold_passes": 3,
+      "gold_verifier_seconds": 13.668776,
+      "null_failures": 3,
+      "null_observations": 3,
+      "null_verifier_seconds": 14.015097,
+      "source": "candidate96",
+      "task_id": "mui__material-ui-14882"
+    },
+    {
+      "gold_observations": 3,
+      "gold_passes": 3,
+      "gold_verifier_seconds": 15.027999,
+      "null_failures": 3,
+      "null_observations": 3,
+      "null_verifier_seconds": 21.993897,
+      "source": "candidate96",
+      "task_id": "mui__material-ui-15359"
+    },
+    {
+      "gold_observations": 3,
+      "gold_passes": 3,
+      "gold_verifier_seconds": 0.0,
+      "null_failures": 3,
+      "null_observations": 3,
+      "source": "pilot28_repeat_qualification",
+      "task_id": "mui__material-ui-15534"
+    },
+    {
+      "gold_observations": 3,
+      "gold_passes": 3,
+      "gold_verifier_seconds": 19.238934,
+      "null_failures": 3,
+      "null_observations": 3,
+      "null_verifier_seconds": 20.127889,
+      "source": "candidate96",
+      "task_id": "mui__material-ui-17301"
+    },
+    {
+      "gold_observations": 3,
+      "gold_passes": 3,
+      "gold_verifier_seconds": 0.0,
+      "null_failures": 3,
+      "null_observations": 3,
+      "source": "pilot28_repeat_qualification",
+      "task_id": "mui__material-ui-19072"
+    },
+    {
+      "gold_observations": 3,
+      "gold_passes": 3,
+      "gold_verifier_seconds": 26.166772,
+      "null_failures": 0,
+      "null_observations": 0,
+      "null_verifier_seconds": 0,
+      "source": "candidate96",
+      "task_id": "mui__material-ui-22696"
+    },
+    {
+      "gold_observations": 3,
+      "gold_passes": 3,
+      "gold_verifier_seconds": 19.458124,
+      "null_failures": 3,
+      "null_observations": 3,
+      "null_verifier_seconds": 20.242785,
+      "source": "candidate96",
+      "task_id": "mui__material-ui-25874"
+    },
+    {
+      "gold_observations": 3,
+      "gold_passes": 3,
+      "gold_verifier_seconds": 21.981414,
+      "null_failures": 3,
+      "null_observations": 3,
+      "null_verifier_seconds": 23.701906,
+      "source": "candidate96",
+      "task_id": "mui__material-ui-34610"
+    },
+    {
+      "gold_observations": 3,
+      "gold_passes": 3,
+      "gold_verifier_seconds": 31.175393,
+      "null_failures": 3,
+      "null_observations": 3,
+      "null_verifier_seconds": 31.36941,
+      "source": "candidate96",
+      "task_id": "tailwindlabs__tailwindcss-116"
+    },
+    {
+      "gold_observations": 3,
+      "gold_passes": 3,
+      "gold_verifier_seconds": 0.0,
+      "null_failures": 3,
+      "null_observations": 3,
+      "source": "pilot28_repeat_qualification",
+      "task_id": "tailwindlabs__tailwindcss-550"
+    },
+    {
+      "gold_observations": 3,
+      "gold_passes": 3,
+      "gold_verifier_seconds": 0.0,
+      "null_failures": 3,
+      "null_observations": 3,
+      "source": "pilot28_repeat_qualification",
+      "task_id": "tailwindlabs__tailwindcss-853"
+    },
+    {
+      "gold_observations": 3,
+      "gold_passes": 3,
+      "gold_verifier_seconds": 53.656149,
+      "null_failures": 3,
+      "null_observations": 3,
+      "null_verifier_seconds": 60.03058,
+      "source": "candidate96",
+      "task_id": "coder__code-server-4923"
+    },
+    {
+      "gold_observations": 3,
+      "gold_passes": 3,
+      "gold_verifier_seconds": 0.0,
+      "null_failures": 3,
+      "null_observations": 3,
+      "source": "pilot28_repeat_qualification",
+      "task_id": "coder__code-server-6278"
+    },
+    {
+      "gold_observations": 3,
+      "gold_passes": 3,
+      "gold_verifier_seconds": 0.0,
+      "null_failures": 3,
+      "null_observations": 3,
+      "source": "pilot28_repeat_qualification",
+      "task_id": "huggingface__transformers-21345"
+    },
+    {
+      "gold_observations": 3,
+      "gold_passes": 3,
+      "gold_verifier_seconds": 0.0,
+      "null_failures": 3,
+      "null_observations": 3,
+      "source": "pilot28_repeat_qualification",
+      "task_id": "huggingface__transformers-22458"
+    },
+    {
+      "gold_observations": 3,
+      "gold_passes": 3,
+      "gold_verifier_seconds": 0.0,
+      "null_failures": 3,
+      "null_observations": 3,
+      "source": "pilot28_repeat_qualification",
+      "task_id": "huggingface__transformers-23796"
+    },
+    {
+      "gold_observations": 1,
+      "gold_passes": 0,
+      "gold_verifier_seconds": 9.47882,
+      "null_failures": 0,
+      "null_observations": 0,
+      "null_verifier_seconds": 0,
+      "source": "candidate96",
+      "task_id": "huggingface__transformers-25884"
+    },
+    {
+      "gold_observations": 3,
+      "gold_passes": 3,
+      "gold_verifier_seconds": 0.0,
+      "null_failures": 3,
+      "null_observations": 3,
+      "source": "pilot28_repeat_qualification",
+      "task_id": "huggingface__transformers-26164"
+    },
+    {
+      "gold_observations": 3,
+      "gold_passes": 3,
+      "gold_verifier_seconds": 96.159776,
+      "null_failures": 0,
+      "null_observations": 0,
+      "null_verifier_seconds": 0,
+      "source": "candidate96",
+      "task_id": "huggingface__transformers-26568"
+    },
+    {
+      "gold_observations": 3,
+      "gold_passes": 3,
+      "gold_verifier_seconds": 0.0,
+      "null_failures": 3,
+      "null_observations": 3,
+      "source": "pilot28_repeat_qualification",
+      "task_id": "huggingface__transformers-27463"
+    },
+    {
+      "gold_observations": 3,
+      "gold_passes": 3,
+      "gold_verifier_seconds": 0.0,
+      "null_failures": 3,
+      "null_observations": 3,
+      "source": "pilot28_repeat_qualification",
+      "task_id": "langchain-ai__langchain-3367"
+    },
+    {
+      "gold_observations": 3,
+      "gold_passes": 3,
+      "gold_verifier_seconds": 12.046812,
+      "null_failures": 0,
+      "null_observations": 0,
+      "null_verifier_seconds": 0,
+      "source": "candidate96",
+      "task_id": "langchain-ai__langchain-4420"
+    },
+    {
+      "gold_observations": 3,
+      "gold_passes": 3,
+      "gold_verifier_seconds": 11.819323,
+      "null_failures": 3,
+      "null_observations": 3,
+      "null_verifier_seconds": 12.734719,
+      "source": "candidate96",
+      "task_id": "langchain-ai__langchain-4646"
+    },
+    {
+      "gold_observations": 1,
+      "gold_passes": 0,
+      "gold_verifier_seconds": 6.24166,
+      "null_failures": 0,
+      "null_observations": 0,
+      "null_verifier_seconds": 0,
+      "source": "candidate96",
+      "task_id": "langchain-ai__langchain-5450"
+    },
+    {
+      "gold_observations": 3,
+      "gold_passes": 3,
+      "gold_verifier_seconds": 0.0,
+      "null_failures": 3,
+      "null_observations": 3,
+      "source": "pilot28_repeat_qualification",
+      "task_id": "langchain-ai__langchain-5625"
+    },
+    {
+      "gold_observations": 3,
+      "gold_passes": 3,
+      "gold_verifier_seconds": 12.501514,
+      "null_failures": 3,
+      "null_observations": 3,
+      "null_verifier_seconds": 12.887942,
+      "source": "candidate96",
+      "task_id": "langchain-ai__langchain-19331"
+    },
+    {
+      "gold_observations": 3,
+      "gold_passes": 3,
+      "gold_verifier_seconds": 10.094413,
+      "null_failures": 3,
+      "null_observations": 3,
+      "null_verifier_seconds": 9.090594,
+      "source": "candidate96",
+      "task_id": "yt-dlp__yt-dlp-4841"
+    },
+    {
+      "gold_observations": 3,
+      "gold_passes": 3,
+      "gold_verifier_seconds": 8.83858,
+      "null_failures": 3,
+      "null_observations": 3,
+      "null_verifier_seconds": 9.208727,
+      "source": "candidate96",
+      "task_id": "yt-dlp__yt-dlp-5195"
+    },
+    {
+      "gold_observations": 3,
+      "gold_passes": 3,
+      "gold_verifier_seconds": 11.168779,
+      "null_failures": 0,
+      "null_observations": 0,
+      "null_verifier_seconds": 0,
+      "source": "candidate96",
+      "task_id": "yt-dlp__yt-dlp-5933"
+    },
+    {
+      "gold_observations": 3,
+      "gold_passes": 3,
+      "gold_verifier_seconds": 0.0,
+      "null_failures": 3,
+      "null_observations": 3,
+      "source": "pilot28_repeat_qualification",
+      "task_id": "yt-dlp__yt-dlp-9862"
+    },
+    {
+      "gold_observations": 1,
+      "gold_passes": 0,
+      "gold_verifier_seconds": 8.994609,
+      "null_failures": 0,
+      "null_observations": 0,
+      "null_verifier_seconds": 0,
+      "source": "candidate96",
+      "task_id": "yt-dlp__yt-dlp-10390"
+    },
+    {
+      "gold_observations": 3,
+      "gold_passes": 3,
+      "gold_verifier_seconds": 21.330033,
+      "null_failures": 3,
+      "null_observations": 3,
+      "null_verifier_seconds": 21.990202,
+      "source": "candidate96",
+      "task_id": "keras-team__keras-18871"
+    },
+    {
+      "gold_observations": 3,
+      "gold_passes": 3,
+      "gold_verifier_seconds": 0.0,
+      "null_failures": 3,
+      "null_observations": 3,
+      "source": "pilot28_repeat_qualification",
+      "task_id": "keras-team__keras-19773"
+    },
+    {
+      "gold_observations": 3,
+      "gold_passes": 3,
+      "gold_verifier_seconds": 18.725914,
+      "null_failures": 3,
+      "null_observations": 3,
+      "null_verifier_seconds": 19.238054,
+      "source": "candidate96",
+      "task_id": "keras-team__keras-19863"
+    },
+    {
+      "gold_observations": 3,
+      "gold_passes": 3,
+      "gold_verifier_seconds": 38.389268,
+      "null_failures": 0,
+      "null_observations": 0,
+      "null_verifier_seconds": 0,
+      "source": "candidate96",
+      "task_id": "keras-team__keras-19915"
+    },
+    {
+      "gold_observations": 3,
+      "gold_passes": 3,
+      "gold_verifier_seconds": 24.091348,
+      "null_failures": 0,
+      "null_observations": 0,
+      "null_verifier_seconds": 0,
+      "source": "candidate96",
+      "task_id": "keras-team__keras-19937"
+    },
+    {
+      "gold_observations": 3,
+      "gold_passes": 3,
+      "gold_verifier_seconds": 19.959609,
+      "null_failures": 3,
+      "null_observations": 3,
+      "null_verifier_seconds": 22.151446,
+      "source": "candidate96",
+      "task_id": "keras-team__keras-20002"
+    },
+    {
+      "gold_observations": 3,
+      "gold_passes": 3,
+      "gold_verifier_seconds": 132.084828,
+      "null_failures": 3,
+      "null_observations": 3,
+      "null_verifier_seconds": 141.387044,
+      "source": "candidate96",
+      "task_id": "coder__code-server-3277"
+    },
+    {
+      "gold_observations": 3,
+      "gold_passes": 3,
+      "gold_verifier_seconds": 319.734457,
+      "null_failures": 0,
+      "null_observations": 0,
+      "null_verifier_seconds": 0,
+      "source": "java_extension32",
+      "task_id": "google__gson-2498"
+    },
+    {
+      "gold_observations": 3,
+      "gold_passes": 3,
+      "gold_verifier_seconds": 1548.911261,
+      "null_failures": 3,
+      "null_observations": 3,
+      "null_verifier_seconds": 1324.721744,
+      "source": "java_extension32",
+      "task_id": "apache__rocketmq-7563"
+    },
+    {
+      "gold_observations": 1,
+      "gold_passes": 0,
+      "gold_verifier_seconds": 33.00889,
+      "null_failures": 0,
+      "null_observations": 0,
+      "null_verifier_seconds": 0,
+      "source": "java_extension32",
+      "task_id": "google__gson-2376"
+    },
+    {
+      "gold_observations": 3,
+      "gold_passes": 3,
+      "gold_verifier_seconds": 75.901711,
+      "null_failures": 3,
+      "null_observations": 3,
+      "null_verifier_seconds": 69.301806,
+      "source": "java_extension32",
+      "task_id": "apolloconfig__apollo-4207"
+    },
+    {
+      "gold_observations": 1,
+      "gold_passes": 0,
+      "gold_verifier_seconds": 2.346485,
+      "null_failures": 0,
+      "null_observations": 0,
+      "null_verifier_seconds": 0,
+      "source": "java_extension32",
+      "task_id": "google__gson-1904"
+    },
+    {
+      "gold_observations": 3,
+      "gold_passes": 3,
+      "gold_verifier_seconds": 251.339783,
+      "null_failures": 0,
+      "null_observations": 0,
+      "null_verifier_seconds": 0,
+      "source": "java_extension32",
+      "task_id": "google__gson-2345"
+    },
+    {
+      "gold_observations": 3,
+      "gold_passes": 3,
+      "gold_verifier_seconds": 82.502581,
+      "null_failures": 3,
+      "null_observations": 3,
+      "null_verifier_seconds": 56.688826,
+      "source": "java_extension32",
+      "task_id": "google__gson-2060"
+    },
+    {
+      "gold_observations": 1,
+      "gold_passes": 0,
+      "gold_verifier_seconds": 2.464859,
+      "null_failures": 0,
+      "null_observations": 0,
+      "null_verifier_seconds": 0,
+      "source": "java_extension32",
+      "task_id": "apache__dubbo-3622"
+    },
+    {
+      "gold_observations": 3,
+      "gold_passes": 3,
+      "gold_verifier_seconds": 325.560033,
+      "null_failures": 0,
+      "null_observations": 0,
+      "null_verifier_seconds": 0,
+      "source": "java_extension32",
+      "task_id": "google__gson-2701"
+    },
+    {
+      "gold_observations": 3,
+      "gold_passes": 3,
+      "gold_verifier_seconds": 79.651988,
+      "null_failures": 3,
+      "null_observations": 3,
+      "null_verifier_seconds": 52.486152,
+      "source": "java_extension32",
+      "task_id": "google__gson-2158"
+    },
+    {
+      "gold_observations": 1,
+      "gold_passes": 0,
+      "gold_verifier_seconds": 51.223547,
+      "null_failures": 0,
+      "null_observations": 0,
+      "null_verifier_seconds": 0,
+      "source": "java_extension32",
+      "task_id": "apache__dubbo-8623"
+    },
+    {
+      "gold_observations": 3,
+      "gold_passes": 3,
+      "gold_verifier_seconds": 86.164477,
+      "null_failures": 3,
+      "null_observations": 3,
+      "null_verifier_seconds": 76.086014,
+      "source": "java_extension32",
+      "task_id": "apolloconfig__apollo-4464"
+    },
+    {
+      "gold_observations": 1,
+      "gold_passes": 0,
+      "gold_verifier_seconds": 3.741667,
+      "null_failures": 0,
+      "null_observations": 0,
+      "null_verifier_seconds": 0,
+      "source": "java_extension32",
+      "task_id": "google__gson-2420"
+    },
+    {
+      "gold_observations": 1,
+      "gold_passes": 0,
+      "gold_verifier_seconds": 5.976249,
+      "null_failures": 0,
+      "null_observations": 0,
+      "null_verifier_seconds": 0,
+      "source": "java_extension32",
+      "task_id": "apache__dubbo-5783"
+    },
+    {
+      "gold_observations": 1,
+      "gold_passes": 0,
+      "gold_verifier_seconds": 3.850365,
+      "null_failures": 0,
+      "null_observations": 0,
+      "null_verifier_seconds": 0,
+      "source": "java_extension32",
+      "task_id": "apache__rocketmq-7346"
+    },
+    {
+      "gold_observations": 1,
+      "gold_passes": 0,
+      "gold_verifier_seconds": 6.890634,
+      "null_failures": 0,
+      "null_observations": 0,
+      "null_verifier_seconds": 0,
+      "source": "java_extension32",
+      "task_id": "apache__dubbo-5356"
+    },
+    {
+      "gold_observations": 1,
+      "gold_passes": 0,
+      "gold_verifier_seconds": 4.99091,
+      "null_failures": 0,
+      "null_observations": 0,
+      "null_verifier_seconds": 0,
+      "source": "java_extension32",
+      "task_id": "apache__dubbo-8126"
+    },
+    {
+      "gold_observations": 1,
+      "gold_passes": 0,
+      "gold_verifier_seconds": 3.670414,
+      "null_failures": 0,
+      "null_observations": 0,
+      "null_verifier_seconds": 0,
+      "source": "java_extension32",
+      "task_id": "apache__rocketmq-5841"
+    },
+    {
+      "gold_observations": 1,
+      "gold_passes": 0,
+      "gold_verifier_seconds": 3.518904,
+      "null_failures": 0,
+      "null_observations": 0,
+      "null_verifier_seconds": 0,
+      "source": "java_extension32",
+      "task_id": "apache__rocketmq-7426"
+    },
+    {
+      "gold_observations": 1,
+      "gold_passes": 0,
+      "gold_verifier_seconds": 5.329187,
+      "null_failures": 0,
+      "null_observations": 0,
+      "null_verifier_seconds": 0,
+      "source": "java_extension32",
+      "task_id": "apache__dubbo-6498"
+    },
+    {
+      "gold_observations": 1,
+      "gold_passes": 0,
+      "gold_verifier_seconds": 3.565398,
+      "null_failures": 0,
+      "null_observations": 0,
+      "null_verifier_seconds": 0,
+      "source": "java_extension32",
+      "task_id": "apache__rocketmq-7420"
+    },
+    {
+      "gold_observations": 1,
+      "gold_passes": 0,
+      "gold_verifier_seconds": 4.220795,
+      "null_failures": 0,
+      "null_observations": 0,
+      "null_verifier_seconds": 0,
+      "source": "java_extension32",
+      "task_id": "apache__rocketmq-4122"
+    },
+    {
+      "gold_observations": 1,
+      "gold_passes": 0,
+      "gold_verifier_seconds": 3.609231,
+      "null_failures": 0,
+      "null_observations": 0,
+      "null_verifier_seconds": 0,
+      "source": "java_extension32",
+      "task_id": "apache__rocketmq-7712"
+    },
+    {
+      "gold_observations": 1,
+      "gold_passes": 0,
+      "gold_verifier_seconds": 3.534081,
+      "null_failures": 0,
+      "null_observations": 0,
+      "null_verifier_seconds": 0,
+      "source": "java_extension32",
+      "task_id": "apache__rocketmq-1636"
+    },
+    {
+      "gold_observations": 1,
+      "gold_passes": 0,
+      "gold_verifier_seconds": 6.866693,
+      "null_failures": 0,
+      "null_observations": 0,
+      "null_verifier_seconds": 0,
+      "source": "java_extension32",
+      "task_id": "apache__dubbo-4678"
+    },
+    {
+      "gold_observations": 1,
+      "gold_passes": 0,
+      "gold_verifier_seconds": 3.544969,
+      "null_failures": 0,
+      "null_observations": 0,
+      "null_verifier_seconds": 0,
+      "source": "java_extension32",
+      "task_id": "apache__rocketmq-5037"
+    },
+    {
+      "gold_observations": 1,
+      "gold_passes": 0,
+      "gold_verifier_seconds": 6.003536,
+      "null_failures": 0,
+      "null_observations": 0,
+      "null_verifier_seconds": 0,
+      "source": "java_extension32",
+      "task_id": "apache__dubbo-4026"
+    },
+    {
+      "gold_observations": 1,
+      "gold_passes": 0,
+      "gold_verifier_seconds": 2.673758,
+      "null_failures": 0,
+      "null_observations": 0,
+      "null_verifier_seconds": 0,
+      "source": "java_extension32",
+      "task_id": "trinodb__trino-4393"
+    },
+    {
+      "gold_observations": 1,
+      "gold_passes": 0,
+      "gold_verifier_seconds": 3.284756,
+      "null_failures": 0,
+      "null_observations": 0,
+      "null_verifier_seconds": 0,
+      "source": "java_extension32",
+      "task_id": "trinodb__trino-2081"
+    },
+    {
+      "gold_observations": 1,
+      "gold_passes": 0,
+      "gold_verifier_seconds": 2.988982,
+      "null_failures": 0,
+      "null_observations": 0,
+      "null_verifier_seconds": 0,
+      "source": "java_extension32",
+      "task_id": "trinodb__trino-3603"
+    },
+    {
+      "gold_observations": 1,
+      "gold_passes": 0,
+      "gold_verifier_seconds": 2.689388,
+      "null_failures": 0,
+      "null_observations": 0,
+      "null_verifier_seconds": 0,
+      "source": "java_extension32",
+      "task_id": "trinodb__trino-2768"
+    },
+    {
+      "gold_observations": 1,
+      "gold_passes": 0,
+      "gold_verifier_seconds": 2.644975,
+      "null_failures": 0,
+      "null_observations": 0,
+      "null_verifier_seconds": 0,
+      "source": "java_extension32",
+      "task_id": "trinodb__trino-3599"
+    },
+    {
+      "gold_observations": 3,
+      "gold_passes": 3,
+      "gold_verifier_seconds": 81.414221,
+      "null_failures": 3,
+      "null_observations": 3,
+      "null_verifier_seconds": 53.096818,
+      "source": "java_strata_extension7",
+      "task_id": "google__gson-2134"
+    },
+    {
+      "gold_observations": 3,
+      "gold_passes": 3,
+      "gold_verifier_seconds": 223.050458,
+      "null_failures": 3,
+      "null_observations": 3,
+      "null_verifier_seconds": 95.725174,
+      "source": "java_strata_extension7",
+      "task_id": "google__gson-2337"
+    },
+    {
+      "gold_observations": 1,
+      "gold_passes": 0,
+      "gold_verifier_seconds": 5.550771,
+      "null_failures": 0,
+      "null_observations": 0,
+      "null_verifier_seconds": 0,
+      "source": "java_strata_extension7",
+      "task_id": "apache__dubbo-5708"
+    },
+    {
+      "gold_observations": 1,
+      "gold_passes": 0,
+      "gold_verifier_seconds": 3.577686,
+      "null_failures": 0,
+      "null_observations": 0,
+      "null_verifier_seconds": 0,
+      "source": "java_strata_extension7",
+      "task_id": "apache__rocketmq-7823"
+    },
+    {
+      "gold_observations": 3,
+      "gold_passes": 3,
+      "gold_verifier_seconds": 262.634354,
+      "null_failures": 0,
+      "null_observations": 0,
+      "null_verifier_seconds": 0,
+      "source": "java_strata_extension7",
+      "task_id": "google__gson-2549"
+    },
+    {
+      "gold_observations": 3,
+      "gold_passes": 3,
+      "gold_verifier_seconds": 81.142478,
+      "null_failures": 0,
+      "null_observations": 0,
+      "null_verifier_seconds": 0,
+      "source": "java_strata_extension7",
+      "task_id": "google__gson-2071"
+    },
+    {
+      "gold_observations": 3,
+      "gold_passes": 3,
+      "gold_verifier_seconds": 81.015948,
+      "null_failures": 3,
+      "null_observations": 3,
+      "null_verifier_seconds": 51.368983,
+      "source": "java_strata_extension7",
+      "task_id": "google__gson-1703"
+    }
+  ],
+  "version": "2026-08-15"
+}

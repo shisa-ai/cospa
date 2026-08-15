@@ -24,6 +24,38 @@ from harness.suites.terminal_bench import PROJECT_ROOT, TerminalBenchSuite
 
 PILOT_PATH = PROJECT_ROOT / "configs" / "ornith_runtime_pilot_v1.json"
 IMAGE_LOCK_PATH = PROJECT_ROOT / "configs" / "ornith_runtime_pilot_images_v1.json"
+BALANCED_CANDIDATE96_PATH = (
+    PROJECT_ROOT / "configs" / "swe_polybench_balanced_candidate96_v1.json"
+)
+BALANCED_IMAGE_LOCK_PATH = (
+    PROJECT_ROOT / "configs" / "swe_polybench_balanced_candidate96_images_v1.json"
+)
+BALANCED_JAVA_EXTENSION32_PATH = (
+    PROJECT_ROOT / "configs" / "swe_polybench_balanced_java_extension32_v1.json"
+)
+BALANCED_JAVA_IMAGE_LOCK_PATH = (
+    PROJECT_ROOT
+    / "configs"
+    / "swe_polybench_balanced_java_extension32_images_v1.json"
+)
+BALANCED_JAVA_STRATA_EXTENSION7_PATH = (
+    PROJECT_ROOT
+    / "configs"
+    / "swe_polybench_balanced_java_strata_extension7_v1.json"
+)
+BALANCED_JAVA_STRATA_IMAGE_LOCK_PATH = (
+    PROJECT_ROOT
+    / "configs"
+    / "swe_polybench_balanced_java_strata_extension7_images_v1.json"
+)
+BALANCED64_PATH = (
+    PROJECT_ROOT / "configs" / "swe_polybench_verified_balanced64_v1.json"
+)
+BALANCED64_IMAGE_LOCK_PATH = (
+    PROJECT_ROOT
+    / "configs"
+    / "swe_polybench_verified_balanced64_images_v1.json"
+)
 _CSV_FIELD_SIZE_LOCK = threading.Lock()
 _SUBMODULE_STATE_PIPELINE = (
     "git submodule foreach --recursive --quiet "
@@ -501,3 +533,89 @@ exit 0
         verdict["test_exit_code"] = status.get("test_exit_code")
         verdict["model_patch_bytes"] = len(patch_file.read_bytes())
         return verdict
+
+
+class SwePolyBenchBalancedCandidate96Suite(SwePolyBenchVerifiedSuite):
+    """Outcome-blind 96-task screen used to qualify the balanced64 panel."""
+
+    name = "swe_polybench_balanced_candidate96"
+    version = "2026-08-15"
+    task_count = 96
+    panel_path = BALANCED_CANDIDATE96_PATH
+    image_lock_path = BALANCED_IMAGE_LOCK_PATH
+
+    def __init__(self) -> None:
+        pilot = json.loads(PILOT_PATH.read_text())
+        self.pilot = pilot["suites"]["swe_polybench_verified"]
+        self.panel = json.loads(self.panel_path.read_text())
+        self.selected = {
+            task["task_id"]: {
+                "id": task["task_id"],
+                "image_ref": task["image_ref"],
+                "language": task["language"],
+                "task_type": task["task_type"],
+            }
+            for task in self.panel["tasks"]
+        }
+        if len(self.selected) != self.task_count:
+            raise ValueError(f"Invalid {self.name} manifest")
+        self.image_lock = json.loads(self.image_lock_path.read_text())["images"]
+        missing_images = {
+            task["image_ref"]
+            for task in self.panel["tasks"]
+            if task["image_ref"] not in self.image_lock
+        }
+        if missing_images:
+            raise ValueError(
+                f"Missing {self.name} image pins: {sorted(missing_images)}"
+            )
+        self._rows = None
+
+    def manifest_metadata(self, task_data: dict[str, Any]) -> dict[str, Any]:
+        metadata = super().manifest_metadata(task_data)
+        metadata.update(
+            {
+                "panel": self.panel["name"],
+                "panel_version": self.panel["version"],
+                "panel_size": self.task_count,
+                "panel_selection": self.panel["selection"],
+                "panel_qualification": self.panel["qualification"],
+            }
+        )
+        return metadata
+
+
+class SwePolyBenchBalancedJavaExtension32Suite(
+    SwePolyBenchBalancedCandidate96Suite
+):
+    """Adaptive outcome-blind Java candidate extension for balanced64."""
+
+    name = "swe_polybench_balanced_java_extension32"
+    version = "2026-08-15"
+    task_count = 32
+    panel_path = BALANCED_JAVA_EXTENSION32_PATH
+    image_lock_path = BALANCED_JAVA_IMAGE_LOCK_PATH
+
+
+class SwePolyBenchBalancedJavaStrataExtension7Suite(
+    SwePolyBenchBalancedCandidate96Suite
+):
+    """Outcome-blind final Java small/medium qualification candidates."""
+
+    name = "swe_polybench_balanced_java_strata_extension7"
+    version = "2026-08-15"
+    task_count = 7
+    panel_path = BALANCED_JAVA_STRATA_EXTENSION7_PATH
+    image_lock_path = BALANCED_JAVA_STRATA_IMAGE_LOCK_PATH
+
+
+class SwePolyBenchVerifiedBalanced64Suite(
+    SwePolyBenchBalancedCandidate96Suite
+):
+    """Repeat-qualified, four-language SWE-PolyBench routine panel."""
+
+    name = "swe_polybench_verified_balanced64"
+    version = "2026-08-15"
+    task_count = 64
+    panel_path = BALANCED64_PATH
+    image_lock_path = BALANCED64_IMAGE_LOCK_PATH

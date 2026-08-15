@@ -379,7 +379,7 @@ rules, and a `c=1/2/4/8/16` ladder. The pilot sizes are:
 | SWE Atlas pilot12 | 12 / 12 | Mechanically pinned but deferred; current campaign does not require an LLM judge |
 | Multi-SWE-bench Flash | 25 retained / 30 screened / 300 | `multi_swe_bench_flash_hermetic25`: 75/75 gold passed and 75/75 null failed under the no-network verifier; ready for DS4 smoke |
 | SWE-bench Multilingual | 30 / 300 | Dataset and 30 image digests locked; gold/null/repeat validation pending |
-| SWE-PolyBench Verified | 28 / 382 (38 screened) | Three-observation null/gold gate passed; complete DS4 and historical Muse vanilla cells measured; balanced64/96 expansion is next |
+| SWE-PolyBench Verified | balanced64 / 135 support candidates / 382 source | `swe_polybench_verified_balanced64`: 192/192 gold passed and 192/192 null failed; balanced96 remains unclaimed |
 | FeatureBench Lite | 6 / 30 | Dataset and 6 image digests locked; gold/null/repeat validation pending |
 | BigCodeBench-Hard Instruct | 15 pilot / 143 retained / 148 screened | `bigcodebench_hard_instruct_hermetic143`: 429/429 gold passed and 429/429 null failed; five no-network failures excluded |
 | BigCodeBench-Hard agentic | Pareto60 / hermetic143 | Separate Agentic suite IDs ready; DS4/Muse/Qwen pilot cells and DS4 thinking ablations measured; expand favorable panels to hermetic143 |
@@ -401,6 +401,18 @@ model patches and all 84 oracle runs resolved with non-empty patches while the
 verifier had no network. Ten tasks were excluded before target-model runs:
 eight require uncached verifier dependencies and two have gold patches that
 fail declared P2P tests in their pinned images.
+
+The balanced expansion froze 96 candidates before target-model outcomes. Its
+first mechanical gold pass retained 41 of the 68 tasks beyond pilot28, leaving
+only nine viable Java tasks. An outcome-blind Java extension retained 8/32; a
+minimal final screen of every seven remaining eligible small/medium Java task
+retained five. All 54 new first-pass tasks repeated gold cleanly, yielding 82
+gold-stable candidates with pilot28. The finalizer selected only the 36 new
+tasks needed for a balanced64 panel and spent the null budget there: all 108
+new no-op observations failed with empty patches. Combined with pilot28, all
+192 selected gold observations pass and all 192 selected null observations
+fail. This mechanical attrition cannot support 24 tasks per language, so the
+candidate96 is not reported as a score.
 
 The original runtime pilot targeted a result within 12 hours with 20% reserve,
 so its campaign budget was 9.6 hours. Its c=16 feasibility thresholds were not
@@ -494,17 +506,23 @@ makespan rather than assuming ideal scaling.
   pinning gate.
 - **Evaluation:** F2P + P2P resolved rate, plus optional file- and concrete
   syntax-tree-node localization metrics. Public prebuilt instance images are
-  expected to pass gold patches. Cospa's pinned screen retained 28/38 tasks;
-  each retained task has three clean null and three clean gold observations
-  under the no-network verifier. The retained stratum is 4 Java, 9 JavaScript,
-  9 Python, and 6 TypeScript tasks.
+  expected to pass gold patches. Cospa's `swe_polybench_verified_balanced64`
+  uses 16 tasks per language. Its task-type counts are 46 bug fixes, 14
+  features, and four refactors; patch-size tertiles are 20 small, 21 medium,
+  and 23 large. Every selected task has three clean null and three clean gold
+  observations under the no-network verifier.
 - **Strength:** explicit task-type balance in PB500, useful localization
   diagnostics, and more multi-file work than SWE-bench Verified.
 - **Risk:** only four languages; task categories and issue informativeness are
   LLM-classified; new-file exclusion biases feature coverage; maintainers have
   already corrected images and duplicate-like entries.
-- **Cospa decision:** include in the repo bake-off, especially for
-  feature/refactor balance, but reject any unpinned “Verified” alias.
+- **Cospa decision:** use balanced64 as the routine DS4/scaffold panel and keep
+  pilot28 only for historical comparability. Report it under its distinct suite
+  ID rather than as the official 382-task Verified score. Java necessarily has
+  seven Gson tasks and TypeScript nine MUI tasks after mechanical qualification;
+  keep those concentrations visible. Do not report candidate96 as balanced96:
+  the gold-stable pools contain only 22 Java, 22 JavaScript, 21 Python, and 17
+  TypeScript tasks.
 
 ### FeatureBench
 

@@ -125,10 +125,21 @@ scored with verifier failures. The 143 retained tasks then had 429/429 gold
 observations pass and 429/429 null observations fail. A post-integration DS4
 `pi_vanilla` `high` c=8 smoke produced eight authoritative native verdicts in
 about 61 seconds elapsed (0/8 resolved, 335 summed task seconds, no
-infrastructure/verifier failures).
-That smoke validates the path, not capability. The PolyBench projection assumes
-newly qualified tasks have similar setup and repository costs; qualification
-must measure that assumption.
+infrastructure/verifier failures). That smoke validates the path, not
+capability.
+
+PolyBench qualification froze 135 support candidates without target-model
+outcomes: the candidate96, a 32-task adaptive Java extension, and the final
+seven eligible small/medium Java tasks. The oracle gate left 82 gold-stable
+tasks. `swe_polybench_verified_balanced64` selects 16 per language with all
+three task types and near-equal patch-size tertiles; all 192 selected gold
+observations pass and all 192 null observations fail under the offline
+verifier. Repository caps had to relax to seven Gson tasks in Java and nine MUI
+tasks in TypeScript, which remain explicit limitations. The stable pools are
+only 22 Java / 22 JavaScript / 21 Python / 17 TypeScript, so a balanced96 score
+is not available and will not be fabricated from mechanically failing tasks.
+The measured DS4 c=8 baseline will determine whether balanced64's earlier
+projection remains useful.
 
 ## Pareto rules
 
@@ -228,13 +239,16 @@ outcome selection.
 | Suite | Routine block | Expansion | Purpose |
 | --- | ---: | ---: | --- |
 | Multi-SWE-bench Flash | qualified hermetic25 | larger source only after utility gate | C/C++/Go/Java/JS/Rust/TS issue repair |
-| SWE-PolyBench Verified | balanced64 | nested balanced96, then full382 finalists | Four-language bug/feature/refactor work |
+| SWE-PolyBench Verified | balanced64 | new qualification before balanced96; full382 finalists | Four-language bug/feature/refactor work |
 
-The PolyBench panels target equal language slots (16 each at 64; 24 each at
-96), repository caps, task-type coverage, and patch-size tertiles. Because this
-changes weighting relative to official PBv, use distinct suite IDs such as
-`swe_polybench_verified_balanced64` and `..._balanced96`. Full382 retains the
-source protocol label.
+The qualified PolyBench panel has equal language slots (16 each), all three
+task types per language, and near-equal patch-size tertiles. Mechanical
+attrition required disclosed effective repository caps of 7 Java / 5
+JavaScript / 5 Python / 9 TypeScript. Because this changes weighting relative
+to official PBv, use the distinct `swe_polybench_verified_balanced64` suite ID.
+The candidate96 and Java extensions are qualification artifacts, not scored
+panels; any future balanced96 requires new outcome-blind mechanical candidates.
+Full382 retains the source protocol label.
 
 The first routine repository portfolio reports Multi-SWE hermetic25 and
 PolyBench balanced64 separately. Their 89 total tasks improve language/task
@@ -265,7 +279,8 @@ rates, task/campaign time, tokens, and cost.
 2. Run the qualified BCB Pareto60 and hermetic143 suite IDs.
 3. Run the qualified Multi-SWE hermetic25 DS4 baseline.
 4. Freeze Terminal-Bench Pareto20.
-5. Select and qualify PolyBench balanced64 plus its nested 96 extension.
+5. Run qualified PolyBench balanced64; add new mechanical candidates before
+   any balanced96 claim.
 6. Qualify FeatureBench pilot6 and measure whether Lite30 or Fast100 is the
    better next block.
 7. Run the DABStep/SWE-Explore 12+12 diagnostic bake-off and implement only the

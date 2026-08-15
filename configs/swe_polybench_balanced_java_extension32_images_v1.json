@@ -1,0 +1,331 @@
+{
+  "name": "ornith_runtime_pilot_images_v1",
+  "source_manifest": "configs/swe_polybench_balanced_java_extension32_v1.json",
+  "source_manifest_sha256": "7475e1ff92256d7eb57cd84001057cb58e5e590380e20941a75ec228915144b4",
+  "platform": {
+    "os": "linux",
+    "architecture": "amd64"
+  },
+  "images": {
+    "ghcr.io/timesler/swe-polybench.eval.x86_64.apache__dubbo-3622:v1.1": {
+      "suites": [
+        "swe_polybench_balanced_java_extension32"
+      ],
+      "task_ids": [
+        "apache__dubbo-3622"
+      ],
+      "digest": "sha256:13eab19bf33516baf318e7c52127e748dc264b298c035573e0aed87da0c7bc85",
+      "pinned_ref": "ghcr.io/timesler/swe-polybench.eval.x86_64.apache__dubbo-3622@sha256:13eab19bf33516baf318e7c52127e748dc264b298c035573e0aed87da0c7bc85"
+    },
+    "ghcr.io/timesler/swe-polybench.eval.x86_64.apache__dubbo-4026:v1.1": {
+      "suites": [
+        "swe_polybench_balanced_java_extension32"
+      ],
+      "task_ids": [
+        "apache__dubbo-4026"
+      ],
+      "digest": "sha256:6eab64a0b5cd245e0dffac5ee05900ea418dabedcd70eab71754de9814128eea",
+      "pinned_ref": "ghcr.io/timesler/swe-polybench.eval.x86_64.apache__dubbo-4026@sha256:6eab64a0b5cd245e0dffac5ee05900ea418dabedcd70eab71754de9814128eea"
+    },
+    "ghcr.io/timesler/swe-polybench.eval.x86_64.apache__dubbo-4678:v1.1": {
+      "suites": [
+        "swe_polybench_balanced_java_extension32"
+      ],
+      "task_ids": [
+        "apache__dubbo-4678"
+      ],
+      "digest": "sha256:cbf6d5054047f09082aa26971a591534968b900065e590fcfb3d505a38591b67",
+      "pinned_ref": "ghcr.io/timesler/swe-polybench.eval.x86_64.apache__dubbo-4678@sha256:cbf6d5054047f09082aa26971a591534968b900065e590fcfb3d505a38591b67"
+    },
+    "ghcr.io/timesler/swe-polybench.eval.x86_64.apache__dubbo-5356:v1.1": {
+      "suites": [
+        "swe_polybench_balanced_java_extension32"
+      ],
+      "task_ids": [
+        "apache__dubbo-5356"
+      ],
+      "digest": "sha256:8129272e8fd9ae08d8211fc1359a6a34dab714f76b54a93f299d5f6cdffd72a7",
+      "pinned_ref": "ghcr.io/timesler/swe-polybench.eval.x86_64.apache__dubbo-5356@sha256:8129272e8fd9ae08d8211fc1359a6a34dab714f76b54a93f299d5f6cdffd72a7"
+    },
+    "ghcr.io/timesler/swe-polybench.eval.x86_64.apache__dubbo-5783:v1.1": {
+      "suites": [
+        "swe_polybench_balanced_java_extension32"
+      ],
+      "task_ids": [
+        "apache__dubbo-5783"
+      ],
+      "digest": "sha256:53fd466edbaf4c4bef568d44ed07a2392aa8b62c376f96ae95357e1f35252cf1",
+      "pinned_ref": "ghcr.io/timesler/swe-polybench.eval.x86_64.apache__dubbo-5783@sha256:53fd466edbaf4c4bef568d44ed07a2392aa8b62c376f96ae95357e1f35252cf1"
+    },
+    "ghcr.io/timesler/swe-polybench.eval.x86_64.apache__dubbo-6498:v1.1": {
+      "suites": [
+        "swe_polybench_balanced_java_extension32"
+      ],
+      "task_ids": [
+        "apache__dubbo-6498"
+      ],
+      "digest": "sha256:a93359bcca8b4f37cc676f9c3c057d07f7a51a3b6cee6a010cc166de3ca082a5",
+      "pinned_ref": "ghcr.io/timesler/swe-polybench.eval.x86_64.apache__dubbo-6498@sha256:a93359bcca8b4f37cc676f9c3c057d07f7a51a3b6cee6a010cc166de3ca082a5"
+    },
+    "ghcr.io/timesler/swe-polybench.eval.x86_64.apache__dubbo-8126:v1.1": {
+      "suites": [
+        "swe_polybench_balanced_java_extension32"
+      ],
+      "task_ids": [
+        "apache__dubbo-8126"
+      ],
+      "digest": "sha256:c27f36eddc1fabda9f2bd9ca24edf048932ceaf1bc3ad29ff8aea9c65fe4a952",
+      "pinned_ref": "ghcr.io/timesler/swe-polybench.eval.x86_64.apache__dubbo-8126@sha256:c27f36eddc1fabda9f2bd9ca24edf048932ceaf1bc3ad29ff8aea9c65fe4a952"
+    },
+    "ghcr.io/timesler/swe-polybench.eval.x86_64.apache__dubbo-8623:v1.1": {
+      "suites": [
+        "swe_polybench_balanced_java_extension32"
+      ],
+      "task_ids": [
+        "apache__dubbo-8623"
+      ],
+      "digest": "sha256:6e357a14970c16903ee290b6205742445fbb9c989ba195d1dc06367f15ad27a9",
+      "pinned_ref": "ghcr.io/timesler/swe-polybench.eval.x86_64.apache__dubbo-8623@sha256:6e357a14970c16903ee290b6205742445fbb9c989ba195d1dc06367f15ad27a9"
+    },
+    "ghcr.io/timesler/swe-polybench.eval.x86_64.apache__rocketmq-1636:v1.1": {
+      "suites": [
+        "swe_polybench_balanced_java_extension32"
+      ],
+      "task_ids": [
+        "apache__rocketmq-1636"
+      ],
+      "digest": "sha256:4fa452b663376889dbec3f94a91aec96de4ed1ff8be3c7b43cb5bf1ccccbcff3",
+      "pinned_ref": "ghcr.io/timesler/swe-polybench.eval.x86_64.apache__rocketmq-1636@sha256:4fa452b663376889dbec3f94a91aec96de4ed1ff8be3c7b43cb5bf1ccccbcff3"
+    },
+    "ghcr.io/timesler/swe-polybench.eval.x86_64.apache__rocketmq-4122:v1.1": {
+      "suites": [
+        "swe_polybench_balanced_java_extension32"
+      ],
+      "task_ids": [
+        "apache__rocketmq-4122"
+      ],
+      "digest": "sha256:d342abc83a9fbdb02730771de706a0bf13c06f81263371c64783cb21e3326ef3",
+      "pinned_ref": "ghcr.io/timesler/swe-polybench.eval.x86_64.apache__rocketmq-4122@sha256:d342abc83a9fbdb02730771de706a0bf13c06f81263371c64783cb21e3326ef3"
+    },
+    "ghcr.io/timesler/swe-polybench.eval.x86_64.apache__rocketmq-5037:v1.1": {
+      "suites": [
+        "swe_polybench_balanced_java_extension32"
+      ],
+      "task_ids": [
+        "apache__rocketmq-5037"
+      ],
+      "digest": "sha256:9aff7b634edd785fa57b6ff8be8c18a4289b85d04fe05655bb4cede29155ca44",
+      "pinned_ref": "ghcr.io/timesler/swe-polybench.eval.x86_64.apache__rocketmq-5037@sha256:9aff7b634edd785fa57b6ff8be8c18a4289b85d04fe05655bb4cede29155ca44"
+    },
+    "ghcr.io/timesler/swe-polybench.eval.x86_64.apache__rocketmq-5841:v1.1": {
+      "suites": [
+        "swe_polybench_balanced_java_extension32"
+      ],
+      "task_ids": [
+        "apache__rocketmq-5841"
+      ],
+      "digest": "sha256:ec813f531d57f304a6a1d46666bf78cbb6f186b13a4267a6e7ac64f513e578ee",
+      "pinned_ref": "ghcr.io/timesler/swe-polybench.eval.x86_64.apache__rocketmq-5841@sha256:ec813f531d57f304a6a1d46666bf78cbb6f186b13a4267a6e7ac64f513e578ee"
+    },
+    "ghcr.io/timesler/swe-polybench.eval.x86_64.apache__rocketmq-7346:v1.1": {
+      "suites": [
+        "swe_polybench_balanced_java_extension32"
+      ],
+      "task_ids": [
+        "apache__rocketmq-7346"
+      ],
+      "digest": "sha256:aeaf3dd0ec7c77d22e821d23ecf01a5a37b2d6da2ecb0b49bb034e09192a5d07",
+      "pinned_ref": "ghcr.io/timesler/swe-polybench.eval.x86_64.apache__rocketmq-7346@sha256:aeaf3dd0ec7c77d22e821d23ecf01a5a37b2d6da2ecb0b49bb034e09192a5d07"
+    },
+    "ghcr.io/timesler/swe-polybench.eval.x86_64.apache__rocketmq-7420:v1.1": {
+      "suites": [
+        "swe_polybench_balanced_java_extension32"
+      ],
+      "task_ids": [
+        "apache__rocketmq-7420"
+      ],
+      "digest": "sha256:8f1f5ff2681cc5995209f14472b4949c2380569e1a3adb57a97573a5237b82bc",
+      "pinned_ref": "ghcr.io/timesler/swe-polybench.eval.x86_64.apache__rocketmq-7420@sha256:8f1f5ff2681cc5995209f14472b4949c2380569e1a3adb57a97573a5237b82bc"
+    },
+    "ghcr.io/timesler/swe-polybench.eval.x86_64.apache__rocketmq-7426:v1.1": {
+      "suites": [
+        "swe_polybench_balanced_java_extension32"
+      ],
+      "task_ids": [
+        "apache__rocketmq-7426"
+      ],
+      "digest": "sha256:9a6f25d3738d2e2f34d3d01ceefd50af91fc25e8352a9ca62a0296a155983318",
+      "pinned_ref": "ghcr.io/timesler/swe-polybench.eval.x86_64.apache__rocketmq-7426@sha256:9a6f25d3738d2e2f34d3d01ceefd50af91fc25e8352a9ca62a0296a155983318"
+    },
+    "ghcr.io/timesler/swe-polybench.eval.x86_64.apache__rocketmq-7563:v1.1": {
+      "suites": [
+        "swe_polybench_balanced_java_extension32"
+      ],
+      "task_ids": [
+        "apache__rocketmq-7563"
+      ],
+      "digest": "sha256:a3d0392a4f0b5388ac583b73bfcba2e0f750ae69dd5c2452a6d18d47cb9d0004",
+      "pinned_ref": "ghcr.io/timesler/swe-polybench.eval.x86_64.apache__rocketmq-7563@sha256:a3d0392a4f0b5388ac583b73bfcba2e0f750ae69dd5c2452a6d18d47cb9d0004"
+    },
+    "ghcr.io/timesler/swe-polybench.eval.x86_64.apache__rocketmq-7712:v1.1": {
+      "suites": [
+        "swe_polybench_balanced_java_extension32"
+      ],
+      "task_ids": [
+        "apache__rocketmq-7712"
+      ],
+      "digest": "sha256:55551bdbe7c85eb32371bbb5578bc2ff384bf885e33c260205b1e6e25a480535",
+      "pinned_ref": "ghcr.io/timesler/swe-polybench.eval.x86_64.apache__rocketmq-7712@sha256:55551bdbe7c85eb32371bbb5578bc2ff384bf885e33c260205b1e6e25a480535"
+    },
+    "ghcr.io/timesler/swe-polybench.eval.x86_64.apolloconfig__apollo-4207:v1.1": {
+      "suites": [
+        "swe_polybench_balanced_java_extension32"
+      ],
+      "task_ids": [
+        "apolloconfig__apollo-4207"
+      ],
+      "digest": "sha256:51e041d290a4aec7e52ec700eb78ac15f47e76ccf1def32cb3404d535bd9afad",
+      "pinned_ref": "ghcr.io/timesler/swe-polybench.eval.x86_64.apolloconfig__apollo-4207@sha256:51e041d290a4aec7e52ec700eb78ac15f47e76ccf1def32cb3404d535bd9afad"
+    },
+    "ghcr.io/timesler/swe-polybench.eval.x86_64.apolloconfig__apollo-4464:v1.1": {
+      "suites": [
+        "swe_polybench_balanced_java_extension32"
+      ],
+      "task_ids": [
+        "apolloconfig__apollo-4464"
+      ],
+      "digest": "sha256:8ff3844b4b6052670aba13c7b36a328b1a9a791cda28b39e9c00f7ef570cf79c",
+      "pinned_ref": "ghcr.io/timesler/swe-polybench.eval.x86_64.apolloconfig__apollo-4464@sha256:8ff3844b4b6052670aba13c7b36a328b1a9a791cda28b39e9c00f7ef570cf79c"
+    },
+    "ghcr.io/timesler/swe-polybench.eval.x86_64.google__gson-1904:v1.1": {
+      "suites": [
+        "swe_polybench_balanced_java_extension32"
+      ],
+      "task_ids": [
+        "google__gson-1904"
+      ],
+      "digest": "sha256:ff821645240b7d9b9862ea8bbea24741904635ee473016bb5dd5196130cff974",
+      "pinned_ref": "ghcr.io/timesler/swe-polybench.eval.x86_64.google__gson-1904@sha256:ff821645240b7d9b9862ea8bbea24741904635ee473016bb5dd5196130cff974"
+    },
+    "ghcr.io/timesler/swe-polybench.eval.x86_64.google__gson-2060:v1.1": {
+      "suites": [
+        "swe_polybench_balanced_java_extension32"
+      ],
+      "task_ids": [
+        "google__gson-2060"
+      ],
+      "digest": "sha256:a80e72c6f4b55e3669ed198757a15ad5c7d8026ab4dc98ef88416e7323e63d9c",
+      "pinned_ref": "ghcr.io/timesler/swe-polybench.eval.x86_64.google__gson-2060@sha256:a80e72c6f4b55e3669ed198757a15ad5c7d8026ab4dc98ef88416e7323e63d9c"
+    },
+    "ghcr.io/timesler/swe-polybench.eval.x86_64.google__gson-2158:v1.1": {
+      "suites": [
+        "swe_polybench_balanced_java_extension32"
+      ],
+      "task_ids": [
+        "google__gson-2158"
+      ],
+      "digest": "sha256:2816430fbf630fec2ea2f970a388e51b0b4762624df850a152752ed24b84ca69",
+      "pinned_ref": "ghcr.io/timesler/swe-polybench.eval.x86_64.google__gson-2158@sha256:2816430fbf630fec2ea2f970a388e51b0b4762624df850a152752ed24b84ca69"
+    },
+    "ghcr.io/timesler/swe-polybench.eval.x86_64.google__gson-2345:v1.1": {
+      "suites": [
+        "swe_polybench_balanced_java_extension32"
+      ],
+      "task_ids": [
+        "google__gson-2345"
+      ],
+      "digest": "sha256:1f24b9bac624e9aa2b175fa9e1402c248f223f714fe674d0c26c3ca315413d7e",
+      "pinned_ref": "ghcr.io/timesler/swe-polybench.eval.x86_64.google__gson-2345@sha256:1f24b9bac624e9aa2b175fa9e1402c248f223f714fe674d0c26c3ca315413d7e"
+    },
+    "ghcr.io/timesler/swe-polybench.eval.x86_64.google__gson-2376:v1.1": {
+      "suites": [
+        "swe_polybench_balanced_java_extension32"
+      ],
+      "task_ids": [
+        "google__gson-2376"
+      ],
+      "digest": "sha256:01fa4b5aa069443838a0cf635460cd1337407e36ac13ca860ef1c1b82908a4d2",
+      "pinned_ref": "ghcr.io/timesler/swe-polybench.eval.x86_64.google__gson-2376@sha256:01fa4b5aa069443838a0cf635460cd1337407e36ac13ca860ef1c1b82908a4d2"
+    },
+    "ghcr.io/timesler/swe-polybench.eval.x86_64.google__gson-2420:v1.1": {
+      "suites": [
+        "swe_polybench_balanced_java_extension32"
+      ],
+      "task_ids": [
+        "google__gson-2420"
+      ],
+      "digest": "sha256:0cbf814a9846fe0cbc8c9af3f2cf34e808e38e71dfc5273108f9bea2ca2497ab",
+      "pinned_ref": "ghcr.io/timesler/swe-polybench.eval.x86_64.google__gson-2420@sha256:0cbf814a9846fe0cbc8c9af3f2cf34e808e38e71dfc5273108f9bea2ca2497ab"
+    },
+    "ghcr.io/timesler/swe-polybench.eval.x86_64.google__gson-2498:v1.1": {
+      "suites": [
+        "swe_polybench_balanced_java_extension32"
+      ],
+      "task_ids": [
+        "google__gson-2498"
+      ],
+      "digest": "sha256:825ebe61f873e2843708d7c15e0864e6457cb46f7d7b3f1d58b7d1d451758d85",
+      "pinned_ref": "ghcr.io/timesler/swe-polybench.eval.x86_64.google__gson-2498@sha256:825ebe61f873e2843708d7c15e0864e6457cb46f7d7b3f1d58b7d1d451758d85"
+    },
+    "ghcr.io/timesler/swe-polybench.eval.x86_64.google__gson-2701:v1.1": {
+      "suites": [
+        "swe_polybench_balanced_java_extension32"
+      ],
+      "task_ids": [
+        "google__gson-2701"
+      ],
+      "digest": "sha256:0cf55472e3792903554e6699898e001b5a7684c10005a59a950d6975efe38d0e",
+      "pinned_ref": "ghcr.io/timesler/swe-polybench.eval.x86_64.google__gson-2701@sha256:0cf55472e3792903554e6699898e001b5a7684c10005a59a950d6975efe38d0e"
+    },
+    "ghcr.io/timesler/swe-polybench.eval.x86_64.trinodb__trino-2081:v1.1": {
+      "suites": [
+        "swe_polybench_balanced_java_extension32"
+      ],
+      "task_ids": [
+        "trinodb__trino-2081"
+      ],
+      "digest": "sha256:76b086b40c61d606aecf4db22489c9d93b9a23450674b75ece37569414da0810",
+      "pinned_ref": "ghcr.io/timesler/swe-polybench.eval.x86_64.trinodb__trino-2081@sha256:76b086b40c61d606aecf4db22489c9d93b9a23450674b75ece37569414da0810"
+    },
+    "ghcr.io/timesler/swe-polybench.eval.x86_64.trinodb__trino-2768:v1.1": {
+      "suites": [
+        "swe_polybench_balanced_java_extension32"
+      ],
+      "task_ids": [
+        "trinodb__trino-2768"
+      ],
+      "digest": "sha256:d17d706a4d92bf589fa910f44e118d241d1c9e1462287fd5dba498b24eb6af66",
+      "pinned_ref": "ghcr.io/timesler/swe-polybench.eval.x86_64.trinodb__trino-2768@sha256:d17d706a4d92bf589fa910f44e118d241d1c9e1462287fd5dba498b24eb6af66"
+    },
+    "ghcr.io/timesler/swe-polybench.eval.x86_64.trinodb__trino-3599:v1.1": {
+      "suites": [
+        "swe_polybench_balanced_java_extension32"
+      ],
+      "task_ids": [
+        "trinodb__trino-3599"
+      ],
+      "digest": "sha256:6b4efa214ecb61c5b9da20fff9c3eee49e5e19df70c7eaa05f54bcbfbcf77515",
+      "pinned_ref": "ghcr.io/timesler/swe-polybench.eval.x86_64.trinodb__trino-3599@sha256:6b4efa214ecb61c5b9da20fff9c3eee49e5e19df70c7eaa05f54bcbfbcf77515"
+    },
+    "ghcr.io/timesler/swe-polybench.eval.x86_64.trinodb__trino-3603:v1.1": {
+      "suites": [
+        "swe_polybench_balanced_java_extension32"
+      ],
+      "task_ids": [
+        "trinodb__trino-3603"
+      ],
+      "digest": "sha256:6f52097e2a39e86da2167c3e1f1600ab2abc3b6b651e2fa675a8a5b93daa4849",
+      "pinned_ref": "ghcr.io/timesler/swe-polybench.eval.x86_64.trinodb__trino-3603@sha256:6f52097e2a39e86da2167c3e1f1600ab2abc3b6b651e2fa675a8a5b93daa4849"
+    },
+    "ghcr.io/timesler/swe-polybench.eval.x86_64.trinodb__trino-4393:v1.1": {
+      "suites": [
+        "swe_polybench_balanced_java_extension32"
+      ],
+      "task_ids": [
+        "trinodb__trino-4393"
+      ],
+      "digest": "sha256:b3ee7e5eb39fa9467dc96fb40069eab89cceae0ccba783f161ca0871ea1849c6",
+      "pinned_ref": "ghcr.io/timesler/swe-polybench.eval.x86_64.trinodb__trino-4393@sha256:b3ee7e5eb39fa9467dc96fb40069eab89cceae0ccba783f161ca0871ea1849c6"
+    }
+  }
+}

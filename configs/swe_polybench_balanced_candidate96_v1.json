@@ -1,0 +1,1565 @@
+{
+  "name": "swe_polybench_balanced_candidate96_v1",
+  "version": "2026-08-15",
+  "source": {
+    "repository": "https://github.com/amazon-science/SWE-PolyBench.git",
+    "revision": "9c836c5d7f3cb991934132b77d29e6941d912a07",
+    "license": "MIT"
+  },
+  "dataset": {
+    "repository": "https://huggingface.co/datasets/AmazonScience/SWE-PolyBench_Verified",
+    "revision": "b3fca77b637379f0c01ad86d18753a7ac1998b53",
+    "sha256": "0c8138e73c34fa29a5276b675b146b72d78ce001fcc4560d76302c908b4808a5",
+    "local_path": "vendor/eval-data/swe-polybench-verified/test.csv",
+    "license": "MIT"
+  },
+  "selection": {
+    "outcome_blind": true,
+    "seed": "cospa-polybench-balanced-v1",
+    "candidate_size": 96,
+    "nested_balanced64_size": 64,
+    "languages": {
+      "balanced64": 16,
+      "candidate96": 24
+    },
+    "patch_size_tertiles": {
+      "balanced64": [
+        5,
+        5,
+        6
+      ],
+      "candidate96": [
+        8,
+        8,
+        8
+      ]
+    },
+    "repository_caps": {
+      "balanced64": {
+        "java": 4,
+        "javascript": 5,
+        "python": 5,
+        "typescript": 6
+      },
+      "candidate96": {
+        "java": 6,
+        "javascript": 8,
+        "python": 8,
+        "typescript": 10
+      }
+    },
+    "task_type_targets": {
+      "balanced64": {
+        "java": {
+          "Bug Fix": 10,
+          "Feature": 4,
+          "Refactoring": 2
+        },
+        "javascript": {
+          "Bug Fix": 11,
+          "Feature": 4,
+          "Refactoring": 1
+        },
+        "python": {
+          "Bug Fix": 12,
+          "Feature": 3,
+          "Refactoring": 1
+        },
+        "typescript": {
+          "Bug Fix": 12,
+          "Feature": 3,
+          "Refactoring": 1
+        }
+      },
+      "candidate96": {
+        "java": {
+          "Bug Fix": 15,
+          "Feature": 6,
+          "Refactoring": 3
+        },
+        "javascript": {
+          "Bug Fix": 17,
+          "Feature": 5,
+          "Refactoring": 2
+        },
+        "python": {
+          "Bug Fix": 18,
+          "Feature": 5,
+          "Refactoring": 1
+        },
+        "typescript": {
+          "Bug Fix": 18,
+          "Feature": 5,
+          "Refactoring": 1
+        }
+      }
+    },
+    "includes_repeat_qualified_pilot28": true,
+    "prior_mechanical_exclusions": [
+      "Significant-Gravitas__AutoGPT-4652",
+      "angular__angular-37561",
+      "apache__dubbo-4567",
+      "apache__rocketmq-5008",
+      "huggingface__transformers-29311",
+      "microsoft__vscode-127071",
+      "microsoft__vscode-135805",
+      "microsoft__vscode-136347",
+      "mrdoob__three.js-20991",
+      "trinodb__trino-3859"
+    ],
+    "excludes_target_model_outcomes": true
+  },
+  "qualification": {
+    "status": "support_candidates_screened_not_scored",
+    "target_observations_per_condition": 3,
+    "evidence": "configs/swe_polybench_balanced_qualification_v1.json"
+  },
+  "suites": {
+    "swe_polybench_balanced_candidate96": {
+      "tasks": [
+        {
+          "id": "apache__dubbo-3317",
+          "image_ref": "ghcr.io/timesler/swe-polybench.eval.x86_64.apache__dubbo-3317:v1.1"
+        },
+        {
+          "id": "apolloconfig__apollo-4568",
+          "image_ref": "ghcr.io/timesler/swe-polybench.eval.x86_64.apolloconfig__apollo-4568:v1.1"
+        },
+        {
+          "id": "google__gson-2410",
+          "image_ref": "ghcr.io/timesler/swe-polybench.eval.x86_64.google__gson-2410:v1.1"
+        },
+        {
+          "id": "google__gson-2475",
+          "image_ref": "ghcr.io/timesler/swe-polybench.eval.x86_64.google__gson-2475:v1.1"
+        },
+        {
+          "id": "apache__dubbo-3855",
+          "image_ref": "ghcr.io/timesler/swe-polybench.eval.x86_64.apache__dubbo-3855:v1.1"
+        },
+        {
+          "id": "google__gson-2479",
+          "image_ref": "ghcr.io/timesler/swe-polybench.eval.x86_64.google__gson-2479:v1.1"
+        },
+        {
+          "id": "apache__dubbo-3093",
+          "image_ref": "ghcr.io/timesler/swe-polybench.eval.x86_64.apache__dubbo-3093:v1.1"
+        },
+        {
+          "id": "google__guava-3971",
+          "image_ref": "ghcr.io/timesler/swe-polybench.eval.x86_64.google__guava-3971:v1.1"
+        },
+        {
+          "id": "google__gson-2167",
+          "image_ref": "ghcr.io/timesler/swe-polybench.eval.x86_64.google__gson-2167:v1.1"
+        },
+        {
+          "id": "apolloconfig__apollo-1894",
+          "image_ref": "ghcr.io/timesler/swe-polybench.eval.x86_64.apolloconfig__apollo-1894:v1.1"
+        },
+        {
+          "id": "apache__rocketmq-7532",
+          "image_ref": "ghcr.io/timesler/swe-polybench.eval.x86_64.apache__rocketmq-7532:v1.1"
+        },
+        {
+          "id": "google__guava-5696",
+          "image_ref": "ghcr.io/timesler/swe-polybench.eval.x86_64.google__guava-5696:v1.1"
+        },
+        {
+          "id": "google__gson-1989",
+          "image_ref": "ghcr.io/timesler/swe-polybench.eval.x86_64.google__gson-1989:v1.1"
+        },
+        {
+          "id": "apache__rocketmq-7655",
+          "image_ref": "ghcr.io/timesler/swe-polybench.eval.x86_64.apache__rocketmq-7655:v1.1"
+        },
+        {
+          "id": "apache__dubbo-4515",
+          "image_ref": "ghcr.io/timesler/swe-polybench.eval.x86_64.apache__dubbo-4515:v1.1"
+        },
+        {
+          "id": "apache__rocketmq-7964",
+          "image_ref": "ghcr.io/timesler/swe-polybench.eval.x86_64.apache__rocketmq-7964:v1.1"
+        },
+        {
+          "id": "apache__dubbo-8414",
+          "image_ref": "ghcr.io/timesler/swe-polybench.eval.x86_64.apache__dubbo-8414:v1.1"
+        },
+        {
+          "id": "apache__rocketmq-5062",
+          "image_ref": "ghcr.io/timesler/swe-polybench.eval.x86_64.apache__rocketmq-5062:v1.1"
+        },
+        {
+          "id": "apache__rocketmq-516",
+          "image_ref": "ghcr.io/timesler/swe-polybench.eval.x86_64.apache__rocketmq-516:v1.1"
+        },
+        {
+          "id": "trinodb__trino-2707",
+          "image_ref": "ghcr.io/timesler/swe-polybench.eval.x86_64.trinodb__trino-2707:v1.1"
+        },
+        {
+          "id": "trinodb__trino-3208",
+          "image_ref": "ghcr.io/timesler/swe-polybench.eval.x86_64.trinodb__trino-3208:v1.1"
+        },
+        {
+          "id": "trinodb__trino-1512",
+          "image_ref": "ghcr.io/timesler/swe-polybench.eval.x86_64.trinodb__trino-1512:v1.1"
+        },
+        {
+          "id": "trinodb__trino-3392",
+          "image_ref": "ghcr.io/timesler/swe-polybench.eval.x86_64.trinodb__trino-3392:v1.1"
+        },
+        {
+          "id": "trinodb__trino-2575",
+          "image_ref": "ghcr.io/timesler/swe-polybench.eval.x86_64.trinodb__trino-2575:v1.1"
+        },
+        {
+          "id": "mrdoob__three.js-14836",
+          "image_ref": "ghcr.io/timesler/swe-polybench.eval.x86_64.mrdoob__three.js-14836:v1.1"
+        },
+        {
+          "id": "mrdoob__three.js-18648",
+          "image_ref": "ghcr.io/timesler/swe-polybench.eval.x86_64.mrdoob__three.js-18648:v1.1"
+        },
+        {
+          "id": "mrdoob__three.js-24461",
+          "image_ref": "ghcr.io/timesler/swe-polybench.eval.x86_64.mrdoob__three.js-24461:v1.1"
+        },
+        {
+          "id": "sveltejs__svelte-477",
+          "image_ref": "ghcr.io/timesler/swe-polybench.eval.x86_64.sveltejs__svelte-477:v1.1"
+        },
+        {
+          "id": "sveltejs__svelte-630",
+          "image_ref": "ghcr.io/timesler/swe-polybench.eval.x86_64.sveltejs__svelte-630:v1.1"
+        },
+        {
+          "id": "sveltejs__svelte-1227",
+          "image_ref": "ghcr.io/timesler/swe-polybench.eval.x86_64.sveltejs__svelte-1227:v1.1"
+        },
+        {
+          "id": "sveltejs__svelte-4454",
+          "image_ref": "ghcr.io/timesler/swe-polybench.eval.x86_64.sveltejs__svelte-4454:v1.1"
+        },
+        {
+          "id": "sveltejs__svelte-5616",
+          "image_ref": "ghcr.io/timesler/swe-polybench.eval.x86_64.sveltejs__svelte-5616:v1.1"
+        },
+        {
+          "id": "sveltejs__svelte-6525",
+          "image_ref": "ghcr.io/timesler/swe-polybench.eval.x86_64.sveltejs__svelte-6525:v1.1"
+        },
+        {
+          "id": "sveltejs__svelte-6564",
+          "image_ref": "ghcr.io/timesler/swe-polybench.eval.x86_64.sveltejs__svelte-6564:v1.1"
+        },
+        {
+          "id": "prettier__prettier-11637",
+          "image_ref": "ghcr.io/timesler/swe-polybench.eval.x86_64.prettier__prettier-11637:v1.1"
+        },
+        {
+          "id": "prettier__prettier-9850",
+          "image_ref": "ghcr.io/timesler/swe-polybench.eval.x86_64.prettier__prettier-9850:v1.1"
+        },
+        {
+          "id": "prettier__prettier-6604",
+          "image_ref": "ghcr.io/timesler/swe-polybench.eval.x86_64.prettier__prettier-6604:v1.1"
+        },
+        {
+          "id": "prettier__prettier-4667",
+          "image_ref": "ghcr.io/timesler/swe-polybench.eval.x86_64.prettier__prettier-4667:v1.1"
+        },
+        {
+          "id": "prettier__prettier-3515",
+          "image_ref": "ghcr.io/timesler/swe-polybench.eval.x86_64.prettier__prettier-3515:v1.1"
+        },
+        {
+          "id": "prettier__prettier-361",
+          "image_ref": "ghcr.io/timesler/swe-polybench.eval.x86_64.prettier__prettier-361:v1.1"
+        },
+        {
+          "id": "serverless__serverless-7587",
+          "image_ref": "ghcr.io/timesler/swe-polybench.eval.x86_64.serverless__serverless-7587:v1.1"
+        },
+        {
+          "id": "serverless__serverless-6827",
+          "image_ref": "ghcr.io/timesler/swe-polybench.eval.x86_64.serverless__serverless-6827:v1.1"
+        },
+        {
+          "id": "serverless__serverless-6366",
+          "image_ref": "ghcr.io/timesler/swe-polybench.eval.x86_64.serverless__serverless-6366:v1.1"
+        },
+        {
+          "id": "serverless__serverless-5775",
+          "image_ref": "ghcr.io/timesler/swe-polybench.eval.x86_64.serverless__serverless-5775:v1.1"
+        },
+        {
+          "id": "serverless__serverless-3187",
+          "image_ref": "ghcr.io/timesler/swe-polybench.eval.x86_64.serverless__serverless-3187:v1.1"
+        },
+        {
+          "id": "serverless__serverless-2952",
+          "image_ref": "ghcr.io/timesler/swe-polybench.eval.x86_64.serverless__serverless-2952:v1.1"
+        },
+        {
+          "id": "serverless__serverless-2842",
+          "image_ref": "ghcr.io/timesler/swe-polybench.eval.x86_64.serverless__serverless-2842:v1.1"
+        },
+        {
+          "id": "serverless__serverless-2576",
+          "image_ref": "ghcr.io/timesler/swe-polybench.eval.x86_64.serverless__serverless-2576:v1.1"
+        },
+        {
+          "id": "microsoft__vscode-108964",
+          "image_ref": "ghcr.io/timesler/swe-polybench.eval.x86_64.microsoft__vscode-108964:v1.1"
+        },
+        {
+          "id": "microsoft__vscode-110094",
+          "image_ref": "ghcr.io/timesler/swe-polybench.eval.x86_64.microsoft__vscode-110094:v1.1"
+        },
+        {
+          "id": "microsoft__vscode-113837",
+          "image_ref": "ghcr.io/timesler/swe-polybench.eval.x86_64.microsoft__vscode-113837:v1.1"
+        },
+        {
+          "id": "microsoft__vscode-122991",
+          "image_ref": "ghcr.io/timesler/swe-polybench.eval.x86_64.microsoft__vscode-122991:v1.1"
+        },
+        {
+          "id": "microsoft__vscode-123294",
+          "image_ref": "ghcr.io/timesler/swe-polybench.eval.x86_64.microsoft__vscode-123294:v1.1"
+        },
+        {
+          "id": "microsoft__vscode-148971",
+          "image_ref": "ghcr.io/timesler/swe-polybench.eval.x86_64.microsoft__vscode-148971:v1.1"
+        },
+        {
+          "id": "microsoft__vscode-164396",
+          "image_ref": "ghcr.io/timesler/swe-polybench.eval.x86_64.microsoft__vscode-164396:v1.1"
+        },
+        {
+          "id": "microsoft__vscode-189223",
+          "image_ref": "ghcr.io/timesler/swe-polybench.eval.x86_64.microsoft__vscode-189223:v1.1"
+        },
+        {
+          "id": "mui__material-ui-11858",
+          "image_ref": "ghcr.io/timesler/swe-polybench.eval.x86_64.mui__material-ui-11858:v1.1"
+        },
+        {
+          "id": "mui__material-ui-13690",
+          "image_ref": "ghcr.io/timesler/swe-polybench.eval.x86_64.mui__material-ui-13690:v1.1"
+        },
+        {
+          "id": "mui__material-ui-14882",
+          "image_ref": "ghcr.io/timesler/swe-polybench.eval.x86_64.mui__material-ui-14882:v1.1"
+        },
+        {
+          "id": "mui__material-ui-15359",
+          "image_ref": "ghcr.io/timesler/swe-polybench.eval.x86_64.mui__material-ui-15359:v1.1"
+        },
+        {
+          "id": "mui__material-ui-15534",
+          "image_ref": "ghcr.io/timesler/swe-polybench.eval.x86_64.mui__material-ui-15534:v1.1"
+        },
+        {
+          "id": "mui__material-ui-17301",
+          "image_ref": "ghcr.io/timesler/swe-polybench.eval.x86_64.mui__material-ui-17301:v1.1"
+        },
+        {
+          "id": "mui__material-ui-19072",
+          "image_ref": "ghcr.io/timesler/swe-polybench.eval.x86_64.mui__material-ui-19072:v1.1"
+        },
+        {
+          "id": "mui__material-ui-22696",
+          "image_ref": "ghcr.io/timesler/swe-polybench.eval.x86_64.mui__material-ui-22696:v1.1"
+        },
+        {
+          "id": "mui__material-ui-25874",
+          "image_ref": "ghcr.io/timesler/swe-polybench.eval.x86_64.mui__material-ui-25874:v1.1"
+        },
+        {
+          "id": "mui__material-ui-34610",
+          "image_ref": "ghcr.io/timesler/swe-polybench.eval.x86_64.mui__material-ui-34610:v1.1"
+        },
+        {
+          "id": "tailwindlabs__tailwindcss-116",
+          "image_ref": "ghcr.io/timesler/swe-polybench.eval.x86_64.tailwindlabs__tailwindcss-116:v1.1"
+        },
+        {
+          "id": "tailwindlabs__tailwindcss-550",
+          "image_ref": "ghcr.io/timesler/swe-polybench.eval.x86_64.tailwindlabs__tailwindcss-550:v1.1"
+        },
+        {
+          "id": "tailwindlabs__tailwindcss-853",
+          "image_ref": "ghcr.io/timesler/swe-polybench.eval.x86_64.tailwindlabs__tailwindcss-853:v1.1"
+        },
+        {
+          "id": "coder__code-server-4923",
+          "image_ref": "ghcr.io/timesler/swe-polybench.eval.x86_64.coder__code-server-4923:v1.1"
+        },
+        {
+          "id": "coder__code-server-6278",
+          "image_ref": "ghcr.io/timesler/swe-polybench.eval.x86_64.coder__code-server-6278:v1.1"
+        },
+        {
+          "id": "huggingface__transformers-21345",
+          "image_ref": "ghcr.io/timesler/swe-polybench.eval.x86_64.huggingface__transformers-21345:v1.1"
+        },
+        {
+          "id": "huggingface__transformers-22458",
+          "image_ref": "ghcr.io/timesler/swe-polybench.eval.x86_64.huggingface__transformers-22458:v1.1"
+        },
+        {
+          "id": "huggingface__transformers-23796",
+          "image_ref": "ghcr.io/timesler/swe-polybench.eval.x86_64.huggingface__transformers-23796:v1.1"
+        },
+        {
+          "id": "huggingface__transformers-25884",
+          "image_ref": "ghcr.io/timesler/swe-polybench.eval.x86_64.huggingface__transformers-25884:v1.1"
+        },
+        {
+          "id": "huggingface__transformers-26164",
+          "image_ref": "ghcr.io/timesler/swe-polybench.eval.x86_64.huggingface__transformers-26164:v1.1"
+        },
+        {
+          "id": "huggingface__transformers-26568",
+          "image_ref": "ghcr.io/timesler/swe-polybench.eval.x86_64.huggingface__transformers-26568:v1.1"
+        },
+        {
+          "id": "huggingface__transformers-27463",
+          "image_ref": "ghcr.io/timesler/swe-polybench.eval.x86_64.huggingface__transformers-27463:v1.1"
+        },
+        {
+          "id": "langchain-ai__langchain-3367",
+          "image_ref": "ghcr.io/timesler/swe-polybench.eval.x86_64.langchain-ai__langchain-3367:v1.1"
+        },
+        {
+          "id": "langchain-ai__langchain-4420",
+          "image_ref": "ghcr.io/timesler/swe-polybench.eval.x86_64.langchain-ai__langchain-4420:v1.1"
+        },
+        {
+          "id": "langchain-ai__langchain-4646",
+          "image_ref": "ghcr.io/timesler/swe-polybench.eval.x86_64.langchain-ai__langchain-4646:v1.1"
+        },
+        {
+          "id": "langchain-ai__langchain-5450",
+          "image_ref": "ghcr.io/timesler/swe-polybench.eval.x86_64.langchain-ai__langchain-5450:v1.1"
+        },
+        {
+          "id": "langchain-ai__langchain-5625",
+          "image_ref": "ghcr.io/timesler/swe-polybench.eval.x86_64.langchain-ai__langchain-5625:v1.1"
+        },
+        {
+          "id": "langchain-ai__langchain-19331",
+          "image_ref": "ghcr.io/timesler/swe-polybench.eval.x86_64.langchain-ai__langchain-19331:v1.1"
+        },
+        {
+          "id": "yt-dlp__yt-dlp-4841",
+          "image_ref": "ghcr.io/timesler/swe-polybench.eval.x86_64.yt-dlp__yt-dlp-4841:v1.1"
+        },
+        {
+          "id": "yt-dlp__yt-dlp-5195",
+          "image_ref": "ghcr.io/timesler/swe-polybench.eval.x86_64.yt-dlp__yt-dlp-5195:v1.1"
+        },
+        {
+          "id": "yt-dlp__yt-dlp-5933",
+          "image_ref": "ghcr.io/timesler/swe-polybench.eval.x86_64.yt-dlp__yt-dlp-5933:v1.1"
+        },
+        {
+          "id": "yt-dlp__yt-dlp-9862",
+          "image_ref": "ghcr.io/timesler/swe-polybench.eval.x86_64.yt-dlp__yt-dlp-9862:v1.1"
+        },
+        {
+          "id": "yt-dlp__yt-dlp-10390",
+          "image_ref": "ghcr.io/timesler/swe-polybench.eval.x86_64.yt-dlp__yt-dlp-10390:v1.1"
+        },
+        {
+          "id": "keras-team__keras-18871",
+          "image_ref": "ghcr.io/timesler/swe-polybench.eval.x86_64.keras-team__keras-18871:v1.1"
+        },
+        {
+          "id": "keras-team__keras-19773",
+          "image_ref": "ghcr.io/timesler/swe-polybench.eval.x86_64.keras-team__keras-19773:v1.1"
+        },
+        {
+          "id": "keras-team__keras-19863",
+          "image_ref": "ghcr.io/timesler/swe-polybench.eval.x86_64.keras-team__keras-19863:v1.1"
+        },
+        {
+          "id": "keras-team__keras-19915",
+          "image_ref": "ghcr.io/timesler/swe-polybench.eval.x86_64.keras-team__keras-19915:v1.1"
+        },
+        {
+          "id": "keras-team__keras-19937",
+          "image_ref": "ghcr.io/timesler/swe-polybench.eval.x86_64.keras-team__keras-19937:v1.1"
+        },
+        {
+          "id": "keras-team__keras-20002",
+          "image_ref": "ghcr.io/timesler/swe-polybench.eval.x86_64.keras-team__keras-20002:v1.1"
+        },
+        {
+          "id": "coder__code-server-3277",
+          "image_ref": "ghcr.io/timesler/swe-polybench.eval.x86_64.coder__code-server-3277:v1.1"
+        }
+      ]
+    }
+  },
+  "tasks": [
+    {
+      "task_id": "apache__dubbo-3317",
+      "image_ref": "ghcr.io/timesler/swe-polybench.eval.x86_64.apache__dubbo-3317:v1.1",
+      "language": "java",
+      "task_type": "Bug Fix",
+      "repository": "apache/dubbo",
+      "patch_changes": 53,
+      "patch_size_tertile": "large",
+      "panel_membership": "balanced64_candidate",
+      "previously_qualified_pilot28": false
+    },
+    {
+      "task_id": "apolloconfig__apollo-4568",
+      "image_ref": "ghcr.io/timesler/swe-polybench.eval.x86_64.apolloconfig__apollo-4568:v1.1",
+      "language": "java",
+      "task_type": "Bug Fix",
+      "repository": "apolloconfig/apollo",
+      "patch_changes": 7,
+      "patch_size_tertile": "small",
+      "panel_membership": "balanced64_candidate",
+      "previously_qualified_pilot28": true
+    },
+    {
+      "task_id": "google__gson-2410",
+      "image_ref": "ghcr.io/timesler/swe-polybench.eval.x86_64.google__gson-2410:v1.1",
+      "language": "java",
+      "task_type": "Refactoring",
+      "repository": "google/gson",
+      "patch_changes": 14,
+      "patch_size_tertile": "small",
+      "panel_membership": "balanced64_candidate",
+      "previously_qualified_pilot28": false
+    },
+    {
+      "task_id": "google__gson-2475",
+      "image_ref": "ghcr.io/timesler/swe-polybench.eval.x86_64.google__gson-2475:v1.1",
+      "language": "java",
+      "task_type": "Bug Fix",
+      "repository": "google/gson",
+      "patch_changes": 3,
+      "patch_size_tertile": "small",
+      "panel_membership": "balanced96_extension_candidate",
+      "previously_qualified_pilot28": false
+    },
+    {
+      "task_id": "apache__dubbo-3855",
+      "image_ref": "ghcr.io/timesler/swe-polybench.eval.x86_64.apache__dubbo-3855:v1.1",
+      "language": "java",
+      "task_type": "Refactoring",
+      "repository": "apache/dubbo",
+      "patch_changes": 19,
+      "patch_size_tertile": "medium",
+      "panel_membership": "balanced64_candidate",
+      "previously_qualified_pilot28": true
+    },
+    {
+      "task_id": "google__gson-2479",
+      "image_ref": "ghcr.io/timesler/swe-polybench.eval.x86_64.google__gson-2479:v1.1",
+      "language": "java",
+      "task_type": "Feature",
+      "repository": "google/gson",
+      "patch_changes": 23,
+      "patch_size_tertile": "medium",
+      "panel_membership": "balanced96_extension_candidate",
+      "previously_qualified_pilot28": false
+    },
+    {
+      "task_id": "apache__dubbo-3093",
+      "image_ref": "ghcr.io/timesler/swe-polybench.eval.x86_64.apache__dubbo-3093:v1.1",
+      "language": "java",
+      "task_type": "Bug Fix",
+      "repository": "apache/dubbo",
+      "patch_changes": 134,
+      "patch_size_tertile": "large",
+      "panel_membership": "balanced64_candidate",
+      "previously_qualified_pilot28": false
+    },
+    {
+      "task_id": "google__guava-3971",
+      "image_ref": "ghcr.io/timesler/swe-polybench.eval.x86_64.google__guava-3971:v1.1",
+      "language": "java",
+      "task_type": "Feature",
+      "repository": "google/guava",
+      "patch_changes": 106,
+      "patch_size_tertile": "large",
+      "panel_membership": "balanced64_candidate",
+      "previously_qualified_pilot28": true
+    },
+    {
+      "task_id": "google__gson-2167",
+      "image_ref": "ghcr.io/timesler/swe-polybench.eval.x86_64.google__gson-2167:v1.1",
+      "language": "java",
+      "task_type": "Bug Fix",
+      "repository": "google/gson",
+      "patch_changes": 45,
+      "patch_size_tertile": "large",
+      "panel_membership": "balanced64_candidate",
+      "previously_qualified_pilot28": false
+    },
+    {
+      "task_id": "apolloconfig__apollo-1894",
+      "image_ref": "ghcr.io/timesler/swe-polybench.eval.x86_64.apolloconfig__apollo-1894:v1.1",
+      "language": "java",
+      "task_type": "Bug Fix",
+      "repository": "apolloconfig/apollo",
+      "patch_changes": 26,
+      "patch_size_tertile": "medium",
+      "panel_membership": "balanced64_candidate",
+      "previously_qualified_pilot28": false
+    },
+    {
+      "task_id": "apache__rocketmq-7532",
+      "image_ref": "ghcr.io/timesler/swe-polybench.eval.x86_64.apache__rocketmq-7532:v1.1",
+      "language": "java",
+      "task_type": "Bug Fix",
+      "repository": "apache/rocketmq",
+      "patch_changes": 101,
+      "patch_size_tertile": "large",
+      "panel_membership": "balanced96_extension_candidate",
+      "previously_qualified_pilot28": false
+    },
+    {
+      "task_id": "google__guava-5696",
+      "image_ref": "ghcr.io/timesler/swe-polybench.eval.x86_64.google__guava-5696:v1.1",
+      "language": "java",
+      "task_type": "Bug Fix",
+      "repository": "google/guava",
+      "patch_changes": 4,
+      "patch_size_tertile": "small",
+      "panel_membership": "balanced64_candidate",
+      "previously_qualified_pilot28": false
+    },
+    {
+      "task_id": "google__gson-1989",
+      "image_ref": "ghcr.io/timesler/swe-polybench.eval.x86_64.google__gson-1989:v1.1",
+      "language": "java",
+      "task_type": "Bug Fix",
+      "repository": "google/gson",
+      "patch_changes": 16,
+      "patch_size_tertile": "medium",
+      "panel_membership": "balanced64_candidate",
+      "previously_qualified_pilot28": true
+    },
+    {
+      "task_id": "apache__rocketmq-7655",
+      "image_ref": "ghcr.io/timesler/swe-polybench.eval.x86_64.apache__rocketmq-7655:v1.1",
+      "language": "java",
+      "task_type": "Feature",
+      "repository": "apache/rocketmq",
+      "patch_changes": 11,
+      "patch_size_tertile": "small",
+      "panel_membership": "balanced96_extension_candidate",
+      "previously_qualified_pilot28": false
+    },
+    {
+      "task_id": "apache__dubbo-4515",
+      "image_ref": "ghcr.io/timesler/swe-polybench.eval.x86_64.apache__dubbo-4515:v1.1",
+      "language": "java",
+      "task_type": "Bug Fix",
+      "repository": "apache/dubbo",
+      "patch_changes": 4,
+      "patch_size_tertile": "small",
+      "panel_membership": "balanced96_extension_candidate",
+      "previously_qualified_pilot28": false
+    },
+    {
+      "task_id": "apache__rocketmq-7964",
+      "image_ref": "ghcr.io/timesler/swe-polybench.eval.x86_64.apache__rocketmq-7964:v1.1",
+      "language": "java",
+      "task_type": "Feature",
+      "repository": "apache/rocketmq",
+      "patch_changes": 6,
+      "patch_size_tertile": "small",
+      "panel_membership": "balanced64_candidate",
+      "previously_qualified_pilot28": false
+    },
+    {
+      "task_id": "apache__dubbo-8414",
+      "image_ref": "ghcr.io/timesler/swe-polybench.eval.x86_64.apache__dubbo-8414:v1.1",
+      "language": "java",
+      "task_type": "Bug Fix",
+      "repository": "apache/dubbo",
+      "patch_changes": 164,
+      "patch_size_tertile": "large",
+      "panel_membership": "balanced64_candidate",
+      "previously_qualified_pilot28": false
+    },
+    {
+      "task_id": "apache__rocketmq-5062",
+      "image_ref": "ghcr.io/timesler/swe-polybench.eval.x86_64.apache__rocketmq-5062:v1.1",
+      "language": "java",
+      "task_type": "Feature",
+      "repository": "apache/rocketmq",
+      "patch_changes": 97,
+      "patch_size_tertile": "large",
+      "panel_membership": "balanced64_candidate",
+      "previously_qualified_pilot28": false
+    },
+    {
+      "task_id": "apache__rocketmq-516",
+      "image_ref": "ghcr.io/timesler/swe-polybench.eval.x86_64.apache__rocketmq-516:v1.1",
+      "language": "java",
+      "task_type": "Bug Fix",
+      "repository": "apache/rocketmq",
+      "patch_changes": 12,
+      "patch_size_tertile": "small",
+      "panel_membership": "balanced64_candidate",
+      "previously_qualified_pilot28": false
+    },
+    {
+      "task_id": "trinodb__trino-2707",
+      "image_ref": "ghcr.io/timesler/swe-polybench.eval.x86_64.trinodb__trino-2707:v1.1",
+      "language": "java",
+      "task_type": "Refactoring",
+      "repository": "trinodb/trino",
+      "patch_changes": 608,
+      "patch_size_tertile": "large",
+      "panel_membership": "balanced96_extension_candidate",
+      "previously_qualified_pilot28": false
+    },
+    {
+      "task_id": "trinodb__trino-3208",
+      "image_ref": "ghcr.io/timesler/swe-polybench.eval.x86_64.trinodb__trino-3208:v1.1",
+      "language": "java",
+      "task_type": "Bug Fix",
+      "repository": "trinodb/trino",
+      "patch_changes": 15,
+      "patch_size_tertile": "medium",
+      "panel_membership": "balanced96_extension_candidate",
+      "previously_qualified_pilot28": false
+    },
+    {
+      "task_id": "trinodb__trino-1512",
+      "image_ref": "ghcr.io/timesler/swe-polybench.eval.x86_64.trinodb__trino-1512:v1.1",
+      "language": "java",
+      "task_type": "Bug Fix",
+      "repository": "trinodb/trino",
+      "patch_changes": 35,
+      "patch_size_tertile": "medium",
+      "panel_membership": "balanced64_candidate",
+      "previously_qualified_pilot28": false
+    },
+    {
+      "task_id": "trinodb__trino-3392",
+      "image_ref": "ghcr.io/timesler/swe-polybench.eval.x86_64.trinodb__trino-3392:v1.1",
+      "language": "java",
+      "task_type": "Feature",
+      "repository": "trinodb/trino",
+      "patch_changes": 17,
+      "patch_size_tertile": "medium",
+      "panel_membership": "balanced64_candidate",
+      "previously_qualified_pilot28": false
+    },
+    {
+      "task_id": "trinodb__trino-2575",
+      "image_ref": "ghcr.io/timesler/swe-polybench.eval.x86_64.trinodb__trino-2575:v1.1",
+      "language": "java",
+      "task_type": "Bug Fix",
+      "repository": "trinodb/trino",
+      "patch_changes": 15,
+      "patch_size_tertile": "medium",
+      "panel_membership": "balanced96_extension_candidate",
+      "previously_qualified_pilot28": false
+    },
+    {
+      "task_id": "mrdoob__three.js-14836",
+      "image_ref": "ghcr.io/timesler/swe-polybench.eval.x86_64.mrdoob__three.js-14836:v1.1",
+      "language": "javascript",
+      "task_type": "Bug Fix",
+      "repository": "mrdoob/three.js",
+      "patch_changes": 2,
+      "patch_size_tertile": "small",
+      "panel_membership": "balanced64_candidate",
+      "previously_qualified_pilot28": true
+    },
+    {
+      "task_id": "mrdoob__three.js-18648",
+      "image_ref": "ghcr.io/timesler/swe-polybench.eval.x86_64.mrdoob__three.js-18648:v1.1",
+      "language": "javascript",
+      "task_type": "Refactoring",
+      "repository": "mrdoob/three.js",
+      "patch_changes": 66,
+      "patch_size_tertile": "large",
+      "panel_membership": "balanced64_candidate",
+      "previously_qualified_pilot28": false
+    },
+    {
+      "task_id": "mrdoob__three.js-24461",
+      "image_ref": "ghcr.io/timesler/swe-polybench.eval.x86_64.mrdoob__three.js-24461:v1.1",
+      "language": "javascript",
+      "task_type": "Bug Fix",
+      "repository": "mrdoob/three.js",
+      "patch_changes": 6,
+      "patch_size_tertile": "small",
+      "panel_membership": "balanced96_extension_candidate",
+      "previously_qualified_pilot28": false
+    },
+    {
+      "task_id": "sveltejs__svelte-477",
+      "image_ref": "ghcr.io/timesler/swe-polybench.eval.x86_64.sveltejs__svelte-477:v1.1",
+      "language": "javascript",
+      "task_type": "Feature",
+      "repository": "sveltejs/svelte",
+      "patch_changes": 6,
+      "patch_size_tertile": "small",
+      "panel_membership": "balanced96_extension_candidate",
+      "previously_qualified_pilot28": false
+    },
+    {
+      "task_id": "sveltejs__svelte-630",
+      "image_ref": "ghcr.io/timesler/swe-polybench.eval.x86_64.sveltejs__svelte-630:v1.1",
+      "language": "javascript",
+      "task_type": "Bug Fix",
+      "repository": "sveltejs/svelte",
+      "patch_changes": 17,
+      "patch_size_tertile": "medium",
+      "panel_membership": "balanced64_candidate",
+      "previously_qualified_pilot28": true
+    },
+    {
+      "task_id": "sveltejs__svelte-1227",
+      "image_ref": "ghcr.io/timesler/swe-polybench.eval.x86_64.sveltejs__svelte-1227:v1.1",
+      "language": "javascript",
+      "task_type": "Bug Fix",
+      "repository": "sveltejs/svelte",
+      "patch_changes": 4,
+      "patch_size_tertile": "small",
+      "panel_membership": "balanced64_candidate",
+      "previously_qualified_pilot28": true
+    },
+    {
+      "task_id": "sveltejs__svelte-4454",
+      "image_ref": "ghcr.io/timesler/swe-polybench.eval.x86_64.sveltejs__svelte-4454:v1.1",
+      "language": "javascript",
+      "task_type": "Bug Fix",
+      "repository": "sveltejs/svelte",
+      "patch_changes": 6,
+      "patch_size_tertile": "small",
+      "panel_membership": "balanced64_candidate",
+      "previously_qualified_pilot28": true
+    },
+    {
+      "task_id": "sveltejs__svelte-5616",
+      "image_ref": "ghcr.io/timesler/swe-polybench.eval.x86_64.sveltejs__svelte-5616:v1.1",
+      "language": "javascript",
+      "task_type": "Feature",
+      "repository": "sveltejs/svelte",
+      "patch_changes": 66,
+      "patch_size_tertile": "large",
+      "panel_membership": "balanced64_candidate",
+      "previously_qualified_pilot28": false
+    },
+    {
+      "task_id": "sveltejs__svelte-6525",
+      "image_ref": "ghcr.io/timesler/swe-polybench.eval.x86_64.sveltejs__svelte-6525:v1.1",
+      "language": "javascript",
+      "task_type": "Refactoring",
+      "repository": "sveltejs/svelte",
+      "patch_changes": 76,
+      "patch_size_tertile": "large",
+      "panel_membership": "balanced96_extension_candidate",
+      "previously_qualified_pilot28": false
+    },
+    {
+      "task_id": "sveltejs__svelte-6564",
+      "image_ref": "ghcr.io/timesler/swe-polybench.eval.x86_64.sveltejs__svelte-6564:v1.1",
+      "language": "javascript",
+      "task_type": "Feature",
+      "repository": "sveltejs/svelte",
+      "patch_changes": 20,
+      "patch_size_tertile": "medium",
+      "panel_membership": "balanced64_candidate",
+      "previously_qualified_pilot28": true
+    },
+    {
+      "task_id": "prettier__prettier-11637",
+      "image_ref": "ghcr.io/timesler/swe-polybench.eval.x86_64.prettier__prettier-11637:v1.1",
+      "language": "javascript",
+      "task_type": "Bug Fix",
+      "repository": "prettier/prettier",
+      "patch_changes": 68,
+      "patch_size_tertile": "large",
+      "panel_membership": "balanced96_extension_candidate",
+      "previously_qualified_pilot28": false
+    },
+    {
+      "task_id": "prettier__prettier-9850",
+      "image_ref": "ghcr.io/timesler/swe-polybench.eval.x86_64.prettier__prettier-9850:v1.1",
+      "language": "javascript",
+      "task_type": "Bug Fix",
+      "repository": "prettier/prettier",
+      "patch_changes": 38,
+      "patch_size_tertile": "large",
+      "panel_membership": "balanced64_candidate",
+      "previously_qualified_pilot28": true
+    },
+    {
+      "task_id": "prettier__prettier-6604",
+      "image_ref": "ghcr.io/timesler/swe-polybench.eval.x86_64.prettier__prettier-6604:v1.1",
+      "language": "javascript",
+      "task_type": "Bug Fix",
+      "repository": "prettier/prettier",
+      "patch_changes": 30,
+      "patch_size_tertile": "large",
+      "panel_membership": "balanced64_candidate",
+      "previously_qualified_pilot28": false
+    },
+    {
+      "task_id": "prettier__prettier-4667",
+      "image_ref": "ghcr.io/timesler/swe-polybench.eval.x86_64.prettier__prettier-4667:v1.1",
+      "language": "javascript",
+      "task_type": "Feature",
+      "repository": "prettier/prettier",
+      "patch_changes": 11,
+      "patch_size_tertile": "medium",
+      "panel_membership": "balanced64_candidate",
+      "previously_qualified_pilot28": false
+    },
+    {
+      "task_id": "prettier__prettier-3515",
+      "image_ref": "ghcr.io/timesler/swe-polybench.eval.x86_64.prettier__prettier-3515:v1.1",
+      "language": "javascript",
+      "task_type": "Bug Fix",
+      "repository": "prettier/prettier",
+      "patch_changes": 59,
+      "patch_size_tertile": "large",
+      "panel_membership": "balanced64_candidate",
+      "previously_qualified_pilot28": false
+    },
+    {
+      "task_id": "prettier__prettier-361",
+      "image_ref": "ghcr.io/timesler/swe-polybench.eval.x86_64.prettier__prettier-361:v1.1",
+      "language": "javascript",
+      "task_type": "Bug Fix",
+      "repository": "prettier/prettier",
+      "patch_changes": 6,
+      "patch_size_tertile": "small",
+      "panel_membership": "balanced96_extension_candidate",
+      "previously_qualified_pilot28": false
+    },
+    {
+      "task_id": "serverless__serverless-7587",
+      "image_ref": "ghcr.io/timesler/swe-polybench.eval.x86_64.serverless__serverless-7587:v1.1",
+      "language": "javascript",
+      "task_type": "Bug Fix",
+      "repository": "serverless/serverless",
+      "patch_changes": 23,
+      "patch_size_tertile": "medium",
+      "panel_membership": "balanced96_extension_candidate",
+      "previously_qualified_pilot28": false
+    },
+    {
+      "task_id": "serverless__serverless-6827",
+      "image_ref": "ghcr.io/timesler/swe-polybench.eval.x86_64.serverless__serverless-6827:v1.1",
+      "language": "javascript",
+      "task_type": "Bug Fix",
+      "repository": "serverless/serverless",
+      "patch_changes": 11,
+      "patch_size_tertile": "medium",
+      "panel_membership": "balanced64_candidate",
+      "previously_qualified_pilot28": true
+    },
+    {
+      "task_id": "serverless__serverless-6366",
+      "image_ref": "ghcr.io/timesler/swe-polybench.eval.x86_64.serverless__serverless-6366:v1.1",
+      "language": "javascript",
+      "task_type": "Bug Fix",
+      "repository": "serverless/serverless",
+      "patch_changes": 11,
+      "patch_size_tertile": "medium",
+      "panel_membership": "balanced96_extension_candidate",
+      "previously_qualified_pilot28": false
+    },
+    {
+      "task_id": "serverless__serverless-5775",
+      "image_ref": "ghcr.io/timesler/swe-polybench.eval.x86_64.serverless__serverless-5775:v1.1",
+      "language": "javascript",
+      "task_type": "Bug Fix",
+      "repository": "serverless/serverless",
+      "patch_changes": 2,
+      "patch_size_tertile": "small",
+      "panel_membership": "balanced64_candidate",
+      "previously_qualified_pilot28": true
+    },
+    {
+      "task_id": "serverless__serverless-3187",
+      "image_ref": "ghcr.io/timesler/swe-polybench.eval.x86_64.serverless__serverless-3187:v1.1",
+      "language": "javascript",
+      "task_type": "Bug Fix",
+      "repository": "serverless/serverless",
+      "patch_changes": 20,
+      "patch_size_tertile": "medium",
+      "panel_membership": "balanced96_extension_candidate",
+      "previously_qualified_pilot28": false
+    },
+    {
+      "task_id": "serverless__serverless-2952",
+      "image_ref": "ghcr.io/timesler/swe-polybench.eval.x86_64.serverless__serverless-2952:v1.1",
+      "language": "javascript",
+      "task_type": "Bug Fix",
+      "repository": "serverless/serverless",
+      "patch_changes": 81,
+      "patch_size_tertile": "large",
+      "panel_membership": "balanced64_candidate",
+      "previously_qualified_pilot28": true
+    },
+    {
+      "task_id": "serverless__serverless-2842",
+      "image_ref": "ghcr.io/timesler/swe-polybench.eval.x86_64.serverless__serverless-2842:v1.1",
+      "language": "javascript",
+      "task_type": "Feature",
+      "repository": "serverless/serverless",
+      "patch_changes": 6,
+      "patch_size_tertile": "small",
+      "panel_membership": "balanced64_candidate",
+      "previously_qualified_pilot28": false
+    },
+    {
+      "task_id": "serverless__serverless-2576",
+      "image_ref": "ghcr.io/timesler/swe-polybench.eval.x86_64.serverless__serverless-2576:v1.1",
+      "language": "javascript",
+      "task_type": "Bug Fix",
+      "repository": "serverless/serverless",
+      "patch_changes": 15,
+      "patch_size_tertile": "medium",
+      "panel_membership": "balanced64_candidate",
+      "previously_qualified_pilot28": false
+    },
+    {
+      "task_id": "microsoft__vscode-108964",
+      "image_ref": "ghcr.io/timesler/swe-polybench.eval.x86_64.microsoft__vscode-108964:v1.1",
+      "language": "typescript",
+      "task_type": "Bug Fix",
+      "repository": "microsoft/vscode",
+      "patch_changes": 2,
+      "patch_size_tertile": "small",
+      "panel_membership": "balanced64_candidate",
+      "previously_qualified_pilot28": false
+    },
+    {
+      "task_id": "microsoft__vscode-110094",
+      "image_ref": "ghcr.io/timesler/swe-polybench.eval.x86_64.microsoft__vscode-110094:v1.1",
+      "language": "typescript",
+      "task_type": "Bug Fix",
+      "repository": "microsoft/vscode",
+      "patch_changes": 133,
+      "patch_size_tertile": "large",
+      "panel_membership": "balanced64_candidate",
+      "previously_qualified_pilot28": false
+    },
+    {
+      "task_id": "microsoft__vscode-113837",
+      "image_ref": "ghcr.io/timesler/swe-polybench.eval.x86_64.microsoft__vscode-113837:v1.1",
+      "language": "typescript",
+      "task_type": "Bug Fix",
+      "repository": "microsoft/vscode",
+      "patch_changes": 10,
+      "patch_size_tertile": "medium",
+      "panel_membership": "balanced96_extension_candidate",
+      "previously_qualified_pilot28": false
+    },
+    {
+      "task_id": "microsoft__vscode-122991",
+      "image_ref": "ghcr.io/timesler/swe-polybench.eval.x86_64.microsoft__vscode-122991:v1.1",
+      "language": "typescript",
+      "task_type": "Bug Fix",
+      "repository": "microsoft/vscode",
+      "patch_changes": 88,
+      "patch_size_tertile": "large",
+      "panel_membership": "balanced64_candidate",
+      "previously_qualified_pilot28": false
+    },
+    {
+      "task_id": "microsoft__vscode-123294",
+      "image_ref": "ghcr.io/timesler/swe-polybench.eval.x86_64.microsoft__vscode-123294:v1.1",
+      "language": "typescript",
+      "task_type": "Bug Fix",
+      "repository": "microsoft/vscode",
+      "patch_changes": 2,
+      "patch_size_tertile": "small",
+      "panel_membership": "balanced64_candidate",
+      "previously_qualified_pilot28": false
+    },
+    {
+      "task_id": "microsoft__vscode-148971",
+      "image_ref": "ghcr.io/timesler/swe-polybench.eval.x86_64.microsoft__vscode-148971:v1.1",
+      "language": "typescript",
+      "task_type": "Bug Fix",
+      "repository": "microsoft/vscode",
+      "patch_changes": 52,
+      "patch_size_tertile": "large",
+      "panel_membership": "balanced64_candidate",
+      "previously_qualified_pilot28": false
+    },
+    {
+      "task_id": "microsoft__vscode-164396",
+      "image_ref": "ghcr.io/timesler/swe-polybench.eval.x86_64.microsoft__vscode-164396:v1.1",
+      "language": "typescript",
+      "task_type": "Bug Fix",
+      "repository": "microsoft/vscode",
+      "patch_changes": 16,
+      "patch_size_tertile": "medium",
+      "panel_membership": "balanced96_extension_candidate",
+      "previously_qualified_pilot28": false
+    },
+    {
+      "task_id": "microsoft__vscode-189223",
+      "image_ref": "ghcr.io/timesler/swe-polybench.eval.x86_64.microsoft__vscode-189223:v1.1",
+      "language": "typescript",
+      "task_type": "Bug Fix",
+      "repository": "microsoft/vscode",
+      "patch_changes": 6,
+      "patch_size_tertile": "small",
+      "panel_membership": "balanced64_candidate",
+      "previously_qualified_pilot28": true
+    },
+    {
+      "task_id": "mui__material-ui-11858",
+      "image_ref": "ghcr.io/timesler/swe-polybench.eval.x86_64.mui__material-ui-11858:v1.1",
+      "language": "typescript",
+      "task_type": "Feature",
+      "repository": "mui/material-ui",
+      "patch_changes": 21,
+      "patch_size_tertile": "medium",
+      "panel_membership": "balanced96_extension_candidate",
+      "previously_qualified_pilot28": false
+    },
+    {
+      "task_id": "mui__material-ui-13690",
+      "image_ref": "ghcr.io/timesler/swe-polybench.eval.x86_64.mui__material-ui-13690:v1.1",
+      "language": "typescript",
+      "task_type": "Bug Fix",
+      "repository": "mui/material-ui",
+      "patch_changes": 8,
+      "patch_size_tertile": "small",
+      "panel_membership": "balanced96_extension_candidate",
+      "previously_qualified_pilot28": false
+    },
+    {
+      "task_id": "mui__material-ui-14882",
+      "image_ref": "ghcr.io/timesler/swe-polybench.eval.x86_64.mui__material-ui-14882:v1.1",
+      "language": "typescript",
+      "task_type": "Bug Fix",
+      "repository": "mui/material-ui",
+      "patch_changes": 24,
+      "patch_size_tertile": "medium",
+      "panel_membership": "balanced64_candidate",
+      "previously_qualified_pilot28": false
+    },
+    {
+      "task_id": "mui__material-ui-15359",
+      "image_ref": "ghcr.io/timesler/swe-polybench.eval.x86_64.mui__material-ui-15359:v1.1",
+      "language": "typescript",
+      "task_type": "Bug Fix",
+      "repository": "mui/material-ui",
+      "patch_changes": 5,
+      "patch_size_tertile": "small",
+      "panel_membership": "balanced96_extension_candidate",
+      "previously_qualified_pilot28": false
+    },
+    {
+      "task_id": "mui__material-ui-15534",
+      "image_ref": "ghcr.io/timesler/swe-polybench.eval.x86_64.mui__material-ui-15534:v1.1",
+      "language": "typescript",
+      "task_type": "Bug Fix",
+      "repository": "mui/material-ui",
+      "patch_changes": 28,
+      "patch_size_tertile": "medium",
+      "panel_membership": "balanced64_candidate",
+      "previously_qualified_pilot28": true
+    },
+    {
+      "task_id": "mui__material-ui-17301",
+      "image_ref": "ghcr.io/timesler/swe-polybench.eval.x86_64.mui__material-ui-17301:v1.1",
+      "language": "typescript",
+      "task_type": "Refactoring",
+      "repository": "mui/material-ui",
+      "patch_changes": 1039,
+      "patch_size_tertile": "large",
+      "panel_membership": "balanced64_candidate",
+      "previously_qualified_pilot28": false
+    },
+    {
+      "task_id": "mui__material-ui-19072",
+      "image_ref": "ghcr.io/timesler/swe-polybench.eval.x86_64.mui__material-ui-19072:v1.1",
+      "language": "typescript",
+      "task_type": "Bug Fix",
+      "repository": "mui/material-ui",
+      "patch_changes": 18,
+      "patch_size_tertile": "medium",
+      "panel_membership": "balanced64_candidate",
+      "previously_qualified_pilot28": true
+    },
+    {
+      "task_id": "mui__material-ui-22696",
+      "image_ref": "ghcr.io/timesler/swe-polybench.eval.x86_64.mui__material-ui-22696:v1.1",
+      "language": "typescript",
+      "task_type": "Feature",
+      "repository": "mui/material-ui",
+      "patch_changes": 2,
+      "patch_size_tertile": "small",
+      "panel_membership": "balanced64_candidate",
+      "previously_qualified_pilot28": false
+    },
+    {
+      "task_id": "mui__material-ui-25874",
+      "image_ref": "ghcr.io/timesler/swe-polybench.eval.x86_64.mui__material-ui-25874:v1.1",
+      "language": "typescript",
+      "task_type": "Feature",
+      "repository": "mui/material-ui",
+      "patch_changes": 292,
+      "patch_size_tertile": "large",
+      "panel_membership": "balanced96_extension_candidate",
+      "previously_qualified_pilot28": false
+    },
+    {
+      "task_id": "mui__material-ui-34610",
+      "image_ref": "ghcr.io/timesler/swe-polybench.eval.x86_64.mui__material-ui-34610:v1.1",
+      "language": "typescript",
+      "task_type": "Bug Fix",
+      "repository": "mui/material-ui",
+      "patch_changes": 2,
+      "patch_size_tertile": "small",
+      "panel_membership": "balanced96_extension_candidate",
+      "previously_qualified_pilot28": false
+    },
+    {
+      "task_id": "tailwindlabs__tailwindcss-116",
+      "image_ref": "ghcr.io/timesler/swe-polybench.eval.x86_64.tailwindlabs__tailwindcss-116:v1.1",
+      "language": "typescript",
+      "task_type": "Bug Fix",
+      "repository": "tailwindlabs/tailwindcss",
+      "patch_changes": 75,
+      "patch_size_tertile": "large",
+      "panel_membership": "balanced96_extension_candidate",
+      "previously_qualified_pilot28": false
+    },
+    {
+      "task_id": "tailwindlabs__tailwindcss-550",
+      "image_ref": "ghcr.io/timesler/swe-polybench.eval.x86_64.tailwindlabs__tailwindcss-550:v1.1",
+      "language": "typescript",
+      "task_type": "Bug Fix",
+      "repository": "tailwindlabs/tailwindcss",
+      "patch_changes": 6,
+      "patch_size_tertile": "small",
+      "panel_membership": "balanced64_candidate",
+      "previously_qualified_pilot28": true
+    },
+    {
+      "task_id": "tailwindlabs__tailwindcss-853",
+      "image_ref": "ghcr.io/timesler/swe-polybench.eval.x86_64.tailwindlabs__tailwindcss-853:v1.1",
+      "language": "typescript",
+      "task_type": "Feature",
+      "repository": "tailwindlabs/tailwindcss",
+      "patch_changes": 114,
+      "patch_size_tertile": "large",
+      "panel_membership": "balanced64_candidate",
+      "previously_qualified_pilot28": true
+    },
+    {
+      "task_id": "coder__code-server-4923",
+      "image_ref": "ghcr.io/timesler/swe-polybench.eval.x86_64.coder__code-server-4923:v1.1",
+      "language": "typescript",
+      "task_type": "Feature",
+      "repository": "coder/code-server",
+      "patch_changes": 18,
+      "patch_size_tertile": "medium",
+      "panel_membership": "balanced64_candidate",
+      "previously_qualified_pilot28": false
+    },
+    {
+      "task_id": "coder__code-server-6278",
+      "image_ref": "ghcr.io/timesler/swe-polybench.eval.x86_64.coder__code-server-6278:v1.1",
+      "language": "typescript",
+      "task_type": "Bug Fix",
+      "repository": "coder/code-server",
+      "patch_changes": 15,
+      "patch_size_tertile": "medium",
+      "panel_membership": "balanced64_candidate",
+      "previously_qualified_pilot28": true
+    },
+    {
+      "task_id": "huggingface__transformers-21345",
+      "image_ref": "ghcr.io/timesler/swe-polybench.eval.x86_64.huggingface__transformers-21345:v1.1",
+      "language": "python",
+      "task_type": "Feature",
+      "repository": "huggingface/transformers",
+      "patch_changes": 22,
+      "patch_size_tertile": "medium",
+      "panel_membership": "balanced64_candidate",
+      "previously_qualified_pilot28": true
+    },
+    {
+      "task_id": "huggingface__transformers-22458",
+      "image_ref": "ghcr.io/timesler/swe-polybench.eval.x86_64.huggingface__transformers-22458:v1.1",
+      "language": "python",
+      "task_type": "Bug Fix",
+      "repository": "huggingface/transformers",
+      "patch_changes": 53,
+      "patch_size_tertile": "large",
+      "panel_membership": "balanced64_candidate",
+      "previously_qualified_pilot28": true
+    },
+    {
+      "task_id": "huggingface__transformers-23796",
+      "image_ref": "ghcr.io/timesler/swe-polybench.eval.x86_64.huggingface__transformers-23796:v1.1",
+      "language": "python",
+      "task_type": "Bug Fix",
+      "repository": "huggingface/transformers",
+      "patch_changes": 4,
+      "patch_size_tertile": "small",
+      "panel_membership": "balanced64_candidate",
+      "previously_qualified_pilot28": true
+    },
+    {
+      "task_id": "huggingface__transformers-25884",
+      "image_ref": "ghcr.io/timesler/swe-polybench.eval.x86_64.huggingface__transformers-25884:v1.1",
+      "language": "python",
+      "task_type": "Bug Fix",
+      "repository": "huggingface/transformers",
+      "patch_changes": 3,
+      "patch_size_tertile": "small",
+      "panel_membership": "balanced96_extension_candidate",
+      "previously_qualified_pilot28": false
+    },
+    {
+      "task_id": "huggingface__transformers-26164",
+      "image_ref": "ghcr.io/timesler/swe-polybench.eval.x86_64.huggingface__transformers-26164:v1.1",
+      "language": "python",
+      "task_type": "Bug Fix",
+      "repository": "huggingface/transformers",
+      "patch_changes": 11,
+      "patch_size_tertile": "medium",
+      "panel_membership": "balanced64_candidate",
+      "previously_qualified_pilot28": true
+    },
+    {
+      "task_id": "huggingface__transformers-26568",
+      "image_ref": "ghcr.io/timesler/swe-polybench.eval.x86_64.huggingface__transformers-26568:v1.1",
+      "language": "python",
+      "task_type": "Feature",
+      "repository": "huggingface/transformers",
+      "patch_changes": 18,
+      "patch_size_tertile": "medium",
+      "panel_membership": "balanced96_extension_candidate",
+      "previously_qualified_pilot28": false
+    },
+    {
+      "task_id": "huggingface__transformers-27463",
+      "image_ref": "ghcr.io/timesler/swe-polybench.eval.x86_64.huggingface__transformers-27463:v1.1",
+      "language": "python",
+      "task_type": "Feature",
+      "repository": "huggingface/transformers",
+      "patch_changes": 308,
+      "patch_size_tertile": "large",
+      "panel_membership": "balanced64_candidate",
+      "previously_qualified_pilot28": true
+    },
+    {
+      "task_id": "langchain-ai__langchain-3367",
+      "image_ref": "ghcr.io/timesler/swe-polybench.eval.x86_64.langchain-ai__langchain-3367:v1.1",
+      "language": "python",
+      "task_type": "Bug Fix",
+      "repository": "langchain-ai/langchain",
+      "patch_changes": 4,
+      "patch_size_tertile": "small",
+      "panel_membership": "balanced64_candidate",
+      "previously_qualified_pilot28": true
+    },
+    {
+      "task_id": "langchain-ai__langchain-4420",
+      "image_ref": "ghcr.io/timesler/swe-polybench.eval.x86_64.langchain-ai__langchain-4420:v1.1",
+      "language": "python",
+      "task_type": "Bug Fix",
+      "repository": "langchain-ai/langchain",
+      "patch_changes": 2,
+      "patch_size_tertile": "small",
+      "panel_membership": "balanced64_candidate",
+      "previously_qualified_pilot28": false
+    },
+    {
+      "task_id": "langchain-ai__langchain-4646",
+      "image_ref": "ghcr.io/timesler/swe-polybench.eval.x86_64.langchain-ai__langchain-4646:v1.1",
+      "language": "python",
+      "task_type": "Bug Fix",
+      "repository": "langchain-ai/langchain",
+      "patch_changes": 2,
+      "patch_size_tertile": "small",
+      "panel_membership": "balanced64_candidate",
+      "previously_qualified_pilot28": false
+    },
+    {
+      "task_id": "langchain-ai__langchain-5450",
+      "image_ref": "ghcr.io/timesler/swe-polybench.eval.x86_64.langchain-ai__langchain-5450:v1.1",
+      "language": "python",
+      "task_type": "Feature",
+      "repository": "langchain-ai/langchain",
+      "patch_changes": 18,
+      "patch_size_tertile": "medium",
+      "panel_membership": "balanced64_candidate",
+      "previously_qualified_pilot28": false
+    },
+    {
+      "task_id": "langchain-ai__langchain-5625",
+      "image_ref": "ghcr.io/timesler/swe-polybench.eval.x86_64.langchain-ai__langchain-5625:v1.1",
+      "language": "python",
+      "task_type": "Bug Fix",
+      "repository": "langchain-ai/langchain",
+      "patch_changes": 32,
+      "patch_size_tertile": "large",
+      "panel_membership": "balanced64_candidate",
+      "previously_qualified_pilot28": true
+    },
+    {
+      "task_id": "langchain-ai__langchain-19331",
+      "image_ref": "ghcr.io/timesler/swe-polybench.eval.x86_64.langchain-ai__langchain-19331:v1.1",
+      "language": "python",
+      "task_type": "Feature",
+      "repository": "langchain-ai/langchain",
+      "patch_changes": 84,
+      "patch_size_tertile": "large",
+      "panel_membership": "balanced96_extension_candidate",
+      "previously_qualified_pilot28": false
+    },
+    {
+      "task_id": "yt-dlp__yt-dlp-4841",
+      "image_ref": "ghcr.io/timesler/swe-polybench.eval.x86_64.yt-dlp__yt-dlp-4841:v1.1",
+      "language": "python",
+      "task_type": "Bug Fix",
+      "repository": "yt-dlp/yt-dlp",
+      "patch_changes": 2,
+      "patch_size_tertile": "small",
+      "panel_membership": "balanced96_extension_candidate",
+      "previously_qualified_pilot28": false
+    },
+    {
+      "task_id": "yt-dlp__yt-dlp-5195",
+      "image_ref": "ghcr.io/timesler/swe-polybench.eval.x86_64.yt-dlp__yt-dlp-5195:v1.1",
+      "language": "python",
+      "task_type": "Bug Fix",
+      "repository": "yt-dlp/yt-dlp",
+      "patch_changes": 30,
+      "patch_size_tertile": "large",
+      "panel_membership": "balanced64_candidate",
+      "previously_qualified_pilot28": false
+    },
+    {
+      "task_id": "yt-dlp__yt-dlp-5933",
+      "image_ref": "ghcr.io/timesler/swe-polybench.eval.x86_64.yt-dlp__yt-dlp-5933:v1.1",
+      "language": "python",
+      "task_type": "Bug Fix",
+      "repository": "yt-dlp/yt-dlp",
+      "patch_changes": 100,
+      "patch_size_tertile": "large",
+      "panel_membership": "balanced64_candidate",
+      "previously_qualified_pilot28": false
+    },
+    {
+      "task_id": "yt-dlp__yt-dlp-9862",
+      "image_ref": "ghcr.io/timesler/swe-polybench.eval.x86_64.yt-dlp__yt-dlp-9862:v1.1",
+      "language": "python",
+      "task_type": "Bug Fix",
+      "repository": "yt-dlp/yt-dlp",
+      "patch_changes": 10,
+      "patch_size_tertile": "medium",
+      "panel_membership": "balanced64_candidate",
+      "previously_qualified_pilot28": true
+    },
+    {
+      "task_id": "yt-dlp__yt-dlp-10390",
+      "image_ref": "ghcr.io/timesler/swe-polybench.eval.x86_64.yt-dlp__yt-dlp-10390:v1.1",
+      "language": "python",
+      "task_type": "Bug Fix",
+      "repository": "yt-dlp/yt-dlp",
+      "patch_changes": 3,
+      "patch_size_tertile": "small",
+      "panel_membership": "balanced96_extension_candidate",
+      "previously_qualified_pilot28": false
+    },
+    {
+      "task_id": "keras-team__keras-18871",
+      "image_ref": "ghcr.io/timesler/swe-polybench.eval.x86_64.keras-team__keras-18871:v1.1",
+      "language": "python",
+      "task_type": "Refactoring",
+      "repository": "keras-team/keras",
+      "patch_changes": 99,
+      "patch_size_tertile": "large",
+      "panel_membership": "balanced64_candidate",
+      "previously_qualified_pilot28": false
+    },
+    {
+      "task_id": "keras-team__keras-19773",
+      "image_ref": "ghcr.io/timesler/swe-polybench.eval.x86_64.keras-team__keras-19773:v1.1",
+      "language": "python",
+      "task_type": "Bug Fix",
+      "repository": "keras-team/keras",
+      "patch_changes": 2,
+      "patch_size_tertile": "small",
+      "panel_membership": "balanced64_candidate",
+      "previously_qualified_pilot28": true
+    },
+    {
+      "task_id": "keras-team__keras-19863",
+      "image_ref": "ghcr.io/timesler/swe-polybench.eval.x86_64.keras-team__keras-19863:v1.1",
+      "language": "python",
+      "task_type": "Bug Fix",
+      "repository": "keras-team/keras",
+      "patch_changes": 24,
+      "patch_size_tertile": "medium",
+      "panel_membership": "balanced96_extension_candidate",
+      "previously_qualified_pilot28": false
+    },
+    {
+      "task_id": "keras-team__keras-19915",
+      "image_ref": "ghcr.io/timesler/swe-polybench.eval.x86_64.keras-team__keras-19915:v1.1",
+      "language": "python",
+      "task_type": "Bug Fix",
+      "repository": "keras-team/keras",
+      "patch_changes": 11,
+      "patch_size_tertile": "medium",
+      "panel_membership": "balanced64_candidate",
+      "previously_qualified_pilot28": false
+    },
+    {
+      "task_id": "keras-team__keras-19937",
+      "image_ref": "ghcr.io/timesler/swe-polybench.eval.x86_64.keras-team__keras-19937:v1.1",
+      "language": "python",
+      "task_type": "Bug Fix",
+      "repository": "keras-team/keras",
+      "patch_changes": 91,
+      "patch_size_tertile": "large",
+      "panel_membership": "balanced96_extension_candidate",
+      "previously_qualified_pilot28": false
+    },
+    {
+      "task_id": "keras-team__keras-20002",
+      "image_ref": "ghcr.io/timesler/swe-polybench.eval.x86_64.keras-team__keras-20002:v1.1",
+      "language": "python",
+      "task_type": "Bug Fix",
+      "repository": "keras-team/keras",
+      "patch_changes": 17,
+      "patch_size_tertile": "medium",
+      "panel_membership": "balanced96_extension_candidate",
+      "previously_qualified_pilot28": false
+    },
+    {
+      "task_id": "coder__code-server-3277",
+      "image_ref": "ghcr.io/timesler/swe-polybench.eval.x86_64.coder__code-server-3277:v1.1",
+      "language": "typescript",
+      "task_type": "Bug Fix",
+      "repository": "coder/code-server",
+      "patch_changes": 188,
+      "patch_size_tertile": "large",
+      "panel_membership": "balanced64_candidate",
+      "previously_qualified_pilot28": false
+    }
+  ]
+}

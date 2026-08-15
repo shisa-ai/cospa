@@ -1,0 +1,81 @@
+{
+  "name": "ornith_runtime_pilot_images_v1",
+  "source_manifest": "configs/swe_polybench_balanced_java_strata_extension7_v1.json",
+  "source_manifest_sha256": "e6de00d931fae77cb7dabaafbb7626798470c5b8e697c1006473991a02c6759c",
+  "platform": {
+    "os": "linux",
+    "architecture": "amd64"
+  },
+  "images": {
+    "ghcr.io/timesler/swe-polybench.eval.x86_64.apache__dubbo-5708:v1.1": {
+      "suites": [
+        "swe_polybench_balanced_java_strata_extension7"
+      ],
+      "task_ids": [
+        "apache__dubbo-5708"
+      ],
+      "digest": "sha256:a557549837e96d2f2dc2e94487b57b9d8ae918fa6e937dc929f1b1a867865e66",
+      "pinned_ref": "ghcr.io/timesler/swe-polybench.eval.x86_64.apache__dubbo-5708@sha256:a557549837e96d2f2dc2e94487b57b9d8ae918fa6e937dc929f1b1a867865e66"
+    },
+    "ghcr.io/timesler/swe-polybench.eval.x86_64.apache__rocketmq-7823:v1.1": {
+      "suites": [
+        "swe_polybench_balanced_java_strata_extension7"
+      ],
+      "task_ids": [
+        "apache__rocketmq-7823"
+      ],
+      "digest": "sha256:d4c1299e5d72004a8ff0fadf5a525c3c28b9287a0eec3875725a353795bf63eb",
+      "pinned_ref": "ghcr.io/timesler/swe-polybench.eval.x86_64.apache__rocketmq-7823@sha256:d4c1299e5d72004a8ff0fadf5a525c3c28b9287a0eec3875725a353795bf63eb"
+    },
+    "ghcr.io/timesler/swe-polybench.eval.x86_64.google__gson-1703:v1.1": {
+      "suites": [
+        "swe_polybench_balanced_java_strata_extension7"
+      ],
+      "task_ids": [
+        "google__gson-1703"
+      ],
+      "digest": "sha256:eb36783cd8da7990e9a79bf5519f81fd7e365888714a396e7f4b2e66c0057f3f",
+      "pinned_ref": "ghcr.io/timesler/swe-polybench.eval.x86_64.google__gson-1703@sha256:eb36783cd8da7990e9a79bf5519f81fd7e365888714a396e7f4b2e66c0057f3f"
+    },
+    "ghcr.io/timesler/swe-polybench.eval.x86_64.google__gson-2071:v1.1": {
+      "suites": [
+        "swe_polybench_balanced_java_strata_extension7"
+      ],
+      "task_ids": [
+        "google__gson-2071"
+      ],
+      "digest": "sha256:4a85453a35bdf4ed4c9651d2f32400ae21aaa7ae1a7a1b5255bafb14cb2c12b9",
+      "pinned_ref": "ghcr.io/timesler/swe-polybench.eval.x86_64.google__gson-2071@sha256:4a85453a35bdf4ed4c9651d2f32400ae21aaa7ae1a7a1b5255bafb14cb2c12b9"
+    },
+    "ghcr.io/timesler/swe-polybench.eval.x86_64.google__gson-2134:v1.1": {
+      "suites": [
+        "swe_polybench_balanced_java_strata_extension7"
+      ],
+      "task_ids": [
+        "google__gson-2134"
+      ],
+      "digest": "sha256:505b01f5db0005d15d2b33d23f3aaa3e51febf782060d3dfbe877ff5a7e18d9a",
+      "pinned_ref": "ghcr.io/timesler/swe-polybench.eval.x86_64.google__gson-2134@sha256:505b01f5db0005d15d2b33d23f3aaa3e51febf782060d3dfbe877ff5a7e18d9a"
+    },
+    "ghcr.io/timesler/swe-polybench.eval.x86_64.google__gson-2337:v1.1": {
+      "suites": [
+        "swe_polybench_balanced_java_strata_extension7"
+      ],
+      "task_ids": [
+        "google__gson-2337"
+      ],
+      "digest": "sha256:8088c84003215eb07f9d927358eeb7259e5e9a5005fc7b17ec8b0e670ea8ab2c",
+      "pinned_ref": "ghcr.io/timesler/swe-polybench.eval.x86_64.google__gson-2337@sha256:8088c84003215eb07f9d927358eeb7259e5e9a5005fc7b17ec8b0e670ea8ab2c"
+    },
+    "ghcr.io/timesler/swe-polybench.eval.x86_64.google__gson-2549:v1.1": {
+      "suites": [
+        "swe_polybench_balanced_java_strata_extension7"
+      ],
+      "task_ids": [
+        "google__gson-2549"
+      ],
+      "digest": "sha256:0babceda9ba919037873fe6811fc43fbfcc7c7ecc9b29ebcdf07b60aab359553",
+      "pinned_ref": "ghcr.io/timesler/swe-polybench.eval.x86_64.google__gson-2549@sha256:0babceda9ba919037873fe6811fc43fbfcc7c7ecc9b29ebcdf07b60aab359553"
+    }
+  }
+}

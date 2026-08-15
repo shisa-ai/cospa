@@ -123,17 +123,22 @@ reorder — earlier items unblock later ones.
       merging. Agentic suites materialize editable `solution.py` workspaces;
       their scores never merge with the Instruct anchor or claim full148
       comparability.
-- [ ] **P11d. Suite: SWE-PolyBench Verified pilot28.**
-      `harness/suites/swe_polybench.py` materializes the 28 tasks retained from
-      an outcome-blind 38-task screen as Harbor tasks over digest-pinned images.
-      A derived image resets each repository to its declared base commit before
-      the agent; hidden test and gold patches enter only their Harbor phases.
-      Verification replays the captured model patch after hidden tests, runs
-      without network (using pinned image caches), and scores with the pinned
-      upstream parser. All 28 retained tasks have three clean null/gold
-      observations. Ten tasks were excluded before model evaluation because
-      their pinned verifier environments required uncached network artifacts or
-      because their gold patches failed declared P2P tests.
+- [ ] **P11d. Suite: SWE-PolyBench Verified pilot28 + balanced64.**
+      `harness/suites/swe_polybench.py` retains the original repeat-qualified
+      pilot28 and adds the distinct `swe_polybench_verified_balanced64` routine
+      panel. The expansion froze an outcome-blind candidate96 before target-model
+      outcomes, then screened two adaptive Java-only support sets after the
+      mechanical oracle gate exposed small/medium Java shortages. Across 135
+      source candidates, 82 had three stable gold observations; the final panel
+      selects 16 tasks per language, all three task types, near-equal patch-size
+      tertiles, repository-diversity/cost tradeoffs, and no selected task whose
+      mean gold verifier exceeds the fixed ten-minute threshold. All 192 gold
+      observations resolve and all 192 selected null observations fail with empty
+      patches under the no-network verifier. The candidate96 and Java extensions
+      remain support artifacts, not scored suites, and no balanced96 score is
+      claimed. Derived images reset repositories to declared base commits;
+      hidden tests and gold patches enter only their Harbor phases, and scoring
+      uses the pinned upstream parser.
 - [ ] **P11e. Suite: Multi-SWE-bench Flash hermetic25.**
       `harness/suites/multi_swe_bench.py` materializes an outcome-blind
       seven-language screen over digest-pinned upstream images, removes

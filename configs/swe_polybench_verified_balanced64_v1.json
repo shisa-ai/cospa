@@ -1,0 +1,1548 @@
+{
+  "name": "swe_polybench_verified_balanced64_v1",
+  "version": "2026-08-15",
+  "source": {
+    "repository": "https://github.com/amazon-science/SWE-PolyBench.git",
+    "revision": "9c836c5d7f3cb991934132b77d29e6941d912a07",
+    "license": "MIT"
+  },
+  "dataset": {
+    "repository": "https://huggingface.co/datasets/AmazonScience/SWE-PolyBench_Verified",
+    "revision": "b3fca77b637379f0c01ad86d18753a7ac1998b53",
+    "sha256": "0c8138e73c34fa29a5276b675b146b72d78ce001fcc4560d76302c908b4808a5",
+    "local_path": "vendor/eval-data/swe-polybench-verified/test.csv",
+    "license": "MIT"
+  },
+  "selection": {
+    "uses_target_model_outcomes": false,
+    "mechanical_qualification_only": true,
+    "seed": "cospa-polybench-balanced-qualified-v1",
+    "panel_size": 64,
+    "tasks_per_language": 16,
+    "includes_repeat_qualified_pilot28": true,
+    "planned_task_type_targets": {
+      "java": {
+        "Bug Fix": 10,
+        "Feature": 4,
+        "Refactoring": 2
+      },
+      "javascript": {
+        "Bug Fix": 11,
+        "Feature": 4,
+        "Refactoring": 1
+      },
+      "python": {
+        "Bug Fix": 12,
+        "Feature": 3,
+        "Refactoring": 1
+      },
+      "typescript": {
+        "Bug Fix": 12,
+        "Feature": 3,
+        "Refactoring": 1
+      }
+    },
+    "task_type_targets": {
+      "java": {
+        "Bug Fix": 11,
+        "Feature": 4,
+        "Refactoring": 1
+      },
+      "javascript": {
+        "Bug Fix": 12,
+        "Feature": 3,
+        "Refactoring": 1
+      },
+      "python": {
+        "Bug Fix": 12,
+        "Feature": 3,
+        "Refactoring": 1
+      },
+      "typescript": {
+        "Bug Fix": 11,
+        "Feature": 4,
+        "Refactoring": 1
+      }
+    },
+    "planned_patch_size_targets": {
+      "small": 5,
+      "medium": 5,
+      "large": 6
+    },
+    "patch_size_targets": {
+      "java": {
+        "large": 6,
+        "medium": 5,
+        "small": 5
+      },
+      "javascript": {
+        "large": 6,
+        "medium": 5,
+        "small": 5
+      },
+      "python": {
+        "large": 6,
+        "medium": 5,
+        "small": 5
+      },
+      "typescript": {
+        "large": 5,
+        "medium": 6,
+        "small": 5
+      }
+    },
+    "planned_repository_caps": {
+      "java": 4,
+      "javascript": 5,
+      "python": 5,
+      "typescript": 6
+    },
+    "repository_caps": {
+      "java": 7,
+      "javascript": 5,
+      "python": 5,
+      "typescript": 9
+    },
+    "verifier_outlier_seconds_per_observation": 600,
+    "adaptive_note": "Mechanical gold/null qualification reduced some strata. Selection first avoids verifier outliers above ten minutes, then minimizes repository-cap, task-type, patch-size, and total verifier-cost deviations without target-model outcomes."
+  },
+  "qualification": {
+    "status": "repeat_qualified",
+    "observations_per_condition": 3,
+    "gold_passed": 192,
+    "null_failed": 192,
+    "verifier_network": "no-network",
+    "completed_at": "2026-08-15",
+    "evidence": {
+      "gold_first": [
+        "results/qualification/polybench-balanced-candidate96-gold1-20260815T1900Z/summary.json",
+        "results/qualification/polybench-balanced-java-extension32-gold1-20260815T1945Z/summary.json",
+        "results/qualification/polybench-balanced-java-strata-extension7-gold1-20260815T2000Z/summary.json"
+      ],
+      "gold_repeat": [
+        "results/qualification/polybench-balanced64-repeat-gold2-20260815T1950Z/summary.json",
+        "results/qualification/polybench-balanced-java-strata-extension7-repeat-gold2-20260815T2005Z/summary.json"
+      ],
+      "null_selected": "results/qualification/polybench-balanced64-selected-null3-20260815T2010Z/summary.json",
+      "selection": "results/qualification/polybench-balanced64-selected-null3-20260815T2010Z/provisional-manifest.json"
+    },
+    "screened_candidates": 135,
+    "fully_qualified_candidates": 64
+  },
+  "suites": {
+    "swe_polybench_verified_balanced64": {
+      "tasks": [
+        {
+          "id": "apache__dubbo-3855",
+          "image_ref": "ghcr.io/timesler/swe-polybench.eval.x86_64.apache__dubbo-3855:v1.1"
+        },
+        {
+          "id": "google__guava-5696",
+          "image_ref": "ghcr.io/timesler/swe-polybench.eval.x86_64.google__guava-5696:v1.1"
+        },
+        {
+          "id": "apolloconfig__apollo-4464",
+          "image_ref": "ghcr.io/timesler/swe-polybench.eval.x86_64.apolloconfig__apollo-4464:v1.1"
+        },
+        {
+          "id": "google__gson-1989",
+          "image_ref": "ghcr.io/timesler/swe-polybench.eval.x86_64.google__gson-1989:v1.1"
+        },
+        {
+          "id": "apache__rocketmq-7655",
+          "image_ref": "ghcr.io/timesler/swe-polybench.eval.x86_64.apache__rocketmq-7655:v1.1"
+        },
+        {
+          "id": "apache__rocketmq-7563",
+          "image_ref": "ghcr.io/timesler/swe-polybench.eval.x86_64.apache__rocketmq-7563:v1.1"
+        },
+        {
+          "id": "google__gson-2337",
+          "image_ref": "ghcr.io/timesler/swe-polybench.eval.x86_64.google__gson-2337:v1.1"
+        },
+        {
+          "id": "google__gson-2060",
+          "image_ref": "ghcr.io/timesler/swe-polybench.eval.x86_64.google__gson-2060:v1.1"
+        },
+        {
+          "id": "google__guava-3971",
+          "image_ref": "ghcr.io/timesler/swe-polybench.eval.x86_64.google__guava-3971:v1.1"
+        },
+        {
+          "id": "google__gson-2134",
+          "image_ref": "ghcr.io/timesler/swe-polybench.eval.x86_64.google__gson-2134:v1.1"
+        },
+        {
+          "id": "apolloconfig__apollo-4207",
+          "image_ref": "ghcr.io/timesler/swe-polybench.eval.x86_64.apolloconfig__apollo-4207:v1.1"
+        },
+        {
+          "id": "google__gson-2167",
+          "image_ref": "ghcr.io/timesler/swe-polybench.eval.x86_64.google__gson-2167:v1.1"
+        },
+        {
+          "id": "apolloconfig__apollo-4568",
+          "image_ref": "ghcr.io/timesler/swe-polybench.eval.x86_64.apolloconfig__apollo-4568:v1.1"
+        },
+        {
+          "id": "google__gson-2158",
+          "image_ref": "ghcr.io/timesler/swe-polybench.eval.x86_64.google__gson-2158:v1.1"
+        },
+        {
+          "id": "apolloconfig__apollo-1894",
+          "image_ref": "ghcr.io/timesler/swe-polybench.eval.x86_64.apolloconfig__apollo-1894:v1.1"
+        },
+        {
+          "id": "google__gson-1703",
+          "image_ref": "ghcr.io/timesler/swe-polybench.eval.x86_64.google__gson-1703:v1.1"
+        },
+        {
+          "id": "serverless__serverless-6827",
+          "image_ref": "ghcr.io/timesler/swe-polybench.eval.x86_64.serverless__serverless-6827:v1.1"
+        },
+        {
+          "id": "sveltejs__svelte-630",
+          "image_ref": "ghcr.io/timesler/swe-polybench.eval.x86_64.sveltejs__svelte-630:v1.1"
+        },
+        {
+          "id": "prettier__prettier-6604",
+          "image_ref": "ghcr.io/timesler/swe-polybench.eval.x86_64.prettier__prettier-6604:v1.1"
+        },
+        {
+          "id": "prettier__prettier-4667",
+          "image_ref": "ghcr.io/timesler/swe-polybench.eval.x86_64.prettier__prettier-4667:v1.1"
+        },
+        {
+          "id": "sveltejs__svelte-4454",
+          "image_ref": "ghcr.io/timesler/swe-polybench.eval.x86_64.sveltejs__svelte-4454:v1.1"
+        },
+        {
+          "id": "prettier__prettier-11637",
+          "image_ref": "ghcr.io/timesler/swe-polybench.eval.x86_64.prettier__prettier-11637:v1.1"
+        },
+        {
+          "id": "serverless__serverless-2576",
+          "image_ref": "ghcr.io/timesler/swe-polybench.eval.x86_64.serverless__serverless-2576:v1.1"
+        },
+        {
+          "id": "serverless__serverless-5775",
+          "image_ref": "ghcr.io/timesler/swe-polybench.eval.x86_64.serverless__serverless-5775:v1.1"
+        },
+        {
+          "id": "prettier__prettier-9850",
+          "image_ref": "ghcr.io/timesler/swe-polybench.eval.x86_64.prettier__prettier-9850:v1.1"
+        },
+        {
+          "id": "sveltejs__svelte-1227",
+          "image_ref": "ghcr.io/timesler/swe-polybench.eval.x86_64.sveltejs__svelte-1227:v1.1"
+        },
+        {
+          "id": "prettier__prettier-3515",
+          "image_ref": "ghcr.io/timesler/swe-polybench.eval.x86_64.prettier__prettier-3515:v1.1"
+        },
+        {
+          "id": "serverless__serverless-2952",
+          "image_ref": "ghcr.io/timesler/swe-polybench.eval.x86_64.serverless__serverless-2952:v1.1"
+        },
+        {
+          "id": "sveltejs__svelte-6564",
+          "image_ref": "ghcr.io/timesler/swe-polybench.eval.x86_64.sveltejs__svelte-6564:v1.1"
+        },
+        {
+          "id": "mrdoob__three.js-14836",
+          "image_ref": "ghcr.io/timesler/swe-polybench.eval.x86_64.mrdoob__three.js-14836:v1.1"
+        },
+        {
+          "id": "serverless__serverless-2842",
+          "image_ref": "ghcr.io/timesler/swe-polybench.eval.x86_64.serverless__serverless-2842:v1.1"
+        },
+        {
+          "id": "sveltejs__svelte-6525",
+          "image_ref": "ghcr.io/timesler/swe-polybench.eval.x86_64.sveltejs__svelte-6525:v1.1"
+        },
+        {
+          "id": "huggingface__transformers-21345",
+          "image_ref": "ghcr.io/timesler/swe-polybench.eval.x86_64.huggingface__transformers-21345:v1.1"
+        },
+        {
+          "id": "langchain-ai__langchain-5625",
+          "image_ref": "ghcr.io/timesler/swe-polybench.eval.x86_64.langchain-ai__langchain-5625:v1.1"
+        },
+        {
+          "id": "langchain-ai__langchain-3367",
+          "image_ref": "ghcr.io/timesler/swe-polybench.eval.x86_64.langchain-ai__langchain-3367:v1.1"
+        },
+        {
+          "id": "langchain-ai__langchain-19331",
+          "image_ref": "ghcr.io/timesler/swe-polybench.eval.x86_64.langchain-ai__langchain-19331:v1.1"
+        },
+        {
+          "id": "langchain-ai__langchain-4646",
+          "image_ref": "ghcr.io/timesler/swe-polybench.eval.x86_64.langchain-ai__langchain-4646:v1.1"
+        },
+        {
+          "id": "keras-team__keras-19863",
+          "image_ref": "ghcr.io/timesler/swe-polybench.eval.x86_64.keras-team__keras-19863:v1.1"
+        },
+        {
+          "id": "keras-team__keras-20002",
+          "image_ref": "ghcr.io/timesler/swe-polybench.eval.x86_64.keras-team__keras-20002:v1.1"
+        },
+        {
+          "id": "yt-dlp__yt-dlp-5195",
+          "image_ref": "ghcr.io/timesler/swe-polybench.eval.x86_64.yt-dlp__yt-dlp-5195:v1.1"
+        },
+        {
+          "id": "huggingface__transformers-26164",
+          "image_ref": "ghcr.io/timesler/swe-polybench.eval.x86_64.huggingface__transformers-26164:v1.1"
+        },
+        {
+          "id": "yt-dlp__yt-dlp-4841",
+          "image_ref": "ghcr.io/timesler/swe-polybench.eval.x86_64.yt-dlp__yt-dlp-4841:v1.1"
+        },
+        {
+          "id": "huggingface__transformers-27463",
+          "image_ref": "ghcr.io/timesler/swe-polybench.eval.x86_64.huggingface__transformers-27463:v1.1"
+        },
+        {
+          "id": "huggingface__transformers-22458",
+          "image_ref": "ghcr.io/timesler/swe-polybench.eval.x86_64.huggingface__transformers-22458:v1.1"
+        },
+        {
+          "id": "yt-dlp__yt-dlp-9862",
+          "image_ref": "ghcr.io/timesler/swe-polybench.eval.x86_64.yt-dlp__yt-dlp-9862:v1.1"
+        },
+        {
+          "id": "huggingface__transformers-23796",
+          "image_ref": "ghcr.io/timesler/swe-polybench.eval.x86_64.huggingface__transformers-23796:v1.1"
+        },
+        {
+          "id": "keras-team__keras-18871",
+          "image_ref": "ghcr.io/timesler/swe-polybench.eval.x86_64.keras-team__keras-18871:v1.1"
+        },
+        {
+          "id": "keras-team__keras-19773",
+          "image_ref": "ghcr.io/timesler/swe-polybench.eval.x86_64.keras-team__keras-19773:v1.1"
+        },
+        {
+          "id": "mui__material-ui-25874",
+          "image_ref": "ghcr.io/timesler/swe-polybench.eval.x86_64.mui__material-ui-25874:v1.1"
+        },
+        {
+          "id": "mui__material-ui-15359",
+          "image_ref": "ghcr.io/timesler/swe-polybench.eval.x86_64.mui__material-ui-15359:v1.1"
+        },
+        {
+          "id": "coder__code-server-6278",
+          "image_ref": "ghcr.io/timesler/swe-polybench.eval.x86_64.coder__code-server-6278:v1.1"
+        },
+        {
+          "id": "tailwindlabs__tailwindcss-116",
+          "image_ref": "ghcr.io/timesler/swe-polybench.eval.x86_64.tailwindlabs__tailwindcss-116:v1.1"
+        },
+        {
+          "id": "mui__material-ui-13690",
+          "image_ref": "ghcr.io/timesler/swe-polybench.eval.x86_64.mui__material-ui-13690:v1.1"
+        },
+        {
+          "id": "tailwindlabs__tailwindcss-550",
+          "image_ref": "ghcr.io/timesler/swe-polybench.eval.x86_64.tailwindlabs__tailwindcss-550:v1.1"
+        },
+        {
+          "id": "mui__material-ui-34610",
+          "image_ref": "ghcr.io/timesler/swe-polybench.eval.x86_64.mui__material-ui-34610:v1.1"
+        },
+        {
+          "id": "mui__material-ui-14882",
+          "image_ref": "ghcr.io/timesler/swe-polybench.eval.x86_64.mui__material-ui-14882:v1.1"
+        },
+        {
+          "id": "mui__material-ui-15534",
+          "image_ref": "ghcr.io/timesler/swe-polybench.eval.x86_64.mui__material-ui-15534:v1.1"
+        },
+        {
+          "id": "tailwindlabs__tailwindcss-853",
+          "image_ref": "ghcr.io/timesler/swe-polybench.eval.x86_64.tailwindlabs__tailwindcss-853:v1.1"
+        },
+        {
+          "id": "microsoft__vscode-189223",
+          "image_ref": "ghcr.io/timesler/swe-polybench.eval.x86_64.microsoft__vscode-189223:v1.1"
+        },
+        {
+          "id": "coder__code-server-3277",
+          "image_ref": "ghcr.io/timesler/swe-polybench.eval.x86_64.coder__code-server-3277:v1.1"
+        },
+        {
+          "id": "coder__code-server-4923",
+          "image_ref": "ghcr.io/timesler/swe-polybench.eval.x86_64.coder__code-server-4923:v1.1"
+        },
+        {
+          "id": "mui__material-ui-11858",
+          "image_ref": "ghcr.io/timesler/swe-polybench.eval.x86_64.mui__material-ui-11858:v1.1"
+        },
+        {
+          "id": "mui__material-ui-19072",
+          "image_ref": "ghcr.io/timesler/swe-polybench.eval.x86_64.mui__material-ui-19072:v1.1"
+        },
+        {
+          "id": "mui__material-ui-17301",
+          "image_ref": "ghcr.io/timesler/swe-polybench.eval.x86_64.mui__material-ui-17301:v1.1"
+        }
+      ]
+    }
+  },
+  "tasks": [
+    {
+      "task_id": "apache__dubbo-3855",
+      "image_ref": "ghcr.io/timesler/swe-polybench.eval.x86_64.apache__dubbo-3855:v1.1",
+      "language": "java",
+      "task_type": "Refactoring",
+      "repository": "apache/dubbo",
+      "patch_changes": 19,
+      "patch_size_tertile": "medium",
+      "qualification": {
+        "source": "pilot28_repeat_qualification",
+        "gold_observations": 3,
+        "gold_passes": 3,
+        "null_observations": 3,
+        "null_failures": 3,
+        "gold_verifier_seconds": 0.0,
+        "null_verifier_seconds": 0
+      }
+    },
+    {
+      "task_id": "google__guava-5696",
+      "image_ref": "ghcr.io/timesler/swe-polybench.eval.x86_64.google__guava-5696:v1.1",
+      "language": "java",
+      "task_type": "Bug Fix",
+      "repository": "google/guava",
+      "patch_changes": 4,
+      "patch_size_tertile": "small",
+      "qualification": {
+        "source": "candidate96",
+        "gold_observations": 3,
+        "gold_passes": 3,
+        "null_observations": 3,
+        "null_failures": 3,
+        "gold_verifier_seconds": 123.291237,
+        "null_verifier_seconds": 113.72251
+      }
+    },
+    {
+      "task_id": "apolloconfig__apollo-4464",
+      "image_ref": "ghcr.io/timesler/swe-polybench.eval.x86_64.apolloconfig__apollo-4464:v1.1",
+      "language": "java",
+      "task_type": "Feature",
+      "repository": "apolloconfig/apollo",
+      "patch_changes": 414,
+      "patch_size_tertile": "large",
+      "qualification": {
+        "source": "java_extension32",
+        "gold_observations": 3,
+        "gold_passes": 3,
+        "null_observations": 3,
+        "null_failures": 3,
+        "gold_verifier_seconds": 86.164477,
+        "null_verifier_seconds": 76.086014
+      }
+    },
+    {
+      "task_id": "google__gson-1989",
+      "image_ref": "ghcr.io/timesler/swe-polybench.eval.x86_64.google__gson-1989:v1.1",
+      "language": "java",
+      "task_type": "Bug Fix",
+      "repository": "google/gson",
+      "patch_changes": 16,
+      "patch_size_tertile": "medium",
+      "qualification": {
+        "source": "pilot28_repeat_qualification",
+        "gold_observations": 3,
+        "gold_passes": 3,
+        "null_observations": 3,
+        "null_failures": 3,
+        "gold_verifier_seconds": 0.0,
+        "null_verifier_seconds": 0
+      }
+    },
+    {
+      "task_id": "apache__rocketmq-7655",
+      "image_ref": "ghcr.io/timesler/swe-polybench.eval.x86_64.apache__rocketmq-7655:v1.1",
+      "language": "java",
+      "task_type": "Feature",
+      "repository": "apache/rocketmq",
+      "patch_changes": 11,
+      "patch_size_tertile": "small",
+      "qualification": {
+        "source": "candidate96",
+        "gold_observations": 3,
+        "gold_passes": 3,
+        "null_observations": 3,
+        "null_failures": 3,
+        "gold_verifier_seconds": 1457.041692,
+        "null_verifier_seconds": 111.160128
+      }
+    },
+    {
+      "task_id": "apache__rocketmq-7563",
+      "image_ref": "ghcr.io/timesler/swe-polybench.eval.x86_64.apache__rocketmq-7563:v1.1",
+      "language": "java",
+      "task_type": "Bug Fix",
+      "repository": "apache/rocketmq",
+      "patch_changes": 19,
+      "patch_size_tertile": "medium",
+      "qualification": {
+        "source": "java_extension32",
+        "gold_observations": 3,
+        "gold_passes": 3,
+        "null_observations": 3,
+        "null_failures": 3,
+        "gold_verifier_seconds": 1548.911261,
+        "null_verifier_seconds": 1324.721744
+      }
+    },
+    {
+      "task_id": "google__gson-2337",
+      "image_ref": "ghcr.io/timesler/swe-polybench.eval.x86_64.google__gson-2337:v1.1",
+      "language": "java",
+      "task_type": "Bug Fix",
+      "repository": "google/gson",
+      "patch_changes": 4,
+      "patch_size_tertile": "small",
+      "qualification": {
+        "source": "java_strata_extension7",
+        "gold_observations": 3,
+        "gold_passes": 3,
+        "null_observations": 3,
+        "null_failures": 3,
+        "gold_verifier_seconds": 223.050458,
+        "null_verifier_seconds": 95.725174
+      }
+    },
+    {
+      "task_id": "google__gson-2060",
+      "image_ref": "ghcr.io/timesler/swe-polybench.eval.x86_64.google__gson-2060:v1.1",
+      "language": "java",
+      "task_type": "Bug Fix",
+      "repository": "google/gson",
+      "patch_changes": 61,
+      "patch_size_tertile": "large",
+      "qualification": {
+        "source": "java_extension32",
+        "gold_observations": 3,
+        "gold_passes": 3,
+        "null_observations": 3,
+        "null_failures": 3,
+        "gold_verifier_seconds": 82.502581,
+        "null_verifier_seconds": 56.688826
+      }
+    },
+    {
+      "task_id": "google__guava-3971",
+      "image_ref": "ghcr.io/timesler/swe-polybench.eval.x86_64.google__guava-3971:v1.1",
+      "language": "java",
+      "task_type": "Feature",
+      "repository": "google/guava",
+      "patch_changes": 106,
+      "patch_size_tertile": "large",
+      "qualification": {
+        "source": "pilot28_repeat_qualification",
+        "gold_observations": 3,
+        "gold_passes": 3,
+        "null_observations": 3,
+        "null_failures": 3,
+        "gold_verifier_seconds": 0.0,
+        "null_verifier_seconds": 0
+      }
+    },
+    {
+      "task_id": "google__gson-2134",
+      "image_ref": "ghcr.io/timesler/swe-polybench.eval.x86_64.google__gson-2134:v1.1",
+      "language": "java",
+      "task_type": "Bug Fix",
+      "repository": "google/gson",
+      "patch_changes": 9,
+      "patch_size_tertile": "small",
+      "qualification": {
+        "source": "java_strata_extension7",
+        "gold_observations": 3,
+        "gold_passes": 3,
+        "null_observations": 3,
+        "null_failures": 3,
+        "gold_verifier_seconds": 81.414221,
+        "null_verifier_seconds": 53.096818
+      }
+    },
+    {
+      "task_id": "apolloconfig__apollo-4207",
+      "image_ref": "ghcr.io/timesler/swe-polybench.eval.x86_64.apolloconfig__apollo-4207:v1.1",
+      "language": "java",
+      "task_type": "Feature",
+      "repository": "apolloconfig/apollo",
+      "patch_changes": 46,
+      "patch_size_tertile": "large",
+      "qualification": {
+        "source": "java_extension32",
+        "gold_observations": 3,
+        "gold_passes": 3,
+        "null_observations": 3,
+        "null_failures": 3,
+        "gold_verifier_seconds": 75.901711,
+        "null_verifier_seconds": 69.301806
+      }
+    },
+    {
+      "task_id": "google__gson-2167",
+      "image_ref": "ghcr.io/timesler/swe-polybench.eval.x86_64.google__gson-2167:v1.1",
+      "language": "java",
+      "task_type": "Bug Fix",
+      "repository": "google/gson",
+      "patch_changes": 45,
+      "patch_size_tertile": "large",
+      "qualification": {
+        "source": "candidate96",
+        "gold_observations": 3,
+        "gold_passes": 3,
+        "null_observations": 3,
+        "null_failures": 3,
+        "gold_verifier_seconds": 79.57006,
+        "null_verifier_seconds": 42.345617
+      }
+    },
+    {
+      "task_id": "apolloconfig__apollo-4568",
+      "image_ref": "ghcr.io/timesler/swe-polybench.eval.x86_64.apolloconfig__apollo-4568:v1.1",
+      "language": "java",
+      "task_type": "Bug Fix",
+      "repository": "apolloconfig/apollo",
+      "patch_changes": 7,
+      "patch_size_tertile": "small",
+      "qualification": {
+        "source": "pilot28_repeat_qualification",
+        "gold_observations": 3,
+        "gold_passes": 3,
+        "null_observations": 3,
+        "null_failures": 3,
+        "gold_verifier_seconds": 0.0,
+        "null_verifier_seconds": 0
+      }
+    },
+    {
+      "task_id": "google__gson-2158",
+      "image_ref": "ghcr.io/timesler/swe-polybench.eval.x86_64.google__gson-2158:v1.1",
+      "language": "java",
+      "task_type": "Bug Fix",
+      "repository": "google/gson",
+      "patch_changes": 46,
+      "patch_size_tertile": "large",
+      "qualification": {
+        "source": "java_extension32",
+        "gold_observations": 3,
+        "gold_passes": 3,
+        "null_observations": 3,
+        "null_failures": 3,
+        "gold_verifier_seconds": 79.651988,
+        "null_verifier_seconds": 52.486152
+      }
+    },
+    {
+      "task_id": "apolloconfig__apollo-1894",
+      "image_ref": "ghcr.io/timesler/swe-polybench.eval.x86_64.apolloconfig__apollo-1894:v1.1",
+      "language": "java",
+      "task_type": "Bug Fix",
+      "repository": "apolloconfig/apollo",
+      "patch_changes": 26,
+      "patch_size_tertile": "medium",
+      "qualification": {
+        "source": "candidate96",
+        "gold_observations": 3,
+        "gold_passes": 3,
+        "null_observations": 3,
+        "null_failures": 3,
+        "gold_verifier_seconds": 99.139212,
+        "null_verifier_seconds": 99.007936
+      }
+    },
+    {
+      "task_id": "google__gson-1703",
+      "image_ref": "ghcr.io/timesler/swe-polybench.eval.x86_64.google__gson-1703:v1.1",
+      "language": "java",
+      "task_type": "Bug Fix",
+      "repository": "google/gson",
+      "patch_changes": 22,
+      "patch_size_tertile": "medium",
+      "qualification": {
+        "source": "java_strata_extension7",
+        "gold_observations": 3,
+        "gold_passes": 3,
+        "null_observations": 3,
+        "null_failures": 3,
+        "gold_verifier_seconds": 81.015948,
+        "null_verifier_seconds": 51.368983
+      }
+    },
+    {
+      "task_id": "serverless__serverless-6827",
+      "image_ref": "ghcr.io/timesler/swe-polybench.eval.x86_64.serverless__serverless-6827:v1.1",
+      "language": "javascript",
+      "task_type": "Bug Fix",
+      "repository": "serverless/serverless",
+      "patch_changes": 11,
+      "patch_size_tertile": "medium",
+      "qualification": {
+        "source": "pilot28_repeat_qualification",
+        "gold_observations": 3,
+        "gold_passes": 3,
+        "null_observations": 3,
+        "null_failures": 3,
+        "gold_verifier_seconds": 0.0,
+        "null_verifier_seconds": 0
+      }
+    },
+    {
+      "task_id": "sveltejs__svelte-630",
+      "image_ref": "ghcr.io/timesler/swe-polybench.eval.x86_64.sveltejs__svelte-630:v1.1",
+      "language": "javascript",
+      "task_type": "Bug Fix",
+      "repository": "sveltejs/svelte",
+      "patch_changes": 17,
+      "patch_size_tertile": "medium",
+      "qualification": {
+        "source": "pilot28_repeat_qualification",
+        "gold_observations": 3,
+        "gold_passes": 3,
+        "null_observations": 3,
+        "null_failures": 3,
+        "gold_verifier_seconds": 0.0,
+        "null_verifier_seconds": 0
+      }
+    },
+    {
+      "task_id": "prettier__prettier-6604",
+      "image_ref": "ghcr.io/timesler/swe-polybench.eval.x86_64.prettier__prettier-6604:v1.1",
+      "language": "javascript",
+      "task_type": "Bug Fix",
+      "repository": "prettier/prettier",
+      "patch_changes": 30,
+      "patch_size_tertile": "large",
+      "qualification": {
+        "source": "candidate96",
+        "gold_observations": 3,
+        "gold_passes": 3,
+        "null_observations": 3,
+        "null_failures": 3,
+        "gold_verifier_seconds": 15.052458,
+        "null_verifier_seconds": 17.598603
+      }
+    },
+    {
+      "task_id": "prettier__prettier-4667",
+      "image_ref": "ghcr.io/timesler/swe-polybench.eval.x86_64.prettier__prettier-4667:v1.1",
+      "language": "javascript",
+      "task_type": "Feature",
+      "repository": "prettier/prettier",
+      "patch_changes": 11,
+      "patch_size_tertile": "medium",
+      "qualification": {
+        "source": "candidate96",
+        "gold_observations": 3,
+        "gold_passes": 3,
+        "null_observations": 3,
+        "null_failures": 3,
+        "gold_verifier_seconds": 13.818525,
+        "null_verifier_seconds": 16.182395
+      }
+    },
+    {
+      "task_id": "sveltejs__svelte-4454",
+      "image_ref": "ghcr.io/timesler/swe-polybench.eval.x86_64.sveltejs__svelte-4454:v1.1",
+      "language": "javascript",
+      "task_type": "Bug Fix",
+      "repository": "sveltejs/svelte",
+      "patch_changes": 6,
+      "patch_size_tertile": "small",
+      "qualification": {
+        "source": "pilot28_repeat_qualification",
+        "gold_observations": 3,
+        "gold_passes": 3,
+        "null_observations": 3,
+        "null_failures": 3,
+        "gold_verifier_seconds": 0.0,
+        "null_verifier_seconds": 0
+      }
+    },
+    {
+      "task_id": "prettier__prettier-11637",
+      "image_ref": "ghcr.io/timesler/swe-polybench.eval.x86_64.prettier__prettier-11637:v1.1",
+      "language": "javascript",
+      "task_type": "Bug Fix",
+      "repository": "prettier/prettier",
+      "patch_changes": 68,
+      "patch_size_tertile": "large",
+      "qualification": {
+        "source": "candidate96",
+        "gold_observations": 3,
+        "gold_passes": 3,
+        "null_observations": 3,
+        "null_failures": 3,
+        "gold_verifier_seconds": 14.356195,
+        "null_verifier_seconds": 14.956469
+      }
+    },
+    {
+      "task_id": "serverless__serverless-2576",
+      "image_ref": "ghcr.io/timesler/swe-polybench.eval.x86_64.serverless__serverless-2576:v1.1",
+      "language": "javascript",
+      "task_type": "Bug Fix",
+      "repository": "serverless/serverless",
+      "patch_changes": 15,
+      "patch_size_tertile": "medium",
+      "qualification": {
+        "source": "candidate96",
+        "gold_observations": 3,
+        "gold_passes": 3,
+        "null_observations": 3,
+        "null_failures": 3,
+        "gold_verifier_seconds": 9.188608,
+        "null_verifier_seconds": 9.250943
+      }
+    },
+    {
+      "task_id": "serverless__serverless-5775",
+      "image_ref": "ghcr.io/timesler/swe-polybench.eval.x86_64.serverless__serverless-5775:v1.1",
+      "language": "javascript",
+      "task_type": "Bug Fix",
+      "repository": "serverless/serverless",
+      "patch_changes": 2,
+      "patch_size_tertile": "small",
+      "qualification": {
+        "source": "pilot28_repeat_qualification",
+        "gold_observations": 3,
+        "gold_passes": 3,
+        "null_observations": 3,
+        "null_failures": 3,
+        "gold_verifier_seconds": 0.0,
+        "null_verifier_seconds": 0
+      }
+    },
+    {
+      "task_id": "prettier__prettier-9850",
+      "image_ref": "ghcr.io/timesler/swe-polybench.eval.x86_64.prettier__prettier-9850:v1.1",
+      "language": "javascript",
+      "task_type": "Bug Fix",
+      "repository": "prettier/prettier",
+      "patch_changes": 38,
+      "patch_size_tertile": "large",
+      "qualification": {
+        "source": "pilot28_repeat_qualification",
+        "gold_observations": 3,
+        "gold_passes": 3,
+        "null_observations": 3,
+        "null_failures": 3,
+        "gold_verifier_seconds": 0.0,
+        "null_verifier_seconds": 0
+      }
+    },
+    {
+      "task_id": "sveltejs__svelte-1227",
+      "image_ref": "ghcr.io/timesler/swe-polybench.eval.x86_64.sveltejs__svelte-1227:v1.1",
+      "language": "javascript",
+      "task_type": "Bug Fix",
+      "repository": "sveltejs/svelte",
+      "patch_changes": 4,
+      "patch_size_tertile": "small",
+      "qualification": {
+        "source": "pilot28_repeat_qualification",
+        "gold_observations": 3,
+        "gold_passes": 3,
+        "null_observations": 3,
+        "null_failures": 3,
+        "gold_verifier_seconds": 0.0,
+        "null_verifier_seconds": 0
+      }
+    },
+    {
+      "task_id": "prettier__prettier-3515",
+      "image_ref": "ghcr.io/timesler/swe-polybench.eval.x86_64.prettier__prettier-3515:v1.1",
+      "language": "javascript",
+      "task_type": "Bug Fix",
+      "repository": "prettier/prettier",
+      "patch_changes": 59,
+      "patch_size_tertile": "large",
+      "qualification": {
+        "source": "candidate96",
+        "gold_observations": 3,
+        "gold_passes": 3,
+        "null_observations": 3,
+        "null_failures": 3,
+        "gold_verifier_seconds": 12.556307,
+        "null_verifier_seconds": 17.115268
+      }
+    },
+    {
+      "task_id": "serverless__serverless-2952",
+      "image_ref": "ghcr.io/timesler/swe-polybench.eval.x86_64.serverless__serverless-2952:v1.1",
+      "language": "javascript",
+      "task_type": "Bug Fix",
+      "repository": "serverless/serverless",
+      "patch_changes": 81,
+      "patch_size_tertile": "large",
+      "qualification": {
+        "source": "pilot28_repeat_qualification",
+        "gold_observations": 3,
+        "gold_passes": 3,
+        "null_observations": 3,
+        "null_failures": 3,
+        "gold_verifier_seconds": 0.0,
+        "null_verifier_seconds": 0
+      }
+    },
+    {
+      "task_id": "sveltejs__svelte-6564",
+      "image_ref": "ghcr.io/timesler/swe-polybench.eval.x86_64.sveltejs__svelte-6564:v1.1",
+      "language": "javascript",
+      "task_type": "Feature",
+      "repository": "sveltejs/svelte",
+      "patch_changes": 20,
+      "patch_size_tertile": "medium",
+      "qualification": {
+        "source": "pilot28_repeat_qualification",
+        "gold_observations": 3,
+        "gold_passes": 3,
+        "null_observations": 3,
+        "null_failures": 3,
+        "gold_verifier_seconds": 0.0,
+        "null_verifier_seconds": 0
+      }
+    },
+    {
+      "task_id": "mrdoob__three.js-14836",
+      "image_ref": "ghcr.io/timesler/swe-polybench.eval.x86_64.mrdoob__three.js-14836:v1.1",
+      "language": "javascript",
+      "task_type": "Bug Fix",
+      "repository": "mrdoob/three.js",
+      "patch_changes": 2,
+      "patch_size_tertile": "small",
+      "qualification": {
+        "source": "pilot28_repeat_qualification",
+        "gold_observations": 3,
+        "gold_passes": 3,
+        "null_observations": 3,
+        "null_failures": 3,
+        "gold_verifier_seconds": 0.0,
+        "null_verifier_seconds": 0
+      }
+    },
+    {
+      "task_id": "serverless__serverless-2842",
+      "image_ref": "ghcr.io/timesler/swe-polybench.eval.x86_64.serverless__serverless-2842:v1.1",
+      "language": "javascript",
+      "task_type": "Feature",
+      "repository": "serverless/serverless",
+      "patch_changes": 6,
+      "patch_size_tertile": "small",
+      "qualification": {
+        "source": "candidate96",
+        "gold_observations": 3,
+        "gold_passes": 3,
+        "null_observations": 3,
+        "null_failures": 3,
+        "gold_verifier_seconds": 9.861893,
+        "null_verifier_seconds": 10.220704
+      }
+    },
+    {
+      "task_id": "sveltejs__svelte-6525",
+      "image_ref": "ghcr.io/timesler/swe-polybench.eval.x86_64.sveltejs__svelte-6525:v1.1",
+      "language": "javascript",
+      "task_type": "Refactoring",
+      "repository": "sveltejs/svelte",
+      "patch_changes": 76,
+      "patch_size_tertile": "large",
+      "qualification": {
+        "source": "candidate96",
+        "gold_observations": 3,
+        "gold_passes": 3,
+        "null_observations": 3,
+        "null_failures": 3,
+        "gold_verifier_seconds": 113.379173,
+        "null_verifier_seconds": 109.492778
+      }
+    },
+    {
+      "task_id": "huggingface__transformers-21345",
+      "image_ref": "ghcr.io/timesler/swe-polybench.eval.x86_64.huggingface__transformers-21345:v1.1",
+      "language": "python",
+      "task_type": "Feature",
+      "repository": "huggingface/transformers",
+      "patch_changes": 22,
+      "patch_size_tertile": "medium",
+      "qualification": {
+        "source": "pilot28_repeat_qualification",
+        "gold_observations": 3,
+        "gold_passes": 3,
+        "null_observations": 3,
+        "null_failures": 3,
+        "gold_verifier_seconds": 0.0,
+        "null_verifier_seconds": 0
+      }
+    },
+    {
+      "task_id": "langchain-ai__langchain-5625",
+      "image_ref": "ghcr.io/timesler/swe-polybench.eval.x86_64.langchain-ai__langchain-5625:v1.1",
+      "language": "python",
+      "task_type": "Bug Fix",
+      "repository": "langchain-ai/langchain",
+      "patch_changes": 32,
+      "patch_size_tertile": "large",
+      "qualification": {
+        "source": "pilot28_repeat_qualification",
+        "gold_observations": 3,
+        "gold_passes": 3,
+        "null_observations": 3,
+        "null_failures": 3,
+        "gold_verifier_seconds": 0.0,
+        "null_verifier_seconds": 0
+      }
+    },
+    {
+      "task_id": "langchain-ai__langchain-3367",
+      "image_ref": "ghcr.io/timesler/swe-polybench.eval.x86_64.langchain-ai__langchain-3367:v1.1",
+      "language": "python",
+      "task_type": "Bug Fix",
+      "repository": "langchain-ai/langchain",
+      "patch_changes": 4,
+      "patch_size_tertile": "small",
+      "qualification": {
+        "source": "pilot28_repeat_qualification",
+        "gold_observations": 3,
+        "gold_passes": 3,
+        "null_observations": 3,
+        "null_failures": 3,
+        "gold_verifier_seconds": 0.0,
+        "null_verifier_seconds": 0
+      }
+    },
+    {
+      "task_id": "langchain-ai__langchain-19331",
+      "image_ref": "ghcr.io/timesler/swe-polybench.eval.x86_64.langchain-ai__langchain-19331:v1.1",
+      "language": "python",
+      "task_type": "Feature",
+      "repository": "langchain-ai/langchain",
+      "patch_changes": 84,
+      "patch_size_tertile": "large",
+      "qualification": {
+        "source": "candidate96",
+        "gold_observations": 3,
+        "gold_passes": 3,
+        "null_observations": 3,
+        "null_failures": 3,
+        "gold_verifier_seconds": 12.501514,
+        "null_verifier_seconds": 12.887942
+      }
+    },
+    {
+      "task_id": "langchain-ai__langchain-4646",
+      "image_ref": "ghcr.io/timesler/swe-polybench.eval.x86_64.langchain-ai__langchain-4646:v1.1",
+      "language": "python",
+      "task_type": "Bug Fix",
+      "repository": "langchain-ai/langchain",
+      "patch_changes": 2,
+      "patch_size_tertile": "small",
+      "qualification": {
+        "source": "candidate96",
+        "gold_observations": 3,
+        "gold_passes": 3,
+        "null_observations": 3,
+        "null_failures": 3,
+        "gold_verifier_seconds": 11.819323,
+        "null_verifier_seconds": 12.734719
+      }
+    },
+    {
+      "task_id": "keras-team__keras-19863",
+      "image_ref": "ghcr.io/timesler/swe-polybench.eval.x86_64.keras-team__keras-19863:v1.1",
+      "language": "python",
+      "task_type": "Bug Fix",
+      "repository": "keras-team/keras",
+      "patch_changes": 24,
+      "patch_size_tertile": "medium",
+      "qualification": {
+        "source": "candidate96",
+        "gold_observations": 3,
+        "gold_passes": 3,
+        "null_observations": 3,
+        "null_failures": 3,
+        "gold_verifier_seconds": 18.725914,
+        "null_verifier_seconds": 19.238054
+      }
+    },
+    {
+      "task_id": "keras-team__keras-20002",
+      "image_ref": "ghcr.io/timesler/swe-polybench.eval.x86_64.keras-team__keras-20002:v1.1",
+      "language": "python",
+      "task_type": "Bug Fix",
+      "repository": "keras-team/keras",
+      "patch_changes": 17,
+      "patch_size_tertile": "medium",
+      "qualification": {
+        "source": "candidate96",
+        "gold_observations": 3,
+        "gold_passes": 3,
+        "null_observations": 3,
+        "null_failures": 3,
+        "gold_verifier_seconds": 19.959609,
+        "null_verifier_seconds": 22.151446
+      }
+    },
+    {
+      "task_id": "yt-dlp__yt-dlp-5195",
+      "image_ref": "ghcr.io/timesler/swe-polybench.eval.x86_64.yt-dlp__yt-dlp-5195:v1.1",
+      "language": "python",
+      "task_type": "Bug Fix",
+      "repository": "yt-dlp/yt-dlp",
+      "patch_changes": 30,
+      "patch_size_tertile": "large",
+      "qualification": {
+        "source": "candidate96",
+        "gold_observations": 3,
+        "gold_passes": 3,
+        "null_observations": 3,
+        "null_failures": 3,
+        "gold_verifier_seconds": 8.83858,
+        "null_verifier_seconds": 9.208727
+      }
+    },
+    {
+      "task_id": "huggingface__transformers-26164",
+      "image_ref": "ghcr.io/timesler/swe-polybench.eval.x86_64.huggingface__transformers-26164:v1.1",
+      "language": "python",
+      "task_type": "Bug Fix",
+      "repository": "huggingface/transformers",
+      "patch_changes": 11,
+      "patch_size_tertile": "medium",
+      "qualification": {
+        "source": "pilot28_repeat_qualification",
+        "gold_observations": 3,
+        "gold_passes": 3,
+        "null_observations": 3,
+        "null_failures": 3,
+        "gold_verifier_seconds": 0.0,
+        "null_verifier_seconds": 0
+      }
+    },
+    {
+      "task_id": "yt-dlp__yt-dlp-4841",
+      "image_ref": "ghcr.io/timesler/swe-polybench.eval.x86_64.yt-dlp__yt-dlp-4841:v1.1",
+      "language": "python",
+      "task_type": "Bug Fix",
+      "repository": "yt-dlp/yt-dlp",
+      "patch_changes": 2,
+      "patch_size_tertile": "small",
+      "qualification": {
+        "source": "candidate96",
+        "gold_observations": 3,
+        "gold_passes": 3,
+        "null_observations": 3,
+        "null_failures": 3,
+        "gold_verifier_seconds": 10.094413,
+        "null_verifier_seconds": 9.090594
+      }
+    },
+    {
+      "task_id": "huggingface__transformers-27463",
+      "image_ref": "ghcr.io/timesler/swe-polybench.eval.x86_64.huggingface__transformers-27463:v1.1",
+      "language": "python",
+      "task_type": "Feature",
+      "repository": "huggingface/transformers",
+      "patch_changes": 308,
+      "patch_size_tertile": "large",
+      "qualification": {
+        "source": "pilot28_repeat_qualification",
+        "gold_observations": 3,
+        "gold_passes": 3,
+        "null_observations": 3,
+        "null_failures": 3,
+        "gold_verifier_seconds": 0.0,
+        "null_verifier_seconds": 0
+      }
+    },
+    {
+      "task_id": "huggingface__transformers-22458",
+      "image_ref": "ghcr.io/timesler/swe-polybench.eval.x86_64.huggingface__transformers-22458:v1.1",
+      "language": "python",
+      "task_type": "Bug Fix",
+      "repository": "huggingface/transformers",
+      "patch_changes": 53,
+      "patch_size_tertile": "large",
+      "qualification": {
+        "source": "pilot28_repeat_qualification",
+        "gold_observations": 3,
+        "gold_passes": 3,
+        "null_observations": 3,
+        "null_failures": 3,
+        "gold_verifier_seconds": 0.0,
+        "null_verifier_seconds": 0
+      }
+    },
+    {
+      "task_id": "yt-dlp__yt-dlp-9862",
+      "image_ref": "ghcr.io/timesler/swe-polybench.eval.x86_64.yt-dlp__yt-dlp-9862:v1.1",
+      "language": "python",
+      "task_type": "Bug Fix",
+      "repository": "yt-dlp/yt-dlp",
+      "patch_changes": 10,
+      "patch_size_tertile": "medium",
+      "qualification": {
+        "source": "pilot28_repeat_qualification",
+        "gold_observations": 3,
+        "gold_passes": 3,
+        "null_observations": 3,
+        "null_failures": 3,
+        "gold_verifier_seconds": 0.0,
+        "null_verifier_seconds": 0
+      }
+    },
+    {
+      "task_id": "huggingface__transformers-23796",
+      "image_ref": "ghcr.io/timesler/swe-polybench.eval.x86_64.huggingface__transformers-23796:v1.1",
+      "language": "python",
+      "task_type": "Bug Fix",
+      "repository": "huggingface/transformers",
+      "patch_changes": 4,
+      "patch_size_tertile": "small",
+      "qualification": {
+        "source": "pilot28_repeat_qualification",
+        "gold_observations": 3,
+        "gold_passes": 3,
+        "null_observations": 3,
+        "null_failures": 3,
+        "gold_verifier_seconds": 0.0,
+        "null_verifier_seconds": 0
+      }
+    },
+    {
+      "task_id": "keras-team__keras-18871",
+      "image_ref": "ghcr.io/timesler/swe-polybench.eval.x86_64.keras-team__keras-18871:v1.1",
+      "language": "python",
+      "task_type": "Refactoring",
+      "repository": "keras-team/keras",
+      "patch_changes": 99,
+      "patch_size_tertile": "large",
+      "qualification": {
+        "source": "candidate96",
+        "gold_observations": 3,
+        "gold_passes": 3,
+        "null_observations": 3,
+        "null_failures": 3,
+        "gold_verifier_seconds": 21.330033,
+        "null_verifier_seconds": 21.990202
+      }
+    },
+    {
+      "task_id": "keras-team__keras-19773",
+      "image_ref": "ghcr.io/timesler/swe-polybench.eval.x86_64.keras-team__keras-19773:v1.1",
+      "language": "python",
+      "task_type": "Bug Fix",
+      "repository": "keras-team/keras",
+      "patch_changes": 2,
+      "patch_size_tertile": "small",
+      "qualification": {
+        "source": "pilot28_repeat_qualification",
+        "gold_observations": 3,
+        "gold_passes": 3,
+        "null_observations": 3,
+        "null_failures": 3,
+        "gold_verifier_seconds": 0.0,
+        "null_verifier_seconds": 0
+      }
+    },
+    {
+      "task_id": "mui__material-ui-25874",
+      "image_ref": "ghcr.io/timesler/swe-polybench.eval.x86_64.mui__material-ui-25874:v1.1",
+      "language": "typescript",
+      "task_type": "Feature",
+      "repository": "mui/material-ui",
+      "patch_changes": 292,
+      "patch_size_tertile": "large",
+      "qualification": {
+        "source": "candidate96",
+        "gold_observations": 3,
+        "gold_passes": 3,
+        "null_observations": 3,
+        "null_failures": 3,
+        "gold_verifier_seconds": 19.458124,
+        "null_verifier_seconds": 20.242785
+      }
+    },
+    {
+      "task_id": "mui__material-ui-15359",
+      "image_ref": "ghcr.io/timesler/swe-polybench.eval.x86_64.mui__material-ui-15359:v1.1",
+      "language": "typescript",
+      "task_type": "Bug Fix",
+      "repository": "mui/material-ui",
+      "patch_changes": 5,
+      "patch_size_tertile": "small",
+      "qualification": {
+        "source": "candidate96",
+        "gold_observations": 3,
+        "gold_passes": 3,
+        "null_observations": 3,
+        "null_failures": 3,
+        "gold_verifier_seconds": 15.027999,
+        "null_verifier_seconds": 21.993897
+      }
+    },
+    {
+      "task_id": "coder__code-server-6278",
+      "image_ref": "ghcr.io/timesler/swe-polybench.eval.x86_64.coder__code-server-6278:v1.1",
+      "language": "typescript",
+      "task_type": "Bug Fix",
+      "repository": "coder/code-server",
+      "patch_changes": 15,
+      "patch_size_tertile": "medium",
+      "qualification": {
+        "source": "pilot28_repeat_qualification",
+        "gold_observations": 3,
+        "gold_passes": 3,
+        "null_observations": 3,
+        "null_failures": 3,
+        "gold_verifier_seconds": 0.0,
+        "null_verifier_seconds": 0
+      }
+    },
+    {
+      "task_id": "tailwindlabs__tailwindcss-116",
+      "image_ref": "ghcr.io/timesler/swe-polybench.eval.x86_64.tailwindlabs__tailwindcss-116:v1.1",
+      "language": "typescript",
+      "task_type": "Bug Fix",
+      "repository": "tailwindlabs/tailwindcss",
+      "patch_changes": 75,
+      "patch_size_tertile": "large",
+      "qualification": {
+        "source": "candidate96",
+        "gold_observations": 3,
+        "gold_passes": 3,
+        "null_observations": 3,
+        "null_failures": 3,
+        "gold_verifier_seconds": 31.175393,
+        "null_verifier_seconds": 31.36941
+      }
+    },
+    {
+      "task_id": "mui__material-ui-13690",
+      "image_ref": "ghcr.io/timesler/swe-polybench.eval.x86_64.mui__material-ui-13690:v1.1",
+      "language": "typescript",
+      "task_type": "Bug Fix",
+      "repository": "mui/material-ui",
+      "patch_changes": 8,
+      "patch_size_tertile": "small",
+      "qualification": {
+        "source": "candidate96",
+        "gold_observations": 3,
+        "gold_passes": 3,
+        "null_observations": 3,
+        "null_failures": 3,
+        "gold_verifier_seconds": 14.345217,
+        "null_verifier_seconds": 14.374964
+      }
+    },
+    {
+      "task_id": "tailwindlabs__tailwindcss-550",
+      "image_ref": "ghcr.io/timesler/swe-polybench.eval.x86_64.tailwindlabs__tailwindcss-550:v1.1",
+      "language": "typescript",
+      "task_type": "Bug Fix",
+      "repository": "tailwindlabs/tailwindcss",
+      "patch_changes": 6,
+      "patch_size_tertile": "small",
+      "qualification": {
+        "source": "pilot28_repeat_qualification",
+        "gold_observations": 3,
+        "gold_passes": 3,
+        "null_observations": 3,
+        "null_failures": 3,
+        "gold_verifier_seconds": 0.0,
+        "null_verifier_seconds": 0
+      }
+    },
+    {
+      "task_id": "mui__material-ui-34610",
+      "image_ref": "ghcr.io/timesler/swe-polybench.eval.x86_64.mui__material-ui-34610:v1.1",
+      "language": "typescript",
+      "task_type": "Bug Fix",
+      "repository": "mui/material-ui",
+      "patch_changes": 2,
+      "patch_size_tertile": "small",
+      "qualification": {
+        "source": "candidate96",
+        "gold_observations": 3,
+        "gold_passes": 3,
+        "null_observations": 3,
+        "null_failures": 3,
+        "gold_verifier_seconds": 21.981414,
+        "null_verifier_seconds": 23.701906
+      }
+    },
+    {
+      "task_id": "mui__material-ui-14882",
+      "image_ref": "ghcr.io/timesler/swe-polybench.eval.x86_64.mui__material-ui-14882:v1.1",
+      "language": "typescript",
+      "task_type": "Bug Fix",
+      "repository": "mui/material-ui",
+      "patch_changes": 24,
+      "patch_size_tertile": "medium",
+      "qualification": {
+        "source": "candidate96",
+        "gold_observations": 3,
+        "gold_passes": 3,
+        "null_observations": 3,
+        "null_failures": 3,
+        "gold_verifier_seconds": 13.668776,
+        "null_verifier_seconds": 14.015097
+      }
+    },
+    {
+      "task_id": "mui__material-ui-15534",
+      "image_ref": "ghcr.io/timesler/swe-polybench.eval.x86_64.mui__material-ui-15534:v1.1",
+      "language": "typescript",
+      "task_type": "Bug Fix",
+      "repository": "mui/material-ui",
+      "patch_changes": 28,
+      "patch_size_tertile": "medium",
+      "qualification": {
+        "source": "pilot28_repeat_qualification",
+        "gold_observations": 3,
+        "gold_passes": 3,
+        "null_observations": 3,
+        "null_failures": 3,
+        "gold_verifier_seconds": 0.0,
+        "null_verifier_seconds": 0
+      }
+    },
+    {
+      "task_id": "tailwindlabs__tailwindcss-853",
+      "image_ref": "ghcr.io/timesler/swe-polybench.eval.x86_64.tailwindlabs__tailwindcss-853:v1.1",
+      "language": "typescript",
+      "task_type": "Feature",
+      "repository": "tailwindlabs/tailwindcss",
+      "patch_changes": 114,
+      "patch_size_tertile": "large",
+      "qualification": {
+        "source": "pilot28_repeat_qualification",
+        "gold_observations": 3,
+        "gold_passes": 3,
+        "null_observations": 3,
+        "null_failures": 3,
+        "gold_verifier_seconds": 0.0,
+        "null_verifier_seconds": 0
+      }
+    },
+    {
+      "task_id": "microsoft__vscode-189223",
+      "image_ref": "ghcr.io/timesler/swe-polybench.eval.x86_64.microsoft__vscode-189223:v1.1",
+      "language": "typescript",
+      "task_type": "Bug Fix",
+      "repository": "microsoft/vscode",
+      "patch_changes": 6,
+      "patch_size_tertile": "small",
+      "qualification": {
+        "source": "pilot28_repeat_qualification",
+        "gold_observations": 3,
+        "gold_passes": 3,
+        "null_observations": 3,
+        "null_failures": 3,
+        "gold_verifier_seconds": 0.0,
+        "null_verifier_seconds": 0
+      }
+    },
+    {
+      "task_id": "coder__code-server-3277",
+      "image_ref": "ghcr.io/timesler/swe-polybench.eval.x86_64.coder__code-server-3277:v1.1",
+      "language": "typescript",
+      "task_type": "Bug Fix",
+      "repository": "coder/code-server",
+      "patch_changes": 188,
+      "patch_size_tertile": "large",
+      "qualification": {
+        "source": "candidate96",
+        "gold_observations": 3,
+        "gold_passes": 3,
+        "null_observations": 3,
+        "null_failures": 3,
+        "gold_verifier_seconds": 132.084828,
+        "null_verifier_seconds": 141.387044
+      }
+    },
+    {
+      "task_id": "coder__code-server-4923",
+      "image_ref": "ghcr.io/timesler/swe-polybench.eval.x86_64.coder__code-server-4923:v1.1",
+      "language": "typescript",
+      "task_type": "Feature",
+      "repository": "coder/code-server",
+      "patch_changes": 18,
+      "patch_size_tertile": "medium",
+      "qualification": {
+        "source": "candidate96",
+        "gold_observations": 3,
+        "gold_passes": 3,
+        "null_observations": 3,
+        "null_failures": 3,
+        "gold_verifier_seconds": 53.656149,
+        "null_verifier_seconds": 60.03058
+      }
+    },
+    {
+      "task_id": "mui__material-ui-11858",
+      "image_ref": "ghcr.io/timesler/swe-polybench.eval.x86_64.mui__material-ui-11858:v1.1",
+      "language": "typescript",
+      "task_type": "Feature",
+      "repository": "mui/material-ui",
+      "patch_changes": 21,
+      "patch_size_tertile": "medium",
+      "qualification": {
+        "source": "candidate96",
+        "gold_observations": 3,
+        "gold_passes": 3,
+        "null_observations": 3,
+        "null_failures": 3,
+        "gold_verifier_seconds": 12.703877,
+        "null_verifier_seconds": 13.323015
+      }
+    },
+    {
+      "task_id": "mui__material-ui-19072",
+      "image_ref": "ghcr.io/timesler/swe-polybench.eval.x86_64.mui__material-ui-19072:v1.1",
+      "language": "typescript",
+      "task_type": "Bug Fix",
+      "repository": "mui/material-ui",
+      "patch_changes": 18,
+      "patch_size_tertile": "medium",
+      "qualification": {
+        "source": "pilot28_repeat_qualification",
+        "gold_observations": 3,
+        "gold_passes": 3,
+        "null_observations": 3,
+        "null_failures": 3,
+        "gold_verifier_seconds": 0.0,
+        "null_verifier_seconds": 0
+      }
+    },
+    {
+      "task_id": "mui__material-ui-17301",
+      "image_ref": "ghcr.io/timesler/swe-polybench.eval.x86_64.mui__material-ui-17301:v1.1",
+      "language": "typescript",
+      "task_type": "Refactoring",
+      "repository": "mui/material-ui",
+      "patch_changes": 1039,
+      "patch_size_tertile": "large",
+      "qualification": {
+        "source": "candidate96",
+        "gold_observations": 3,
+        "gold_passes": 3,
+        "null_observations": 3,
+        "null_failures": 3,
+        "gold_verifier_seconds": 19.238934,
+        "null_verifier_seconds": 20.127889
+      }
+    }
+  ]
+}

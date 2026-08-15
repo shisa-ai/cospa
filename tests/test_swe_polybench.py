@@ -1,13 +1,17 @@
 import ast
 import concurrent.futures
 import csv
+import hashlib
 import json
+import runpy
 import tomllib
+from collections import Counter
 from pathlib import Path
 
 import pytest
 
 from harness.suites import load_suite
+from harness.suites import swe_polybench as swe_polybench_module
 from harness.suites.swe_polybench import (
     SwePolyBenchVerifiedSuite,
     parse_polybench_test_output,
@@ -24,6 +28,225 @@ def selected_row(instance_id="google__gson-1989"):
             if row["instance_id"] == instance_id:
                 return row
     raise AssertionError(instance_id)
+
+
+def test_balanced_candidate96_is_nested_and_outcome_blind():
+    manifest = json.loads(
+        (ROOT / "configs/swe_polybench_balanced_candidate96_v1.json").read_text()
+    )
+    manifest_path = ROOT / "configs/swe_polybench_balanced_candidate96_v1.json"
+    image_lock = json.loads(
+        (ROOT / "configs/swe_polybench_balanced_candidate96_images_v1.json").read_text()
+    )
+    tasks = manifest["tasks"]
+    nested64 = [
+        task for task in tasks
+        if task["panel_membership"] == "balanced64_candidate"
+    ]
+    pilot_ids = set(SwePolyBenchVerifiedSuite().get_task_ids(ROOT / "vendor"))
+
+    selector = runpy.run_path(str(ROOT / "scripts/select-polybench-panel.py"))
+    assert selector["build_manifest"]() == manifest
+    assert image_lock["source_manifest_sha256"] == hashlib.sha256(
+        manifest_path.read_bytes()
+    ).hexdigest()
+    assert len(image_lock["images"]) == 96
+    assert manifest["selection"]["outcome_blind"] is True
+    assert manifest["selection"]["excludes_target_model_outcomes"] is True
+    assert len(tasks) == len({task["task_id"] for task in tasks}) == 96
+    assert len(nested64) == 64
+    assert pilot_ids.issubset(task["task_id"] for task in nested64)
+    assert not set(manifest["selection"]["prior_mechanical_exclusions"]).intersection(
+        task["task_id"] for task in tasks
+    )
+    assert {task["language"] for task in tasks} == {
+        "java", "javascript", "python", "typescript"
+    }
+    for language in ("java", "javascript", "python", "typescript"):
+        language96 = [task for task in tasks if task["language"] == language]
+        language64 = [task for task in nested64 if task["language"] == language]
+        assert len(language96) == 24
+        assert len(language64) == 16
+        assert sorted(
+            sum(task["patch_size_tertile"] == tertile for task in language64)
+            for tertile in ("small", "medium", "large")
+        ) == [5, 5, 6]
+        assert all("passed" not in task and "resolved" not in task for task in language96)
+
+
+def test_balanced_java_extension32_is_outcome_blind_and_disjoint():
+    candidate = json.loads(
+        (ROOT / "configs/swe_polybench_balanced_candidate96_v1.json").read_text()
+    )
+    extension = json.loads(
+        (ROOT / "configs/swe_polybench_balanced_java_extension32_v1.json").read_text()
+    )
+    tasks = extension["tasks"]
+    candidate_ids = {task["task_id"] for task in candidate["tasks"]}
+
+    assert extension["selection"]["outcome_blind"] is True
+    assert extension["selection"]["uses_target_model_outcomes"] is False
+    assert len(tasks) == len({task["task_id"] for task in tasks}) == 32
+    assert all(task["language"] == "java" for task in tasks)
+    assert candidate_ids.isdisjoint(task["task_id"] for task in tasks)
+    assert Counter(task["task_type"] for task in tasks) == Counter(
+        {"Bug Fix": 20, "Feature": 8, "Refactoring": 4}
+    )
+    assert Counter(task["patch_size_tertile"] for task in tasks) == Counter(
+        {"small": 10, "medium": 11, "large": 11}
+    )
+    assert max(Counter(task["repository"] for task in tasks).values()) <= 10
+    suite_class = getattr(
+        swe_polybench_module, "SwePolyBenchBalancedJavaExtension32Suite", None
+    )
+    assert suite_class is not None, "Java extension32 suite is not implemented"
+    suite = suite_class()
+    assert suite.get_task_ids(ROOT / "vendor") == [
+        task["task_id"] for task in tasks
+    ]
+
+
+def test_balanced_java_strata_extension7_is_outcome_blind_and_disjoint():
+    candidate_paths = (
+        ROOT / "configs/swe_polybench_balanced_candidate96_v1.json",
+        ROOT / "configs/swe_polybench_balanced_java_extension32_v1.json",
+    )
+    manifest_path = (
+        ROOT / "configs/swe_polybench_balanced_java_strata_extension7_v1.json"
+    )
+    extension = json.loads(manifest_path.read_text())
+    image_lock = json.loads(
+        (
+            ROOT
+            / "configs/swe_polybench_balanced_java_strata_extension7_images_v1.json"
+        ).read_text()
+    )
+    tasks = extension["tasks"]
+    prior_ids = {
+        task["task_id"]
+        for path in candidate_paths
+        for task in json.loads(path.read_text())["tasks"]
+    }
+
+    selector = runpy.run_path(str(ROOT / "scripts/select-polybench-panel.py"))
+    assert selector["build_java_strata_extension_manifest"]() == extension
+    assert image_lock["source_manifest_sha256"] == hashlib.sha256(
+        manifest_path.read_bytes()
+    ).hexdigest()
+    assert extension["selection"]["outcome_blind"] is True
+    assert extension["selection"]["uses_target_model_outcomes"] is False
+    assert len(tasks) == len({task["task_id"] for task in tasks}) == 7
+    assert prior_ids.isdisjoint(task["task_id"] for task in tasks)
+    assert all(task["language"] == "java" for task in tasks)
+    assert Counter(task["patch_size_tertile"] for task in tasks) == Counter(
+        {"small": 4, "medium": 3}
+    )
+    assert all(task["task_type"] == "Bug Fix" for task in tasks)
+    suite_class = getattr(
+        swe_polybench_module,
+        "SwePolyBenchBalancedJavaStrataExtension7Suite",
+        None,
+    )
+    assert suite_class is not None, "Java strata extension7 suite is not implemented"
+    assert suite_class().get_task_ids(ROOT / "vendor") == [
+        task["task_id"] for task in tasks
+    ]
+
+
+def test_balanced64_is_repeat_qualified_and_loadable():
+    manifest = json.loads(
+        (ROOT / "configs/swe_polybench_verified_balanced64_v1.json").read_text()
+    )
+    image_lock = json.loads(
+        (
+            ROOT
+            / "configs/swe_polybench_verified_balanced64_images_v1.json"
+        ).read_text()
+    )
+    ledger = json.loads(
+        (ROOT / "configs/swe_polybench_balanced_qualification_v1.json").read_text()
+    )
+    finalizer = runpy.run_path(
+        str(ROOT / "scripts/finalize-polybench-panel.py")
+    )
+    expected_manifest, expected_image_lock = finalizer["build_outputs"]()
+    tasks = manifest["tasks"]
+    pilot_ids = set(SwePolyBenchVerifiedSuite().get_task_ids(ROOT / "vendor"))
+
+    assert expected_manifest == manifest
+    assert expected_image_lock == image_lock
+    assert len(ledger["tasks"]) == 135
+    assert ledger["summary"]["gold_stable_candidates"] == 82
+    assert ledger["summary"]["repeat_qualified_candidates"] == 64
+    assert ledger["summary"]["selected_nonpilot_null_resolved"] == 0
+    assert image_lock["source_manifest_sha256"] == hashlib.sha256(
+        (
+            ROOT / "configs/swe_polybench_verified_balanced64_v1.json"
+        ).read_bytes()
+    ).hexdigest()
+    assert manifest["selection"]["uses_target_model_outcomes"] is False
+    assert manifest["qualification"]["observations_per_condition"] == 3
+    assert manifest["qualification"]["gold_passed"] == 64 * 3
+    assert manifest["qualification"]["null_failed"] == 64 * 3
+    assert len(tasks) == len({task["task_id"] for task in tasks}) == 64
+    assert pilot_ids.issubset(task["task_id"] for task in tasks)
+    assert len(image_lock["images"]) == 64
+    verifier_limit = manifest["selection"][
+        "verifier_outlier_seconds_per_observation"
+    ]
+    assert all(
+        task["qualification"]["gold_verifier_seconds"]
+        / task["qualification"]["gold_observations"]
+        <= verifier_limit
+        for task in tasks
+    )
+
+    caps = manifest["selection"]["repository_caps"]
+    type_targets = manifest["selection"]["task_type_targets"]
+    size_targets = manifest["selection"]["patch_size_targets"]
+    for language in ("java", "javascript", "python", "typescript"):
+        selected = [task for task in tasks if task["language"] == language]
+        assert len(selected) == 16
+        assert Counter(task["task_type"] for task in selected) == Counter(
+            type_targets[language]
+        )
+        assert set(type_targets[language]) == {"Bug Fix", "Feature", "Refactoring"}
+        assert Counter(task["patch_size_tertile"] for task in selected) == Counter(
+            size_targets[language]
+        )
+        assert max(size_targets[language].values()) - min(
+            size_targets[language].values()
+        ) <= 2
+        assert max(Counter(task["repository"] for task in selected).values()) <= caps[
+            language
+        ]
+        assert all(task["qualification"]["gold_passes"] == 3 for task in selected)
+        assert all(task["qualification"]["null_failures"] == 3 for task in selected)
+
+    suite = load_suite("swe_polybench_verified_balanced64")
+    assert suite.task_count == 64
+    assert suite.get_task_ids(ROOT / "vendor") == [
+        task["task_id"] for task in tasks
+    ]
+
+
+def test_balanced_candidate96_materializes_tasks_outside_pilot28(tmp_path):
+    suite_class = getattr(
+        swe_polybench_module, "SwePolyBenchBalancedCandidate96Suite", None
+    )
+    assert suite_class is not None, "balanced candidate96 suite is not implemented"
+    suite = suite_class()
+    pilot_ids = set(SwePolyBenchVerifiedSuite().get_task_ids(ROOT / "vendor"))
+    task_ids = suite.get_task_ids(ROOT / "vendor")
+    task_id = next(candidate for candidate in task_ids if candidate not in pilot_ids)
+
+    task = suite.materialize_task(task_id, tmp_path / "task", ROOT / "vendor")
+
+    assert suite.task_count == len(task_ids) == 96
+    assert task["task_id"] == task_id
+    assert task["language"] in {"java", "javascript", "python", "typescript"}
+    assert "patch" not in task and "test_patch" not in task
+    assert "@sha256:" in task["image_ref"]
 
 
 def test_suite_registry_loads_swe_polybench_verified():

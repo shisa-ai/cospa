@@ -2056,3 +2056,25 @@ Append-only development log for the `cospa` repository.
   report hermetic143 as the official complete score.
 - Next: run the complete DS4 Pareto60 baseline, then expand to hermetic143 if the
   score and paired-discrimination gates remain useful.
+
+## 2026-08-15 — Qualify SWE-PolyBench balanced64
+
+- Context: pilot28 was too coarse and language-skewed for routine ranking, while
+  the outcome-blind candidate96 gold screen left only nine viable Java tasks.
+- Change: freeze and pin candidate96, a 32-task adaptive Java extension, and the
+  final seven eligible small/medium Java candidates; add a deterministic
+  finalizer, qualification ledger, and distinct
+  `swe_polybench_verified_balanced64` suite with 16 tasks per language.
+- Evidence: 54 new candidates passed their first oracle observation and all
+  108/108 repeat oracle observations. Together with pilot28 this yielded 82
+  gold-stable candidates. The selected panel passed 192/192 gold observations
+  and failed 192/192 null observations; all 108 newly run no-op patches were
+  empty and unresolved. `tests/test_swe_polybench.py` passes 21/21. Full pytest
+  reports 363 passed with only the same pre-existing `check-models.sh` skip
+  accounting and Terminal-Bench YAML-newline failures.
+- Decision: promote balanced64 for the DS4 c=8 routine baseline, disclose its
+  seven-Gson Java and nine-MUI TypeScript concentrations, and keep candidate96
+  as a support artifact rather than fabricate a balanced96 score from the
+  22 Java / 22 JavaScript / 21 Python / 17 TypeScript gold-stable pools.
+- Next: freeze Terminal-Bench Pareto20, qualify FeatureBench and the low-cost
+  diagnostic bake-off, then launch the matched DS4 baseline wave.

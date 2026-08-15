@@ -12,7 +12,10 @@ from harness.suites.bigcodebench import (
     BigCodeBenchHardInstructHermeticSuite,
     BigCodeBenchHardInstructSuite,
 )
-from harness.suites.swe_polybench import SwePolyBenchVerifiedSuite
+from harness.suites.swe_polybench import (
+    SwePolyBenchVerifiedBalanced64Suite,
+    SwePolyBenchVerifiedSuite,
+)
 from harness.suites.multi_swe_bench import MultiSweBenchFlashHermeticSuite
 
 SUITES = {
@@ -25,6 +28,7 @@ SUITES = {
     "bigcodebench_hard_agentic_hermetic143": BigCodeBenchHardAgenticHermeticSuite,
     "bigcodebench_hard_agentic_pareto60": BigCodeBenchHardAgenticPareto60Suite,
     "swe_polybench_verified": SwePolyBenchVerifiedSuite,
+    "swe_polybench_verified_balanced64": SwePolyBenchVerifiedBalanced64Suite,
     "multi_swe_bench_flash_hermetic25": MultiSweBenchFlashHermeticSuite,
 }
 

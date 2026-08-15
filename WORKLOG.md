@@ -2142,3 +2142,23 @@ Append-only development log for the `cospa` repository.
   reusable generator and deployment guide for this boundary.
 - Next: resume the proprietary c=2 matrix at Terra, then Sol and GLM 5.3,
   preserving Luna's completed 4/15, 4/15, 11/28, and 7/28 cells.
+
+## 2026-08-15 — Stop retrying Harbor agent deadlines
+
+- Context: the FeatureBench c=8 baseline exposed that Harbor
+  `AgentTimeoutError` outcomes were classified as retryable infrastructure,
+  spending another full one-hour episode and obscuring capability-budget
+  exhaustion.
+- Change: classify Harbor agent deadlines as `budget_exhausted` with exit code
+  124, skip the benchmark verifier, and do not retry them. Other Harbor agent
+  exceptions remain retryable infrastructure failures.
+- Evidence: RED then GREEN
+  `test_retry_does_not_retry_harbor_agent_budget_exhaustion`; 36 focused runner
+  and Terminal-Bench tests pass. Full pytest reports 380 passed with only the
+  pre-existing `test_check_models.sh` shell-fixture failure.
+- Decision: an agent safety-wall hit is a measured capability-budget outcome,
+  not a transport retry. Preserve timeout rates separately from incorrect
+  native verifier outcomes.
+- Next: use the corrected classification for the remaining Pareto baseline
+  suites and report the already-running FeatureBench timeout from its Harbor
+  artifact.

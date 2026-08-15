@@ -675,6 +675,7 @@ def run_trial(
     # task environment and invokes the benchmark-native verifier.
     start_time = time.time()
     adapter_failed = False
+    budget_exhausted = False
     harbor_result = None
     is_harbor_suite = callable(getattr(suite, "run_harbor_job", None))
     if callable(prepare_dependencies):
@@ -728,12 +729,21 @@ def run_trial(
                     exception_message = str(
                         agent_exception.get("exception_message") or "agent phase failed"
                     )
-                    manifest["exit_code"] = -1
-                    manifest["error"] = f"{exception_type}: {exception_message}"
                     manifest["harbor_agent_exception"] = {
                         "exception_type": exception_type,
                         "exception_message": exception_message,
                     }
+                    if exception_type == "AgentTimeoutError":
+                        # Harbor's declared agent deadline is a capability-budget
+                        # outcome. Retrying it spends another full episode and
+                        # biases long tasks; it is not an infrastructure failure.
+                        manifest["exit_code"] = 124
+                        manifest["budget_exhausted"] = True
+                        manifest["error"] = f"{exception_type}: {exception_message}"
+                        budget_exhausted = True
+                    else:
+                        manifest["exit_code"] = -1
+                        manifest["error"] = f"{exception_type}: {exception_message}"
                     adapter_failed = True
         except Exception as e:
             manifest["exit_code"] = -1
@@ -898,7 +908,16 @@ def run_trial(
         # infrastructure. Do not turn either into a model score.
         verify_on_failure = False
     verifier_started = time.time()
-    if not adapter_failed or verify_on_failure:
+    if budget_exhausted:
+        verdict = {
+            "passed": False,
+            "test_count": 0,
+            "grader_output": manifest.get("error", "Agent capability budget exhausted"),
+            "exit_code": 124,
+            "budget_exhausted": True,
+            "failure_class": "budget_exhausted",
+        }
+    elif not adapter_failed or verify_on_failure:
         try:
             verdict = suite.verify(task_data, workdir)
         except Exception as e:

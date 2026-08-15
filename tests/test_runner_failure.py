@@ -61,6 +61,36 @@ class FakeFlakyInfraAdapter:
         return AdapterResult(returncode=0, error=None)
 
 
+class FakeHarborTimeoutSuite:
+    """Harbor suite whose agent reaches its declared capability deadline."""
+
+    name = "fake_harbor_timeout"
+    verify_on_adapter_failure = True
+
+    def __init__(self):
+        self.run_calls = 0
+        self.verify_calls = 0
+
+    def materialize_task(self, task_id, workdir, vendor_dir):
+        return {"prompt": "solve it", "task_id": task_id}
+
+    def run_harbor_job(self, **kwargs):
+        self.run_calls += 1
+        result_dir = Path(kwargs["jobs_dir"]) / "run" / "trial"
+        result_dir.mkdir(parents=True)
+        (result_dir / "result.json").write_text(json.dumps({
+            "exception_info": {
+                "exception_type": "AgentTimeoutError",
+                "exception_message": "Agent timed out after 3600 seconds",
+            }
+        }))
+        return {"returncode": 0, "stdout": "", "stderr": ""}
+
+    def verify(self, task_data, workdir):
+        self.verify_calls += 1
+        raise AssertionError("timeout must not invoke the benchmark verifier")
+
+
 class FakeWrongAnswerSuite:
     """Minimal suite for retry behavior tests."""
 
@@ -211,6 +241,35 @@ def test_retry_retries_infrastructure_failure_then_records_success():
     assert verdict["passed"] is True
     assert manifest["retry"]["attempt"] == 2
     assert manifest["retry"]["max_attempts"] == 3
+
+
+def test_retry_does_not_retry_harbor_agent_budget_exhaustion():
+    """A declared agent deadline is capability signal, not retryable infrastructure."""
+    suite = FakeHarborTimeoutSuite()
+    adapter = FakePassingAdapter()
+
+    with tempfile.TemporaryDirectory() as tmp:
+        tmp = Path(tmp)
+        manifest, verdict = run_trial_with_retries(
+            suite,
+            adapter,
+            "test/model",
+            "task/one",
+            1,
+            tmp / "results",
+            tmp / "vendor",
+            retries=2,
+        )
+
+    assert suite.run_calls == 1
+    assert suite.verify_calls == 0
+    assert manifest["exit_code"] == 124
+    assert manifest["budget_exhausted"] is True
+    assert "retry" not in manifest
+    assert verdict["passed"] is False
+    assert verdict["failure_class"] == "budget_exhausted"
+    assert verdict["budget_exhausted"] is True
+    assert verdict.get("adapter_failed") is not True
 
 
 def test_retry_does_not_retry_normal_wrong_answer():

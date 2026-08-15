@@ -345,7 +345,14 @@ def _safe_model_metadata(
         safe_sampling = {
             key: value
             for key, value in sampling.items()
-            if key in {"temperature", "top_p", "top_k", "min_p", "repetition_penalty"}
+            if key in {
+                "temperature",
+                "top_p",
+                "top_k",
+                "min_p",
+                "presence_penalty",
+                "repetition_penalty",
+            }
             and isinstance(value, (int, float))
             and not isinstance(value, bool)
         }

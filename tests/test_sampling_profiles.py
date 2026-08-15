@@ -24,8 +24,15 @@ from harness.telemetry import load_model_metadata
     [
         ("local/deepseek-v4-flash-0731", {"temperature": 1.0, "top_p": 1.0}),
         (
-            "local/muse-glimmer-30b",
-            {"temperature": 1.0, "top_p": 0.95, "top_k": 64},
+            "local/qwen3.8-27b",
+            {
+                "temperature": 1.0,
+                "top_p": 0.95,
+                "top_k": 20,
+                "min_p": 0.0,
+                "presence_penalty": 0.0,
+                "repetition_penalty": 1.0,
+            },
         ),
         (
             "shisa/ornith-35b-fp8-block",
@@ -64,11 +71,14 @@ def test_pi_sampling_params_must_match_profile(tmp_path):
                     "local": {
                         "models": [
                             {
-                                "id": "Muse-Glimmer-30B",
+                                "id": "Qwen3.8-27B",
                                 "samplingParams": {
                                     "temperature": 1.0,
                                     "top_p": 0.95,
-                                    "top_k": 64,
+                                    "top_k": 20,
+                                    "min_p": 0.0,
+                                    "presence_penalty": 0.0,
+                                    "repetition_penalty": 1.0,
                                 },
                             }
                         ]
@@ -77,9 +87,16 @@ def test_pi_sampling_params_must_match_profile(tmp_path):
             }
         )
     )
-    expected = {"temperature": 1.0, "top_p": 0.95, "top_k": 64}
+    expected = {
+        "temperature": 1.0,
+        "top_p": 0.95,
+        "top_k": 20,
+        "min_p": 0.0,
+        "presence_penalty": 0.0,
+        "repetition_penalty": 1.0,
+    }
     validate_pi_sampling_params(
-        "local/muse-glimmer-30b", expected, models_json_path=models_json
+        "local/qwen3.8-27b", expected, models_json_path=models_json
     )
 
     models_json.write_text(
@@ -89,7 +106,7 @@ def test_pi_sampling_params_must_match_profile(tmp_path):
                     "local": {
                         "models": [
                             {
-                                "id": "Muse-Glimmer-30B",
+                                "id": "Qwen3.8-27B",
                                 "samplingParams": {"temperature": 1.0, "top_p": 1.0},
                             }
                         ]
@@ -100,5 +117,5 @@ def test_pi_sampling_params_must_match_profile(tmp_path):
     )
     with pytest.raises(RuntimeError, match="samplingParams mismatch"):
         validate_pi_sampling_params(
-            "local/muse-glimmer-30b", expected, models_json_path=models_json
+            "local/qwen3.8-27b", expected, models_json_path=models_json
         )

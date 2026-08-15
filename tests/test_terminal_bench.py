@@ -677,13 +677,18 @@ def test_harbor_env_exports_repo_sampling_profile(tmp_path):
             "local": {
                 "baseUrl": "http://model-relay:8013/v1",
                 "models": [{
-                    "id": "Muse-Glimmer-30B",
-                    "name": "Muse Glimmer 30B",
+                    "id": "Qwen3.8-27B",
+                    "name": "Qwen 3.8 27B",
                     "thinkingLevelMap": {
-                        "high": "high",
+                        "high": None,
+                        "low": "low",
+                        "medium": "medium",
+                        "minimal": None,
+                        "off": "none",
                         "xhigh": "xhigh",
                     },
                     "compat": {
+                        "supportsDeveloperRole": False,
                         "supportsReasoningEffort": True,
                         "maxTokensField": "max_tokens",
                     },
@@ -693,20 +698,28 @@ def test_harbor_env_exports_repo_sampling_profile(tmp_path):
     }))
 
     with patch("harness.suites.terminal_bench.Path.home", return_value=home):
-        env = TerminalBenchSuite()._harbor_env("local/muse-glimmer-30b")
+        env = TerminalBenchSuite()._harbor_env("local/qwen3.8-27b")
 
     assert json.loads(env["CODING_EVAL_PI_SAMPLING_PARAMS"]) == {
         "temperature": 1.0,
         "top_p": 0.95,
-        "top_k": 64,
+        "top_k": 20,
+        "min_p": 0.0,
+        "presence_penalty": 0.0,
+        "repetition_penalty": 1.0,
     }
-    assert env["CODING_EVAL_PI_CONTEXT_WINDOW"] == "131072"
-    assert env["CODING_EVAL_PI_MAX_TOKENS"] == "65536"
+    assert env["CODING_EVAL_PI_CONTEXT_WINDOW"] == "262144"
+    assert env["CODING_EVAL_PI_MAX_TOKENS"] == "131072"
     assert json.loads(env["CODING_EVAL_PI_THINKING_LEVEL_MAP"]) == {
-        "high": "high",
+        "high": None,
+        "low": "low",
+        "medium": "medium",
+        "minimal": None,
+        "off": "none",
         "xhigh": "xhigh",
     }
     assert json.loads(env["CODING_EVAL_PI_COMPAT"]) == {
+        "supportsDeveloperRole": False,
         "supportsReasoningEffort": True,
         "maxTokensField": "max_tokens",
     }

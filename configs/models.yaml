@@ -105,26 +105,29 @@ models:
       cacheWrite: 0.14
       output: 1.04
     pricing_unit: usd_per_1m_tokens
-  - id: local/muse-glimmer-30b
-    name: Muse Glimmer 30B
-    context_window: 131072
-    max_tokens: 65536
+  - id: local/qwen3.8-27b
+    name: Qwen 3.8 27B
+    context_window: 262144
+    max_tokens: 131072
     reasoning: true
     sampling:
       temperature: 1.0
       top_p: 0.95
-      top_k: 64
-    sampling_source: https://huggingface.co/meta-models/Muse-Glimmer-30B
-    sampling_rationale: model-card-best-practices-agentic-coding
+      top_k: 20
+      min_p: 0.0
+      presence_penalty: 0.0
+      repetition_penalty: 1.0
+    sampling_source: https://huggingface.co/Qwen/Qwen3.8-27B
+    sampling_rationale: model-card-recommended-thinking-agentic
     protocol_overrides:
       bigcodebench_hard_instruct:
         request_overrides:
           reasoning_effort: none
     cost:
-      input: 0.30
-      cacheRead: 0.04
-      cacheWrite: 0
-      output: 1.20
+      input: 0.45
+      cacheRead: 0.45
+      cacheWrite: 0.45
+      output: 3.20
     pricing_unit: usd_per_1m_tokens
   - id: local/deepseek-v4-flash-0731
     name: DeepSeek V4 Flash 0731

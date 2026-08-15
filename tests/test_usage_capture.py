@@ -360,13 +360,23 @@ def test_repo_models_include_glm_53_pool_metadata(tmp_path):
     }
 
 
-def test_repo_muse_metadata_disables_reasoning_for_capped_bcb_protocol(tmp_path):
-    """Muse must preserve BCB's 1,280-token final-answer budget."""
+def test_repo_qwen_38_metadata_matches_pool_and_capped_bcb_protocol(tmp_path):
+    """Qwen must use pool limits/pricing and preserve BCB's answer budget."""
     metadata = load_model_metadata(
-        "local/muse-glimmer-30b",
+        "local/qwen3.8-27b",
         models_json_path=tmp_path / "missing-models.json",
     )
 
+    assert metadata["name"] == "Qwen 3.8 27B"
+    assert metadata["context_window"] == 262144
+    assert metadata["max_tokens"] == 131072
+    assert metadata["reasoning"] is True
+    assert metadata["cost"] == {
+        "input": 0.45,
+        "cacheRead": 0.45,
+        "cacheWrite": 0.45,
+        "output": 3.2,
+    }
     assert metadata["protocol_overrides"] == {
         "bigcodebench_hard_instruct": {
             "request_overrides": {"reasoning_effort": "none"}

@@ -311,7 +311,7 @@ access:
 mamba run -n cospa python harness/runner.py \
   --suite bigcodebench_hard_agentic \
   --adapter pi_vanilla \
-  --model local/muse-glimmer-30b \
+  --model local/qwen3.8-27b \
   --thinking xhigh \
   --concurrency 8 \
   --k 1

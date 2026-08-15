@@ -1892,3 +1892,26 @@ Append-only development log for the `cospa` repository.
 - Next: rerun Muse's two remaining infrastructure tasks only after its server
   returns; GPU0 is currently occupied by an unrelated Qwen benchmark and the
   local model pool reports no live Muse account.
+
+## 2026-08-15 — Replace Muse with Qwen 3.8 27B
+
+- Context: the local GPU0 pool retired Muse Glimmer 30B and now serves Qwen 3.8
+  27B. Historical Muse result labels remain unchanged; only the active model
+  catalog and run example move to Qwen.
+- Change: record the pool's 262,144-token context, 131,072-token output limit,
+  pricing, reasoning support, and the official thinking-mode sampling profile.
+  Preserve `presence_penalty` in safe telemetry so manifests and Harbor receive
+  the complete profile. Refresh the current user's generated pool providers
+  while retaining the established `stg04.local:8989` proxy topology.
+- Evidence: both old and newly generated credentials completed authenticated
+  Qwen chat requests through the existing proxy (HTTP 200, served model
+  `qwen38-27b-nvfp4-mtp`); a fresh Pi process listed `local/Qwen3.8-27B` and
+  returned `OK`. RED tests failed on missing Qwen metadata/profile, then the
+  targeted set passed 7/7. Full pytest passed 345 tests; only the two documented
+  unrelated shell-port and Terminal-Bench newline fixture failures remain.
+- Decision: use the model-card thinking profile (`temperature=1.0`,
+  `top_p=0.95`, `top_k=20`, `min_p=0`, `presence_penalty=0`, and
+  `repetition_penalty=1`) for agentic comparisons, and continue disabling
+  reasoning for the 1,280-token BigCodeBench Instruct protocol.
+- Next: validate effective xhigh control and run one Qwen agentic BigCodeBench
+  and PolyBench smoke before launching the full scaffold matrix.

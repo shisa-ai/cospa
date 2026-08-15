@@ -150,12 +150,24 @@ def test_selected_images_are_digest_pinned_before_model_runs():
         "bigcodebench_hard_instruct",
     ):
         assert suites[name]["image_digest_status"] == "resolved"
-        expected_status = (
-            "ready_smoke"
-            if name in {"swe_polybench_verified", "bigcodebench_hard_instruct"}
-            else "blocked_gold_null_validation"
-        )
+        expected_status = {
+            "multi_swe_bench_flash": "qualified_subset_ready",
+            "swe_bench_multilingual": "blocked_gold_null_validation",
+            "swe_polybench_verified": "ready_smoke",
+            "featurebench_lite": "blocked_gold_null_validation",
+            "bigcodebench_hard_instruct": "ready_smoke",
+        }[name]
         assert suites[name]["status"] == expected_status
+        if name == "multi_swe_bench_flash":
+            assert suites[name]["qualified_subset"] == {
+                "manifest": "configs/multi_swe_bench_flash_hermetic25.json",
+                "screened_tasks": 30,
+                "retained_tasks": 25,
+                "observations_per_condition": 3,
+                "gold_resolved": "75/75",
+                "null_resolved": "0/75",
+                "completed_at": "2026-08-15",
+            }
         selected_task_count += sum(
             1 for task in suites[name].get("tasks", []) if task.get("image_ref")
         )

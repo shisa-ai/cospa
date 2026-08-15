@@ -10,6 +10,7 @@ from harness.suites.bigcodebench import (
     BigCodeBenchHardInstructSuite,
 )
 from harness.suites.swe_polybench import SwePolyBenchVerifiedSuite
+from harness.suites.multi_swe_bench import MultiSweBenchFlashHermeticSuite
 
 SUITES = {
     "aider_polyglot": AiderPolyglotSuite,
@@ -18,6 +19,7 @@ SUITES = {
     "bigcodebench_hard_instruct": BigCodeBenchHardInstructSuite,
     "bigcodebench_hard_agentic": BigCodeBenchHardAgenticSuite,
     "swe_polybench_verified": SwePolyBenchVerifiedSuite,
+    "multi_swe_bench_flash_hermetic25": MultiSweBenchFlashHermeticSuite,
 }
 
 

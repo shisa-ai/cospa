@@ -1,0 +1,7 @@
+Running com.google.gson.functional.InterfaceTest
+Tests run: 2, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.001 sec
+Running com.google.gson.functional.JsonAdapterSerializerDeserializerTest
+Tests run: 4, Failures: 1, Errors: 0, Skipped: 0, Time elapsed: 0.004 sec <<< FAILURE!
+testJsonAdapterNullSafe(com.google.gson.functional.JsonAdapterSerializerDeserializerTest)  Time elapsed: 0.004 sec  <<< FAILURE!
+Running com.google.gson.CommentsTest
+Tests run: 1, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0 sec

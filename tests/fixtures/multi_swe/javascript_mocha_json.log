@@ -1,0 +1,32 @@
+{
+  "stats": {
+    "suites": 457,
+    "tests": 864,
+    "passes": 862,
+    "pending": 0,
+    "failures": 2,
+    "start": "2026-08-14T11:54:15.063Z",
+    "end": "2026-08-14T11:54:15.810Z",
+    "duration": 747
+  },
+  "tests": [],
+  "pending": [],
+  "failures": [
+    {
+      "title": "should use the first value",
+      "fullTitle": "req .hostname when trust proxy is enabled should use the first value",
+      "duration": 1,
+      "currentRetry": 0,
+      "err": {"message": "expected example.com"}
+    }
+  ],
+  "passes": [
+    {
+      "title": "should work without handlers",
+      "fullTitle": "Route should work without handlers",
+      "duration": 0,
+      "currentRetry": 0,
+      "err": {}
+    }
+  ]
+}

@@ -1,0 +1,5 @@
+ 1/20 Test  #1: args-test ........................   Passed    0.00 sec
+ 2/20 Test  #2: assert-test ......................   Passed    0.00 sec
+ 3/20 Test  #3: chrono-test ......................   Passed    0.03 sec
+ 4/20 Test  #4: color-test .......................   Passed    0.00 sec
+ 5/20 Test  #5: core-test ........................   Passed    0.00 sec

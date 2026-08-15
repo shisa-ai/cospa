@@ -248,8 +248,17 @@
       "blocker": "A real run requires the pinned judge model through SWE_ATLAS_JUDGE_API_KEY and SWE_ATLAS_JUDGE_BASE_URL."
     },
     "multi_swe_bench_flash": {
-      "status": "blocked_gold_null_validation",
+      "status": "qualified_subset_ready",
       "pilot_size": 30,
+      "qualified_subset": {
+        "manifest": "configs/multi_swe_bench_flash_hermetic25.json",
+        "screened_tasks": 30,
+        "retained_tasks": 25,
+        "observations_per_condition": 3,
+        "gold_resolved": "75/75",
+        "null_resolved": "0/75",
+        "completed_at": "2026-08-15"
+      },
       "source": {
         "repository": "https://github.com/multi-swe-bench/multi-swe-bench.git",
         "revision": "24f493f8a103e72312ded4f6b9c89f081d69cb09",

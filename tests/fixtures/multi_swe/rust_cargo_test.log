@@ -1,0 +1,4 @@
+test search_buffer::tests::count ... ok
+test after_context ... ok
+test count ... FAILED
+test suggest_fixed_strings_for_invalid_regex ... FAILED

@@ -2008,3 +2008,28 @@ Append-only development log for the `cospa` repository.
 - Next: expand BCB to full148, finish Multi-SWE qualification, freeze
   Terminal-Bench Pareto20 and PolyBench balanced64/96, then qualify FeatureBench
   and the low-cost DABStep/SWE-Explore diagnostic bake-off.
+
+## 2026-08-15 — Qualify Multi-SWE Flash hermetic25
+
+- Context: the outcome-blind 30-task Multi-SWE Flash screen had pinned images
+  but no local null/gold evidence, and unqualified tasks could turn dependency
+  or flaky-test failures into model failures.
+- Change: add the Harbor suite with construction-artifact removal, hidden test
+  injection after patch capture, pinned upstream parsers for all seven
+  languages, transition/P2P scoring, and a distinct repeat-qualified
+  `multi_swe_bench_flash_hermetic25` suite ID. Model patches that conflict with
+  hidden tests are classified as incorrect rather than verifier failures.
+- Evidence: all 90 no-op observations were unresolved with empty patches. The
+  gold screen resolved 78/90 observations; three Java tasks consistently needed
+  uncached Maven/Gradle artifacts and two Vue tasks had unrelated timing-test
+  flips. After those five outcome-blind exclusions, all 75/75 retained gold
+  observations resolved and all 75/75 retained null observations failed under
+  no-network verification. Fourteen suite tests and all ten runtime-pilot tests
+  pass; full pytest reports 357 passed with the two documented unrelated shell
+  and Terminal-Bench newline failures.
+- Decision: promote the retained 25 tasks for DS4 `pi_vanilla` c=8 screening,
+  report their 4 C / 4 C++ / 5 Go / 1 Java / 5 JavaScript / 4 Rust /
+  2 TypeScript distribution, and never label them as the official Flash300
+  score.
+- Next: run the DS4 baseline after BCB registration is complete, then use paired
+  outcomes to decide whether this suite earns scaffold expansion.

@@ -215,7 +215,7 @@ evidence is unresolved or favorable.
 
 | Suite | Routine block | Expansion | Purpose |
 | --- | ---: | ---: | --- |
-| Multi-SWE-bench Flash | qualified pilot30 | larger source only after utility gate | C/C++/Go/Java/JS/Rust/TS issue repair |
+| Multi-SWE-bench Flash | qualified hermetic25 | larger source only after utility gate | C/C++/Go/Java/JS/Rust/TS issue repair |
 | SWE-PolyBench Verified | balanced64 | nested balanced96, then full382 finalists | Four-language bug/feature/refactor work |
 
 The PolyBench panels target equal language slots (16 each at 64; 24 each at
@@ -224,9 +224,12 @@ changes weighting relative to official PBv, use distinct suite IDs such as
 `swe_polybench_verified_balanced64` and `..._balanced96`. Full382 retains the
 source protocol label.
 
-The first routine repository portfolio reports Multi-SWE pilot30 and PolyBench
-balanced64 separately. Their 94 total tasks improve language/task breadth, but
-must never be presented as one unweighted synthetic resolved rate.
+The first routine repository portfolio reports Multi-SWE hermetic25 and
+PolyBench balanced64 separately. Their 89 total tasks improve language/task
+breadth, but must never be presented as one unweighted synthetic resolved rate.
+The Multi-SWE screen excluded three Java tasks with uncached verifier
+requirements and two flaky TypeScript gold tasks; its reduced strata remain
+visible rather than being silently reweighted.
 
 ### Phase C — scaffold ablations
 
@@ -248,7 +251,7 @@ rates, task/campaign time, tokens, and cost.
 
 1. Freeze this campaign and its nested manifests.
 2. Expand BCB public prompts and suite IDs to full148.
-3. Finish the in-progress Multi-SWE pilot and mechanical qualification.
+3. Run the qualified Multi-SWE hermetic25 DS4 baseline.
 4. Freeze Terminal-Bench Pareto20.
 5. Select and qualify PolyBench balanced64 plus its nested 96 extension.
 6. Qualify FeatureBench pilot6 and measure whether Lite30 or Fast100 is the

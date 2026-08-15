@@ -377,7 +377,7 @@ rules, and a `c=1/2/4/8/16` ladder. The pilot sizes are:
 | Aider source corpus | 23 / 225 | Blocked until the contract audit freezes eligible tasks |
 | Terminal-Bench Core 0.1.1 | 8 / 80 | Source and Harbor 0.16.1 ready; fresh Docker smoke required |
 | SWE Atlas pilot12 | 12 / 12 | Mechanically pinned but deferred; current campaign does not require an LLM judge |
-| Multi-SWE-bench Flash | 30 / 300 | Dataset and 30 image digests locked; gold/null/repeat validation pending |
+| Multi-SWE-bench Flash | 25 retained / 30 screened / 300 | `multi_swe_bench_flash_hermetic25` passed 75/75 gold and 75/75 null observations under the no-network verifier; ready for DS4 smoke |
 | SWE-bench Multilingual | 30 / 300 | Dataset and 30 image digests locked; gold/null/repeat validation pending |
 | SWE-PolyBench Verified | 28 / 382 (38 screened) | Three-observation null/gold gate passed; complete DS4 and historical Muse vanilla cells measured; balanced64/96 expansion is next |
 | FeatureBench Lite | 6 / 30 | Dataset and 6 image digests locked; gold/null/repeat validation pending |
@@ -448,8 +448,18 @@ makespan rather than assuming ideal scaling.
   Flash selection rule is undocumented, and the full Hugging Face viewer
   currently errors on schema casting. Hints added after release also require an
   exact revision and visibility policy.
-- **Cospa decision:** leading `cospa_repo` source after the Flash selection is
-  audited and every chosen image passes local gold/null/repeat checks.
+- **Cospa qualification:** the first outcome-blind 30-task screen produced
+  `multi_swe_bench_flash_hermetic25`. Across three clean observations per
+  condition, all 75 retained oracle patches resolved and all 75 retained no-op
+  patches failed with empty captured patches. Three Java tasks were excluded
+  because their pinned images require uncached Maven/Gradle verifier artifacts;
+  two TypeScript tasks were excluded after unrelated timing tests flipped across
+  clean gold runs. The retained language counts are 4 C, 4 C++, 5 Go, 1 Java,
+  5 JavaScript, 4 Rust, and 2 TypeScript.
+- **Cospa decision:** this qualified 25-task suite is ready for the DS4
+  `pi_vanilla` c=8 baseline. It remains a separately labeled source score; the
+  reduced Java/TypeScript strata must be disclosed and supplemented by
+  PolyBench rather than hidden by one combined repository percentage.
 
 ### SWE-bench Multilingual
 

@@ -1,0 +1,6 @@
+--- PASS: Test_CacheReponse (0.00s)
+--- PASS: TestGraphQL (0.00s)
+    --- PASS: Test_CheckScopes/missing_read:org (0.00s)
+FAIL	github.com/cli/cli/git [build failed]
+FAIL	github.com/cli/cli/internal/authflow [build failed]
+FAIL	github.com/cli/cli/pkg/cmd/gist/create [build failed]

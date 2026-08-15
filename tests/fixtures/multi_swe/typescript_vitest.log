@@ -1,0 +1,3 @@
+ ✓ packages/compiler-core/__tests__/transforms/transformSlotOutlet.spec.ts > compiler: transform <slot> outlets > default slot outlet
+ × packages/compiler-core/__tests__/transforms/transformSlotOutlet.spec.ts > compiler: transform <slot> outlets > dynamically named slot outlet with v-bind shorthand
+ ✓ packages/compiler-core/__tests__/codegen.spec.ts > compiler: codegen > ArrayExpression

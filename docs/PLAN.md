@@ -129,6 +129,17 @@ reorder — earlier items unblock later ones.
       observations. Ten tasks were excluded before model evaluation because
       their pinned verifier environments required uncached network artifacts or
       because their gold patches failed declared P2P tests.
+- [ ] **P11e. Suite: Multi-SWE-bench Flash hermetic25.**
+      `harness/suites/multi_swe_bench.py` materializes an outcome-blind
+      seven-language screen over digest-pinned upstream images, removes
+      construction-time gold/test artifacts before the agent, captures a clean
+      model patch, injects hidden tests only in the verifier, and scores with
+      pinned upstream transition parsers. The scored suite retains 25 of 30
+      screened tasks after three clean null/gold observations: three Java tasks
+      required uncached verifier dependencies and two TypeScript tasks had
+      unrelated flaky gold failures. Keep the source score separate and disclose
+      the retained 4 C / 4 C++ / 5 Go / 1 Java / 5 JavaScript / 4 Rust /
+      2 TypeScript distribution.
 - [ ] **P12. Score viewer (`view-scores/`).** Static HTML + a tiny
       `server.py` that walks `results/` and renders a table:
       rows = `(model, adapter, suite)`, cells = pass-rate with CI,

@@ -1,0 +1,118 @@
+{
+  "name": "multi_swe_bench_flash_hermetic25",
+  "version": "2026-08-15",
+  "source_manifest": "configs/ornith_runtime_pilot_v1.json#suites.multi_swe_bench_flash",
+  "selection": {
+    "outcome_blind": true,
+    "criterion": "Retain only tasks with repeat-stable gold resolution and null failure under the pinned no-network verifier.",
+    "screened_tasks": 30,
+    "retained_tasks": 25,
+    "excluded": [
+      {
+        "task_id": "fasterxml__jackson-databind-4360",
+        "reason": "Gold verifier requires an uncached snapshot parent POM with verifier network disabled."
+      },
+      {
+        "task_id": "fasterxml__jackson-dataformat-xml-590",
+        "reason": "Gold verifier requires an uncached snapshot parent POM with verifier network disabled."
+      },
+      {
+        "task_id": "googlecontainertools__jib-2536",
+        "reason": "Gold verifier requires uncached Gradle test dependencies with verifier network disabled."
+      },
+      {
+        "task_id": "vuejs__core-10218",
+        "reason": "Gold full-suite verification was flaky across three clean observations (2 pass, 1 unrelated timing-test failure)."
+      },
+      {
+        "task_id": "vuejs__core-10874",
+        "reason": "Gold full-suite verification was flaky across three clean observations (1 pass, 2 unrelated timing-test failures)."
+      }
+    ]
+  },
+  "qualification": {
+    "observations_per_condition": 3,
+    "gold_observations": "78/90 resolved across the screened set; all 75/75 retained observations resolved.",
+    "null_observations": "0/75 resolved; all 75 model patches were empty",
+    "verifier_network": "no-network",
+    "completed_at": "2026-08-15",
+    "evidence": "results/qualification/multi-swe-flash-null-gold3-20260815T1815Z/retained-summary.json"
+  },
+  "tasks": [
+    {
+      "task_id": "jqlang__jq-1793"
+    },
+    {
+      "task_id": "jqlang__jq-2821"
+    },
+    {
+      "task_id": "jqlang__jq-2919"
+    },
+    {
+      "task_id": "ponylang__ponyc-2007"
+    },
+    {
+      "task_id": "catchorg__Catch2-2187"
+    },
+    {
+      "task_id": "fmtlib__fmt-3158"
+    },
+    {
+      "task_id": "nlohmann__json-609"
+    },
+    {
+      "task_id": "simdjson__simdjson-545"
+    },
+    {
+      "task_id": "cli__cli-1642"
+    },
+    {
+      "task_id": "cli__cli-2263"
+    },
+    {
+      "task_id": "cli__cli-352"
+    },
+    {
+      "task_id": "cli__cli-624"
+    },
+    {
+      "task_id": "cli__cli-696"
+    },
+    {
+      "task_id": "google__gson-1555"
+    },
+    {
+      "task_id": "anuraghazra__github-readme-stats-2228"
+    },
+    {
+      "task_id": "anuraghazra__github-readme-stats-99"
+    },
+    {
+      "task_id": "expressjs__express-3495"
+    },
+    {
+      "task_id": "iamkun__dayjs-1953"
+    },
+    {
+      "task_id": "iamkun__dayjs-668"
+    },
+    {
+      "task_id": "BurntSushi__ripgrep-727"
+    },
+    {
+      "task_id": "clap-rs__clap-5298"
+    },
+    {
+      "task_id": "sharkdp__fd-1162"
+    },
+    {
+      "task_id": "tokio-rs__bytes-547"
+    },
+    {
+      "task_id": "darkreader__darkreader-6747"
+    },
+    {
+      "task_id": "mui__material-ui-23778"
+    }
+  ]
+}

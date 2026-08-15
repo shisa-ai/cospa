@@ -2114,3 +2114,31 @@ Append-only development log for the `cospa` repository.
   overlapped the smoke; remeasure Pareto20 without host contention.
 - Next: qualify FeatureBench's campaign tier before launching the shared DS4
   baseline wave.
+
+## 2026-08-15 — Make Harbor devstack packages cross-image safe
+
+- Context: Luna PolyBench devstack completed 26/28 trials, but the fail-closed
+  campaign guard quarantined two pre-model failures. `coder__code-server-6278`
+  could not load host-native `pi-smart-fetch`/`wreq-js`, while
+  `tailwindlabs__tailwindcss-853` tried to install a missing Camoufox package
+  through the intentionally blocked agent network.
+- Change: sanitize the container's private settings copy after selecting its
+  compatible Node runtime and before `pi list`. Remove Camoufox, smart-fetch,
+  and pi-zentui package entries entirely; empty resource filters are insufficient
+  because Pi can still materialize a missing configured package. The canonical
+  workstation settings and mounted package tree remain untouched.
+- Evidence: both RED tests failed before the sanitizer and all 36 focused Harbor
+  tests pass afterward. The two preserved invalid attempts remain under
+  `results/validation/`; resume skipped the other 26 durable trials and reran
+  only the affected tasks. Both retries exited Pi normally with observed Luna
+  usage and no package/native errors. Code-server ran 283 native tests in 907.2
+  seconds; Tailwind completed in 251.6 seconds. Their unresolved verdicts are now
+  legitimate model outcomes, yielding a complete Luna devstack score of 7/28.
+  Full pytest reports 379 passed with only the pre-existing shell-fixture failure.
+- Decision: classify package installation and native-extension load errors as
+  infrastructure, never model misses. Keep the devstack scaffold's portable
+  packages while excluding browser/TUI/native-fetch facilities that cannot be
+  used in no-network benchmark images. `~/devstack` commit `4c1dff5` adds the
+  reusable generator and deployment guide for this boundary.
+- Next: resume the proprietary c=2 matrix at Terra, then Sol and GLM 5.3,
+  preserving Luna's completed 4/15, 4/15, 11/28, and 7/28 cells.

@@ -8,6 +8,7 @@ agents.
 
 from __future__ import annotations
 
+import json
 import os
 import shlex
 import sys
@@ -157,6 +158,34 @@ def _thinking_args() -> list[str]:
     return ["--thinking", thinking] if thinking else []
 
 
+_HEADLESS_EXCLUDED_PACKAGE_FRAGMENTS = (
+    "npm:pi-smart-fetch",
+    "npm:@the-forge-flow/camoufox-pi",
+    "github.com/lhl/pi-zentui",
+)
+
+
+def _devstack_settings_sanitizer_command() -> str:
+    """Remove packages that cannot initialize portably in headless images."""
+    excluded = json.dumps(_HEADLESS_EXCLUDED_PACKAGE_FRAGMENTS)
+    command = r'''node <<'NODE'
+const fs = require('fs');
+const path = require('path');
+const settingsPath = path.join(process.env.HOME, '.pi', 'agent', 'settings.json');
+const COSPA_HEADLESS_EXCLUDED_PACKAGES = __COSPA_EXCLUDED_PACKAGES__;
+const settings = JSON.parse(fs.readFileSync(settingsPath, 'utf8'));
+const packages = Array.isArray(settings.packages) ? settings.packages : [];
+settings.packages = packages.filter((entry) => {
+  const source = typeof entry === 'string' ? entry : entry?.source;
+  return typeof source !== 'string' || !COSPA_HEADLESS_EXCLUDED_PACKAGES.some(
+    (fragment) => source.includes(fragment),
+  );
+});
+fs.writeFileSync(settingsPath, JSON.stringify(settings, null, 2) + '\n');
+NODE'''
+    return command.replace("__COSPA_EXCLUDED_PACKAGES__", excluded)
+
+
 def _devstack_profile_install_command() -> str:
     """Install the read-only devstack package snapshot into the agent home."""
     command = r'''
@@ -172,10 +201,14 @@ ln -s "$profile_root/npm" "$agent_dir/npm"
 ln -s "$profile_root/git" "$agent_dir/git"
 cp "$profile_root/settings.json" "$agent_dir/settings.json"
 __COSPA_RUNTIME_ACTIVATION__
+__COSPA_SETTINGS_SANITIZER__
 pi list
 '''.strip()
     return command.replace(
         "__COSPA_RUNTIME_ACTIVATION__", _RUNTIME_ACTIVATION_INLINE
+    ).replace(
+        "__COSPA_SETTINGS_SANITIZER__",
+        _devstack_settings_sanitizer_command(),
     )
 
 

@@ -315,8 +315,10 @@ Terminal-Bench 2.1 remains a separate milestone campaign.
 - Every adapter maps to a distinct custom Harbor agent, preserving scaffold
   identity inside the task container. Because Harbor containers have an empty
   pi home, the `pi_devstack*` agents additionally mount a read-only package
-  profile with a deterministic, headless-safe settings snapshot; distinct class
-  names alone do not establish a distinct scaffold.
+  profile with a deterministic settings snapshot. Container activation removes
+  browser, TUI, and host-native fetch packages from its private copy before Pi
+  package discovery; distinct class names alone do not establish a distinct
+  scaffold.
 - Network boundary: Harbor environment build and installed-agent setup may use
   public network for images/packages. Migrated local tasks are patched so the
   prompt-bearing `[agent]` phase uses `network_mode = "allowlist"` with only

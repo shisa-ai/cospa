@@ -1143,11 +1143,16 @@ behaviorally equivalent to `pi_vanilla` except for an inert omission of
 - A 2026-08-15 campaign exposed that the earlier qualification's explicit
   snapshot override was not durable: the default path still mounted mutable
   workstation settings, so Camoufox reappeared and repeatedly failed in
-  no-network PolyBench containers. The default path now creates a deterministic
-  read-only settings snapshot with Camoufox and pi-zentui resources filtered;
-  explicit pre-sanitized profile overrides remain unchanged. A real DS4
-  PolyBench devstack retry completed 29 model responses and passed all 17 native
-  tests (`fixed (unit test + end-to-end)`).
+  no-network PolyBench containers. A deterministic read-only snapshot fixed the
+  immediate default-path failure, but Luna then exposed two cross-image gaps:
+  resource filters did not prevent a missing Camoufox package from attempting
+  installation, and host-native `pi-smart-fetch` could not load in a legacy
+  image. Container activation now removes Camoufox, pi-smart-fetch, and
+  pi-zentui package entries from its private settings copy before `pi list`.
+  Real retries for `coder__code-server-6278` and
+  `tailwindlabs__tailwindcss-853` both completed Pi normally at the requested
+  `max` level with observed usage; the former ran 283 native tests
+  (`fixed (unit test + cross-image end-to-end)`).
 - Docker-backed `hello-world` then passed with Ornith and `pi_devstack`; the
   result is under
   `results/e2e-smoke-terminal-bench-devstack-profile-v5-20260716T034155Z/`.

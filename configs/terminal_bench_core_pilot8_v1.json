@@ -1,0 +1,153 @@
+{
+  "name": "terminal-bench-core-pilot8",
+  "version": "2026-08-15",
+  "terminal_bench_version": ">=0.2.4",
+  "github_url": "https://github.com/harbor-framework/terminal-bench-1.git",
+  "dataset_path": "tasks",
+  "branch": "dataset/terminal-bench-core/v0.1.x",
+  "commit_hash": "91e10457b5410f16c44364da1a34cb6de8c488a5",
+  "source_manifest": "configs/terminal_bench_core_0.1.1.json",
+  "selection": {
+    "outcome_blind": true,
+    "source": "configs/ornith_runtime_pilot_v1.json",
+    "pilot_size": 8
+  },
+  "qualification": {
+    "status": "smoke_complete",
+    "baseline_model": "local/deepseek-v4-flash-0731",
+    "baseline_adapter": "pi_vanilla",
+    "baseline_thinking": "high",
+    "baseline_concurrency": 8,
+    "pilot8_result": "3/8",
+    "incorrect": 1,
+    "budget_exhausted": 4,
+    "infrastructure_failures": 0,
+    "campaign_elapsed_seconds": 630.54028,
+    "runtime_is_clean_baseline": false,
+    "evidence": "configs/terminal_bench_core_pilot8_qualification_v1.json"
+  },
+  "task_ids": [
+    "build-tcc-qemu",
+    "configure-git-webserver",
+    "cron-broken-network",
+    "csv-to-parquet",
+    "extract-safely",
+    "fix-git",
+    "modernize-fortran-build",
+    "train-fasttext"
+  ],
+  "tasks": [
+    {
+      "task_id": "build-tcc-qemu",
+      "category": "system-administration",
+      "difficulty": "medium",
+      "max_agent_timeout_sec": 360.0,
+      "max_test_timeout_sec": 60.0,
+      "runtime_bucket": "short",
+      "variant_family": "build-tcc-qemu",
+      "tags": [],
+      "stratum": "heavy systems build and emulation"
+    },
+    {
+      "task_id": "configure-git-webserver",
+      "category": "system-administration",
+      "difficulty": "hard",
+      "max_agent_timeout_sec": 360.0,
+      "max_test_timeout_sec": 60.0,
+      "runtime_bucket": "short",
+      "variant_family": "configure-git-webserver",
+      "tags": [
+        "system",
+        "version-control",
+        "web"
+      ],
+      "stratum": "service configuration"
+    },
+    {
+      "task_id": "cron-broken-network",
+      "category": "system-administration",
+      "difficulty": "medium",
+      "max_agent_timeout_sec": 360.0,
+      "max_test_timeout_sec": 120.0,
+      "runtime_bucket": "short",
+      "variant_family": "cron-broken-network",
+      "tags": [
+        "sys-admin",
+        "networking",
+        "troubleshooting"
+      ],
+      "stratum": "network debugging"
+    },
+    {
+      "task_id": "csv-to-parquet",
+      "category": "data-science",
+      "difficulty": "easy",
+      "max_agent_timeout_sec": 360.0,
+      "max_test_timeout_sec": 60.0,
+      "runtime_bucket": "short",
+      "variant_family": "csv-to-parquet",
+      "tags": [
+        "data-processing",
+        "file-operations"
+      ],
+      "stratum": "data transformation"
+    },
+    {
+      "task_id": "extract-safely",
+      "category": "security",
+      "difficulty": "easy",
+      "max_agent_timeout_sec": 300.0,
+      "max_test_timeout_sec": 20.0,
+      "runtime_bucket": "short",
+      "variant_family": "extract-safely",
+      "tags": [
+        "file-operations",
+        "system"
+      ],
+      "stratum": "security and archive handling"
+    },
+    {
+      "task_id": "fix-git",
+      "category": "software-engineering",
+      "difficulty": "medium",
+      "max_agent_timeout_sec": 360.0,
+      "max_test_timeout_sec": 60.0,
+      "runtime_bucket": "short",
+      "variant_family": "fix-git",
+      "tags": [
+        "coding",
+        "version-control"
+      ],
+      "stratum": "version-control repair"
+    },
+    {
+      "task_id": "modernize-fortran-build",
+      "category": "software-engineering",
+      "difficulty": "easy",
+      "max_agent_timeout_sec": 360.0,
+      "max_test_timeout_sec": 60.0,
+      "runtime_bucket": "short",
+      "variant_family": "modernize-fortran-build",
+      "tags": [
+        "compiler-migration,",
+        "build-automation,",
+        "fortran"
+      ],
+      "stratum": "build modernization"
+    },
+    {
+      "task_id": "train-fasttext",
+      "category": "model-training",
+      "difficulty": "hard",
+      "max_agent_timeout_sec": 600.0,
+      "max_test_timeout_sec": 240.0,
+      "runtime_bucket": "medium",
+      "variant_family": "train-fasttext",
+      "tags": [
+        "data-processing",
+        "data-science"
+      ],
+      "stratum": "machine-learning workflow"
+    }
+  ]
+}

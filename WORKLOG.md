@@ -2091,3 +2091,26 @@ Append-only development log for the `cospa` repository.
 - Decision: keep PyYAML optional while requiring identical prompt bytes for the
   literal block styles used by the pinned Core tasks.
 - Next: freeze and smoke the Terminal-Bench Pareto20 panel.
+
+## 2026-08-15 — Freeze Terminal-Bench Pareto20
+
+- Context: Core 0.1.1 had an immutable official80 manifest but no reproducible
+  routine panel or DS4 cost/utility measurement; the existing pilot8 also
+  contained legacy tasks Harbor 0.16 could not migrate directly.
+- Change: register frozen pilot8 and outcome-blind Pareto20 suite IDs; preserve
+  all pilot tasks, stratify Pareto20 over nine capability categories, 5 easy /
+  9 medium / 6 hard tasks, and 15 short / 3 medium / 2 long timeout buckets.
+  Convert unsupported `solution.yaml` command sequences only in migration
+  scratch copies and supply fixed 2-CPU / 8-GiB / `/tests` Compose defaults
+  without modifying the pinned vendor checkout.
+- Evidence: the corrected DS4 + `pi_vanilla` + high-thinking c=8 smoke resolved
+  3/8 in 10m31s elapsed (37m42s summed task wall): three resolved, one incorrect,
+  four official agent timeouts, and zero infrastructure failures. Five tasks
+  exported token traces with $0.0157 partial estimated cost. All 34 focused
+  Terminal-Bench tests and the full 368-test pytest suite pass.
+- Decision: promote Pareto20 to the matched baseline wave and report timeout
+  outcomes separately as `budget_exhausted`. Do not treat its linear 26m17s
+  projection as clean throughput because two unrelated c=2 repository workers
+  overlapped the smoke; remeasure Pareto20 without host contention.
+- Next: qualify FeatureBench's campaign tier before launching the shared DS4
+  baseline wave.

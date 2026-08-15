@@ -349,7 +349,7 @@ publish end-to-end elapsed time, so a local pilot is required.
 | Evaluation | Size / official repetition | Published timing or budget evidence | Practical one-pass planning |
 | --- | --- | --- | --- |
 | `aider_cospa_full` | 225 × `k=1` | Cospa currently has a 10-minute safety wall | Provisional measured projections above; absolute cap is 37.5 serial hours |
-| Terminal-Bench Core 0.1.1 | 80 × `k=1` in Cospa | No complete local row | At a hypothetical 30-minute episode ceiling: 40 serial h, 20 h ideal `c=2`, 5 h ideal `c=8`; pilot required |
+| Terminal-Bench Core 0.1.1 | Pareto20 routine / 80 official | **Measured here:** DS4 pilot8 used 37m42s task wall and 10m31s c=8 elapsed | Linear Pareto20 projection: 1h34m task wall / 26m17s c=8; long-task mix and concurrent host work make a fresh measurement mandatory |
 | Terminal-Bench 2.x | 89 tasks; official campaigns commonly repeat | **Published:** most agent trials finish under 20 minutes; extremes reach two hours | If every trial took 20 minutes: 29.7 serial h for `k=1`; 148.3 h for `k=5`. Actual distribution and compatible task list must be pinned |
 | SWE Atlas pilot | 12 × `k=1`, then matched `k=2` if promoted | Published cost for selected Q&A/Test Writing systems is about $0.35–$1.90/task; wall time unknown | Deferred from the deterministic Pareto campaign because the headline requires a rubric LLM judge |
 | Multi-SWE-bench Flash | 300 × `k=1` | No published E2E runtime | At a 30-minute Cospa episode ceiling: 150 serial h; 75 h ideal `c=2`; 18.8 h ideal `c=8`, plus verification |
@@ -375,7 +375,7 @@ rules, and a `c=1/2/4/8/16` ladder. The pilot sizes are:
 | Evaluation | Pilot | Current gate |
 | --- | ---: | --- |
 | Aider source corpus | 23 / 225 | Blocked until the contract audit freezes eligible tasks |
-| Terminal-Bench Core 0.1.1 | 8 / 80 | Source and Harbor 0.16.1 ready; fresh Docker smoke required |
+| Terminal-Bench Core 0.1.1 | pilot8 / Pareto20 / full80 | DS4 pilot8 completed 3/8 with 1 incorrect, 4 budget-exhausted, and 0 infrastructure failures; Pareto20 is frozen for baseline |
 | SWE Atlas pilot12 | 12 / 12 | Mechanically pinned but deferred; current campaign does not require an LLM judge |
 | Multi-SWE-bench Flash | 25 retained / 30 screened / 300 | `multi_swe_bench_flash_hermetic25`: 75/75 gold passed and 75/75 null failed under the no-network verifier; ready for DS4 smoke |
 | SWE-bench Multilingual | 30 / 300 | Dataset and 30 image digests locked; gold/null/repeat validation pending |
@@ -401,6 +401,17 @@ model patches and all 84 oracle runs resolved with non-empty patches while the
 verifier had no network. Ten tasks were excluded before target-model runs:
 eight require uncached verifier dependencies and two have gold patches that
 fail declared P2P tests in their pinned images.
+
+Terminal-Bench's first DS4 pilot exposed two migration defects before the
+scored smoke: Harbor 0.16 rejects legacy `solution.yaml` even though target
+agents never receive the oracle, and migrated custom Compose tasks need explicit
+CPU, memory, and test-directory substitutions. Cospa now converts legacy oracle
+command sequences only in migration scratch copies, leaves the pinned source
+untouched, and supplies fixed 2-CPU / 8-GiB / `/tests` defaults. The corrected c=8 run
+resolved 3/8, produced one ordinary incorrect result and four official agent
+timeouts, and had zero infrastructure failures. Pareto20 was selected before
+these outcomes across all nine source categories, all three difficulties, and
+short/medium/long declared-timeout strata.
 
 The balanced expansion froze 96 candidates before target-model outcomes. Its
 first mechanical gold pass retained 41 of the 68 tasks beyond pilot28, leaving

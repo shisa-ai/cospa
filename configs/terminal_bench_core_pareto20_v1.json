@@ -1,0 +1,395 @@
+{
+  "name": "terminal-bench-core-pareto20",
+  "version": "2026-08-15",
+  "terminal_bench_version": ">=0.2.4",
+  "github_url": "https://github.com/harbor-framework/terminal-bench-1.git",
+  "dataset_path": "tasks",
+  "branch": "dataset/terminal-bench-core/v0.1.x",
+  "commit_hash": "91e10457b5410f16c44364da1a34cb6de8c488a5",
+  "source_manifest": "configs/terminal_bench_core_0.1.1.json",
+  "source_manifest_sha256": "7e18956a18d605185c0579e81aa766b12c645e8667eb9da596be0e2b967700a7",
+  "selection": {
+    "outcome_blind": true,
+    "uses_target_model_outcomes": false,
+    "seed": "cospa-terminal-bench-pareto20-v1",
+    "panel_size": 20,
+    "includes_runtime_pilot8": true,
+    "category_targets": {
+      "software-engineering": 4,
+      "system-administration": 4,
+      "security": 3,
+      "debugging": 2,
+      "file-operations": 2,
+      "data-science": 2,
+      "model-training": 1,
+      "games": 1,
+      "scientific-computing": 1
+    },
+    "difficulty_targets": {
+      "easy": 5,
+      "medium": 9,
+      "hard": 6
+    },
+    "runtime_bucket_targets": {
+      "short": 15,
+      "medium": 3,
+      "long": 2
+    },
+    "runtime_bucket_definition_seconds": {
+      "short": "<=360",
+      "medium": "361-900",
+      "long": ">900"
+    },
+    "at_most_one_task_per_variant_family": true
+  },
+  "qualification": {
+    "status": "ready_baseline",
+    "baseline_model": "local/deepseek-v4-flash-0731",
+    "baseline_adapter": "pi_vanilla",
+    "baseline_thinking": "high",
+    "baseline_concurrency": 8,
+    "pilot8_result": "3/8",
+    "incorrect": 1,
+    "budget_exhausted": 4,
+    "infrastructure_failures": 0,
+    "campaign_elapsed_seconds": 630.54028,
+    "runtime_is_clean_baseline": false,
+    "evidence": "configs/terminal_bench_core_pilot8_qualification_v1.json"
+  },
+  "task_ids": [
+    "blind-maze-explorer-5x5",
+    "build-tcc-qemu",
+    "configure-git-webserver",
+    "crack-7z-hash.easy",
+    "create-bucket",
+    "cron-broken-network",
+    "csv-to-parquet",
+    "eval-mteb.hard",
+    "extract-moves-from-video",
+    "extract-safely",
+    "fix-git",
+    "grid-pattern-transform",
+    "modernize-fortran-build",
+    "openssl-selfsigned-cert",
+    "prove-plus-comm",
+    "raman-fitting",
+    "sqlite-with-gcov",
+    "swe-bench-astropy-1",
+    "tmux-advanced-workflow",
+    "train-fasttext"
+  ],
+  "tasks": [
+    {
+      "task_id": "blind-maze-explorer-5x5",
+      "category": "games",
+      "difficulty": "hard",
+      "max_agent_timeout_sec": 900.0,
+      "max_test_timeout_sec": 120.0,
+      "runtime_bucket": "medium",
+      "variant_family": "blind-maze-explorer-5x5",
+      "tags": [
+        "maze",
+        "exploration",
+        "mapping",
+        "algorithms"
+      ],
+      "pilot8": false,
+      "stratum": "games / medium"
+    },
+    {
+      "task_id": "build-tcc-qemu",
+      "category": "system-administration",
+      "difficulty": "medium",
+      "max_agent_timeout_sec": 360.0,
+      "max_test_timeout_sec": 60.0,
+      "runtime_bucket": "short",
+      "variant_family": "build-tcc-qemu",
+      "tags": [],
+      "pilot8": true,
+      "stratum": "heavy systems build and emulation"
+    },
+    {
+      "task_id": "configure-git-webserver",
+      "category": "system-administration",
+      "difficulty": "hard",
+      "max_agent_timeout_sec": 360.0,
+      "max_test_timeout_sec": 60.0,
+      "runtime_bucket": "short",
+      "variant_family": "configure-git-webserver",
+      "tags": [
+        "system",
+        "version-control",
+        "web"
+      ],
+      "pilot8": true,
+      "stratum": "service configuration"
+    },
+    {
+      "task_id": "crack-7z-hash.easy",
+      "category": "security",
+      "difficulty": "medium",
+      "max_agent_timeout_sec": 360.0,
+      "max_test_timeout_sec": 60.0,
+      "runtime_bucket": "short",
+      "variant_family": "crack-7z-hash",
+      "tags": [
+        "decrypt",
+        "security",
+        "file-operations"
+      ],
+      "pilot8": false,
+      "stratum": "security / short"
+    },
+    {
+      "task_id": "create-bucket",
+      "category": "file-operations",
+      "difficulty": "easy",
+      "max_agent_timeout_sec": 360.0,
+      "max_test_timeout_sec": 60.0,
+      "runtime_bucket": "short",
+      "variant_family": "create-bucket",
+      "tags": [
+        "cloud",
+        "storage",
+        "system"
+      ],
+      "pilot8": false,
+      "stratum": "file-operations / short"
+    },
+    {
+      "task_id": "cron-broken-network",
+      "category": "system-administration",
+      "difficulty": "medium",
+      "max_agent_timeout_sec": 360.0,
+      "max_test_timeout_sec": 120.0,
+      "runtime_bucket": "short",
+      "variant_family": "cron-broken-network",
+      "tags": [
+        "sys-admin",
+        "networking",
+        "troubleshooting"
+      ],
+      "pilot8": true,
+      "stratum": "network debugging"
+    },
+    {
+      "task_id": "csv-to-parquet",
+      "category": "data-science",
+      "difficulty": "easy",
+      "max_agent_timeout_sec": 360.0,
+      "max_test_timeout_sec": 60.0,
+      "runtime_bucket": "short",
+      "variant_family": "csv-to-parquet",
+      "tags": [
+        "data-processing",
+        "file-operations"
+      ],
+      "pilot8": true,
+      "stratum": "data transformation"
+    },
+    {
+      "task_id": "eval-mteb.hard",
+      "category": "data-science",
+      "difficulty": "medium",
+      "max_agent_timeout_sec": 1800.0,
+      "max_test_timeout_sec": 240.0,
+      "runtime_bucket": "long",
+      "variant_family": "eval-mteb",
+      "tags": [
+        "data-processing",
+        "data-science"
+      ],
+      "pilot8": false,
+      "stratum": "data-science / long"
+    },
+    {
+      "task_id": "extract-moves-from-video",
+      "category": "file-operations",
+      "difficulty": "hard",
+      "max_agent_timeout_sec": 360.0,
+      "max_test_timeout_sec": 60.0,
+      "runtime_bucket": "short",
+      "variant_family": "extract-moves-from-video",
+      "tags": [
+        "file-operations",
+        "web",
+        "video-processing"
+      ],
+      "pilot8": false,
+      "stratum": "file-operations / short"
+    },
+    {
+      "task_id": "extract-safely",
+      "category": "security",
+      "difficulty": "easy",
+      "max_agent_timeout_sec": 300.0,
+      "max_test_timeout_sec": 20.0,
+      "runtime_bucket": "short",
+      "variant_family": "extract-safely",
+      "tags": [
+        "file-operations",
+        "system"
+      ],
+      "pilot8": true,
+      "stratum": "security and archive handling"
+    },
+    {
+      "task_id": "fix-git",
+      "category": "software-engineering",
+      "difficulty": "medium",
+      "max_agent_timeout_sec": 360.0,
+      "max_test_timeout_sec": 60.0,
+      "runtime_bucket": "short",
+      "variant_family": "fix-git",
+      "tags": [
+        "coding",
+        "version-control"
+      ],
+      "pilot8": true,
+      "stratum": "version-control repair"
+    },
+    {
+      "task_id": "grid-pattern-transform",
+      "category": "software-engineering",
+      "difficulty": "easy",
+      "max_agent_timeout_sec": 600.0,
+      "max_test_timeout_sec": 120.0,
+      "runtime_bucket": "medium",
+      "variant_family": "grid-pattern-transform",
+      "tags": [
+        "python",
+        "coding",
+        "numpy",
+        "grid-manipulation",
+        "pattern-recognition"
+      ],
+      "pilot8": false,
+      "stratum": "software-engineering / medium"
+    },
+    {
+      "task_id": "modernize-fortran-build",
+      "category": "software-engineering",
+      "difficulty": "easy",
+      "max_agent_timeout_sec": 360.0,
+      "max_test_timeout_sec": 60.0,
+      "runtime_bucket": "short",
+      "variant_family": "modernize-fortran-build",
+      "tags": [
+        "compiler-migration,",
+        "build-automation,",
+        "fortran"
+      ],
+      "pilot8": true,
+      "stratum": "build modernization"
+    },
+    {
+      "task_id": "openssl-selfsigned-cert",
+      "category": "security",
+      "difficulty": "medium",
+      "max_agent_timeout_sec": 360.0,
+      "max_test_timeout_sec": 60.0,
+      "runtime_bucket": "short",
+      "variant_family": "openssl-selfsigned-cert",
+      "tags": [
+        "coding",
+        "file-operations",
+        "security",
+        "system"
+      ],
+      "pilot8": false,
+      "stratum": "security / short"
+    },
+    {
+      "task_id": "prove-plus-comm",
+      "category": "software-engineering",
+      "difficulty": "hard",
+      "max_agent_timeout_sec": 360.0,
+      "max_test_timeout_sec": 60.0,
+      "runtime_bucket": "short",
+      "variant_family": "prove-plus-comm",
+      "tags": [
+        "coding"
+      ],
+      "pilot8": false,
+      "stratum": "software-engineering / short"
+    },
+    {
+      "task_id": "raman-fitting",
+      "category": "scientific-computing",
+      "difficulty": "medium",
+      "max_agent_timeout_sec": 360.0,
+      "max_test_timeout_sec": 60.0,
+      "runtime_bucket": "short",
+      "variant_family": "raman-fitting",
+      "tags": [
+        "coding",
+        "fitting",
+        "analysis",
+        "physics"
+      ],
+      "pilot8": false,
+      "stratum": "scientific-computing / short"
+    },
+    {
+      "task_id": "sqlite-with-gcov",
+      "category": "system-administration",
+      "difficulty": "medium",
+      "max_agent_timeout_sec": 360.0,
+      "max_test_timeout_sec": 60.0,
+      "runtime_bucket": "short",
+      "variant_family": "sqlite-with-gcov",
+      "tags": [
+        "software-installation",
+        "system"
+      ],
+      "pilot8": false,
+      "stratum": "system-administration / short"
+    },
+    {
+      "task_id": "swe-bench-astropy-1",
+      "category": "debugging",
+      "difficulty": "hard",
+      "max_agent_timeout_sec": 1000.0,
+      "max_test_timeout_sec": 120.0,
+      "runtime_bucket": "long",
+      "variant_family": "swe-bench-astropy-1",
+      "tags": [
+        "debugging",
+        "swe-bench"
+      ],
+      "pilot8": false,
+      "stratum": "debugging / long"
+    },
+    {
+      "task_id": "tmux-advanced-workflow",
+      "category": "debugging",
+      "difficulty": "medium",
+      "max_agent_timeout_sec": 360.0,
+      "max_test_timeout_sec": 60.0,
+      "runtime_bucket": "short",
+      "variant_family": "tmux-advanced-workflow",
+      "tags": [
+        "data-processing",
+        "debugging",
+        "system"
+      ],
+      "pilot8": false,
+      "stratum": "debugging / short"
+    },
+    {
+      "task_id": "train-fasttext",
+      "category": "model-training",
+      "difficulty": "hard",
+      "max_agent_timeout_sec": 600.0,
+      "max_test_timeout_sec": 240.0,
+      "runtime_bucket": "medium",
+      "variant_family": "train-fasttext",
+      "tags": [
+        "data-processing",
+        "data-science"
+      ],
+      "pilot8": true,
+      "stratum": "machine-learning workflow"
+    }
+  ]
+}

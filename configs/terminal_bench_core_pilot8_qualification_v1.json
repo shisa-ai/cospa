@@ -1,0 +1,150 @@
+{
+  "compatibility_fixes": [
+    "Convert legacy solution.yaml command sequences to solution.sh only in Harbor migration scratch copies; keep the pinned vendor source unchanged.",
+    "Provide CPUS=2, MEMORY=8G, and TEST_DIR=/tests for migrated custom Compose tasks."
+  ],
+  "environment_note": "Two unrelated GPT-5.6 PolyBench c=2 trials were active on the host, so elapsed time is conservative plumbing evidence, not a clean throughput baseline.",
+  "evidence": {
+    "authoritative_run": "results/runs/ds4-terminal-pilot8-v3-20260815T2055Z",
+    "superseded_compose_probe": "results/runs/ds4-terminal-pilot8-v2-20260815T2050Z",
+    "superseded_migration_probe": "results/runs/ds4-terminal-pilot8-20260815T2040Z"
+  },
+  "name": "terminal_bench_core_pilot8_qualification_v1",
+  "policy": {
+    "adapter": "pi_vanilla",
+    "attempts": 1,
+    "client_concurrency": 8,
+    "harbor_version": "0.16.1",
+    "model": "local/deepseek-v4-flash-0731",
+    "model_endpoint_only": true,
+    "retries": 0,
+    "terminal_bench_commit": "91e10457b5410f16c44364da1a34cb6de8c488a5",
+    "thinking": "high"
+  },
+  "summary": {
+    "budget_exhausted": 4,
+    "campaign_elapsed_seconds": 630.54028,
+    "incorrect": 1,
+    "infrastructure_failures": 0,
+    "native_verifier_outcomes": 4,
+    "resolved": 3,
+    "summed_task_wall_seconds": 2262.444296,
+    "tasks": 8,
+    "token_covered": 5
+  },
+  "tasks": [
+    {
+      "agent_exception": "AgentTimeoutError",
+      "harbor_exit_code": -1,
+      "outcome": "budget_exhausted",
+      "passed": false,
+      "requested_model": "local/deepseek-v4-flash-0731",
+      "response_count": 0,
+      "served_model": null,
+      "task_id": "build-tcc-qemu",
+      "thinking": "high",
+      "token_usage_observed": false,
+      "total_tokens": 0,
+      "total_wall_seconds": 390.757905
+    },
+    {
+      "agent_exception": "AgentTimeoutError",
+      "harbor_exit_code": -1,
+      "outcome": "budget_exhausted",
+      "passed": false,
+      "requested_model": "local/deepseek-v4-flash-0731",
+      "response_count": 0,
+      "served_model": null,
+      "task_id": "configure-git-webserver",
+      "thinking": "high",
+      "token_usage_observed": false,
+      "total_tokens": 0,
+      "total_wall_seconds": 401.125797
+    },
+    {
+      "agent_exception": null,
+      "harbor_exit_code": 0,
+      "outcome": "incorrect",
+      "passed": false,
+      "requested_model": "local/deepseek-v4-flash-0731",
+      "response_count": 13,
+      "served_model": "deepseek-v4-flash-0731",
+      "task_id": "cron-broken-network",
+      "thinking": "high",
+      "token_usage_observed": true,
+      "total_tokens": 80610,
+      "total_wall_seconds": 167.963038
+    },
+    {
+      "agent_exception": "AgentTimeoutError",
+      "harbor_exit_code": -1,
+      "outcome": "budget_exhausted",
+      "passed": false,
+      "requested_model": "local/deepseek-v4-flash-0731",
+      "response_count": 25,
+      "served_model": "deepseek-v4-flash-0731",
+      "task_id": "csv-to-parquet",
+      "thinking": "high",
+      "token_usage_observed": true,
+      "total_tokens": 358846,
+      "total_wall_seconds": 391.107235
+    },
+    {
+      "agent_exception": null,
+      "harbor_exit_code": 0,
+      "outcome": "resolved",
+      "passed": true,
+      "requested_model": "local/deepseek-v4-flash-0731",
+      "response_count": 5,
+      "served_model": "deepseek-v4-flash-0731",
+      "task_id": "extract-safely",
+      "thinking": "high",
+      "token_usage_observed": true,
+      "total_tokens": 10253,
+      "total_wall_seconds": 81.996416
+    },
+    {
+      "agent_exception": null,
+      "harbor_exit_code": 0,
+      "outcome": "resolved",
+      "passed": true,
+      "requested_model": "local/deepseek-v4-flash-0731",
+      "response_count": 12,
+      "served_model": "deepseek-v4-flash-0731",
+      "task_id": "fix-git",
+      "thinking": "high",
+      "token_usage_observed": true,
+      "total_tokens": 57551,
+      "total_wall_seconds": 84.68786
+    },
+    {
+      "agent_exception": null,
+      "harbor_exit_code": 0,
+      "outcome": "resolved",
+      "passed": true,
+      "requested_model": "local/deepseek-v4-flash-0731",
+      "response_count": 7,
+      "served_model": "deepseek-v4-flash-0731",
+      "task_id": "modernize-fortran-build",
+      "thinking": "high",
+      "token_usage_observed": true,
+      "total_tokens": 41318,
+      "total_wall_seconds": 114.265128
+    },
+    {
+      "agent_exception": "AgentTimeoutError",
+      "harbor_exit_code": -1,
+      "outcome": "budget_exhausted",
+      "passed": false,
+      "requested_model": "local/deepseek-v4-flash-0731",
+      "response_count": 0,
+      "served_model": null,
+      "task_id": "train-fasttext",
+      "thinking": "high",
+      "token_usage_observed": false,
+      "total_tokens": 0,
+      "total_wall_seconds": 630.540917
+    }
+  ],
+  "version": "2026-08-15"
+}

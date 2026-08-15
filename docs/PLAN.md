@@ -99,8 +99,15 @@ reorder — earlier items unblock later ones.
 - [ ] **P11. Suite: Terminal-Bench.** `harness/suites/terminal_bench.py`
       wraps `harbor run` against the checked-in 80-task
       `terminal-bench-core==0.1.1` manifest and immutable upstream commit.
-      Each adapter uses a distinct custom Harbor agent. Start with k=1 on a
-      5-task slice to measure wall-clock before committing to full runs.
+      Each adapter uses a distinct custom Harbor agent. The frozen
+      `terminal_bench_core_pilot8` DS4 c=8 smoke resolved 3/8, returned one
+      ordinary incorrect outcome and four official agent timeouts, and had no
+      infrastructure/verifier failures after migration compatibility fixes.
+      The nested `terminal_bench_core_pareto20` panel preserves pilot8 and
+      targets 9 capability categories, 5 easy / 9 medium / 6 hard tasks, and
+      15 short / 3 medium / 2 long declared-runtime buckets without using
+      target-model outcomes. Keep the official 80-task suite under
+      `terminal_bench`; run Pareto20 next and reserve full80 for finalists.
 - [ ] **P11b. Suite: SWE Atlas pilot12 (deferred).**
       `harness/suites/swe_atlas.py` preserves a predeclared Harbor-native slice:
       eight Test Writing and four Codebase Q&A tasks, with three total tasks
@@ -317,9 +324,10 @@ Terminal-Bench 2.1 remains a separate milestone campaign.
   fallback is disabled because it cannot guarantee the patch. Host-loopback
   model URLs require `CODING_EVAL_HARBOR_MODEL_BASE_URL` set to a
   container-reachable relay address.
-- **Wall-clock probe first.** Before scaling, run k=1 on a 5-task slice,
-  measure time, *then* decide k for the real matrix. TB on small models
-  is slow; we don't want to discover a 40-hour run after launching it.
+- **Measured gate.** The DS4 `pi_vanilla` pilot8 completed in 10m31s at c=8:
+  3 resolved, 1 incorrect, and 4 official agent-timeout outcomes. Run the
+  frozen Pareto20 at k=1 next; add repetitions or full80 only after its paired
+  discrimination and budget-exhaustion profile justify the cost.
 
 ### SWE Atlas pilot12 (P11b, preserved but deferred)
 

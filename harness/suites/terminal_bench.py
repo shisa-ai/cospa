@@ -8,6 +8,7 @@ Harbor jobs with the appropriate agent and model.
 Reference: vendor/terminal-bench/CLAUDE.md
 """
 
+import ast
 import hashlib
 import json
 import os
@@ -25,6 +26,12 @@ from harness.telemetry import load_model_metadata
 
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
+PILOT8_MANIFEST_PATH = (
+    PROJECT_ROOT / "configs" / "terminal_bench_core_pilot8_v1.json"
+)
+PARETO20_MANIFEST_PATH = (
+    PROJECT_ROOT / "configs" / "terminal_bench_core_pareto20_v1.json"
+)
 
 
 @dataclass
@@ -147,6 +154,13 @@ class TerminalBenchSuite:
         PYTHONPATH lets Harbor import `harness.harbor_agents`.
         """
         env = os.environ.copy()
+        # Harbor's Terminal-Bench mapper preserves some custom Compose files
+        # with these substitutions. Harbor 0.16 does not populate them when
+        # the legacy task omits explicit resource fields, so provide stable
+        # campaign defaults instead of letting Docker Compose parse blanks.
+        env.setdefault("CPUS", "2")
+        env.setdefault("MEMORY", "8G")
+        env.setdefault("TEST_DIR", "/tests")
         existing = env.get("PYTHONPATH")
         parts = [str(PROJECT_ROOT)]
         if existing:
@@ -410,6 +424,64 @@ class TerminalBenchSuite:
             }
             for source, target in sources
         ]
+
+    @staticmethod
+    def _legacy_solution_commands(text: str) -> list[str]:
+        """Extract commands from Core's legacy interactive oracle format."""
+        try:
+            import yaml  # type: ignore
+
+            payload = yaml.safe_load(text) or []
+            commands = [
+                str(item["command"])
+                for item in payload
+                if isinstance(item, dict) and item.get("command")
+            ]
+            if commands:
+                return commands
+        except ImportError:
+            pass
+
+        commands = []
+        lines = text.splitlines()
+        index = 0
+        while index < len(lines):
+            line = lines[index]
+            match = re.match(r"^-\s+command\s*:\s*(.*)$", line)
+            if not match:
+                index += 1
+                continue
+            value = match.group(1).strip()
+            if value in {"|", "|-", "|+"}:
+                block = []
+                index += 1
+                while index < len(lines) and not lines[index].startswith("-"):
+                    candidate = lines[index]
+                    if candidate.startswith("    "):
+                        block.append(candidate[4:])
+                    index += 1
+                commands.append("\n".join(block).rstrip("\n"))
+                continue
+            if value.startswith(("'", '"')):
+                try:
+                    value = str(ast.literal_eval(value))
+                except (SyntaxError, ValueError):
+                    value = value.strip("'\"")
+            commands.append(value)
+            index += 1
+        return commands
+
+    @classmethod
+    def _convert_legacy_solution(cls, source: Path, destination: Path) -> None:
+        commands = cls._legacy_solution_commands(source.read_text())
+        if not commands:
+            raise ValueError(f"Legacy Terminal-Bench solution has no commands: {source}")
+        destination.write_text(
+            "#!/usr/bin/env bash\nset -e\n\n"
+            + "\n\n".join(commands)
+            + "\n"
+        )
+        destination.chmod(0o755)
 
     def _dataset_manifest(self) -> Dict[str, Any]:
         """Load cospa's immutable Terminal-Bench Core dataset manifest."""
@@ -832,23 +904,45 @@ class TerminalBenchSuite:
             tasks_dir = self._task_source_dir(vendor_dir)
             original_task = tasks_dir / task_id if tasks_dir is not None else None
             if original_task is not None and original_task.exists():
+                migrate_input = original_task.resolve()
+                compatibility_root = None
+                if (original_task / "solution.yaml").is_file():
+                    # Harbor 0.16 rejects the legacy interactive oracle format.
+                    # Convert its ordered shell commands only in migration
+                    # scratch space. Harbor keeps the resulting oracle hidden
+                    # from the target agent; the pinned checkout stays untouched.
+                    compatibility_root = Path(
+                        tempfile.mkdtemp(prefix="_migrate_input_", dir=jobs_dir)
+                    )
+                    migrate_input = compatibility_root / task_id
+                    shutil.copytree(original_task, migrate_input)
+                    legacy_solution = migrate_input / "solution.yaml"
+                    self._convert_legacy_solution(
+                        legacy_solution,
+                        migrate_input / "solution.sh",
+                    )
+                    legacy_solution.unlink()
                 local_task_path = jobs_dir / f"_local_tasks_{time.time_ns()}"
                 migrate_cmd = [
                     "harbor",
                     "task",
                     "migrate",
                     "--input",
-                    str(original_task.resolve()),
+                    str(migrate_input),
                     "--output",
                     str(local_task_path),
                 ]
-                migrate_result = run_command(
-                    migrate_cmd,
-                    capture_output=True,
-                    text=True,
-                    timeout=300,
-                    env=harbor_env,
-                )
+                try:
+                    migrate_result = run_command(
+                        migrate_cmd,
+                        capture_output=True,
+                        text=True,
+                        timeout=300,
+                        env=harbor_env,
+                    )
+                finally:
+                    if compatibility_root is not None:
+                        shutil.rmtree(compatibility_root)
                 if migrate_result.returncode != 0:
                     return {
                         "returncode": migrate_result.returncode,
@@ -916,3 +1010,19 @@ class TerminalBenchSuite:
             return {"returncode": -1, "stdout": "", "stderr": f"harbor not found: {e}"}
         except Exception as e:
             return {"returncode": -1, "stdout": "", "stderr": str(e)}
+
+
+class TerminalBenchCorePilot8Suite(TerminalBenchSuite):
+    """Frozen eight-task runtime and infrastructure pilot."""
+
+    name = "terminal_bench_core_pilot8"
+    task_count = 8
+    manifest_path = PILOT8_MANIFEST_PATH
+
+
+class TerminalBenchCorePareto20Suite(TerminalBenchSuite):
+    """Outcome-blind 20-task routine panel from Terminal-Bench Core 0.1.1."""
+
+    name = "terminal_bench_core_pareto20"
+    task_count = 20
+    manifest_path = PARETO20_MANIFEST_PATH

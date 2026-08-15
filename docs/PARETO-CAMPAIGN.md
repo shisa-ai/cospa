@@ -102,6 +102,7 @@ billing.
 | BCB-Hard Instruct pilot15, no thinking | 3/15 | 1m43s | 24.5s | $0.0023 |
 | BCB-Hard Agentic pilot15, vanilla `xhigh` | 2/15 | 29m04s | 5m25s | $0.0350 |
 | SWE-PolyBench pilot28, vanilla `high` | 5/28 | 2h30m | 2h05m | $0.3201 |
+| Terminal-Bench Core pilot8, vanilla `high` | 3/8 | 37m42s | 10m31s | $0.0157 on 5/8 token-covered tasks |
 
 Linear projections preserve the observed per-task throughput and are planning
 estimates, not promises:
@@ -111,6 +112,7 @@ estimates, not promises:
 | BCB Agentic 60 | 1h56m | 21m40s | $0.14 |
 | BCB Agentic 75 | 2h25m | 27m05s | $0.18 |
 | BCB Agentic hermetic143 | 4h37m | 51m38s | $0.33 |
+| Terminal-Bench Pareto20 | 1h34m | 26m17s | Partially costed; pilot projection only |
 | PolyBench balanced64 | 5h43m | 4h46m | $0.73 |
 | PolyBench balanced96 | 8h35m | 7h09m | $1.10 |
 | PolyBench full382 | 34h08m | 28h25m | $4.37 |
@@ -140,6 +142,17 @@ only 22 Java / 22 JavaScript / 21 Python / 17 TypeScript, so a balanced96 score
 is not available and will not be fabricated from mechanically failing tasks.
 The measured DS4 c=8 baseline will determine whether balanced64's earlier
 projection remains useful.
+
+Terminal-Bench's corrected DS4 c=8 pilot resolved 3/8 tasks, produced one
+ordinary incorrect verifier outcome, and hit four official agent timeouts, with
+no setup, transport, or verifier failures. The 37.5% resolved rate is in the
+utility band and the timeouts are retained as `budget_exhausted`, not silently
+reclassified as wrong solutions. Five tasks exported token traces; their
+partial estimated cost was $0.0157. The 10m31s elapsed time overlapped two
+unrelated GPT-5.6 PolyBench workers, so the 26m17s Pareto20 projection is
+conservative plumbing evidence rather than a clean throughput baseline.
+Pareto20 is frozen for the matched baseline wave, where timing must be measured
+again without unrelated host load.
 
 ## Pareto rules
 
@@ -224,7 +237,7 @@ protocol comparability.
 | --- | ---: | ---: | --- |
 | BCB-Hard Instruct | hermetic143 | none | Cheap model-only protocol anchor |
 | BCB-Hard Agentic | Pareto60 | hermetic143 | Function implementation + scaffold sensitivity |
-| Terminal-Bench Core | existing 8 | Pareto20, then full80 | Broad terminal/tool competence |
+| Terminal-Bench Core | completed pilot8 | Pareto20, then full80 | Broad terminal/tool competence |
 | FeatureBench | existing 6 | Lite30; Fast100 only if promoted | Long feature implementation |
 | Diagnostic bake-off | 12 DABStep + 12 SWE-Explore | select one fixed panel | Cheap tool or localization signal |
 

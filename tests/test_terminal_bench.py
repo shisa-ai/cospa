@@ -16,17 +16,20 @@ import asyncio
 import json
 import importlib
 import os
+import runpy
 import shutil
 import sys
 import tempfile
 import tomllib
 import types
+from collections import Counter
 from pathlib import Path
 from unittest.mock import patch
 
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(PROJECT_ROOT))
 
+from harness.suites import load_suite
 from harness.suites.terminal_bench import TerminalBenchSuite, _parse_task_yaml
 
 
@@ -132,6 +135,59 @@ def test_task_yaml_fallback_matches_yaml_chomping_semantics():
         with patch.dict(sys.modules, {"yaml": None}):
             parsed = _parse_task_yaml(payload)
         assert parsed["instruction"] == expected
+
+
+def test_pareto20_panel_is_outcome_blind_stratified_and_loadable():
+    manifest_path = (
+        PROJECT_ROOT / "configs/terminal_bench_core_pareto20_v1.json"
+    )
+    manifest = json.loads(manifest_path.read_text())
+    pilot_manifest = json.loads(
+        (
+            PROJECT_ROOT / "configs/terminal_bench_core_pilot8_v1.json"
+        ).read_text()
+    )
+    tasks = manifest["tasks"]
+    pilot = json.loads(
+        (PROJECT_ROOT / "configs/ornith_runtime_pilot_v1.json").read_text()
+    )["suites"]["terminal_bench_core_0_1_1"]
+    pilot_ids = {task["id"] for task in pilot["tasks"]}
+
+    selector = runpy.run_path(
+        str(PROJECT_ROOT / "scripts/select-terminal-bench-panel.py")
+    )
+    assert selector["build_manifest"]() == manifest
+    assert selector["build_pilot_manifest"]() == pilot_manifest
+    assert manifest["selection"]["outcome_blind"] is True
+    assert manifest["selection"]["uses_target_model_outcomes"] is False
+    assert manifest["qualification"]["status"] == "ready_baseline"
+    assert manifest["qualification"]["pilot8_result"] == "3/8"
+    assert manifest["qualification"]["budget_exhausted"] == 4
+    assert manifest["qualification"]["infrastructure_failures"] == 0
+    assert len(tasks) == len({task["task_id"] for task in tasks}) == 20
+    assert pilot_ids.issubset(task["task_id"] for task in tasks)
+    assert Counter(task["category"] for task in tasks) == Counter(
+        manifest["selection"]["category_targets"]
+    )
+    assert Counter(task["difficulty"] for task in tasks) == Counter(
+        manifest["selection"]["difficulty_targets"]
+    )
+    assert Counter(task["runtime_bucket"] for task in tasks) == Counter(
+        manifest["selection"]["runtime_bucket_targets"]
+    )
+    assert len({task["variant_family"] for task in tasks}) == 20
+    assert all("passed" not in task and "resolved" not in task for task in tasks)
+
+    official = load_suite("terminal_bench")
+    pilot_suite = load_suite("terminal_bench_core_pilot8")
+    pareto = load_suite("terminal_bench_core_pareto20")
+    assert official.task_count == len(official.get_task_ids(PROJECT_ROOT / "vendor")) == 80
+    assert pilot_suite.task_count == 8
+    assert pilot_suite.get_task_ids(PROJECT_ROOT / "vendor") == sorted(pilot_ids)
+    assert pareto.task_count == 20
+    assert pareto.get_task_ids(PROJECT_ROOT / "vendor") == [
+        task["task_id"] for task in tasks
+    ]
 
 
 def test_materialize_task_reads_task_yaml_instruction():
@@ -264,6 +320,63 @@ def test_run_harbor_job_uses_correct_flags():
     assert cmd[cmd.index("--allow-agent-host") + 1] == "model-relay"
 
     assert result["returncode"] == 0, result
+
+
+def test_run_harbor_job_strips_legacy_solution_yaml_from_migration_copy(tmp_path):
+    suite = TerminalBenchSuite()
+    vendor_dir = tmp_path / "vendor"
+    source = _make_task_yaml_task(vendor_dir, "legacy-solution")
+    (source / "solution.sh").unlink()
+    (source / "solution.yaml").write_text(
+        "- command: echo solved > /app/answer\n"
+    )
+    captured = {}
+
+    def fake_run(cmd, **kwargs):
+        import subprocess as sp
+
+        captured["env"] = kwargs.get("env", {})
+        if cmd[:3] == ["harbor", "task", "migrate"]:
+            migrate_input = Path(cmd[cmd.index("--input") + 1])
+            captured["input"] = migrate_input
+            captured["has_legacy_solution"] = (
+                migrate_input / "solution.yaml"
+            ).exists()
+            generated_solution = migrate_input / "solution.sh"
+            captured["generated_solution"] = (
+                generated_solution.read_text()
+                if generated_solution.is_file()
+                else None
+            )
+            output = Path(cmd[cmd.index("--output") + 1]) / "legacy-solution"
+            output.mkdir(parents=True)
+            (output / "task.toml").write_text('name = "legacy-solution"\n')
+        return sp.CompletedProcess(cmd, 0, "", "")
+
+    with patch(
+        "harness.suites.terminal_bench.run_command", side_effect=fake_run
+    ), patch.dict(
+        os.environ,
+        {"CODING_EVAL_HARBOR_MODEL_BASE_URL": "http://model-relay:8013/v1"},
+    ):
+        result = suite.run_harbor_job(
+            "legacy-solution",
+            "test/model",
+            "pi_vanilla",
+            tmp_path / "workdir",
+            tmp_path / "jobs",
+            vendor_dir=vendor_dir,
+        )
+
+    assert result["returncode"] == 0
+    assert captured["has_legacy_solution"] is False
+    assert "echo solved > /app/answer" in captured["generated_solution"]
+    assert (source / "solution.yaml").is_file()
+    assert not (source / "solution.sh").exists()
+    assert captured["input"] != source.resolve()
+    assert captured["env"]["CPUS"] == "2"
+    assert captured["env"]["MEMORY"] == "8G"
+    assert captured["env"]["TEST_DIR"] == "/tests"
 
 
 def test_terminal_bench_agent_phase_is_model_host_allowlisted(tmp_path):

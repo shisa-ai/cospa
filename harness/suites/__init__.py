@@ -3,7 +3,11 @@ Suite registry — load suites by name.
 """
 
 from harness.suites.aider_polyglot import AiderPolyglotSuite
-from harness.suites.terminal_bench import TerminalBenchSuite
+from harness.suites.terminal_bench import (
+    TerminalBenchCorePareto20Suite,
+    TerminalBenchCorePilot8Suite,
+    TerminalBenchSuite,
+)
 from harness.suites.swe_atlas import SweAtlasPilotSuite
 from harness.suites.bigcodebench import (
     BigCodeBenchHardAgenticHermeticSuite,
@@ -21,6 +25,8 @@ from harness.suites.multi_swe_bench import MultiSweBenchFlashHermeticSuite
 SUITES = {
     "aider_polyglot": AiderPolyglotSuite,
     "terminal_bench": TerminalBenchSuite,
+    "terminal_bench_core_pilot8": TerminalBenchCorePilot8Suite,
+    "terminal_bench_core_pareto20": TerminalBenchCorePareto20Suite,
     "swe_atlas_pilot12": SweAtlasPilotSuite,
     "bigcodebench_hard_instruct": BigCodeBenchHardInstructSuite,
     "bigcodebench_hard_instruct_hermetic143": BigCodeBenchHardInstructHermeticSuite,

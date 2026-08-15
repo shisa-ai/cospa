@@ -2325,3 +2325,24 @@ Append-only development log for the `cospa` repository.
   pass probability and outcome-flip rate, never best-of-three as Pass@1.
 - Next: commit this freeze before outcomes exist, run its five suite slices at
   c=8, validate all 96 authoritative attempts, and publish stability metrics.
+
+## 2026-08-16 — Define fail-closed stability metrics
+
+- Context: the score viewer deliberately summarizes repeated binary trials by
+  task-majority, while the Pareto campaign requires mean pass probability and
+  outcome-flip rate without any best-of-k interpretation.
+- Change: add `scripts/analyze-stability-panel.py`. It validates the exact model,
+  scaffold, thinking policy, task IDs, trial numbers, manifests, verdicts, and
+  infrastructure taxonomy before calculating per-suite metrics. A task flips
+  only when its independent outcomes contain both pass and fail; pairwise
+  disagreement is retained as a secondary stability diagnostic.
+- Evidence: RED tests failed because no analyzer existed. GREEN tests cover
+  mixed/unanimous `k=3` outcomes, incomplete `k=2` and `k=3` boundaries, and
+  missing plus non-authoritative result artifacts. All three focused tests pass;
+  full pytest reports 396 passes with only the pre-existing
+  `test_check_models.sh` port-8080 fixture failure.
+- Decision: suppress metrics for any incomplete suite and return nonzero until
+  every expected attempt is authoritative. Keep suite scores separate; any
+  aggregate panel stability block is explicitly labeled not a capability score.
+- Next: apply the analyzer to the queued 96-attempt Stability32 result root,
+  repair only infrastructure failures, and publish the complete report.

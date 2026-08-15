@@ -1153,6 +1153,13 @@ behaviorally equivalent to `pi_vanilla` except for an inert omission of
   `tailwindlabs__tailwindcss-853` both completed Pi normally at the requested
   `max` level with observed usage; the former ran 283 native tests
   (`fixed (unit test + cross-image end-to-end)`).
+- Concurrent Harbor campaigns later exhausted Docker's predefined address pools
+  after 15 empty `workdir__*__env_default` networks accumulated. Every
+  Harbor-backed runner now performs a pre-concurrency reclamation pass that
+  removes only exact-name, unattached networks older than five minutes; active,
+  recent, and unrelated networks are preserved. A live disposable-network test
+  confirmed exact reclamation without global prune semantics
+  (`fixed (unit test + live integration test)`).
 - Docker-backed `hello-world` then passed with Ornith and `pi_devstack`; the
   result is under
   `results/e2e-smoke-terminal-bench-devstack-profile-v5-20260716T034155Z/`.

@@ -2162,3 +2162,27 @@ Append-only development log for the `cospa` repository.
 - Next: use the corrected classification for the remaining Pareto baseline
   suites and report the already-running FeatureBench timeout from its Harbor
   artifact.
+
+## 2026-08-16 — Reclaim stale Harbor networks before campaigns
+
+- Context: overlapping PolyBench/FeatureBench campaigns accumulated 15 empty
+  Compose networks and exhausted Docker's predefined address pools. Twenty-four
+  Terra and 21 Qwen PolyBench trials failed before container startup; their
+  valid sibling trials were preserved and the failures quarantined rather than
+  scored.
+- Change: add a Harbor-suite runtime preflight before task concurrency starts.
+  It inspects Docker networks and removes only unattached
+  `workdir__*__env_default` networks older than five minutes. Active endpoints,
+  recent networks that may still be starting, unrelated Compose projects, and
+  all non-Harbor networks are preserved. Docker inspection failures remain
+  best-effort because Harbor startup is still the fail-closed authority.
+- Evidence: both RED tests failed before implementation. All 44 focused Harbor,
+  runner, and reachability tests pass afterward. A live disposable network was
+  reclaimed by exact ID and verified absent. Full pytest reports 382 passed with
+  only the pre-existing `test_check_models.sh` shell-fixture failure.
+- Decision: do not use global `docker network prune`, remove active networks, or
+  restart the daemon during campaigns. One age-gated preflight per Harbor runner
+  prevents historical leakage from consuming the finite pool without racing
+  concurrent Compose startup.
+- Next: finish the salvaged Terra and Qwen PolyBench retries, then resume their
+  queues; every subsequent Harbor cell will run the automatic preflight.

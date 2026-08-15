@@ -42,6 +42,7 @@ from harness.behavior import (
     summarize_pi_session_behavior,
 )
 from harness.suites import load_suite
+from harness.harbor_docker import reclaim_stale_harbor_networks
 from harness.path_utils import encode_path_component
 from harness.subprocess_utils import (
     agent_sandbox_cwd,
@@ -1110,6 +1111,18 @@ class RunHeartbeat:
         temp_path.replace(self.path)
 
 
+def prepare_suite_runtime(suite) -> list[str]:
+    """Prepare shared runtime state before concurrent suite trials start."""
+    if not callable(getattr(suite, "run_harbor_job", None)):
+        return []
+    removed = reclaim_stale_harbor_networks()
+    if removed:
+        print(
+            f"Reclaimed {len(removed)} stale, unattached Harbor network(s)."
+        )
+    return removed
+
+
 def main():
     args = parse_args()
 
@@ -1142,6 +1155,7 @@ def main():
     # Load suite and adapter
     suite = load_suite(args.suite)
     adapter = load_adapter(args.adapter)
+    prepare_suite_runtime(suite)
 
     # Get task list from suite
     task_ids = suite.get_task_ids(vendor_dir=args.vendor_dir)

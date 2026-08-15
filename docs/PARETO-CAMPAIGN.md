@@ -103,6 +103,7 @@ billing.
 | BCB-Hard Agentic pilot15, vanilla `xhigh` | 2/15 | 29m04s | 5m25s | $0.0350 |
 | SWE-PolyBench pilot28, vanilla `high` | 5/28 | 2h30m | 2h05m | $0.3201 |
 | Terminal-Bench Core pilot8, vanilla `high` | 3/8 | 37m42s | 10m31s | $0.0157 on 5/8 token-covered tasks |
+| FeatureBench Lite Pareto12, vanilla `high` | 2/12 raw | 10h52m including retries | 2h40m | $1.02 estimated from all observed retry traces |
 
 Linear projections preserve the observed per-task throughput and are planning
 estimates, not promises:
@@ -153,6 +154,33 @@ unrelated GPT-5.6 PolyBench workers, so the 26m17s Pareto20 projection is
 conservative plumbing evidence rather than a clean throughput baseline.
 Pareto20 is frozen for the matched baseline wave, where timing must be measured
 again without unrelated host load.
+
+FeatureBench's complete official Lite30 split was pinned before target-model
+outcomes. Four Level 2 tasks have no released gold patch, and only 21 of the 26
+Level 1 tasks passed a first oracle observation in Cospa's no-network Harbor
+path. The final `featurebench_lite_pareto12` panel preserves the two stable
+pilot rows, adds the fastest mechanically passing row from each unrepresented
+repository, and permits one second Seaborn row under a repository cap of two.
+It covers 11 repositories; all 36 selected gold observations pass and all 36
+null observations fail. This is a distinct repeat-qualified Cospa panel, not an
+official Lite30 score. Fast100 is deferred: expanding before fixing Lite's
+mechanical attrition would buy cost rather than trustworthy breadth.
+
+The first DS4 c=8 run resolved 2/12 tasks and produced eight ordinary incorrect
+native verdicts, one official one-hour agent timeout, and one repeated model-
+transport failure. An isolated c=1 repair converted the remaining SymPy task to
+an ordinary incorrect native verdict, leaving 2 resolved, 9 incorrect, 1
+`budget_exhausted`, and no unresolved infrastructure failures. The eleven native
+verifier outcomes had mean task F2P pass rate 0.645 (median 0.771), so the
+partial executable diagnostic carries signal beyond the coarse binary score.
+The raw c=8 campaign consumed 22 task attempts after the old runner spent up to
+three attempts on five initially failing tasks, including a one-hour timeout,
+totaling 10h52m task wall, 2h40m elapsed, 143.2M traced tokens including cache
+reads, and about $1.02 under checked-in pricing. The timeout-retry bug is fixed;
+these raw numbers are a conservative stress measurement, not a clean c=8
+throughput baseline. FeatureBench clears the capability utility band, but
+scaffold promotion should retain an isolated repair policy and treat its long
+wall/cost as milestone evidence rather than routine matrix cost.
 
 ## Pareto rules
 
@@ -238,7 +266,7 @@ protocol comparability.
 | BCB-Hard Instruct | hermetic143 | none | Cheap model-only protocol anchor |
 | BCB-Hard Agentic | Pareto60 | hermetic143 | Function implementation + scaffold sensitivity |
 | Terminal-Bench Core | completed pilot8 | Pareto20, then full80 | Broad terminal/tool competence |
-| FeatureBench | existing 6 | Lite30; Fast100 only if promoted | Long feature implementation |
+| FeatureBench | qualified Pareto12 | broader Lite/Full only after new qualification | Long feature implementation + F2P diagnostic |
 | Diagnostic bake-off | 12 DABStep + 12 SWE-Explore | select one fixed panel | Cheap tool or localization signal |
 
 BCB Agentic is cheap enough that DS4 vanilla should normally continue from the
@@ -294,8 +322,8 @@ rates, task/campaign time, tokens, and cost.
 4. Freeze Terminal-Bench Pareto20.
 5. Run qualified PolyBench balanced64; add new mechanical candidates before
    any balanced96 claim.
-6. Qualify FeatureBench pilot6 and measure whether Lite30 or Fast100 is the
-   better next block.
+6. Run the qualified FeatureBench Pareto12 panel; add new mechanically stable
+   rows before any broader Lite or Fast100 claim.
 7. Run the DABStep/SWE-Explore 12+12 diagnostic bake-off and implement only the
    winner first.
 8. Execute DS4 `pi_vanilla`, `high`, `c=8`, `k=1` suite by suite.

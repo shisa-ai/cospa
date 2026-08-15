@@ -29,7 +29,7 @@ a portfolio whose components have distinct jobs:
 | Full source-corpus audit | **`aider_cospa_full`** | All 225 Aider/Exercism instances under the Cospa protocol; releases and corpus research, not every matrix run |
 | Legacy comparison | **`aider_canonical`** | Optional reproduction only; never merge its scores with `aider_cospa` |
 | Real repository issue resolution | **`cospa_repo`**, selected after a source bake-off | Curate from pinned, revalidated multilingual SWE sources; keep source benchmark IDs and report source-specific results |
-| Feature implementation | **FeatureBench Lite**, then selected full tasks | Milestone suite; too expensive for a Cartesian model × adapter matrix |
+| Feature implementation | **`featurebench_lite_pareto12`**, then newly qualified expansion | Repeat-qualified 11-repository milestone panel; too expensive for a Cartesian model × adapter matrix |
 | Terminal and broad tool competence | **Terminal-Bench Core 0.1.1 now; 2.x at milestones** | Preserve as a separate external anchor with exact task IDs and protocol |
 | Harness-sensitive investigation/testing | **SWE Atlas Q&A + Test Writing** | Deferred from the current campaign because the headline path requires an LLM judge; retain as a separately labeled future diagnostic |
 | Freshness audit | **SWE-bench-Live MultiLang** or a genuinely post-cutoff rolling set | Freeze each evaluated release; use as an audit, not a stable longitudinal score |
@@ -355,7 +355,7 @@ publish end-to-end elapsed time, so a local pilot is required.
 | Multi-SWE-bench Flash | 300 × `k=1` | No published E2E runtime | At a 30-minute Cospa episode ceiling: 150 serial h; 75 h ideal `c=2`; 18.8 h ideal `c=8`, plus verification |
 | SWE-bench Multilingual | 300 × `k=1` | Baseline used a $2.50/task cost limit; time unknown | Same 150 h / 75 h / 18.8 h planning ceiling under a 30-minute policy |
 | SWE-PolyBench Verified | README says 382; dataset card has stale conflicting count | Harness recommends 10–12 evaluator threads on 16 cores/64 GB; inference time unknown | At 382 × 30 minutes: 191 serial h; 95.5 h ideal `c=2`; 23.9 h ideal `c=8` |
-| FeatureBench Lite / Full | 30 / 200 | Default task timeout 3,600 s; published OpenHands runs allow 500 steps and consume 2.6M–9.0M input tokens/task on Lite | Timeout ceiling: 30 / 200 serial h; ideal `c=8`: 3.75 / 25 h, before cold setup and contention |
+| FeatureBench Lite / Full | Pareto12 / 30 / 200 | Default task timeout 3,600 s; published OpenHands runs allow 500 steps and consume 2.6M–9.0M input tokens/task on Lite | **Measured here:** raw DS4 Pareto12 c=8 used 2h40m elapsed and 10h52m task-attempt wall after retries; broader panels require new mechanical qualification |
 | SWE-bench-Live MultiLang | 743 in current README | Runtime unknown; large multilingual builds/tests | At 30 minutes/task: 371.5 serial h; 185.8 h ideal `c=2`; 46.4 h ideal `c=8` |
 | SWE-bench Pro public | Currently 730 leaderboard tasks; 250-turn uncapped model runs | Published task intent is hours to days for humans; agent wall distribution not published | Not a routine local run. Pilot required; use public trajectories before generating new ones |
 | BigCodeBench-Hard | 148 official; 143 in Cospa's no-network subset | **Published verifier time for the whole set:** 4–5 min on hosted Gradio or 15–20 min on default E2B | Cospa excludes five tasks whose gold solutions fail without external URL/NLTK state; DS4 c=8 projects to about 52 minutes for 143 Agentic tasks |
@@ -380,7 +380,7 @@ rules, and a `c=1/2/4/8/16` ladder. The pilot sizes are:
 | Multi-SWE-bench Flash | 25 retained / 30 screened / 300 | `multi_swe_bench_flash_hermetic25`: 75/75 gold passed and 75/75 null failed under the no-network verifier; ready for DS4 smoke |
 | SWE-bench Multilingual | 30 / 300 | Dataset and 30 image digests locked; gold/null/repeat validation pending |
 | SWE-PolyBench Verified | balanced64 / 135 support candidates / 382 source | `swe_polybench_verified_balanced64`: 192/192 gold passed and 192/192 null failed; balanced96 remains unclaimed |
-| FeatureBench Lite | 6 / 30 | Dataset and 6 image digests locked; gold/null/repeat validation pending |
+| FeatureBench Lite | Pareto12 / 30 | `featurebench_lite_pareto12` spans 11 repositories; 36/36 gold passed and 36/36 null failed. DS4 resolved 2/12 with 9 incorrect and 1 timeout after an isolated transport repair |
 | BigCodeBench-Hard Instruct | 15 pilot / 143 retained / 148 screened | `bigcodebench_hard_instruct_hermetic143`: 429/429 gold passed and 429/429 null failed; five no-network failures excluded |
 | BigCodeBench-Hard agentic | Pareto60 / hermetic143 | Separate Agentic suite IDs ready; DS4/Muse/Qwen pilot cells and DS4 thinking ablations measured; expand favorable panels to hermetic143 |
 
@@ -424,6 +424,18 @@ new no-op observations failed with empty patches. Combined with pilot28, all
 192 selected gold observations pass and all 192 selected null observations
 fail. This mechanical attrition cannot support 24 tasks per language, so the
 candidate96 is not reported as a score.
+
+FeatureBench then screened all 30 official Lite rows without target-model
+outcomes. Four Level 2 rows have no released gold, and 21/26 Level 1 rows passed
+a first offline oracle observation. Pareto12 retains 12 tasks across 11
+repositories using only repeated verifier validity, repository coverage, and
+verifier wall time. All 36 selected oracle observations pass and all 36 no-op
+observations fail. The raw DS4 c=8 stress run resolved two tasks; its ten native
+c=8 verdicts plus the isolated SymPy repair averaged 0.645 task F2P pass
+rate across eleven native outcomes; one additional task exhausted the official
+agent budget. The old runner retried that timeout and several transport
+failures; that waste is fixed for future runs. Keep the raw 2h40m c=8 elapsed
+time as conservative stress evidence, not clean throughput.
 
 The original runtime pilot targeted a result within 12 hours with 20% reserve,
 so its campaign budget was 9.6 hours. Its c=16 feasibility thresholds were not
@@ -555,8 +567,11 @@ makespan rather than assuming ideal scaling.
   rather than taken directly from a natural issue; LLM classification and
   docstring generation can make boundaries artificial. Very high token use
   makes even “Lite” a milestone suite.
-- **Cospa decision:** strongest fixed feature-development pilot. Run Lite with
-  one winning scaffold, not across the full matrix.
+- **Cospa decision:** use the repeat-qualified, 11-repository
+  `featurebench_lite_pareto12` panel for DS4 and promoted scaffold arms. Report
+  binary resolution and task-macro F2P pass rate separately. Do not call the
+  panel official Lite30, and defer Fast100 until new rows pass the same repeated
+  no-network gold/null gate.
 
 ### SWE-bench-Live MultiLang and RepoLaunch
 

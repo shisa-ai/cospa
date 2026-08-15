@@ -110,6 +110,7 @@ class TerminalBenchSuite:
     languages = ["python"]
     task_count = 80
     manifest_path = PROJECT_ROOT / "configs" / "terminal_bench_core_0.1.1.json"
+    harbor_timeout_seconds = 3600
 
     # Harbor is the source of truth for Terminal-Bench scoring, so we want
     # verify() to run even if the (no-op) adapter returned nonzero — the
@@ -996,7 +997,7 @@ class TerminalBenchSuite:
                 cwd=str(workdir),
                 capture_output=True,
                 text=True,
-                timeout=3600,
+                timeout=self.harbor_timeout_seconds,
                 env=harbor_env,
             )
             return {

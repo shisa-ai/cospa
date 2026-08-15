@@ -157,6 +157,18 @@ reorder — earlier items unblock later ones.
       unrelated flaky gold failures. Keep the source score separate and disclose
       the retained 4 C / 4 C++ / 5 Go / 1 Java / 5 JavaScript / 4 Rust /
       2 TypeScript distribution.
+- [ ] **P11f. Suite: FeatureBench Lite Pareto12.**
+      `harness/suites/featurebench.py` materializes digest-pinned official Lite
+      rows as Harbor tasks, removes the unmasked source repository before the
+      agent phase, injects tests and gold artifacts only afterward, and scores
+      binary resolution plus task-level F2P partial credit with the pinned
+      upstream parser. The official Lite30 screen has four Level 2 rows without
+      released gold and five Level 1 rows that failed or flaked mechanically.
+      `featurebench_lite_pareto12` retains 12 repeat-qualified Level 1 tasks
+      across 11 repositories; all 36 selected gold observations pass and all 36
+      null observations fail offline. Keep this Cospa panel distinct from the
+      official Lite30 score, and require new mechanical qualification before
+      claiming broader Lite or Fast100 coverage.
 - [ ] **P12. Score viewer (`view-scores/`).** Static HTML + a tiny
       `server.py` that walks `results/` and renders a table:
       rows = `(model, adapter, suite)`, cells = pass-rate with CI,

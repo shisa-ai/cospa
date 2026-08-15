@@ -2186,3 +2186,31 @@ Append-only development log for the `cospa` repository.
   concurrent Compose startup.
 - Next: finish the salvaged Terra and Qwen PolyBench retries, then resume their
   queues; every subsequent Harbor cell will run the automatic preflight.
+
+## 2026-08-16 — Qualify FeatureBench Lite Pareto12
+
+- Context: FeatureBench's official Lite30 split was pinned but mixed four Level
+  2 rows without released gold with Level 1 rows that could fail or flake in an
+  offline verifier. Running all 30 as model misses would invalidate the score.
+- Change: add the Harbor-backed FeatureBench suite, full outcome-blind Lite30
+  candidate manifest and image lock, deterministic finalizer, and distinct
+  `featurebench_lite_pareto12` panel. Hidden tests, test patches, gold patches,
+  and the unmasked source repository remain unavailable during the agent phase;
+  verdicts report binary resolution and F2P partial credit separately.
+- Evidence: 21/26 Level 1 rows passed a first oracle screen. Pareto12 selects 12
+  tasks across 11 repositories using only repeated verifier validity,
+  repository coverage, and verifier wall time; 36/36 gold observations pass and
+  36/36 null observations fail offline. The DS4 `pi_vanilla` high-thinking c=8
+  stress run plus isolated SymPy transport repair produced 2 resolved, 9
+  incorrect, 1 budget-exhausted, and 0 unresolved infrastructure outcomes. The
+  11 native verdicts averaged 0.645 F2P pass rate (median 0.771). Fifty focused
+  FeatureBench/runner/Terminal-Bench tests pass; the full-suite result is noted
+  below.
+- Decision: use Pareto12 as a milestone feature panel, not an official Lite30
+  score. Defer Fast100 and broader Lite claims until new rows pass the same
+  repeated no-network gate. The raw 2h40m c=8 stress run and $1.02 trace-priced
+  retry cost are conservative infrastructure evidence, not clean throughput.
+- Next: compare DABStep with SWE-Explore for the low-cost diagnostic slot, then
+  begin the mechanically qualified DS4 baseline wave.
+- Validation: full pytest reports 382 passed with only the pre-existing
+  `test_check_models.sh` shell-fixture failure.

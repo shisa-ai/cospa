@@ -1,0 +1,690 @@
+{
+  "name": "featurebench-lite30-v1",
+  "version": "2026-08-15",
+  "source": {
+    "repository": "https://github.com/LiberCoders/FeatureBench.git",
+    "revision": "445dcbaec0b2e136061b0acb54e753c0a9f1888e",
+    "license": "MIT"
+  },
+  "dataset": {
+    "repository": "https://huggingface.co/datasets/LiberCoders/FeatureBench",
+    "revision": "e99d6efdfe511ea832c1b5735c536129561ec96a",
+    "sha256": "d0d1ee656179cd4f24547cfdccd31e10d8f77f337056661ffc8278f839a6ab7d",
+    "local_path": "vendor/eval-data/featurebench-lite/lite.parquet",
+    "license": "MIT"
+  },
+  "selection": {
+    "official_split": "lite",
+    "outcome_blind": true,
+    "uses_target_model_outcomes": false,
+    "panel_size": 30,
+    "repositories": 13,
+    "repository_names": [
+      "Lightning-AI/pytorch-lightning",
+      "Netflix/metaflow",
+      "astropy/astropy",
+      "huggingface/transformers",
+      "huggingface/trl",
+      "linkedin/Liger-Kernel",
+      "mlflow/mlflow",
+      "mwaskom/seaborn",
+      "pandas-dev/pandas",
+      "pydantic/pydantic",
+      "pydata/xarray",
+      "sphinx-doc/sphinx",
+      "sympy/sympy"
+    ],
+    "level_counts": {
+      "lv1": 26,
+      "lv2": 4
+    },
+    "note": "All rows in the pinned official Lite parquet are candidates; mechanical gold/null screening may produce a distinctly named hermetic campaign subset."
+  },
+  "qualification": {
+    "status": "candidate_screen_pending",
+    "gold_policy": "three no-network observations for released Level 1 gold",
+    "null_policy": "three no-network observations",
+    "level2_gold_status": "not_released_upstream",
+    "uses_target_model_outcomes": false
+  },
+  "task_ids": [
+    "huggingface__trl.02a34777.test_data_utils.827a9d15.lv1",
+    "mlflow__mlflow.93dab383.test_judge_tool_search_traces.cad8fc4b.lv1",
+    "mlflow__mlflow.93dab383.test_validation.2e1c5076.lv1",
+    "mlflow__mlflow.93dab383.test_serialization.2c029be6.lv1",
+    "mlflow__mlflow.93dab383.test_span.69efd376.lv1",
+    "mlflow__mlflow.93dab383.test_trace.17fde8b0.lv1",
+    "mlflow__mlflow.93dab383.test_databricks_tracing_utils.8ef44eb4.lv1",
+    "mlflow__mlflow.93dab383.test_responses_agent.072c4133.lv1",
+    "Netflix__metaflow.b390a8d4.test_stub_generator.7bf08c98.lv1",
+    "Lightning-AI__pytorch-lightning.126fa6f1.test_connector.825ef3b1.lv1",
+    "Lightning-AI__pytorch-lightning.126fa6f1.test_data.c8b292af.lv1",
+    "pandas-dev__pandas.82fa2715.test_concat.ebe5de39.lv1",
+    "pandas-dev__pandas.82fa2715.test_list_accessor.7ab0b2ea.lv1",
+    "pandas-dev__pandas.82fa2715.test_iceberg.85771c70.lv2",
+    "sympy__sympy.c1097516.test_nullspace.f14fc970.lv1",
+    "pydata__xarray.97f3a746.test_treenode.aa8ba777.lv2",
+    "pydata__xarray.97f3a746.test_backends_chunks.fa55f68a.lv1",
+    "astropy__astropy.b0db0daa.test_quantity_erfa_ufuncs.3fc54395.lv1",
+    "astropy__astropy.b0db0daa.test_table.48eef659.lv1",
+    "pydantic__pydantic.e1dcaf9e.test_deprecated_fields.40a2ec54.lv1",
+    "linkedin__Liger-Kernel.c856fbab.test_poly_norm.7b0e3399.lv1",
+    "linkedin__Liger-Kernel.c856fbab.test_fused_neighborhood_attention.78217be4.lv2",
+    "mwaskom__seaborn.7001ebe7.test_regression.ce8c62e2.lv1",
+    "mwaskom__seaborn.7001ebe7.test_statistics.0f2ae277.lv1",
+    "mwaskom__seaborn.7001ebe7.test_algorithms.1f0181c2.lv1",
+    "huggingface__transformers.e2e8dbed.test_modeling_seggpt.f9e83f60.lv2",
+    "huggingface__transformers.e2e8dbed.test_serve.4e7860c7.lv1",
+    "huggingface__transformers.e2e8dbed.test_tests_fetcher.e1abe0dd.lv1",
+    "huggingface__transformers.e2e8dbed.test_processing_wav2vec2.4f660c78.lv1",
+    "sphinx-doc__sphinx.e347e59c.test_domain_c.4068b9e8.lv1"
+  ],
+  "tasks": [
+    {
+      "task_id": "huggingface__trl.02a34777.test_data_utils.827a9d15.lv1",
+      "repository": "huggingface/trl",
+      "level": 1,
+      "base_commit": "02a34777c36173ea53c8ce9979db50f13c1aaac8",
+      "image_ref": "libercoders/featurebench-specs_trl-instance_725be9aa",
+      "patch_bytes": 42015,
+      "test_patch_bytes": 47855,
+      "problem_statement_sha256": "301c972d4425bdd1cd045828c0e78f8c2f2f73c85bb4c9704931c77295a1bec5",
+      "f2p_file_count": 1,
+      "p2p_file_count": 5,
+      "timeout_run_seconds": 1200,
+      "timeout_one_seconds": 120,
+      "needs_gpu": true,
+      "requested_gpus": 1
+    },
+    {
+      "task_id": "mlflow__mlflow.93dab383.test_judge_tool_search_traces.cad8fc4b.lv1",
+      "repository": "mlflow/mlflow",
+      "level": 1,
+      "base_commit": "93dab383a1a3fc9882ebc32283ad2a05d79ff70f",
+      "image_ref": "libercoders/featurebench-specs_mlflow-instance_efffa87e",
+      "patch_bytes": 15501,
+      "test_patch_bytes": 15780,
+      "problem_statement_sha256": "83aa1c408b83d84ca71e97e73fe6e4f16a52bff5c05d6f2f5e1b17cc11c2b479",
+      "f2p_file_count": 1,
+      "p2p_file_count": 5,
+      "timeout_run_seconds": 1200,
+      "timeout_one_seconds": 20,
+      "needs_gpu": false,
+      "requested_gpus": 0
+    },
+    {
+      "task_id": "mlflow__mlflow.93dab383.test_validation.2e1c5076.lv1",
+      "repository": "mlflow/mlflow",
+      "level": 1,
+      "base_commit": "93dab383a1a3fc9882ebc32283ad2a05d79ff70f",
+      "image_ref": "libercoders/featurebench-specs_mlflow-instance_efffa87e",
+      "patch_bytes": 12992,
+      "test_patch_bytes": 8712,
+      "problem_statement_sha256": "c596bfd0bad41fda83c559aff287926dae29525ea09fb2928bc0eb0ae1175611",
+      "f2p_file_count": 1,
+      "p2p_file_count": 5,
+      "timeout_run_seconds": 1200,
+      "timeout_one_seconds": 20,
+      "needs_gpu": false,
+      "requested_gpus": 0
+    },
+    {
+      "task_id": "mlflow__mlflow.93dab383.test_serialization.2c029be6.lv1",
+      "repository": "mlflow/mlflow",
+      "level": 1,
+      "base_commit": "93dab383a1a3fc9882ebc32283ad2a05d79ff70f",
+      "image_ref": "libercoders/featurebench-specs_mlflow-instance_efffa87e",
+      "patch_bytes": 18131,
+      "test_patch_bytes": 25408,
+      "problem_statement_sha256": "ae4edb2de45ebed987e5150753f52a77ad949a4d1dfcea6e24cdac2868104f57",
+      "f2p_file_count": 1,
+      "p2p_file_count": 5,
+      "timeout_run_seconds": 1200,
+      "timeout_one_seconds": 20,
+      "needs_gpu": false,
+      "requested_gpus": 0
+    },
+    {
+      "task_id": "mlflow__mlflow.93dab383.test_span.69efd376.lv1",
+      "repository": "mlflow/mlflow",
+      "level": 1,
+      "base_commit": "93dab383a1a3fc9882ebc32283ad2a05d79ff70f",
+      "image_ref": "libercoders/featurebench-specs_mlflow-instance_efffa87e",
+      "patch_bytes": 30364,
+      "test_patch_bytes": 29478,
+      "problem_statement_sha256": "e897deef4565e24e29d66b4e0d4b7d4f1b4e9ca676ee6ebeb6291e18ae2280ee",
+      "f2p_file_count": 1,
+      "p2p_file_count": 5,
+      "timeout_run_seconds": 1200,
+      "timeout_one_seconds": 20,
+      "needs_gpu": false,
+      "requested_gpus": 0
+    },
+    {
+      "task_id": "mlflow__mlflow.93dab383.test_trace.17fde8b0.lv1",
+      "repository": "mlflow/mlflow",
+      "level": 1,
+      "base_commit": "93dab383a1a3fc9882ebc32283ad2a05d79ff70f",
+      "image_ref": "libercoders/featurebench-specs_mlflow-instance_efffa87e",
+      "patch_bytes": 52540,
+      "test_patch_bytes": 20115,
+      "problem_statement_sha256": "1080df3eda4a7ae482949a4f374f926a9fe72587ed1108ac7523f90922925755",
+      "f2p_file_count": 1,
+      "p2p_file_count": 5,
+      "timeout_run_seconds": 1200,
+      "timeout_one_seconds": 20,
+      "needs_gpu": false,
+      "requested_gpus": 0
+    },
+    {
+      "task_id": "mlflow__mlflow.93dab383.test_databricks_tracing_utils.8ef44eb4.lv1",
+      "repository": "mlflow/mlflow",
+      "level": 1,
+      "base_commit": "93dab383a1a3fc9882ebc32283ad2a05d79ff70f",
+      "image_ref": "libercoders/featurebench-specs_mlflow-instance_efffa87e",
+      "patch_bytes": 13420,
+      "test_patch_bytes": 16889,
+      "problem_statement_sha256": "9e0563fd666cb9c49515b12b2727663916775c9668a73f417bbc2d0fcad87361",
+      "f2p_file_count": 1,
+      "p2p_file_count": 5,
+      "timeout_run_seconds": 1200,
+      "timeout_one_seconds": 20,
+      "needs_gpu": false,
+      "requested_gpus": 0
+    },
+    {
+      "task_id": "mlflow__mlflow.93dab383.test_responses_agent.072c4133.lv1",
+      "repository": "mlflow/mlflow",
+      "level": 1,
+      "base_commit": "93dab383a1a3fc9882ebc32283ad2a05d79ff70f",
+      "image_ref": "libercoders/featurebench-specs_mlflow-instance_efffa87e",
+      "patch_bytes": 226649,
+      "test_patch_bytes": 49467,
+      "problem_statement_sha256": "b54745134d50c63c87e377ade40b41d0d757c8d34b6f26f367be6986d5a41ddb",
+      "f2p_file_count": 1,
+      "p2p_file_count": 5,
+      "timeout_run_seconds": 1200,
+      "timeout_one_seconds": 20,
+      "needs_gpu": false,
+      "requested_gpus": 0
+    },
+    {
+      "task_id": "Netflix__metaflow.b390a8d4.test_stub_generator.7bf08c98.lv1",
+      "repository": "Netflix/metaflow",
+      "level": 1,
+      "base_commit": "b390a8d4459fed4c5e13271a434f9d77e756164c",
+      "image_ref": "libercoders/featurebench-specs_metaflow-instance_87a4ffa7",
+      "patch_bytes": 41336,
+      "test_patch_bytes": 21047,
+      "problem_statement_sha256": "62f7b05f760a7fb66c31c23f07c6ee3b64958fc83e22185cc3b41638768cc80e",
+      "f2p_file_count": 1,
+      "p2p_file_count": 5,
+      "timeout_run_seconds": 600,
+      "timeout_one_seconds": 10,
+      "needs_gpu": false,
+      "requested_gpus": 0
+    },
+    {
+      "task_id": "Lightning-AI__pytorch-lightning.126fa6f1.test_connector.825ef3b1.lv1",
+      "repository": "Lightning-AI/pytorch-lightning",
+      "level": 1,
+      "base_commit": "126fa6f1bf0dceb03643c59ff4130c701b61aca4",
+      "image_ref": "libercoders/featurebench-specs_pytorch_lightning-instance_83799db4",
+      "patch_bytes": 52699,
+      "test_patch_bytes": 48394,
+      "problem_statement_sha256": "98956d2e198a815b2858d649cf7872efc36e2ad5489dcb17459bcd62f0d35dd9",
+      "f2p_file_count": 1,
+      "p2p_file_count": 5,
+      "timeout_run_seconds": 600,
+      "timeout_one_seconds": 10,
+      "needs_gpu": true,
+      "requested_gpus": 2
+    },
+    {
+      "task_id": "Lightning-AI__pytorch-lightning.126fa6f1.test_data.c8b292af.lv1",
+      "repository": "Lightning-AI/pytorch-lightning",
+      "level": 1,
+      "base_commit": "126fa6f1bf0dceb03643c59ff4130c701b61aca4",
+      "image_ref": "libercoders/featurebench-specs_pytorch_lightning-instance_83799db4",
+      "patch_bytes": 40303,
+      "test_patch_bytes": 15634,
+      "problem_statement_sha256": "b01c2f5ec9d40c676aadcd052e898de59a3382ce445ee4f3b56cf7bab1713a8a",
+      "f2p_file_count": 1,
+      "p2p_file_count": 5,
+      "timeout_run_seconds": 600,
+      "timeout_one_seconds": 10,
+      "needs_gpu": true,
+      "requested_gpus": 2
+    },
+    {
+      "task_id": "pandas-dev__pandas.82fa2715.test_concat.ebe5de39.lv1",
+      "repository": "pandas-dev/pandas",
+      "level": 1,
+      "base_commit": "82fa27153e5b646ecdb78cfc6ecf3e1750443892",
+      "image_ref": "libercoders/featurebench-specs_pandas-instance_15f634a6",
+      "patch_bytes": 42722,
+      "test_patch_bytes": 3052,
+      "problem_statement_sha256": "14a02e2a0f0e4a3dee2326860b1b906ecc6eeb1b02b671cf5a233d13fec07939",
+      "f2p_file_count": 1,
+      "p2p_file_count": 5,
+      "timeout_run_seconds": 600,
+      "timeout_one_seconds": 10,
+      "needs_gpu": true,
+      "requested_gpus": 1
+    },
+    {
+      "task_id": "pandas-dev__pandas.82fa2715.test_list_accessor.7ab0b2ea.lv1",
+      "repository": "pandas-dev/pandas",
+      "level": 1,
+      "base_commit": "82fa27153e5b646ecdb78cfc6ecf3e1750443892",
+      "image_ref": "libercoders/featurebench-specs_pandas-instance_15f634a6",
+      "patch_bytes": 14000,
+      "test_patch_bytes": 4049,
+      "problem_statement_sha256": "fdc3890bc3ae887bb87bf96df9f7048759c9dbafaaac4e4d9ea2862da0d236cc",
+      "f2p_file_count": 1,
+      "p2p_file_count": 5,
+      "timeout_run_seconds": 600,
+      "timeout_one_seconds": 10,
+      "needs_gpu": true,
+      "requested_gpus": 1
+    },
+    {
+      "task_id": "pandas-dev__pandas.82fa2715.test_iceberg.85771c70.lv2",
+      "repository": "pandas-dev/pandas",
+      "level": 2,
+      "base_commit": "82fa27153e5b646ecdb78cfc6ecf3e1750443892",
+      "image_ref": "libercoders/featurebench-specs_pandas-instance_15f634a6",
+      "patch_bytes": 0,
+      "test_patch_bytes": 3592,
+      "problem_statement_sha256": "b8462156fd78cf42eb734783bdc5d1318464508539954e700a3f4ff88706389d",
+      "f2p_file_count": 1,
+      "p2p_file_count": 0,
+      "timeout_run_seconds": 600,
+      "timeout_one_seconds": 10,
+      "needs_gpu": true,
+      "requested_gpus": 1
+    },
+    {
+      "task_id": "sympy__sympy.c1097516.test_nullspace.f14fc970.lv1",
+      "repository": "sympy/sympy",
+      "level": 1,
+      "base_commit": "c1097516c793b0364c4f3fe2eeb66b15a94eedfd",
+      "image_ref": "libercoders/featurebench-specs_sympy-instance_3d889fef",
+      "patch_bytes": 71694,
+      "test_patch_bytes": 5869,
+      "problem_statement_sha256": "2a1462ba182f77788156341f8c7a3c3307ec731d681a644a813b6ec35c352a9a",
+      "f2p_file_count": 1,
+      "p2p_file_count": 5,
+      "timeout_run_seconds": 600,
+      "timeout_one_seconds": 10,
+      "needs_gpu": true,
+      "requested_gpus": 1
+    },
+    {
+      "task_id": "pydata__xarray.97f3a746.test_treenode.aa8ba777.lv2",
+      "repository": "pydata/xarray",
+      "level": 2,
+      "base_commit": "97f3a7465a66638f68129581b658853a3992dd89",
+      "image_ref": "libercoders/featurebench-specs_xarray-instance_62de996a",
+      "patch_bytes": 0,
+      "test_patch_bytes": 12661,
+      "problem_statement_sha256": "8a0ef79b95a574523e90af10714d9195fa3329f7d28ba6d2c4512bf3f98044ba",
+      "f2p_file_count": 1,
+      "p2p_file_count": 0,
+      "timeout_run_seconds": 600,
+      "timeout_one_seconds": 10,
+      "needs_gpu": true,
+      "requested_gpus": 1
+    },
+    {
+      "task_id": "pydata__xarray.97f3a746.test_backends_chunks.fa55f68a.lv1",
+      "repository": "pydata/xarray",
+      "level": 1,
+      "base_commit": "97f3a7465a66638f68129581b658853a3992dd89",
+      "image_ref": "libercoders/featurebench-specs_xarray-instance_62de996a",
+      "patch_bytes": 12539,
+      "test_patch_bytes": 3515,
+      "problem_statement_sha256": "c1ae45693408bc0c5a48900252a4a1dc1a9d43dd0ff3bd0500e0f3711d042d3f",
+      "f2p_file_count": 1,
+      "p2p_file_count": 5,
+      "timeout_run_seconds": 600,
+      "timeout_one_seconds": 10,
+      "needs_gpu": true,
+      "requested_gpus": 1
+    },
+    {
+      "task_id": "astropy__astropy.b0db0daa.test_quantity_erfa_ufuncs.3fc54395.lv1",
+      "repository": "astropy/astropy",
+      "level": 1,
+      "base_commit": "b0db0daac6b851596851cb43e5456fb6c916c071",
+      "image_ref": "libercoders/featurebench-specs_astropy-instance_493bb78b",
+      "patch_bytes": 13563,
+      "test_patch_bytes": 28479,
+      "problem_statement_sha256": "6c8b7d914622afb34398d83a2fd268769e77d435b85bd496895969f882f6eefd",
+      "f2p_file_count": 1,
+      "p2p_file_count": 5,
+      "timeout_run_seconds": 600,
+      "timeout_one_seconds": 10,
+      "needs_gpu": false,
+      "requested_gpus": 0
+    },
+    {
+      "task_id": "astropy__astropy.b0db0daa.test_table.48eef659.lv1",
+      "repository": "astropy/astropy",
+      "level": 1,
+      "base_commit": "b0db0daac6b851596851cb43e5456fb6c916c071",
+      "image_ref": "libercoders/featurebench-specs_astropy-instance_493bb78b",
+      "patch_bytes": 34510,
+      "test_patch_bytes": 32229,
+      "problem_statement_sha256": "a2c1198f74d2b8358a93940ffaebd2ad132d23ef40d6977d017ea302270cac7d",
+      "f2p_file_count": 1,
+      "p2p_file_count": 5,
+      "timeout_run_seconds": 600,
+      "timeout_one_seconds": 10,
+      "needs_gpu": false,
+      "requested_gpus": 0
+    },
+    {
+      "task_id": "pydantic__pydantic.e1dcaf9e.test_deprecated_fields.40a2ec54.lv1",
+      "repository": "pydantic/pydantic",
+      "level": 1,
+      "base_commit": "e1dcaf9e68fc89731b45235e53245447edf35084",
+      "image_ref": "libercoders/featurebench-specs_pydantic-instance_78693714",
+      "patch_bytes": 23336,
+      "test_patch_bytes": 8654,
+      "problem_statement_sha256": "eb85a24c5a3e7b81ed9460fab49e9230b6b2126516d90a199e5ba5670b39c716",
+      "f2p_file_count": 1,
+      "p2p_file_count": 5,
+      "timeout_run_seconds": 600,
+      "timeout_one_seconds": 10,
+      "needs_gpu": false,
+      "requested_gpus": 0
+    },
+    {
+      "task_id": "linkedin__Liger-Kernel.c856fbab.test_poly_norm.7b0e3399.lv1",
+      "repository": "linkedin/Liger-Kernel",
+      "level": 1,
+      "base_commit": "c856fbab96e56d221f5eb617e3f99eba38a9d619",
+      "image_ref": "libercoders/featurebench-specs_liger_kernel-instance_23e4cbae",
+      "patch_bytes": 11808,
+      "test_patch_bytes": 8828,
+      "problem_statement_sha256": "e6d046b942015f460b8022d3517d7fe34ee343f6893e6ab8b6ae36c0bdbb6bb8",
+      "f2p_file_count": 1,
+      "p2p_file_count": 5,
+      "timeout_run_seconds": 600,
+      "timeout_one_seconds": 20,
+      "needs_gpu": true,
+      "requested_gpus": 1
+    },
+    {
+      "task_id": "linkedin__Liger-Kernel.c856fbab.test_fused_neighborhood_attention.78217be4.lv2",
+      "repository": "linkedin/Liger-Kernel",
+      "level": 2,
+      "base_commit": "c856fbab96e56d221f5eb617e3f99eba38a9d619",
+      "image_ref": "libercoders/featurebench-specs_liger_kernel-instance_23e4cbae",
+      "patch_bytes": 0,
+      "test_patch_bytes": 4118,
+      "problem_statement_sha256": "f59d3878f3f01342046a2649c557bd08b92b4400d1269b5d20a39d9d7619e5d6",
+      "f2p_file_count": 1,
+      "p2p_file_count": 0,
+      "timeout_run_seconds": 600,
+      "timeout_one_seconds": 20,
+      "needs_gpu": true,
+      "requested_gpus": 1
+    },
+    {
+      "task_id": "mwaskom__seaborn.7001ebe7.test_regression.ce8c62e2.lv1",
+      "repository": "mwaskom/seaborn",
+      "level": 1,
+      "base_commit": "7001ebe72423238e99c0434a2ef0a0ebc9cb55c1",
+      "image_ref": "libercoders/featurebench-specs_seaborn-instance_52738fbb",
+      "patch_bytes": 34353,
+      "test_patch_bytes": 24444,
+      "problem_statement_sha256": "b059796a53af3423a78fca1c43276dc86f8a68e2278420e0f6c3f3a9a2fda947",
+      "f2p_file_count": 1,
+      "p2p_file_count": 5,
+      "timeout_run_seconds": 600,
+      "timeout_one_seconds": 10,
+      "needs_gpu": true,
+      "requested_gpus": 1
+    },
+    {
+      "task_id": "mwaskom__seaborn.7001ebe7.test_statistics.0f2ae277.lv1",
+      "repository": "mwaskom/seaborn",
+      "level": 1,
+      "base_commit": "7001ebe72423238e99c0434a2ef0a0ebc9cb55c1",
+      "image_ref": "libercoders/featurebench-specs_seaborn-instance_52738fbb",
+      "patch_bytes": 8009,
+      "test_patch_bytes": 22208,
+      "problem_statement_sha256": "4bc25211550f8ce60b1f62784d0bdd6b9c20924ec235e84ce489c9a1d85c6634",
+      "f2p_file_count": 1,
+      "p2p_file_count": 5,
+      "timeout_run_seconds": 600,
+      "timeout_one_seconds": 10,
+      "needs_gpu": true,
+      "requested_gpus": 1
+    },
+    {
+      "task_id": "mwaskom__seaborn.7001ebe7.test_algorithms.1f0181c2.lv1",
+      "repository": "mwaskom/seaborn",
+      "level": 1,
+      "base_commit": "7001ebe72423238e99c0434a2ef0a0ebc9cb55c1",
+      "image_ref": "libercoders/featurebench-specs_seaborn-instance_52738fbb",
+      "patch_bytes": 4957,
+      "test_patch_bytes": 5661,
+      "problem_statement_sha256": "9992981bba2e840bd1cadae55b30040f1ea7a7966e6d5f89ff8f2b194a65ade0",
+      "f2p_file_count": 1,
+      "p2p_file_count": 5,
+      "timeout_run_seconds": 600,
+      "timeout_one_seconds": 10,
+      "needs_gpu": true,
+      "requested_gpus": 1
+    },
+    {
+      "task_id": "huggingface__transformers.e2e8dbed.test_modeling_seggpt.f9e83f60.lv2",
+      "repository": "huggingface/transformers",
+      "level": 2,
+      "base_commit": "e2e8dbed13c6a8455fd85c15c9fa91c99d609010",
+      "image_ref": "libercoders/featurebench-specs_transformers-instance_5c00e64e",
+      "patch_bytes": 0,
+      "test_patch_bytes": 1189,
+      "problem_statement_sha256": "a485f41b0ae9eddc3acbde7b4637782f848766835da628b6fd6df19008b21636",
+      "f2p_file_count": 1,
+      "p2p_file_count": 0,
+      "timeout_run_seconds": 600,
+      "timeout_one_seconds": 20,
+      "needs_gpu": true,
+      "requested_gpus": 1
+    },
+    {
+      "task_id": "huggingface__transformers.e2e8dbed.test_serve.4e7860c7.lv1",
+      "repository": "huggingface/transformers",
+      "level": 1,
+      "base_commit": "e2e8dbed13c6a8455fd85c15c9fa91c99d609010",
+      "image_ref": "libercoders/featurebench-specs_transformers-instance_5c00e64e",
+      "patch_bytes": 15870,
+      "test_patch_bytes": 35318,
+      "problem_statement_sha256": "5824a0ef3c1154cc2d603a1015f4e9bcc6ba2a95c709adea71d2a88574915bef",
+      "f2p_file_count": 1,
+      "p2p_file_count": 5,
+      "timeout_run_seconds": 600,
+      "timeout_one_seconds": 20,
+      "needs_gpu": true,
+      "requested_gpus": 1
+    },
+    {
+      "task_id": "huggingface__transformers.e2e8dbed.test_tests_fetcher.e1abe0dd.lv1",
+      "repository": "huggingface/transformers",
+      "level": 1,
+      "base_commit": "e2e8dbed13c6a8455fd85c15c9fa91c99d609010",
+      "image_ref": "libercoders/featurebench-specs_transformers-instance_5c00e64e",
+      "patch_bytes": 32571,
+      "test_patch_bytes": 36036,
+      "problem_statement_sha256": "e4da955c836d474b520a340e29d80add5de991beae028891342db4537594a8b0",
+      "f2p_file_count": 1,
+      "p2p_file_count": 5,
+      "timeout_run_seconds": 600,
+      "timeout_one_seconds": 20,
+      "needs_gpu": true,
+      "requested_gpus": 1
+    },
+    {
+      "task_id": "huggingface__transformers.e2e8dbed.test_processing_wav2vec2.4f660c78.lv1",
+      "repository": "huggingface/transformers",
+      "level": 1,
+      "base_commit": "e2e8dbed13c6a8455fd85c15c9fa91c99d609010",
+      "image_ref": "libercoders/featurebench-specs_transformers-instance_5c00e64e",
+      "patch_bytes": 36543,
+      "test_patch_bytes": 7038,
+      "problem_statement_sha256": "0bd559e4efb91cf07655456368725a379328d8cce63c166ee36cddd9c943ca08",
+      "f2p_file_count": 1,
+      "p2p_file_count": 5,
+      "timeout_run_seconds": 600,
+      "timeout_one_seconds": 20,
+      "needs_gpu": true,
+      "requested_gpus": 1
+    },
+    {
+      "task_id": "sphinx-doc__sphinx.e347e59c.test_domain_c.4068b9e8.lv1",
+      "repository": "sphinx-doc/sphinx",
+      "level": 1,
+      "base_commit": "e347e59ccc27a646c974526252e39a63870f6ea3",
+      "image_ref": "libercoders/featurebench-specs_sphinx-instance_6191afb1",
+      "patch_bytes": 25688,
+      "test_patch_bytes": 44949,
+      "problem_statement_sha256": "e8a9c4c70d6eb1e01d67b04e6b5cc8df21e24d1979a753932e9cd06fdff85be7",
+      "f2p_file_count": 1,
+      "p2p_file_count": 5,
+      "timeout_run_seconds": 600,
+      "timeout_one_seconds": 10,
+      "needs_gpu": true,
+      "requested_gpus": 1
+    }
+  ],
+  "suites": {
+    "featurebench_lite30_candidate": {
+      "tasks": [
+        {
+          "id": "huggingface__trl.02a34777.test_data_utils.827a9d15.lv1",
+          "image_ref": "libercoders/featurebench-specs_trl-instance_725be9aa"
+        },
+        {
+          "id": "mlflow__mlflow.93dab383.test_judge_tool_search_traces.cad8fc4b.lv1",
+          "image_ref": "libercoders/featurebench-specs_mlflow-instance_efffa87e"
+        },
+        {
+          "id": "mlflow__mlflow.93dab383.test_validation.2e1c5076.lv1",
+          "image_ref": "libercoders/featurebench-specs_mlflow-instance_efffa87e"
+        },
+        {
+          "id": "mlflow__mlflow.93dab383.test_serialization.2c029be6.lv1",
+          "image_ref": "libercoders/featurebench-specs_mlflow-instance_efffa87e"
+        },
+        {
+          "id": "mlflow__mlflow.93dab383.test_span.69efd376.lv1",
+          "image_ref": "libercoders/featurebench-specs_mlflow-instance_efffa87e"
+        },
+        {
+          "id": "mlflow__mlflow.93dab383.test_trace.17fde8b0.lv1",
+          "image_ref": "libercoders/featurebench-specs_mlflow-instance_efffa87e"
+        },
+        {
+          "id": "mlflow__mlflow.93dab383.test_databricks_tracing_utils.8ef44eb4.lv1",
+          "image_ref": "libercoders/featurebench-specs_mlflow-instance_efffa87e"
+        },
+        {
+          "id": "mlflow__mlflow.93dab383.test_responses_agent.072c4133.lv1",
+          "image_ref": "libercoders/featurebench-specs_mlflow-instance_efffa87e"
+        },
+        {
+          "id": "Netflix__metaflow.b390a8d4.test_stub_generator.7bf08c98.lv1",
+          "image_ref": "libercoders/featurebench-specs_metaflow-instance_87a4ffa7"
+        },
+        {
+          "id": "Lightning-AI__pytorch-lightning.126fa6f1.test_connector.825ef3b1.lv1",
+          "image_ref": "libercoders/featurebench-specs_pytorch_lightning-instance_83799db4"
+        },
+        {
+          "id": "Lightning-AI__pytorch-lightning.126fa6f1.test_data.c8b292af.lv1",
+          "image_ref": "libercoders/featurebench-specs_pytorch_lightning-instance_83799db4"
+        },
+        {
+          "id": "pandas-dev__pandas.82fa2715.test_concat.ebe5de39.lv1",
+          "image_ref": "libercoders/featurebench-specs_pandas-instance_15f634a6"
+        },
+        {
+          "id": "pandas-dev__pandas.82fa2715.test_list_accessor.7ab0b2ea.lv1",
+          "image_ref": "libercoders/featurebench-specs_pandas-instance_15f634a6"
+        },
+        {
+          "id": "pandas-dev__pandas.82fa2715.test_iceberg.85771c70.lv2",
+          "image_ref": "libercoders/featurebench-specs_pandas-instance_15f634a6"
+        },
+        {
+          "id": "sympy__sympy.c1097516.test_nullspace.f14fc970.lv1",
+          "image_ref": "libercoders/featurebench-specs_sympy-instance_3d889fef"
+        },
+        {
+          "id": "pydata__xarray.97f3a746.test_treenode.aa8ba777.lv2",
+          "image_ref": "libercoders/featurebench-specs_xarray-instance_62de996a"
+        },
+        {
+          "id": "pydata__xarray.97f3a746.test_backends_chunks.fa55f68a.lv1",
+          "image_ref": "libercoders/featurebench-specs_xarray-instance_62de996a"
+        },
+        {
+          "id": "astropy__astropy.b0db0daa.test_quantity_erfa_ufuncs.3fc54395.lv1",
+          "image_ref": "libercoders/featurebench-specs_astropy-instance_493bb78b"
+        },
+        {
+          "id": "astropy__astropy.b0db0daa.test_table.48eef659.lv1",
+          "image_ref": "libercoders/featurebench-specs_astropy-instance_493bb78b"
+        },
+        {
+          "id": "pydantic__pydantic.e1dcaf9e.test_deprecated_fields.40a2ec54.lv1",
+          "image_ref": "libercoders/featurebench-specs_pydantic-instance_78693714"
+        },
+        {
+          "id": "linkedin__Liger-Kernel.c856fbab.test_poly_norm.7b0e3399.lv1",
+          "image_ref": "libercoders/featurebench-specs_liger_kernel-instance_23e4cbae"
+        },
+        {
+          "id": "linkedin__Liger-Kernel.c856fbab.test_fused_neighborhood_attention.78217be4.lv2",
+          "image_ref": "libercoders/featurebench-specs_liger_kernel-instance_23e4cbae"
+        },
+        {
+          "id": "mwaskom__seaborn.7001ebe7.test_regression.ce8c62e2.lv1",
+          "image_ref": "libercoders/featurebench-specs_seaborn-instance_52738fbb"
+        },
+        {
+          "id": "mwaskom__seaborn.7001ebe7.test_statistics.0f2ae277.lv1",
+          "image_ref": "libercoders/featurebench-specs_seaborn-instance_52738fbb"
+        },
+        {
+          "id": "mwaskom__seaborn.7001ebe7.test_algorithms.1f0181c2.lv1",
+          "image_ref": "libercoders/featurebench-specs_seaborn-instance_52738fbb"
+        },
+        {
+          "id": "huggingface__transformers.e2e8dbed.test_modeling_seggpt.f9e83f60.lv2",
+          "image_ref": "libercoders/featurebench-specs_transformers-instance_5c00e64e"
+        },
+        {
+          "id": "huggingface__transformers.e2e8dbed.test_serve.4e7860c7.lv1",
+          "image_ref": "libercoders/featurebench-specs_transformers-instance_5c00e64e"
+        },
+        {
+          "id": "huggingface__transformers.e2e8dbed.test_tests_fetcher.e1abe0dd.lv1",
+          "image_ref": "libercoders/featurebench-specs_transformers-instance_5c00e64e"
+        },
+        {
+          "id": "huggingface__transformers.e2e8dbed.test_processing_wav2vec2.4f660c78.lv1",
+          "image_ref": "libercoders/featurebench-specs_transformers-instance_5c00e64e"
+        },
+        {
+          "id": "sphinx-doc__sphinx.e347e59c.test_domain_c.4068b9e8.lv1",
+          "image_ref": "libercoders/featurebench-specs_sphinx-instance_6191afb1"
+        }
+      ]
+    }
+  }
+}

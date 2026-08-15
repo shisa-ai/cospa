@@ -21,6 +21,10 @@ from harness.suites.swe_polybench import (
     SwePolyBenchVerifiedSuite,
 )
 from harness.suites.multi_swe_bench import MultiSweBenchFlashHermeticSuite
+from harness.suites.featurebench import (
+    FeatureBenchLitePareto12Suite,
+    FeatureBenchLitePilotSuite,
+)
 
 SUITES = {
     "aider_polyglot": AiderPolyglotSuite,
@@ -36,6 +40,8 @@ SUITES = {
     "swe_polybench_verified": SwePolyBenchVerifiedSuite,
     "swe_polybench_verified_balanced64": SwePolyBenchVerifiedBalanced64Suite,
     "multi_swe_bench_flash_hermetic25": MultiSweBenchFlashHermeticSuite,
+    "featurebench_lite_pilot6": FeatureBenchLitePilotSuite,
+    "featurebench_lite_pareto12": FeatureBenchLitePareto12Suite,
 }
 
 

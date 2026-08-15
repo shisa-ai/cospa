@@ -1,0 +1,466 @@
+{
+  "name": "featurebench-lite-pareto12-v1",
+  "version": "2026-08-15",
+  "source": {
+    "repository": "https://github.com/LiberCoders/FeatureBench.git",
+    "revision": "445dcbaec0b2e136061b0acb54e753c0a9f1888e",
+    "license": "MIT"
+  },
+  "dataset": {
+    "repository": "https://huggingface.co/datasets/LiberCoders/FeatureBench",
+    "revision": "e99d6efdfe511ea832c1b5735c536129561ec96a",
+    "sha256": "d0d1ee656179cd4f24547cfdccd31e10d8f77f337056661ffc8278f839a6ab7d",
+    "local_path": "vendor/eval-data/featurebench-lite/lite.parquet",
+    "license": "MIT"
+  },
+  "selection": {
+    "official_split": "lite",
+    "parent_manifest": "configs/featurebench_lite30_v1.json",
+    "uses_target_model_outcomes": false,
+    "mechanical_qualification_only": true,
+    "panel_size": 12,
+    "repository_count": 11,
+    "repository_counts": {
+      "Lightning-AI/pytorch-lightning": 1,
+      "Netflix/metaflow": 1,
+      "astropy/astropy": 1,
+      "huggingface/transformers": 1,
+      "mlflow/mlflow": 1,
+      "mwaskom/seaborn": 2,
+      "pandas-dev/pandas": 1,
+      "pydantic/pydantic": 1,
+      "pydata/xarray": 1,
+      "sphinx-doc/sphinx": 1,
+      "sympy/sympy": 1
+    },
+    "maximum_tasks_per_repository": 2,
+    "level_counts": {
+      "lv1": 12,
+      "lv2": 0
+    },
+    "policy": "Preserve the two repeat-stable Level 1 pilot rows, then take the fastest first-gold-pass row from each repository not yet represented and the fastest remaining row under a repository cap of two. Selection used only verifier validity, repository coverage, and verifier wall time; no target-model outcomes."
+  },
+  "qualification": {
+    "status": "repeat_qualified",
+    "observations_per_condition": 3,
+    "gold_passed": 36,
+    "null_failed": 36,
+    "verifier_network": "no-network",
+    "completed_at": "2026-08-15",
+    "screened_official_tasks": 30,
+    "released_level1_gold_tasks": 26,
+    "level2_without_released_gold": 4,
+    "first_gold_passing_level1_tasks": 21,
+    "fully_qualified_selected_tasks": 12,
+    "evidence": {
+      "pilot_repeat": "results/qualification/featurebench-pilot3-repeat2-20260815T2210Z/summary.json",
+      "extension_first_gold": [
+        "results/qualification/featurebench-lite30-ready-gold1-v2-20260815T2230Z/summary.json",
+        "results/qualification/featurebench-lite30-remaining4-gold1-20260815T2240Z/summary.json"
+      ],
+      "extension_repeat_gold_null": "results/qualification/featurebench-pareto12-new10-repeat-20260815T2210Z/summary.json"
+    }
+  },
+  "task_ids": [
+    "Lightning-AI__pytorch-lightning.126fa6f1.test_data.c8b292af.lv1",
+    "sphinx-doc__sphinx.e347e59c.test_domain_c.4068b9e8.lv1",
+    "Netflix__metaflow.b390a8d4.test_stub_generator.7bf08c98.lv1",
+    "astropy__astropy.b0db0daa.test_table.48eef659.lv1",
+    "huggingface__transformers.e2e8dbed.test_serve.4e7860c7.lv1",
+    "mlflow__mlflow.93dab383.test_databricks_tracing_utils.8ef44eb4.lv1",
+    "mwaskom__seaborn.7001ebe7.test_regression.ce8c62e2.lv1",
+    "mwaskom__seaborn.7001ebe7.test_algorithms.1f0181c2.lv1",
+    "pandas-dev__pandas.82fa2715.test_concat.ebe5de39.lv1",
+    "pydantic__pydantic.e1dcaf9e.test_deprecated_fields.40a2ec54.lv1",
+    "pydata__xarray.97f3a746.test_backends_chunks.fa55f68a.lv1",
+    "sympy__sympy.c1097516.test_nullspace.f14fc970.lv1"
+  ],
+  "tasks": [
+    {
+      "task_id": "Lightning-AI__pytorch-lightning.126fa6f1.test_data.c8b292af.lv1",
+      "repository": "Lightning-AI/pytorch-lightning",
+      "level": 1,
+      "base_commit": "126fa6f1bf0dceb03643c59ff4130c701b61aca4",
+      "image_ref": "libercoders/featurebench-specs_pytorch_lightning-instance_83799db4",
+      "patch_bytes": 40303,
+      "test_patch_bytes": 15634,
+      "problem_statement_sha256": "b01c2f5ec9d40c676aadcd052e898de59a3382ce445ee4f3b56cf7bab1713a8a",
+      "f2p_file_count": 1,
+      "p2p_file_count": 5,
+      "timeout_run_seconds": 600,
+      "timeout_one_seconds": 10,
+      "needs_gpu": true,
+      "requested_gpus": 2,
+      "qualification": {
+        "source": "pilot6_mechanical_screen",
+        "gold_observations": 3,
+        "gold_passes": 3,
+        "null_observations": 3,
+        "null_failures": 3,
+        "evidence": [
+          "results/qualification/featurebench-pilot3-repeat2-20260815T2210Z/summary.json"
+        ]
+      }
+    },
+    {
+      "task_id": "sphinx-doc__sphinx.e347e59c.test_domain_c.4068b9e8.lv1",
+      "repository": "sphinx-doc/sphinx",
+      "level": 1,
+      "base_commit": "e347e59ccc27a646c974526252e39a63870f6ea3",
+      "image_ref": "libercoders/featurebench-specs_sphinx-instance_6191afb1",
+      "patch_bytes": 25688,
+      "test_patch_bytes": 44949,
+      "problem_statement_sha256": "e8a9c4c70d6eb1e01d67b04e6b5cc8df21e24d1979a753932e9cd06fdff85be7",
+      "f2p_file_count": 1,
+      "p2p_file_count": 5,
+      "timeout_run_seconds": 600,
+      "timeout_one_seconds": 10,
+      "needs_gpu": true,
+      "requested_gpus": 1,
+      "qualification": {
+        "source": "pilot6_mechanical_screen",
+        "gold_observations": 3,
+        "gold_passes": 3,
+        "null_observations": 3,
+        "null_failures": 3,
+        "evidence": [
+          "results/qualification/featurebench-pilot3-repeat2-20260815T2210Z/summary.json"
+        ]
+      }
+    },
+    {
+      "task_id": "Netflix__metaflow.b390a8d4.test_stub_generator.7bf08c98.lv1",
+      "repository": "Netflix/metaflow",
+      "level": 1,
+      "base_commit": "b390a8d4459fed4c5e13271a434f9d77e756164c",
+      "image_ref": "libercoders/featurebench-specs_metaflow-instance_87a4ffa7",
+      "patch_bytes": 41336,
+      "test_patch_bytes": 21047,
+      "problem_statement_sha256": "62f7b05f760a7fb66c31c23f07c6ee3b64958fc83e22185cc3b41638768cc80e",
+      "f2p_file_count": 1,
+      "p2p_file_count": 5,
+      "timeout_run_seconds": 600,
+      "timeout_one_seconds": 10,
+      "needs_gpu": false,
+      "requested_gpus": 0,
+      "qualification": {
+        "source": "lite30_outcome_blind_extension",
+        "gold_observations": 3,
+        "gold_passes": 3,
+        "null_observations": 3,
+        "null_failures": 3,
+        "evidence": [
+          "results/qualification/featurebench-lite30-ready-gold1-v2-20260815T2230Z/summary.json",
+          "results/qualification/featurebench-lite30-remaining4-gold1-20260815T2240Z/summary.json",
+          "results/qualification/featurebench-pareto12-new10-repeat-20260815T2210Z/summary.json"
+        ]
+      }
+    },
+    {
+      "task_id": "astropy__astropy.b0db0daa.test_table.48eef659.lv1",
+      "repository": "astropy/astropy",
+      "level": 1,
+      "base_commit": "b0db0daac6b851596851cb43e5456fb6c916c071",
+      "image_ref": "libercoders/featurebench-specs_astropy-instance_493bb78b",
+      "patch_bytes": 34510,
+      "test_patch_bytes": 32229,
+      "problem_statement_sha256": "a2c1198f74d2b8358a93940ffaebd2ad132d23ef40d6977d017ea302270cac7d",
+      "f2p_file_count": 1,
+      "p2p_file_count": 5,
+      "timeout_run_seconds": 600,
+      "timeout_one_seconds": 10,
+      "needs_gpu": false,
+      "requested_gpus": 0,
+      "qualification": {
+        "source": "lite30_outcome_blind_extension",
+        "gold_observations": 3,
+        "gold_passes": 3,
+        "null_observations": 3,
+        "null_failures": 3,
+        "evidence": [
+          "results/qualification/featurebench-lite30-ready-gold1-v2-20260815T2230Z/summary.json",
+          "results/qualification/featurebench-lite30-remaining4-gold1-20260815T2240Z/summary.json",
+          "results/qualification/featurebench-pareto12-new10-repeat-20260815T2210Z/summary.json"
+        ]
+      }
+    },
+    {
+      "task_id": "huggingface__transformers.e2e8dbed.test_serve.4e7860c7.lv1",
+      "repository": "huggingface/transformers",
+      "level": 1,
+      "base_commit": "e2e8dbed13c6a8455fd85c15c9fa91c99d609010",
+      "image_ref": "libercoders/featurebench-specs_transformers-instance_5c00e64e",
+      "patch_bytes": 15870,
+      "test_patch_bytes": 35318,
+      "problem_statement_sha256": "5824a0ef3c1154cc2d603a1015f4e9bcc6ba2a95c709adea71d2a88574915bef",
+      "f2p_file_count": 1,
+      "p2p_file_count": 5,
+      "timeout_run_seconds": 600,
+      "timeout_one_seconds": 20,
+      "needs_gpu": true,
+      "requested_gpus": 1,
+      "qualification": {
+        "source": "lite30_outcome_blind_extension",
+        "gold_observations": 3,
+        "gold_passes": 3,
+        "null_observations": 3,
+        "null_failures": 3,
+        "evidence": [
+          "results/qualification/featurebench-lite30-ready-gold1-v2-20260815T2230Z/summary.json",
+          "results/qualification/featurebench-lite30-remaining4-gold1-20260815T2240Z/summary.json",
+          "results/qualification/featurebench-pareto12-new10-repeat-20260815T2210Z/summary.json"
+        ]
+      }
+    },
+    {
+      "task_id": "mlflow__mlflow.93dab383.test_databricks_tracing_utils.8ef44eb4.lv1",
+      "repository": "mlflow/mlflow",
+      "level": 1,
+      "base_commit": "93dab383a1a3fc9882ebc32283ad2a05d79ff70f",
+      "image_ref": "libercoders/featurebench-specs_mlflow-instance_efffa87e",
+      "patch_bytes": 13420,
+      "test_patch_bytes": 16889,
+      "problem_statement_sha256": "9e0563fd666cb9c49515b12b2727663916775c9668a73f417bbc2d0fcad87361",
+      "f2p_file_count": 1,
+      "p2p_file_count": 5,
+      "timeout_run_seconds": 1200,
+      "timeout_one_seconds": 20,
+      "needs_gpu": false,
+      "requested_gpus": 0,
+      "qualification": {
+        "source": "lite30_outcome_blind_extension",
+        "gold_observations": 3,
+        "gold_passes": 3,
+        "null_observations": 3,
+        "null_failures": 3,
+        "evidence": [
+          "results/qualification/featurebench-lite30-ready-gold1-v2-20260815T2230Z/summary.json",
+          "results/qualification/featurebench-lite30-remaining4-gold1-20260815T2240Z/summary.json",
+          "results/qualification/featurebench-pareto12-new10-repeat-20260815T2210Z/summary.json"
+        ]
+      }
+    },
+    {
+      "task_id": "mwaskom__seaborn.7001ebe7.test_regression.ce8c62e2.lv1",
+      "repository": "mwaskom/seaborn",
+      "level": 1,
+      "base_commit": "7001ebe72423238e99c0434a2ef0a0ebc9cb55c1",
+      "image_ref": "libercoders/featurebench-specs_seaborn-instance_52738fbb",
+      "patch_bytes": 34353,
+      "test_patch_bytes": 24444,
+      "problem_statement_sha256": "b059796a53af3423a78fca1c43276dc86f8a68e2278420e0f6c3f3a9a2fda947",
+      "f2p_file_count": 1,
+      "p2p_file_count": 5,
+      "timeout_run_seconds": 600,
+      "timeout_one_seconds": 10,
+      "needs_gpu": true,
+      "requested_gpus": 1,
+      "qualification": {
+        "source": "lite30_outcome_blind_extension",
+        "gold_observations": 3,
+        "gold_passes": 3,
+        "null_observations": 3,
+        "null_failures": 3,
+        "evidence": [
+          "results/qualification/featurebench-lite30-ready-gold1-v2-20260815T2230Z/summary.json",
+          "results/qualification/featurebench-lite30-remaining4-gold1-20260815T2240Z/summary.json",
+          "results/qualification/featurebench-pareto12-new10-repeat-20260815T2210Z/summary.json"
+        ]
+      }
+    },
+    {
+      "task_id": "mwaskom__seaborn.7001ebe7.test_algorithms.1f0181c2.lv1",
+      "repository": "mwaskom/seaborn",
+      "level": 1,
+      "base_commit": "7001ebe72423238e99c0434a2ef0a0ebc9cb55c1",
+      "image_ref": "libercoders/featurebench-specs_seaborn-instance_52738fbb",
+      "patch_bytes": 4957,
+      "test_patch_bytes": 5661,
+      "problem_statement_sha256": "9992981bba2e840bd1cadae55b30040f1ea7a7966e6d5f89ff8f2b194a65ade0",
+      "f2p_file_count": 1,
+      "p2p_file_count": 5,
+      "timeout_run_seconds": 600,
+      "timeout_one_seconds": 10,
+      "needs_gpu": true,
+      "requested_gpus": 1,
+      "qualification": {
+        "source": "lite30_outcome_blind_extension",
+        "gold_observations": 3,
+        "gold_passes": 3,
+        "null_observations": 3,
+        "null_failures": 3,
+        "evidence": [
+          "results/qualification/featurebench-lite30-ready-gold1-v2-20260815T2230Z/summary.json",
+          "results/qualification/featurebench-lite30-remaining4-gold1-20260815T2240Z/summary.json",
+          "results/qualification/featurebench-pareto12-new10-repeat-20260815T2210Z/summary.json"
+        ]
+      }
+    },
+    {
+      "task_id": "pandas-dev__pandas.82fa2715.test_concat.ebe5de39.lv1",
+      "repository": "pandas-dev/pandas",
+      "level": 1,
+      "base_commit": "82fa27153e5b646ecdb78cfc6ecf3e1750443892",
+      "image_ref": "libercoders/featurebench-specs_pandas-instance_15f634a6",
+      "patch_bytes": 42722,
+      "test_patch_bytes": 3052,
+      "problem_statement_sha256": "14a02e2a0f0e4a3dee2326860b1b906ecc6eeb1b02b671cf5a233d13fec07939",
+      "f2p_file_count": 1,
+      "p2p_file_count": 5,
+      "timeout_run_seconds": 600,
+      "timeout_one_seconds": 10,
+      "needs_gpu": true,
+      "requested_gpus": 1,
+      "qualification": {
+        "source": "lite30_outcome_blind_extension",
+        "gold_observations": 3,
+        "gold_passes": 3,
+        "null_observations": 3,
+        "null_failures": 3,
+        "evidence": [
+          "results/qualification/featurebench-lite30-ready-gold1-v2-20260815T2230Z/summary.json",
+          "results/qualification/featurebench-lite30-remaining4-gold1-20260815T2240Z/summary.json",
+          "results/qualification/featurebench-pareto12-new10-repeat-20260815T2210Z/summary.json"
+        ]
+      }
+    },
+    {
+      "task_id": "pydantic__pydantic.e1dcaf9e.test_deprecated_fields.40a2ec54.lv1",
+      "repository": "pydantic/pydantic",
+      "level": 1,
+      "base_commit": "e1dcaf9e68fc89731b45235e53245447edf35084",
+      "image_ref": "libercoders/featurebench-specs_pydantic-instance_78693714",
+      "patch_bytes": 23336,
+      "test_patch_bytes": 8654,
+      "problem_statement_sha256": "eb85a24c5a3e7b81ed9460fab49e9230b6b2126516d90a199e5ba5670b39c716",
+      "f2p_file_count": 1,
+      "p2p_file_count": 5,
+      "timeout_run_seconds": 600,
+      "timeout_one_seconds": 10,
+      "needs_gpu": false,
+      "requested_gpus": 0,
+      "qualification": {
+        "source": "lite30_outcome_blind_extension",
+        "gold_observations": 3,
+        "gold_passes": 3,
+        "null_observations": 3,
+        "null_failures": 3,
+        "evidence": [
+          "results/qualification/featurebench-lite30-ready-gold1-v2-20260815T2230Z/summary.json",
+          "results/qualification/featurebench-lite30-remaining4-gold1-20260815T2240Z/summary.json",
+          "results/qualification/featurebench-pareto12-new10-repeat-20260815T2210Z/summary.json"
+        ]
+      }
+    },
+    {
+      "task_id": "pydata__xarray.97f3a746.test_backends_chunks.fa55f68a.lv1",
+      "repository": "pydata/xarray",
+      "level": 1,
+      "base_commit": "97f3a7465a66638f68129581b658853a3992dd89",
+      "image_ref": "libercoders/featurebench-specs_xarray-instance_62de996a",
+      "patch_bytes": 12539,
+      "test_patch_bytes": 3515,
+      "problem_statement_sha256": "c1ae45693408bc0c5a48900252a4a1dc1a9d43dd0ff3bd0500e0f3711d042d3f",
+      "f2p_file_count": 1,
+      "p2p_file_count": 5,
+      "timeout_run_seconds": 600,
+      "timeout_one_seconds": 10,
+      "needs_gpu": true,
+      "requested_gpus": 1,
+      "qualification": {
+        "source": "lite30_outcome_blind_extension",
+        "gold_observations": 3,
+        "gold_passes": 3,
+        "null_observations": 3,
+        "null_failures": 3,
+        "evidence": [
+          "results/qualification/featurebench-lite30-ready-gold1-v2-20260815T2230Z/summary.json",
+          "results/qualification/featurebench-lite30-remaining4-gold1-20260815T2240Z/summary.json",
+          "results/qualification/featurebench-pareto12-new10-repeat-20260815T2210Z/summary.json"
+        ]
+      }
+    },
+    {
+      "task_id": "sympy__sympy.c1097516.test_nullspace.f14fc970.lv1",
+      "repository": "sympy/sympy",
+      "level": 1,
+      "base_commit": "c1097516c793b0364c4f3fe2eeb66b15a94eedfd",
+      "image_ref": "libercoders/featurebench-specs_sympy-instance_3d889fef",
+      "patch_bytes": 71694,
+      "test_patch_bytes": 5869,
+      "problem_statement_sha256": "2a1462ba182f77788156341f8c7a3c3307ec731d681a644a813b6ec35c352a9a",
+      "f2p_file_count": 1,
+      "p2p_file_count": 5,
+      "timeout_run_seconds": 600,
+      "timeout_one_seconds": 10,
+      "needs_gpu": true,
+      "requested_gpus": 1,
+      "qualification": {
+        "source": "lite30_outcome_blind_extension",
+        "gold_observations": 3,
+        "gold_passes": 3,
+        "null_observations": 3,
+        "null_failures": 3,
+        "evidence": [
+          "results/qualification/featurebench-lite30-ready-gold1-v2-20260815T2230Z/summary.json",
+          "results/qualification/featurebench-lite30-remaining4-gold1-20260815T2240Z/summary.json",
+          "results/qualification/featurebench-pareto12-new10-repeat-20260815T2210Z/summary.json"
+        ]
+      }
+    }
+  ],
+  "suites": {
+    "featurebench_lite_pareto12": {
+      "tasks": [
+        {
+          "id": "Lightning-AI__pytorch-lightning.126fa6f1.test_data.c8b292af.lv1",
+          "image_ref": "libercoders/featurebench-specs_pytorch_lightning-instance_83799db4"
+        },
+        {
+          "id": "sphinx-doc__sphinx.e347e59c.test_domain_c.4068b9e8.lv1",
+          "image_ref": "libercoders/featurebench-specs_sphinx-instance_6191afb1"
+        },
+        {
+          "id": "Netflix__metaflow.b390a8d4.test_stub_generator.7bf08c98.lv1",
+          "image_ref": "libercoders/featurebench-specs_metaflow-instance_87a4ffa7"
+        },
+        {
+          "id": "astropy__astropy.b0db0daa.test_table.48eef659.lv1",
+          "image_ref": "libercoders/featurebench-specs_astropy-instance_493bb78b"
+        },
+        {
+          "id": "huggingface__transformers.e2e8dbed.test_serve.4e7860c7.lv1",
+          "image_ref": "libercoders/featurebench-specs_transformers-instance_5c00e64e"
+        },
+        {
+          "id": "mlflow__mlflow.93dab383.test_databricks_tracing_utils.8ef44eb4.lv1",
+          "image_ref": "libercoders/featurebench-specs_mlflow-instance_efffa87e"
+        },
+        {
+          "id": "mwaskom__seaborn.7001ebe7.test_regression.ce8c62e2.lv1",
+          "image_ref": "libercoders/featurebench-specs_seaborn-instance_52738fbb"
+        },
+        {
+          "id": "mwaskom__seaborn.7001ebe7.test_algorithms.1f0181c2.lv1",
+          "image_ref": "libercoders/featurebench-specs_seaborn-instance_52738fbb"
+        },
+        {
+          "id": "pandas-dev__pandas.82fa2715.test_concat.ebe5de39.lv1",
+          "image_ref": "libercoders/featurebench-specs_pandas-instance_15f634a6"
+        },
+        {
+          "id": "pydantic__pydantic.e1dcaf9e.test_deprecated_fields.40a2ec54.lv1",
+          "image_ref": "libercoders/featurebench-specs_pydantic-instance_78693714"
+        },
+        {
+          "id": "pydata__xarray.97f3a746.test_backends_chunks.fa55f68a.lv1",
+          "image_ref": "libercoders/featurebench-specs_xarray-instance_62de996a"
+        },
+        {
+          "id": "sympy__sympy.c1097516.test_nullspace.f14fc970.lv1",
+          "image_ref": "libercoders/featurebench-specs_sympy-instance_3d889fef"
+        }
+      ]
+    }
+  }
+}

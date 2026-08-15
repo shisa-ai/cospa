@@ -1,0 +1,122 @@
+{
+  "name": "featurebench_lite_pareto12_images_v1",
+  "source_manifest": "configs/featurebench_lite_pareto12_v1.json",
+  "source_manifest_sha256": "581bae8979cf71def1a98a2de8b80d71183d85e6ba2ef0c652687353a81d9357",
+  "platform": {
+    "os": "linux",
+    "architecture": "amd64"
+  },
+  "images": {
+    "libercoders/featurebench-specs_astropy-instance_493bb78b": {
+      "suites": [
+        "featurebench_lite_pareto12"
+      ],
+      "task_ids": [
+        "astropy__astropy.b0db0daa.test_table.48eef659.lv1"
+      ],
+      "digest": "sha256:4b5e7489d8bee8e20b53f94c74833e6d9ee0163673ac4a36eecb0372ef01fda2",
+      "pinned_ref": "libercoders/featurebench-specs_astropy-instance_493bb78b@sha256:4b5e7489d8bee8e20b53f94c74833e6d9ee0163673ac4a36eecb0372ef01fda2"
+    },
+    "libercoders/featurebench-specs_metaflow-instance_87a4ffa7": {
+      "suites": [
+        "featurebench_lite_pareto12"
+      ],
+      "task_ids": [
+        "Netflix__metaflow.b390a8d4.test_stub_generator.7bf08c98.lv1"
+      ],
+      "digest": "sha256:b319caebd869643983a3302839c3604cd885b4b2fe6dafb79686564bfcd52654",
+      "pinned_ref": "libercoders/featurebench-specs_metaflow-instance_87a4ffa7@sha256:b319caebd869643983a3302839c3604cd885b4b2fe6dafb79686564bfcd52654"
+    },
+    "libercoders/featurebench-specs_mlflow-instance_efffa87e": {
+      "suites": [
+        "featurebench_lite_pareto12"
+      ],
+      "task_ids": [
+        "mlflow__mlflow.93dab383.test_databricks_tracing_utils.8ef44eb4.lv1"
+      ],
+      "digest": "sha256:5a63b594bc99a6dcd876289974979606b276edd49e966020111db3590c40add4",
+      "pinned_ref": "libercoders/featurebench-specs_mlflow-instance_efffa87e@sha256:5a63b594bc99a6dcd876289974979606b276edd49e966020111db3590c40add4"
+    },
+    "libercoders/featurebench-specs_pandas-instance_15f634a6": {
+      "suites": [
+        "featurebench_lite_pareto12"
+      ],
+      "task_ids": [
+        "pandas-dev__pandas.82fa2715.test_concat.ebe5de39.lv1"
+      ],
+      "digest": "sha256:e484ae407255b4c2c481a842e476c3c3285d2032738adf0abd410fb5f776dab7",
+      "pinned_ref": "libercoders/featurebench-specs_pandas-instance_15f634a6@sha256:e484ae407255b4c2c481a842e476c3c3285d2032738adf0abd410fb5f776dab7"
+    },
+    "libercoders/featurebench-specs_pydantic-instance_78693714": {
+      "suites": [
+        "featurebench_lite_pareto12"
+      ],
+      "task_ids": [
+        "pydantic__pydantic.e1dcaf9e.test_deprecated_fields.40a2ec54.lv1"
+      ],
+      "digest": "sha256:755c424c73170faf66d88006022ed2733f8e269446f330f301d762b0d0ab7d6b",
+      "pinned_ref": "libercoders/featurebench-specs_pydantic-instance_78693714@sha256:755c424c73170faf66d88006022ed2733f8e269446f330f301d762b0d0ab7d6b"
+    },
+    "libercoders/featurebench-specs_pytorch_lightning-instance_83799db4": {
+      "suites": [
+        "featurebench_lite_pareto12"
+      ],
+      "task_ids": [
+        "Lightning-AI__pytorch-lightning.126fa6f1.test_data.c8b292af.lv1"
+      ],
+      "digest": "sha256:cc9cc0e9b5bdf7a86b8dad6ec7b1c56ae8141eef3563ba3ad9589810c0700fdc",
+      "pinned_ref": "libercoders/featurebench-specs_pytorch_lightning-instance_83799db4@sha256:cc9cc0e9b5bdf7a86b8dad6ec7b1c56ae8141eef3563ba3ad9589810c0700fdc"
+    },
+    "libercoders/featurebench-specs_seaborn-instance_52738fbb": {
+      "suites": [
+        "featurebench_lite_pareto12"
+      ],
+      "task_ids": [
+        "mwaskom__seaborn.7001ebe7.test_algorithms.1f0181c2.lv1",
+        "mwaskom__seaborn.7001ebe7.test_regression.ce8c62e2.lv1"
+      ],
+      "digest": "sha256:fe27a1a5205fa0939453e79d0f40c74cb402bad8ea1d42fff7de5e2106e77ce1",
+      "pinned_ref": "libercoders/featurebench-specs_seaborn-instance_52738fbb@sha256:fe27a1a5205fa0939453e79d0f40c74cb402bad8ea1d42fff7de5e2106e77ce1"
+    },
+    "libercoders/featurebench-specs_sphinx-instance_6191afb1": {
+      "suites": [
+        "featurebench_lite_pareto12"
+      ],
+      "task_ids": [
+        "sphinx-doc__sphinx.e347e59c.test_domain_c.4068b9e8.lv1"
+      ],
+      "digest": "sha256:15b434473e16386e33c864d8b7f4a3bddb9c5585961758c0ed0f06b51b3f0268",
+      "pinned_ref": "libercoders/featurebench-specs_sphinx-instance_6191afb1@sha256:15b434473e16386e33c864d8b7f4a3bddb9c5585961758c0ed0f06b51b3f0268"
+    },
+    "libercoders/featurebench-specs_sympy-instance_3d889fef": {
+      "suites": [
+        "featurebench_lite_pareto12"
+      ],
+      "task_ids": [
+        "sympy__sympy.c1097516.test_nullspace.f14fc970.lv1"
+      ],
+      "digest": "sha256:207ff124011e74d2b6abbdce2f8d3244546949cd0abfb7949d7dd414368f8935",
+      "pinned_ref": "libercoders/featurebench-specs_sympy-instance_3d889fef@sha256:207ff124011e74d2b6abbdce2f8d3244546949cd0abfb7949d7dd414368f8935"
+    },
+    "libercoders/featurebench-specs_transformers-instance_5c00e64e": {
+      "suites": [
+        "featurebench_lite_pareto12"
+      ],
+      "task_ids": [
+        "huggingface__transformers.e2e8dbed.test_serve.4e7860c7.lv1"
+      ],
+      "digest": "sha256:bceb0fa48b3489401b69fa8894172c83c769cf95fe840a192602c57c182c059b",
+      "pinned_ref": "libercoders/featurebench-specs_transformers-instance_5c00e64e@sha256:bceb0fa48b3489401b69fa8894172c83c769cf95fe840a192602c57c182c059b"
+    },
+    "libercoders/featurebench-specs_xarray-instance_62de996a": {
+      "suites": [
+        "featurebench_lite_pareto12"
+      ],
+      "task_ids": [
+        "pydata__xarray.97f3a746.test_backends_chunks.fa55f68a.lv1"
+      ],
+      "digest": "sha256:075803e6495efc4aa64c015effcae52986a62352655127f69a262dfbedfbb7d7",
+      "pinned_ref": "libercoders/featurebench-specs_xarray-instance_62de996a@sha256:075803e6495efc4aa64c015effcae52986a62352655127f69a262dfbedfbb7d7"
+    }
+  }
+}

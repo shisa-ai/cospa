@@ -2439,3 +2439,29 @@ Append-only development log for the `cospa` repository.
   task IDs x 3 trials with identity, thinking-policy, and failure-taxonomy
   checks; full metrics recorded in `docs/PARETO-CAMPAIGN.md` Phase D.
 - Next: Phase D finalist promotion decisions on the retained k=1 protocol.
+
+## 2026-08-16 — Define capability-oriented harness evaluation
+
+- Context: current BCB/PB vanilla-versus-devstack scores provide little stable
+  adapter discrimination and do not exercise much of the day-to-day devstack's
+  web, automation, context, provider, or interactive workflow value.
+- Change: add `docs/HARNESS-EVAL.md` with the canonical and actually installed
+  package inventory, generic/Harbor exposure boundaries, task-level tool-uptake
+  evidence, statistical interpretation, and a design for modular capability
+  profiles, disabled/sham/enabled/cued arms, deterministic capability tracks,
+  and counterfactual replay from real development sessions. Link the methodology
+  from `docs/EVALS.md`.
+- Evidence: reviewed the complete devstack manifest/setup/headless guidance,
+  current Pi settings and package resources, Cospa adapter/sandbox/Harbor paths,
+  and exported BCB/PB Pi traces. The scored devstack roots contained 822 task,
+  63 background, 96 web, 13 context, and 31 goal-tool calls; multiloop,
+  scheduling, and boomerang had no uptake. Re-read both changed documents
+  end-to-end and ran `git diff --check`.
+- Decision: retain BCB as a coding/protocol anchor and PB as an offline patching
+  benchmark, but do not interpret their adapter delta as full workstation
+  utility. Freeze and fingerprint small capability profiles, keep public
+  historical issue tasks offline, and report opportunity through causal lift
+  and overhead rather than tool availability alone.
+- Next: implement profile fingerprinting, then qualify one small deterministic
+  diagnostic each for planning, async tests, long context, optimization loops,
+  and frozen web before another scaffold campaign.

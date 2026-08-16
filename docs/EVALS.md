@@ -41,6 +41,12 @@ baseline, measured projections, and promotion gates are frozen in
 `docs/PARETO-CAMPAIGN.md`. That campaign prefers deterministic executable
 oracles and defers suites whose headline requires an LLM judge.
 
+Interpretation of vanilla-versus-devstack results, the effective headless
+package surface, and the design for capability-specific harness evaluation
+live in `docs/HARNESS-EVAL.md`. Until complete profiles are frozen and
+fingerprinted, a `pi_devstack` row is evidence about that run's sanitized
+workflow snapshot—not the utility of the full day-to-day workstation stack.
+
 `aider_cospa` is a protocol design target, not merely a rename of the current
 suite. The current Aider suite already hides official tests and reference
 artifacts, but the 225 visible contracts still require task-by-task review and,

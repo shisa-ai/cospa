@@ -440,6 +440,35 @@ and about 1.5 hours elapsed — keeping the whole campaign near $3.10 and
 `results/runs/ds4-bcb-agentic-hermetic143-c8-20260816` and
 `results/runs/ds4-terminal-full80-c8-20260816`.
 
+### Phase F — four-model pi_vanilla matrix
+
+The next routine matrix compares four models on the frozen panels under one
+identical scaffold:
+
+- **Harness:** `pi 0.84.2`, `pi_vanilla` (`--no-extensions`, seven built-in
+  coding tools per `docs/HARNESS-EVAL.md`). Devstack is skipped because none
+  of its real-world improvements have opportunity in these hermetic suites.
+- **Protocol:** `thinking=high`, `c=8`, `k=1`; BCB Instruct keeps its declared
+  no-thinking, no-tool exception.
+- **Models:** `shisa/ornith-35b-fp8-block`, `local/deepseek-v4-flash-0731`,
+  `local/qwen3.8-27b`, and `codex/gpt-5.3-codex-spark` (128K context — the
+  tightest window in the matrix and a real constraint on long episodes).
+- **Panels:** BCB Instruct hermetic143, BCB Agentic hermetic143, Multi-SWE
+  hermetic25, Terminal full80, PolyBench balanced64, FeatureBench Pareto12,
+  SWE-Explore Verified12 — per model.
+- **DS4 row:** instruct/multiswe/poly/feature/explore reuse the completed
+  baseline cells; the Phase E agentic143 and full80 cells complete the row.
+- **Cost note:** Ornith bills real Shisa rates ($0.14 in / $1.04 out per 1M);
+  Spark mirrors codex-pool $0 accounting; Qwen's yaml rates are external list
+  prices applied to a self-hosted endpoint, so its dollar column overstates
+  real spend — compare token columns for that row.
+- **Execution:** cells run sequentially per model (one Harbor c=8 row at a
+  time alongside unrelated campaigns at c=2, staying at the proven ten-network
+  operating point); the local-model relay env is set only for `local/*` rows.
+- **Report:** `scripts/generate-report.py` one-sheets per model row plus a
+  combined matrix sheet; behavior columns (turns, LLM%, tool calls) are the
+  primary cross-model comparison surface.
+
 ## Implementation order
 
 Items 1–8 and the matched scaffold gate plus stability sentinel in item 9

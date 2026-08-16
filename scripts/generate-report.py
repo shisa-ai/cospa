@@ -273,6 +273,23 @@ def _render_cell_section(
     return "\n".join(lines)
 
 
+def _pi_version() -> str:
+    """Best-effort pi CLI version for the harness header."""
+    import subprocess
+
+    for argv in (["pi", "--version"],):
+        try:
+            result = subprocess.run(
+                argv, capture_output=True, text=True, timeout=10
+            )
+        except (OSError, subprocess.TimeoutExpired):
+            continue
+        output = (result.stdout or result.stderr or "").strip()
+        if result.returncode == 0 and output:
+            return output.splitlines()[0]
+    return "unknown"
+
+
 def generate_report(results_dirs: list[Path], output: Path) -> str:
     """Render the one-sheet report and write it to ``output``."""
     viewer = _load_viewer()
@@ -292,7 +309,8 @@ def generate_report(results_dirs: list[Path], output: Path) -> str:
     lines = [
         "# Cospa Run Report",
         "",
-        f"_Generated {now.strftime('%Y-%m-%dT%H:%M:%S%z')}_",
+        f"_Generated {now.strftime('%Y-%m-%dT%H:%M:%S%z')} · "
+        f"harness pi {_pi_version()} (pi_vanilla, --no-extensions)_",
         "",
         "## Summary",
         "",

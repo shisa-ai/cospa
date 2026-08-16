@@ -2458,6 +2458,32 @@ Append-only development log for the `cospa` repository.
   waits and durable roots, then aggregate the final campaign report and
   freeze the next routine matrix (task #16).
 
+## 2026-08-16 — Freeze four-model pi_vanilla matrix
+
+- Context: the campaign's next matrix compares real model behavior under one
+  identical scaffold; `docs/HARNESS-EVAL.md` establishes that devstack's
+  real-world improvements have no opportunity in these hermetic suites, so
+  the comparison runs `pi_vanilla` only at a pinned harness version.
+- Change: add `codex/gpt-5.3-codex-spark` (128K context, codex-pool thinking
+  map, $0 pool accounting) to `configs/models.yaml`; define the Phase F
+  matrix in `docs/PARETO-CAMPAIGN.md` (4 models x 7 frozen panels, thinking
+  high except the Instruct protocol exception, c=8 k=1); pin pi 0.84.2 in
+  `docs/HARNESS-EVAL.md`; record the pi version and adapter surface in the
+  report header via `scripts/generate-report.py`.
+- Evidence: all four endpoints reachable via the runner probe; spark metadata
+  resolves (name, 128K window, reasoning) through `load_model_metadata`;
+  20 focused report/reachability/sampling tests pass. No-RED rationale: the
+  report change is a cosmetic generated-header line, and the models.yaml
+  addition is configuration consumed by existing tested lookups.
+- Decision: DS4's row reuses the five completed baseline cells and adds only
+  the Phase E agentic143/full80 cells; ornith/spark/qwen run all seven panels
+  sequentially with one Harbor c=8 row live at a time and the local relay env
+  set only for `local/*` models. Qwen's dollar column uses external list
+  prices on a self-hosted endpoint, so token columns are the comparable
+  quantity for that row.
+- Next: execute the matrix (~19h serial), generate per-row and combined
+  one-sheets, and publish the campaign analysis (task #16).
+
 ## 2026-08-16 — Define capability-oriented harness evaluation
 
 - Context: current BCB/PB vanilla-versus-devstack scores provide little stable

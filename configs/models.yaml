@@ -76,6 +76,18 @@ models:
       cacheWrite: 0
       output: 0
     pricing_unit: usd_per_1m_tokens
+  - id: codex/gpt-5.3-codex-spark
+    name: GPT-5.3 Codex Spark
+    context_window: 128000
+    max_tokens: 128000
+    reasoning: true
+    reasoning_effort_source: codex-pool-thinking-level-map
+    cost:
+      input: 0
+      cacheRead: 0
+      cacheWrite: 0
+      output: 0
+    pricing_unit: usd_per_1m_tokens
   - id: nvidia/nemotron-3-ultra-550b-a55b
     name: Nemotron 3 Ultra 550B
     cost:

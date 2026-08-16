@@ -46,7 +46,7 @@ sessions.
 ### Vanilla baseline
 
 `harness/adapters/pi_vanilla.py` launches Pi with `--no-extensions`. Current Pi
-0.84.1 provides these seven built-in coding tools:
+0.84.2 provides these seven built-in coding tools:
 
 - `read`
 - `bash`

@@ -2367,3 +2367,29 @@ Append-only development log for the `cospa` repository.
 - Next: turn this table into a script-generated per-run one-sheet report with
   links to raw traces; rerun BCB Instruct at matched thinking if it joins a
   headline geomean.
+
+## 2026-08-16 — Add script-driven one-sheet run report
+
+- Context: the campaign table format needed to become a repeatable per-run
+  artifact that an agent can navigate from headline numbers to raw rollouts,
+  with statistical extensions expected later.
+- Change: add `scripts/generate-report.py`. It aggregates every
+  (model, adapter, suite, thinking) cell across the given results roots via
+  the score viewer, renders the summary table with token and cost columns,
+  then per-cell drill-downs: per-task trial verdict links, summed task wall,
+  pi-session trace links, failed-trial taxonomy, campaign elapsed, and trace
+  coverage. All links are relative to the output file so the report relocates
+  with the results tree.
+- Evidence: RED tests failed before the script existed. GREEN tests cover the
+  summary row, relative trial/trace links that resolve on disk, trace
+  suppression when absent, failure taxonomy, token formatting, and cost
+  rendering for a priced model. Full pytest reports 398 passes with only the
+  pre-existing `test_check_models.sh` port-8080 fixture failure. The real
+  report over nine DS4 result roots rendered 566 lines with 706/706 links
+  resolving and 273 trace links at
+  `results/reports/ds4-pareto-baseline-k1-and-stability32.md`.
+- Decision: the report is generated output, not a committed artifact;
+  regenerate with the script whenever results move. Keep the raw navigation
+  footer describing manifest/verdict/out/jobs layout for agent consumption.
+- Next: fold stability metrics into the report once the 96-attempt run is
+  authoritative; consider elapsed-column promotion and per-language cuts.

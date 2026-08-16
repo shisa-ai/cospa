@@ -411,10 +411,41 @@ Publish paired effects, standalone uncertainty, language/repository/task-type
 cuts, partial executable diagnostics, failure rates, task/campaign time,
 tokens, and cost.
 
+### Phase E — finalist promotion decisions
+
+Applying the predeclared gates (paired-effect potential, uncertainty that can
+change the frontier, external protocol comparability, and the one-day /
+few-million-output-token budget envelope):
+
+1. **Promote BCB-Hard Agentic to hermetic143.** External comparability with
+   Instruct hermetic143 over the same 143-task universe under two protocols;
+   tightens the 36.7% ±10-point Pareto60 interval to about ±7.8 points.
+   Incremental cost about $0.10 and 15 minutes elapsed.
+2. **Promote Terminal-Bench to full80.** Pareto20's 55% ±22-point interval
+   cannot discriminate models, and Terminal showed the highest k=3 flip rate
+   (40%), so breadth is the correct spend on the noisiest suite. Incremental
+   cost about $0.23 and roughly one hour elapsed.
+3. **Defer SWE-PolyBench full382.** About $5.48 incremental and roughly 5.3M
+   additional output tokens would exceed the entire current portfolio and
+   break the declared envelope for a ±4-point interval improvement that no
+   pending decision needs. balanced64 remains the routine panel; full382
+   stays the pre-declared finalist-only expansion.
+4. **No promotion** for FeatureBench (pre-declared mechanical-attrition
+   deferral), Multi-SWE (no larger mechanically qualified panel exists), or a
+   freshness campaign (out of scope for this wave).
+
+Total incremental promotion spend: about $0.33, roughly 650K output tokens,
+and about 1.5 hours elapsed — keeping the whole campaign near $3.10 and
+3.7M output tokens, inside the envelope. Durable roots:
+`results/runs/ds4-bcb-agentic-hermetic143-c8-20260816` and
+`results/runs/ds4-terminal-full80-c8-20260816`.
+
 ## Implementation order
 
 Items 1–8 and the matched scaffold gate plus stability sentinel in item 9
-are complete as of 2026-08-16; finalist promotion is the remaining phase.
+are complete as of 2026-08-16; Phase E finalist promotions are executing
+(BCB herentic143 and Terminal full80 promoted; PolyBench full382 deferred
+with rationale).
 
 1. Freeze this campaign and its nested manifests.
 2. Run the qualified BCB Pareto60 and hermetic143 suite IDs.

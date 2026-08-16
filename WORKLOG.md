@@ -2440,6 +2440,24 @@ Append-only development log for the `cospa` repository.
   checks; full metrics recorded in `docs/PARETO-CAMPAIGN.md` Phase D.
 - Next: Phase D finalist promotion decisions on the retained k=1 protocol.
 
+## 2026-08-16 — Promote BCB143 and Terminal80, defer PolyBench382
+
+- Context: task #15 required applying the predeclared full-suite gates
+  (frontier-changing uncertainty, external comparability, budget envelope)
+  to each candidate finalist.
+- Decision: promote BCB-Hard Agentic hermetic143 (protocol comparability
+  with Instruct143; ±10 → ±7.8 points) and Terminal-Bench full80 (Pareto20's
+  ±22-point interval cannot discriminate; Terminal's 40% k=3 flip rate makes
+  breadth the correct spend). Defer PolyBench full382 ($5.48 and ~5.3M extra
+  output tokens break the one-day/few-million envelope without a pending
+  decision needing ±4 points). No Multi-SWE/FeatureBench/freshness promotion.
+- Evidence: gate arithmetic from the measured baseline table, the Stability32
+  flip rates, and the linear finalist projections already recorded in
+  `docs/PARETO-CAMPAIGN.md`; total incremental spend about $0.33 and 1.5h.
+- Next: execute the two promoted cells sequentially at c=8 k=1 with endpoint
+  waits and durable roots, then aggregate the final campaign report and
+  freeze the next routine matrix (task #16).
+
 ## 2026-08-16 — Define capability-oriented harness evaluation
 
 - Context: current BCB/PB vanilla-versus-devstack scores provide little stable

@@ -2695,3 +2695,23 @@ Append-only development log for the `cospa` repository.
 - Next: bg-66 matrix continues (qwen multi_swe onward, then ornith row, spark
   repair); on completion generate per-row and combined one-sheet reports and
   close out tasks #15/#16.
+
+## 2026-08-17 — Remove unrequested OpenCode benchmark support
+
+- Context: OpenCode adapter work was added without an explicit user request.
+  The interrupted Ornith campaign completed only its Pi baseline and never ran
+  an OpenCode cell, so it provides neither an OpenCode failure nor outcome.
+- Change: remove both OpenCode adapters, their registry entries and tests, and
+  the OpenCode-only sandbox/manifest plumbing. Mark OpenCode explicitly not
+  implemented in the README, plan, and audit follow-up while preserving prior
+  commits, qualification notes, and result artifacts as historical evidence.
+- Evidence: the RED registry test initially loaded both former adapter names;
+  it is now GREEN and requires each to fail as unknown. Focused adapter,
+  sandbox, and runner checks report 22 passes. Full validation with
+  `mamba run -n cospa python -m pytest -q` reports 416 passes in the exact
+  staged tree (excluding the unrelated, unstaged failure-audit changes).
+- Decision: stop the abandoned 2×2 campaign. Do not restart, replace, or
+  reintroduce an OpenCode arm without a new explicit request. The generic
+  Pi-family deadline fix remains in place.
+- Next: if P14 resumes, keep it scoped to the implemented Pi/little-coder
+  Superpowers ablation unless the user explicitly changes that scope.

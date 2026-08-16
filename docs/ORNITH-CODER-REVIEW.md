@@ -1292,3 +1292,17 @@ does not retry. Twenty-one focused tests and the 429-test full suite pass.
 Pilot status remains `partial (real artifacts)`: no `pi_superpowers`,
 `opencode_vanilla`, or `opencode_superpowers` trial exists, so no skill uptake,
 main effect, interaction effect, or Pi/OpenCode comparison is measurable.
+
+### OpenCode scope correction (2026-08-17 follow-up)
+
+The OpenCode adapter work above was not explicitly requested. It has been
+removed rather than promoted after the interrupted campaign. OpenCode is now
+**not implemented**: it has no adapter module, no registry entries, and no
+runnable Cospa benchmark arm. The historical commit, qualification notes, and
+result artifacts remain as audit history; none contains an OpenCode benchmark
+trial, so they are not implementation or outcome evidence.
+
+Status: `fixed (unit test)`. Registry tests require both former OpenCode names
+to fail as unknown adapters. The generic deadline fix remains active for the
+implemented Pi/Superpowers/Little Coder adapters. The abandoned 2×2 campaign is
+closed and will not be restarted or replaced without a new explicit request.

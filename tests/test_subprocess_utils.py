@@ -128,43 +128,6 @@ def test_agent_sandbox_persists_explicit_session_dir(tmp_path):
     assert session_file.exists()
 
 
-def test_agent_sandbox_mounts_only_declared_adapter_state_paths(tmp_path):
-    """Adapter-private config/state must persist without exposing sibling data."""
-    workdir = tmp_path / "workdir"
-    workdir.mkdir()
-    readonly = tmp_path / "readonly-profile"
-    readonly.mkdir()
-    (readonly / "profile.txt").write_text("pinned\n")
-    writable = tmp_path / "adapter-state"
-    writable.mkdir()
-    hidden = tmp_path / "must-stay-hidden"
-    hidden.mkdir()
-    (hidden / "secret.txt").write_text("hidden\n")
-
-    result = subprocess_utils.run_command(
-        [
-            "/bin/bash",
-            "-c",
-            (
-                f"test \"$(cat {shlex.quote(str(readonly / 'profile.txt'))})\" = pinned && "
-                f"! touch {shlex.quote(str(readonly / 'forbidden'))} 2>/dev/null && "
-                f"printf persisted > {shlex.quote(str(writable / 'state.txt'))} && "
-                f"test ! -e {shlex.quote(str(hidden / 'secret.txt'))}"
-            ),
-        ],
-        cwd=workdir,
-        sandbox_workdir=workdir,
-        sandbox_name="adapter-state",
-        sandbox_model_access=False,
-        sandbox_readonly_paths=[readonly],
-        sandbox_writable_paths=[writable],
-    )
-
-    assert result.returncode == 0
-    assert (writable / "state.txt").read_text() == "persisted"
-    assert not (readonly / "forbidden").exists()
-
-
 def test_verifier_sandbox_has_no_model_or_public_network(tmp_path):
     """Model-written code executed by a verifier stays hermetically isolated."""
     project_root = Path(__file__).resolve().parents[1]

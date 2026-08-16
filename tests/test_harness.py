@@ -106,6 +106,13 @@ class TestAdapters:
         with pytest.raises(ValueError, match="Unknown adapter"):
             load_adapter("unknown_adapter")
 
+    @pytest.mark.parametrize(
+        "adapter_name", ["opencode_vanilla", "opencode_superpowers"]
+    )
+    def test_opencode_adapters_are_not_implemented(self, adapter_name):
+        with pytest.raises(ValueError, match="Unknown adapter"):
+            load_adapter(adapter_name)
+
     def test_pi_vanilla_uses_model_flag(self):
         """Test that pi_vanilla uses --model flag (not -m)."""
         adapter = PiVanillaAdapter()

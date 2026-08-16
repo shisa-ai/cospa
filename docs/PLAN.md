@@ -213,30 +213,20 @@ reorder — earlier items unblock later ones.
       only on the retained baseline scaffold. Reserve full repository/feature
       suites and `k>1` for cells that pass those gates; report independent
       repetitions rather than best-of-k.
-- [ ] **P14. Controlled harness/Superpowers ablation (2×2).** Compare
-      {Pi core, OpenCode Build} × {baseline, `superpowers-bench-v1`} first on
-      workspace-native suites. `pi_superpowers`, `opencode_vanilla`, and
-      `opencode_superpowers` use the pinned, headless-safe subset:
+- [ ] **P14. Superpowers ablation.** Compare {Pi, little-coder} × {baseline,
+      `superpowers-bench-v1`} using the pinned, headless-safe subset:
       systematic-debugging, test-driven-development, and
       verification-before-completion with their referenced support files.
       The TDD skill is required because the debugging workflow delegates its
-      implementation phase to it. OpenCode is pinned to 1.18.8, constrained
-      to Pi's four tool classes, isolated from project/global config, and
-      records native JSONL usage/tool events; its auxiliary agents and
-      automatic compaction are disabled. Both harnesses retain their native
-      system prompts and tool descriptions, so this estimates harness fit and
-      skill main/interaction effects rather than prompt equivalence. OpenCode
-      has no Harbor agent yet and must not be labeled as a runnable
-      Terminal-Bench arm. The little-coder Superpowers arms remain optional
-      secondary comparisons after this primary 2×2 discriminates. **Pilot
-      status: partial (real artifacts).** The first Ornith c=2 pilot completed
-      only the 15-task Pi baseline: 2 resolved, 11 incorrect, and 2 exact
-      1,800-second capability-budget expirations. The wrapper disappeared
-      externally during erroneous automatic retries before any Pi-Superpowers
-      or OpenCode cell started. Commit `ee990d2` fixes generic timeout semantics
-      with unit tests, but the historical artifacts remain unchanged. No
-      harness, skill, or interaction effect is estimable from this baseline-only
-      run; run a new matched campaign before making a P14 claim.
+      implementation phase to it. Strip interactive skill-check flows because
+      no user is present to answer clarifying questions. Optional / last —
+      depends on Terminal-Bench timing (P11). **OpenCode is not implemented or
+      registered and is not part of this plan.** Historical pilot note: an
+      interrupted Ornith c=2 wrapper completed only a 15-task Pi baseline (2
+      resolved, 11 incorrect, 2 exact 1,800-second budget expirations) before
+      disappearing during erroneous retries. No treatment ran, so no skill or
+      harness effect is estimable. Commit `ee990d2` fixes generic Pi-family
+      timeout semantics; preserved historical artifacts retain their old labels.
 - [ ] **P15. Write up.** Results table, harness comparison, per-model
       findings. `RESULTS.md` at the repo root.
 
@@ -249,12 +239,10 @@ model serving automation, automated regression on every commit.
 
 The primary variable we want to isolate is **scaffold fit** — how well the
 agent's context engineering (system prompt, tool descriptions, skill
-selection, recovery behaviors) fits a *small* model's capabilities. Within
-each harness, baseline and Superpowers treatment retain the same native loop;
-the Pi/OpenCode comparison deliberately changes the harness loop while holding
-model, task, tool classes, sampling, and capability budgets fixed.
-`bigcodebench_openai` is intentionally excluded from that scaffold matrix: it
-is a no-tool, one-generation orthogonal anchor.
+selection, recovery behaviors) fits a *small* model's capabilities. The
+agentic adapters use the same Pi loop on the same model; what differs is what
+surrounds the model call. `bigcodebench_openai` is intentionally excluded from
+that scaffold matrix: it is a no-tool, one-generation orthogonal anchor.
 
 | Adapter | What it is | Why it's in the matrix |
 |---|---|---|
@@ -263,16 +251,14 @@ is a no-tool, one-generation orthogonal anchor.
 | `little_coder` | little-coder launcher (pi + 20 ext + 30 skills) | Maximal targeted scaffold for small models. |
 | `pi_superpowers` | `pi_vanilla` + pinned Superpowers debugging/TDD/verification profile | Ablation: does generic methodology help or hurt without devstack extensions? |
 | `pi_devstack_superpowers` | devstack extensions + the same pinned Superpowers profile | Direct `pi_devstack` vs `pi_devstack` + Superpowers bench ablation. |
-| `little_coder_superpowers` | `little_coder` + the same pinned Superpowers profile | Optional secondary Superpowers ablation for little-coder. |
-| `opencode_vanilla` | OpenCode 1.18.8 Build, reduced to Pi's read/bash/edit/write classes | External harness baseline with native prompt/tool semantics. |
-| `opencode_superpowers` | The controlled OpenCode baseline + the identical pinned profile | Completes the primary Pi/OpenCode × baseline/Superpowers 2×2. |
+| `little_coder_superpowers` | `little_coder` + the same pinned Superpowers profile | Same Superpowers ablation for little-coder. |
 | `bigcodebench_openai` | One OpenAI-compatible user message; no system prompt or tools | Separate BigCodeBench protocol anchor; never compared as a scaffold arm. |
 
-Prediction (worth testing): scaffold fit, skill uptake, and token overhead will
-interact with model and harness; no fixed harness ranking is assumed.
-Superpowers may improve recovery discipline while spending enough context and
-tool turns to hurt short tasks — that is the hypothesis, not a foregone
-conclusion.
+Prediction (worth testing): little_coder > pi_devstack > pi_vanilla on
+both suites, with the gap widest on the smallest models. Superpowers
+helps pi_vanilla on TB (recovery discipline) and *hurts* on Polyglot
+(token overhead per turn in a small context) — but that's the hypothesis,
+not a foregone conclusion.
 
 ## 2. Models
 
@@ -431,7 +417,7 @@ parallel invocations do not race by default:
 ```
 results/runs/<encoded-model>-<run-id>/<encoded-model>/<adapter>/<suite>/<task_id>/trial-<k>/
 ├── manifest.json     # model, adapter, params, env hash, timing
-├── out/              # stdout/stderr + native Pi or OpenCode JSONL/session state
+├── out/              # adapter stdout/stderr, session log, pi_session.jsonl
 ├── workdir/          # final state of the task workdir (git diff vs initial)
 └── verdict.json      # suite-specific: pass/fail, test counts, grader output
 ```

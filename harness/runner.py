@@ -225,17 +225,6 @@ def validate_required_adapter(task_data: dict, adapter) -> None:
         )
 
 
-def validate_suite_adapter_compatibility(suite, adapter) -> None:
-    """Prevent Harbor suites from silently substituting another scaffold."""
-    is_harbor_suite = callable(getattr(suite, "run_harbor_job", None))
-    if is_harbor_suite and not getattr(adapter, "supports_harbor_execution", True):
-        name = getattr(adapter, "name", adapter.__class__.__name__)
-        raise ValueError(
-            f"Adapter {name!r} has no distinct Harbor agent; "
-            "refusing to substitute a different scaffold"
-        )
-
-
 def generate_run_id() -> str:
     """Generate a path-safe run id for default CLI output isolation."""
     timestamp = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%S.%fZ")
@@ -438,11 +427,10 @@ def _manifest_sampling(
     return sampling
 
 
-def _manifest_tool_call_parser(task_data: dict, adapter=None) -> str:
+def _manifest_tool_call_parser(task_data: dict) -> str:
     """Return the best available tool-call parser/config identifier."""
     return (
         task_data.get("tool_call_parser")
-        or getattr(adapter, "tool_call_parser", None)
         or os.environ.get("CODING_EVAL_TOOL_CALL_PARSER")
         or "server-config-unobserved"
     )
@@ -641,7 +629,6 @@ def run_trial(
     # Materialize the task into the workdir
     task_data = suite.materialize_task(task_id, workdir, vendor_dir)
     validate_required_adapter(task_data, adapter)
-    validate_suite_adapter_compatibility(suite, adapter)
 
     model_metadata = load_model_metadata(model_id)
 
@@ -724,8 +711,9 @@ def run_trial(
         "trial": trial_k,
         "sampling": _manifest_sampling(task_data, model_metadata=model_metadata),
         # Identifier for the tool-call parser/config the adapter uses.
-        # Suite protocol metadata takes precedence over an adapter declaration.
-        "tool_call_parser": _manifest_tool_call_parser(task_data, adapter),
+        # pi/little-coder use their built-in tool-call handling; adapters may
+        # override via task_data["tool_call_parser"].
+        "tool_call_parser": _manifest_tool_call_parser(task_data),
         "env": {
             "hash": get_env_hash(),
             "pi_version": get_pi_version(),
@@ -875,14 +863,6 @@ def run_trial(
                     "completion_tokens": getattr(result.usage, "completion_tokens", None),
                     "total_tokens": getattr(result.usage, "total_tokens", None),
                 }
-                for field in (
-                    "cache_read_tokens",
-                    "cache_write_tokens",
-                    "reasoning_tokens",
-                ):
-                    value = getattr(result.usage, field, None)
-                    if value is not None:
-                        manifest["token_usage"][field] = value
             if getattr(result, "inference_seconds", None) is not None:
                 manifest["timing"]["provider_inference_seconds"] = (
                     result.inference_seconds

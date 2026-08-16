@@ -9,10 +9,6 @@ from harness.adapters.little_coder import LittleCoderAdapter
 from harness.adapters.pi_superpowers import PiSuperpowersAdapter
 from harness.adapters.little_coder_superpowers import LittleCoderSuperpowersAdapter
 from harness.adapters.bigcodebench_openai import BigCodeBenchOpenAIAdapter
-from harness.adapters.opencode import (
-    OpenCodeSuperpowersAdapter,
-    OpenCodeVanillaAdapter,
-)
 
 AGENTIC_ADAPTERS = {
     "pi_vanilla": PiVanillaAdapter,
@@ -21,8 +17,6 @@ AGENTIC_ADAPTERS = {
     "little_coder": LittleCoderAdapter,
     "pi_superpowers": PiSuperpowersAdapter,
     "little_coder_superpowers": LittleCoderSuperpowersAdapter,
-    "opencode_vanilla": OpenCodeVanillaAdapter,
-    "opencode_superpowers": OpenCodeSuperpowersAdapter,
 }
 
 PROTOCOL_ADAPTERS = {

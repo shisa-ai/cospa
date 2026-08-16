@@ -2650,3 +2650,21 @@ Append-only development log for the `cospa` repository.
   retryable infrastructure; historical pilot artifacts remain immutable.
 - Next: record the interrupted baseline-only pilot separately. Do not estimate
   a Superpowers or cross-harness effect without matched treatment cells.
+
+## 2026-08-16 — Record the interrupted Ornith harness pilot
+
+- Context: the frozen 15-task, c=2 Ornith campaign was intended to compare Pi
+  and OpenCode baseline/Superpowers cells sequentially under matched sampling
+  and wall budgets. Its wrapper disappeared externally before the first cell
+  could hand off to any treatment.
+- Evidence: Pi baseline covered all 15 task IDs in exact frozen order. Native
+  grading produced 2 resolved and 11 incorrect outcomes; `/985` and `/1077`
+  reached exactly 1,800 seconds and are semantically budget-exhausted. All
+  observed provider headers were HTTP 200, the model and 0.6/0.95/20/81920
+  profile stayed exact, and no treatment directory exists. Qwen c=8 shared the
+  same router, so baseline wall time is not isolated throughput evidence.
+- Decision: mark P14 `partial (real artifacts)`. Preserve the result root and
+  its historical pre-fix timeout labels; do not report a paired effect, skill
+  uptake, or harness ranking from a baseline-only run.
+- Next: only a newly approved matched campaign under one runner version and a
+  disclosed router-load policy can answer the 2×2 question.

@@ -1270,3 +1270,25 @@ Relevant verification reports 68/68 focused tests passing. Full pytest reports
 412 passed and the pre-existing `test_check_models.sh` fixture failure; the
 standalone shell suite likewise reports only that fixture's two assertions,
 which are unrelated to the Superpowers path.
+
+### Workspace timeout semantics and interrupted P14 pilot (2026-08-16 follow-up)
+
+The first matched Ornith c=2 attempt completed the 15-task Pi baseline in the
+frozen pilot order but stopped before any treatment or OpenCode cell. Thirteen
+trials reached authoritative native verdicts (2 resolved, 11 incorrect).
+`BigCodeBench/985` and `/1077` each reached the exact 1,800-second workspace
+agent deadline. The generic adapters returned `-1`, so the runner mislabeled
+those deadlines as retryable infrastructure and launched duplicate episodes.
+The background wrapper then disappeared externally during those retries; no
+OOM, non-200 provider response, or surviving process identifies a more specific
+cause. Qwen c=8 shared the same router throughout, so absolute throughput is
+also not an isolated c=2 measurement. The preserved baseline artifacts are at
+`results/runs/ornith-bcb-agentic-pilot15-2x2-c2-20260816T1240Z`.
+
+Status: timeout semantics are `fixed (unit test)` in `ee990d2`. Generic Pi,
+Superpowers, Little Coder, and OpenCode adapters now signal agent-wall budget
+exhaustion explicitly; the runner records exit 124, skips verification, and
+does not retry. Twenty-one focused tests and the 429-test full suite pass.
+Pilot status remains `partial (real artifacts)`: no `pi_superpowers`,
+`opencode_vanilla`, or `opencode_superpowers` trial exists, so no skill uptake,
+main effect, interaction effect, or Pi/OpenCode comparison is measurable.

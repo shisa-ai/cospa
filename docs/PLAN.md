@@ -228,7 +228,15 @@ reorder — earlier items unblock later ones.
       skill main/interaction effects rather than prompt equivalence. OpenCode
       has no Harbor agent yet and must not be labeled as a runnable
       Terminal-Bench arm. The little-coder Superpowers arms remain optional
-      secondary comparisons after this primary 2×2 discriminates.
+      secondary comparisons after this primary 2×2 discriminates. **Pilot
+      status: partial (real artifacts).** The first Ornith c=2 pilot completed
+      only the 15-task Pi baseline: 2 resolved, 11 incorrect, and 2 exact
+      1,800-second capability-budget expirations. The wrapper disappeared
+      externally during erroneous automatic retries before any Pi-Superpowers
+      or OpenCode cell started. Commit `ee990d2` fixes generic timeout semantics
+      with unit tests, but the historical artifacts remain unchanged. No
+      harness, skill, or interaction effect is estimable from this baseline-only
+      run; run a new matched campaign before making a P14 claim.
 - [ ] **P15. Write up.** Results table, harness comparison, per-model
       findings. `RESULTS.md` at the repo root.
 

@@ -32,10 +32,17 @@ models:
   - id: fake/provider-three
 EOF
 
-# Use an empty HOME so the real ~/.pi/agent/models.json isn't read.
-mkdir -p "$TMP/empty-home"
+# Use an empty HOME so the real ~/.pi/agent/models.json isn't read, and a
+# deterministic curl stub so host-local services on ports 8000/8080 cannot
+# turn this all-skipped fixture into an environment-dependent DEAD result.
+mkdir -p "$TMP/empty-home" "$TMP/skip-bin"
+cat > "$TMP/skip-bin/curl" <<'EOF'
+#!/usr/bin/env bash
+printf '000'
+EOF
+chmod +x "$TMP/skip-bin/curl"
 
-OUT=$(HOME="$TMP/empty-home" bash "$PROJ/scripts/check-models.sh" 2>&1)
+OUT=$(HOME="$TMP/empty-home" PATH="$TMP/skip-bin:$PATH" bash "$PROJ/scripts/check-models.sh" 2>&1)
 RC=$?
 
 # Bug #1: with `set -e`, `((SKIPPED++))` exits on the first SKIP because the

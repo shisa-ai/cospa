@@ -2588,3 +2588,17 @@ Append-only development log for the `cospa` repository.
   treat full interactive Superpowers as a separate product-profile question.
 - Next: add the controlled OpenCode baseline and identical Superpowers arm,
   then run the small Ornith c=2 comparison.
+
+## 2026-08-16 — Make the model-check fixture hermetic
+
+- Context: the all-skipped `check-models` shell test probed real localhost
+  ports, so an unrelated local service could turn fake providers into DEAD
+  results and fail the suite nondeterministically.
+- Change: shadow `curl` with a deterministic HTTP-000 stub only for the
+  all-skipped fixture; retain the separate authenticated-request stub.
+- Evidence: `bash tests/scripts/test_check_models.sh` reports 9 passes and
+  `mamba run -n cospa python -m pytest -q tests/test_scripts.py` reports 4
+  passes.
+- Decision: endpoint absence is now a fixture property rather than a host-state
+  assumption.
+- Next: resume full validation of the OpenCode adapter unit.

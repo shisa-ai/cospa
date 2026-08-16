@@ -2512,6 +2512,31 @@ Append-only development log for the `cospa` repository.
   (spark PolyBench/FeatureBench usage-limit hits), and fold the corrected
   taxonomy into the campaign report.
 
+## 2026-08-16 — Honor provider thinking-level remaps in verification
+
+- Context: the four-model matrix's Qwen row failed every agentic trial with
+  "Thinking level mismatch: requested high, observed xhigh" — the runner's
+  post-hoc verification treated the provider's documented remap (Qwen3.8
+  maps Pi `high` to no explicit effort; the server then reports its native
+  `xhigh` default, per codex-pool MODEL-MAPPINGS.md) as an adapter failure.
+- Change: add `pi_thinking_level_map()` to harness/telemetry.py (loads the
+  model's provider `thinkingLevelMap` from pi models.json, empty when
+  absent) and `_thinking_level_check()` to the runner. A null map value for
+  the requested level now records `thinking_observed` without failing; an
+  explicit translation must match the observed level or the trial still
+  fails closed with the mapping in the error message.
+- Evidence: RED tests failed before the change. GREEN covers the
+  provider-managed case, explicit-map mismatch, exact/default passes, a
+  high→xhigh translated match, and the real registry's Qwen map exposing
+  `high: null`. 44 mismatch-garbage Qwen agentic trials were removed for a
+  clean resume. Full pytest reports 412 passes with only the pre-existing
+  `test_check_models.sh` fixture failure.
+- Decision: keep the verification fail-closed for genuine mismatches; only
+  provider-managed (null) levels are observations, and `thinking=high`
+  remains a per-model label resolved by each provider's documented map.
+- Next: relaunch the matrix (Qwen row resumes cleanly), then the audit and
+  final analysis fold per-model effort resolution into the report.
+
 ## 2026-08-16 — Define capability-oriented harness evaluation
 
 - Context: current BCB/PB vanilla-versus-devstack scores provide little stable

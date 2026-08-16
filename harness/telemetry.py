@@ -6,6 +6,7 @@ import json
 import os
 import shutil
 from datetime import datetime, timezone
+from functools import lru_cache
 from pathlib import Path
 from typing import Any
 
@@ -258,6 +259,41 @@ def _match_model_entry(
             if value in targets or _normalize_model_id(value) in targets:
                 return item
     return None
+
+
+@lru_cache(maxsize=32)
+def pi_thinking_level_map(model_id: str) -> dict:
+    """Return the model's provider ``thinkingLevelMap`` from pi models.json.
+
+    The map translates a requested Pi thinking level to the value sent
+    upstream. A ``None``/null value means the provider manages that level
+    itself (no explicit effort is sent), so the server's reported default is
+    the legitimate observation. Returns an empty dict when no map exists.
+    """
+    override = os.environ.get("CODING_EVAL_PI_MODELS_JSON")
+    models_json_path = Path(override) if override else Path.home() / ".pi" / "agent" / "models.json"
+    data = _read_json(Path(models_json_path))
+    if not data:
+        return {}
+    providers = data.get("providers") or {}
+    if model_id.startswith("local/"):
+        provider_names = ["local"]
+    elif "/" in model_id:
+        provider_names = [model_id.split("/", 1)[0]]
+    else:
+        provider_names = list(providers)
+    bare_id = model_id.split("/", 1)[-1] if "/" in model_id else model_id
+    for provider_name in provider_names:
+        provider = providers.get(provider_name) or {}
+        for lookup_id in (model_id, bare_id):
+            entry = _match_model_entry(
+                provider.get("models") or [], lookup_id
+            )
+            if entry is not None:
+                level_map = entry.get("thinkingLevelMap")
+                if isinstance(level_map, dict):
+                    return level_map
+    return {}
 
 
 def load_model_metadata(

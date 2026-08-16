@@ -54,6 +54,7 @@ from harness.telemetry import (
     collect_harbor_pi_session_usage,
     collect_pi_session_usage,
     load_model_metadata,
+    pi_thinking_level_map,
     thinking_sampling_metadata,
 )
 
@@ -169,6 +170,49 @@ def validate_args(args) -> None:
     if getattr(args, "concurrency", 1) < 1:
         print("✗ --concurrency must be a positive integer", file=sys.stderr)
         sys.exit(2)
+
+
+def _thinking_level_check(
+    model_id: str,
+    requested: str | None,
+    observed: str | None,
+) -> dict:
+    """Classify a requested-vs-observed thinking level for one trial.
+
+    Providers may remap Pi effort levels: a map value of None means the
+    provider manages that level itself, so the server-reported default is
+    expected rather than a mismatch. Returns a dict with status
+    'ok' | 'observed' | 'mismatch' plus fields to merge into the manifest.
+    """
+    if (
+        not requested
+        or requested == "default"
+        or not observed
+        or observed == requested
+    ):
+        return {"status": "ok"}
+    level_map = pi_thinking_level_map(model_id)
+    expected = (
+        level_map.get(requested, requested)
+        if requested in level_map
+        else requested
+    )
+    if expected is None:
+        return {"status": "observed", "thinking_observed": observed}
+    if observed != expected:
+        return {
+            "status": "mismatch",
+            "thinking_mismatch": {
+                "requested": requested,
+                "observed": observed,
+            },
+            "error": (
+                "Thinking level mismatch: requested "
+                f"{requested} (provider-mapped to {expected!r}), "
+                f"observed {observed}"
+            ),
+        }
+    return {"status": "ok"}
 
 
 def validate_required_adapter(task_data: dict, adapter) -> None:
@@ -649,12 +693,20 @@ def run_trial(
         if isinstance(extra_suite_metadata, dict):
             suite_manifest.update(extra_suite_metadata)
 
+    adapter_manifest = {
+        "id": adapter.__class__.__name__,
+        "version": getattr(adapter, "version", "unknown"),
+    }
+    adapter_metadata = getattr(adapter, "manifest_metadata", None)
+    if callable(adapter_metadata):
+        extra_adapter_metadata = adapter_metadata()
+        if not isinstance(extra_adapter_metadata, dict):
+            raise ValueError("adapter manifest_metadata() must return a mapping")
+        adapter_manifest.update(extra_adapter_metadata)
+
     manifest = {
         "model": model_manifest,
-        "adapter": {
-            "id": adapter.__class__.__name__,
-            "version": getattr(adapter, "version", "unknown"),
-        },
+        "adapter": adapter_manifest,
         "suite": suite_manifest,
         "trial": trial_k,
         "sampling": _manifest_sampling(task_data, model_metadata=model_metadata),
@@ -871,21 +923,15 @@ def run_trial(
         # session so tool behavior is still comparable across adapter arms.
         requested_thinking = task_data.get("thinking")
         observed_thinking = session_usage.get("thinking")
-        if (
-            requested_thinking
-            and requested_thinking != "default"
-            and observed_thinking
-            and observed_thinking != requested_thinking
-        ):
-            manifest["thinking_mismatch"] = {
-                "requested": requested_thinking,
-                "observed": observed_thinking,
-            }
+        thinking_check = _thinking_level_check(
+            model_id, requested_thinking, observed_thinking
+        )
+        if thinking_check["status"] == "observed":
+            manifest["thinking_observed"] = thinking_check["thinking_observed"]
+        elif thinking_check["status"] == "mismatch":
+            manifest["thinking_mismatch"] = thinking_check["thinking_mismatch"]
             manifest["exit_code"] = -1
-            manifest["error"] = (
-                "Thinking level mismatch: requested "
-                f"{requested_thinking}, observed {observed_thinking}"
-            )
+            manifest["error"] = thinking_check["error"]
             adapter_failed = True
         if is_harbor_suite:
             trace_files = session_usage.get("trace_files")

@@ -386,7 +386,7 @@ publish end-to-end elapsed time, so a local pilot is required.
 | SWE-Explore Verified12 | 12 × `k=1` | **Measured here:** DS4 used 26m26s task wall and 5m28s c=8 elapsed | 0.0968 task-macro weighted core coverage; 10/12 any-core-line hits; $0.0432 estimated cost |
 | SWE-bench-Live MultiLang | 743 in current README | Runtime unknown; large multilingual builds/tests | At 30 minutes/task: 371.5 serial h; 185.8 h ideal `c=2`; 46.4 h ideal `c=8` |
 | SWE-bench Pro public | Currently 730 leaderboard tasks; 250-turn uncapped model runs | Published task intent is hours to days for humans; agent wall distribution not published | Not a routine local run. Pilot required; use public trajectories before generating new ones |
-| BigCodeBench-Hard | 148 official; 143 in Cospa's no-network subset | **Measured here:** DS4 Instruct143 used 41m56s generation wall / 7m10s c=8; Agentic60 used 1h task wall | 17/143 Instruct and 22/60 Agentic resolved; complete costs $0.0430 and $0.0705 respectively |
+| BigCodeBench-Hard | 148 official; 143 in Cospa's no-network subset | **Measured here:** DS4 Instruct143 used 41m56s generation wall / 7m10s c=8; Agentic60 used 1h task wall | 17/143 Instruct and 22/60 Agentic resolved; complete costs $0.0430 and $0.0705 respectively. Effort sweep (off/low/high×2/xhigh on Pareto60): 19–24/60, flat within same-config repeat noise (two `high` runs 22 and 19, agreement 53/60; off vs xhigh exact paired p = 0.42) |
 | LiveCodeBench v6 | 1,055 problems; official setup defaults to `n=10` samples | Runtime not published; authors warn timeout settings can move score by <0.5 points | 10,550 generations before repair scenarios. Use `n=1` only if explicitly defining a different protocol |
 
 A 30-minute row is a **planning ceiling**, not a recommendation that every
@@ -411,7 +411,7 @@ rules, and a `c=1/2/4/8/16` ladder. The pilot sizes are:
 | FeatureBench Lite | Pareto12 / 30 | `featurebench_lite_pareto12` spans 11 repositories; 36/36 gold passed and 36/36 null failed. DS4 resolved 2/12 with 9 incorrect and 1 timeout after an isolated transport repair |
 | SWE-Explore | Verified12 / 451 Verified-derived source rows | 36/36 oracle observations scored 1.0 and 36/36 null observations scored 0.0; DS4 scored 0.0968 task-macro weighted core coverage with 10/12 any-hits |
 | BigCodeBench-Hard Instruct | 15 pilot / 143 retained / 148 screened | 429/429 gold passed and 429/429 null failed; DS4 Instruct hermetic143 resolved 17/143 without infrastructure failures |
-| BigCodeBench-Hard agentic | Pareto60 / hermetic143 | DS4 Pareto60 resolved 22/60 without infrastructure failures; use matched scaffold evidence before full143 promotion |
+| BigCodeBench-Hard agentic | Pareto60 / hermetic143 | DS4 Pareto60 resolved 22/60 without infrastructure failures; the 2026-08-16 effort sweep (off/low/high×2/xhigh, paired task IDs) found 19–24/60 with no rung separating from same-config repeat noise; use matched scaffold evidence before full143 promotion |
 
 **Measured setup state, 2026-08-14:** the host has 683 GiB free on `/`; all
 listed source repositories and external dataset files are present at the

@@ -88,6 +88,40 @@ fixed panel). This supports a real difference on pilot28, but not a precise
 features, and one refactor, with language counts 4 Java / 9 JavaScript /
 9 Python / 6 TypeScript; it is not a balanced routine panel.
 
+### DS4 reasoning-effort sweep on Pareto60 (2026-08-16)
+
+Four controllable rungs (`off`→none, `low`, `high`, `xhigh`→max; provider-managed
+`minimal`/`medium` are not distinct settings) were run on the fixed
+`bigcodebench_hard_agentic_pareto60` panel, `pi_vanilla`, `c=8`, `k=1`,
+same task IDs for paired analysis:
+
+| Effort | Score | Source cell |
+| --- | ---: | --- |
+| `off` | 20/60 (33.3%) | fresh sweep cell |
+| `low` | 20/60 (33.3%) | fresh sweep cell |
+| `high` | 22/60 (36.7%) | hermetic143 subset (original) |
+| `high` | 19/60 (31.7%) | fresh sweep cell (repeat) |
+| `xhigh` | 24/60 (40.0%) | fresh sweep cell |
+
+Findings:
+
+- The curve is **flat within repeat noise at k=1**. Two same-config `high`
+  runs scored 22 and 19 (agreement 53/60, seven discordant tasks); the entire
+  effort spread (19–24) is the same order as that repeat spread.
+- `off` vs `xhigh`: nine xhigh-only passes vs five off-only passes, exact
+  binomial (McNemar) two-sided `p = 0.42`. No rung beats another beyond noise.
+- Pairwise agreement across rungs is 46–53/60 (77–88%): per-task churn at
+  `k=1` is large regardless of effort setting.
+- At matched rungs, `pi_vanilla` meets or beats the devstack gate
+  (20/20/–/24 vs 16/–/19/21 devstack off/low/high/xhigh), consistent with
+  devstack's failed promotion.
+- Practical consequence: effort choice on this panel is a throughput/cost
+  decision, not a quality decision (`off` trials ran 14–50 s vs minutes with
+  thinking). The protocol default stays `high` (declared baseline); `off`/`low`
+  is a legitimate throughput mode where latency dominates. Promoting `xhigh`
+  on the strength of +4 would require a confirmed-k panel (k≥3) showing the
+  gain survives repetition.
+
 ## Measured DS4 c=8 baseline and projections
 
 These measurements come from the durable 2026-08-15 result trees. `Task wall`

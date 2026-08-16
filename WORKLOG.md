@@ -2668,3 +2668,30 @@ Append-only development log for the `cospa` repository.
   uptake, or harness ranking from a baseline-only run.
 - Next: only a newly approved matched campaign under one runner version and a
   disclosed router-load policy can answer the 2×2 question.
+
+## 2026-08-17 — Complete DS4 reasoning-effort sweep on Pareto60
+
+- Context: DS4 (`local/deepseek-v4-flash-0731`) had only ever run `pi_vanilla`
+  at `thinking=high`; the devstack gate (16/19/21 at off/high/xhigh) was the
+  sole effort comparison and used the wrong adapter for a vanilla claim.
+- Evidence: four fresh paired cells on `bigcodebench_hard_agentic_pareto60`
+  (c=8, k=1, identical task IDs) in `results/runs/ds4-bcb-pareto60-effort-*`:
+  off 20/60, low 20/60, high 19/60, xhigh 24/60; plus the original
+  hermetic143-subset high sample 22/60. Two same-config high runs (22 vs 19,
+  agreement 53/60) bound k=1 repeat noise at the same scale as the effort
+  spread; off-vs-xhigh exact McNemar p=0.42. Verified counts by direct verdict
+  scan; subset derivation re-checked (60/60 overlap, 22 passed).
+- Decision: effort curve is flat within noise on this panel; effort is a
+  throughput knob, not a quality knob. Protocol default stays `high`;
+  `off`/`low` documented as throughput mode; `xhigh` promotion would need a
+  confirmed-k (k>=3) panel. Recorded in docs/PARETO-CAMPAIGN.md (new sweep
+  subsection) and docs/EVALS.md (two table rows).
+- Infra note: bg-63 (matrix) and bg-64 (first sweep attempt) were killed by
+  external signals during a session-restart window (~23:48/23:58); both were
+  relaunched as bg-66/bg-67 with the artificial serialization gate removed
+  (matrix rows qwen/ornith/spark never touch the DS4 endpoint) and the
+  matrix's c=8 guard taught to ignore the sweep lane. Resume-skip verified:
+  298 completed qwen trials skipped, zero re-runs.
+- Next: bg-66 matrix continues (qwen multi_swe onward, then ornith row, spark
+  repair); on completion generate per-row and combined one-sheet reports and
+  close out tasks #15/#16.

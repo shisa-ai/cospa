@@ -5,8 +5,6 @@ import runpy
 import sys
 from pathlib import Path
 
-import pytest
-
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(PROJECT_ROOT))
 
@@ -17,71 +15,24 @@ def _auditor():
     return runpy.run_path(str(SCRIPT))
 
 
-def _verdict(grader: str = "", **kw):
-    base = {"passed": False, "test_count": 0, "grader_output": grader}
-    base.update(kw)
-    return base
+def test_incorrect_streaks_are_not_capacity_events(tmp_path):
+    audit_cell = _auditor()["audit_cell"]
 
+    cell = tmp_path / "cell"
+    for i in range(5):
+        d = cell / f"t{i}" / "trial-1"
+        d.mkdir(parents=True)
+        (d / "manifest.json").write_text(
+            json.dumps({"error": None, "run_end_time": f"2026-08-16T10:0{i}:00+00:00"})
+        )
+        (d / "verdict.json").write_text(
+            json.dumps({"passed": False, "failure_class": "incorrect"})
+        )
 
-COMMAND_NOISE = (
-    "Adapter failed with exit code -1: NonZeroAgentExitCodeError: Command failed "
-    "(exit 1): bash -lc 'pi --print ... # Task: fix the maximum context length "
-    "issue in prettier ... usage limit discussion' 2>&1 | tee /logs/x.txt\n"
-)
+    audit = audit_cell(cell)
 
-
-def test_classifier_uses_error_surface_not_embedded_task_text():
-    classify = _auditor()["classify_failure"]
-    cases = [
-        (
-            # Codex account cap; the command text mentions 'usage limit' AND
-            # 'context length' as task prose -- only the stdout tail counts.
-            COMMAND_NOISE + "agent stuff\nstdout: Codex error: The usage limit has been reached\n",
-            "usage_limit",
-        ),
-        (
-            COMMAND_NOISE + "stdout: HTTP 502: upstream 403 Forbidden\n",
-            "auth_forbidden",
-        ),
-        (
-            "Adapter failed with exit code -1: RuntimeError: Docker compose "
-            "command failed for environment security-vulhub-minio. Command: "
-            "docker compose --project-name x",
-            "compose_failure",
-        ),
-        (
-            "Adapter failed with exit code -1: VerifierTimeoutError: Verifier "
-            "execution timed out after 60.0 seconds",
-            "verifier_timeout",
-        ),
-        (
-            COMMAND_NOISE + "stdout: Error: maximum context length exceeded: "
-            "128000 tokens",
-            "context_limit",
-        ),
-        (
-            COMMAND_NOISE + "stdout: Connection error.\n",
-            "connection_error",
-        ),
-        (
-            "AgentTimeoutError: Agent execution timed out after 600.0 seconds",
-            "budget_exhausted",
-        ),
-    ]
-    for grader, expected in cases:
-        assert classify_failure_(_verdict(grader), {}) == expected, grader[:60]
-
-
-def classify_failure_(verdict, manifest):
-    classify = _auditor()["classify_failure"]
-    return classify(verdict, manifest)
-
-
-def test_classifier_prefers_manifest_error_field():
-    classify = _auditor()["classify_failure"]
-    verdict = _verdict(grader="Adapter failed with exit code -1: noisy output")
-    manifest = {"error": "Codex error: The usage limit has been reached"}
-    assert classify(verdict, manifest) == "usage_limit"
+    assert audit["failures"] == {"incorrect": 5}
+    assert audit["capacity_events"] == []
 
 
 def test_audit_cell_flags_consecutive_failure_streaks_as_capacity_events(tmp_path):

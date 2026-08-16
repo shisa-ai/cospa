@@ -2715,3 +2715,33 @@ Append-only development log for the `cospa` repository.
   Pi-family deadline fix remains in place.
 - Next: if P14 resumes, keep it scoped to the implemented Pi/little-coder
   Superpowers ablation unless the user explicitly changes that scope.
+
+## 2026-08-17 — Scope failure classifier + backfill Harbor verdicts
+
+- Context: the DS4 pareto/stability audit surfaced two featurebench mislabels
+  and a classifier false positive. The `auth_forbidden` hit was ordinary gh-cli
+  Go test output (`Test_detectDeviceFlow/403_forbidden`, `internal/authflow`);
+  the sympy "adapter error" was a provider `Connection error.` hidden inside the
+  embedded agent command; the pytorch-lightning timeout predated `531d457` and
+  was recorded as a generic adapter failure instead of `budget_exhausted`.
+- Change: extract classification into `harness/failure_classify.py`;
+  provider/adapter substring rules now read only the cleaned manifest error
+  surface (stdout tail), never task/test output or embedded command prose.
+  `scripts/audit-failures.py` imports the shared classifier; capacity-event
+  logic unchanged. Add `harness/backfill_harbor_verdicts.py` +
+  `scripts/backfill-harbor-verdicts.py` to correct pre-`531d457` Harbor
+  verdicts from `jobs/*/result.json` evidence (AgentTimeoutError →
+  budget_exhausted exit 124; other agent exceptions → failure_class from the
+  manifest surface). Idempotent with dry-run/filter/exclude.
+- Evidence: RED classifier tests (Go test names → incorrect; command-embedded
+  connection error → connection_error; manifest AgentTimeoutError →
+  budget_exhausted) now pass. Backfill dry-run touched exactly 2 of 12
+  featurebench trials; apply + idempotency re-run (0 updated). Full pytest 429
+  passed; `tests/scripts/run_all.sh` 17 pass, 0 fail.
+- Decision: backfilled `pytorch-lightning…lv1` (budget_exhausted, exit 124) and
+  `sympy…lv1` (connection_error) in
+  `results/runs/ds4-featurebench-pareto12-c8-20260815T2300Z`; originals
+  snapshotted under `/tmp/feat-backfill-pre`. Featurebench cell now audits as
+  `{incorrect: 8, connection_error: 1, budget_exhausted: 1}`. Report ledger
+  updated to record the resolution.
+- Next: none required; report/ledger consumers now see the corrected classes.

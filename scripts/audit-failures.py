@@ -2,12 +2,13 @@
 """Audit result cells: classify failures from real error surfaces, detect
 capacity-event streaks, and cross-check trace evidence.
 
-Classification reads the manifest ``error`` field or the terminal
-``stdout:``/``stderr:`` segment of ``grader_output`` — never the embedded
-shell command or task text, which routinely contains words like "usage" or
-"context" as prose. A run of three or more consecutive same-class failures in
-end-time order is reported as a capacity event (endpoint outage, account cap,
-image breakage) rather than model-quality evidence.
+Classification is defined in :mod:`harness.failure_classify`: provider/adapter
+substring rules read only the manifest error surface, never the embedded
+shell command or task/test output, which routinely contains words like
+"usage", "forbidden" or "context" as prose. A run of three or more
+consecutive infrastructure-class failures in end-time order is reported as a
+capacity event (endpoint outage, account cap, image breakage) rather than
+model-quality evidence.
 """
 
 from __future__ import annotations
@@ -24,55 +25,26 @@ ROOT = Path(__file__).resolve().parents[1]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
+from harness.failure_classify import classify_failure  # noqa: E402
+
 CAPACITY_STREAK_THRESHOLD = 3
 INSTANT_DEATH_TRACE_ENTRIES = 2
-
-
-def _error_surface(verdict: dict, manifest: dict) -> str:
-    """Return the most specific available error text."""
-    error = manifest.get("error")
-    if isinstance(error, str) and error.strip():
-        return error
-    grader = str(verdict.get("grader_output") or "")
-    if "stdout:" in grader:
-        return grader.rsplit("stdout:", 1)[-1]
-    if "stderr:" in grader:
-        return grader.rsplit("stderr:", 1)[-1]
-    return grader
-
-
-def classify_failure(verdict: dict, manifest: dict) -> str:
-    """Classify one failed trial from its real error surface."""
-    grader = str(verdict.get("grader_output") or "")
-    if verdict.get("failure_class") == "budget_exhausted" or (
-        "AgentTimeoutError" in grader
-    ):
-        return "budget_exhausted"
-    if verdict.get("verifier_failed") or "VerifierTimeoutError" in grader:
-        return "verifier_timeout"
-    if "Docker compose command failed" in grader:
-        return "compose_failure"
-
-    surface = _error_surface(verdict, manifest).lower()
-    if "usage limit" in surface or "rate limit" in surface:
-        return "usage_limit"
-    if "403" in surface or "forbidden" in surface:
-        return "auth_forbidden"
-    if (
-        "maximum context" in surface
-        or "context length" in surface
-        or "context window" in surface
-    ):
-        return "context_limit"
-    if "connection error" in surface or "connection failed" in surface:
-        return "connection_error"
-    if "http 5" in surface or "bad gateway" in surface or "502" in surface:
-        return "http_error"
-    if "timed out" in surface or "timeout" in surface:
-        return "timeout_other"
-    if verdict.get("adapter_failed"):
-        return "adapter_error_other"
-    return "incorrect"
+# Only infrastructure-class failures form capacity events. Ordinary
+# ``incorrect`` and ``budget_exhausted`` streaks are model-capability
+# evidence, not outage signal.
+CAPACITY_CLASSES = frozenset(
+    {
+        "usage_limit",
+        "auth_forbidden",
+        "connection_error",
+        "compose_failure",
+        "http_error",
+        "context_limit",
+        "adapter_error_other",
+        "verifier_timeout",
+        "timeout_other",
+    }
+)
 
 
 def _trace_entries(trial_dir: Path) -> int | None:
@@ -158,7 +130,8 @@ def audit_cell(cell_dir: Path) -> dict[str, Any]:
             classification = classify_failure(
                 record["verdict"], record["manifest"]
             )
-        if classification is not None and classification == streak_class:
+        in_class = classification in CAPACITY_CLASSES
+        if in_class and classification == streak_class:
             streak_count += 1
             streak_last = record["end"] or None
         else:
@@ -174,8 +147,8 @@ def audit_cell(cell_dir: Path) -> dict[str, Any]:
                         "last": streak_last,
                     }
                 )
-            streak_class = classification
-            streak_count = 1 if classification is not None else 0
+            streak_class = classification if in_class else None
+            streak_count = 1 if in_class else 0
             streak_first = record["end"] or None
             streak_last = streak_first
     if streak_class is not None and streak_count >= CAPACITY_STREAK_THRESHOLD:

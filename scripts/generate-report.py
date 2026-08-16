@@ -75,6 +75,28 @@ def _fmt_cost(value: float | None) -> str:
     return f"${value:,.2f}"
 
 
+def _fmt_percent(value: float | None) -> str:
+    if value is None:
+        return "-"
+    try:
+        percent = float(value)
+    except (TypeError, ValueError):
+        return "-"
+    return f"{percent:.1f}%"
+
+
+def _fmt_count(value: float | None) -> str:
+    if value is None:
+        return "-"
+    try:
+        count = float(value)
+    except (TypeError, ValueError):
+        return "-"
+    if count <= 0:
+        return "-"
+    return f"{count:.1f}"
+
+
 def _fmt_score(row: dict) -> str:
     if row.get("score_type") == "continuous_non_coding":
         return f"{row.get('score', 0.0):.1f}% {row.get('headline_metric', 'diag')}"
@@ -323,6 +345,34 @@ def generate_report(results_dirs: list[Path], output: Path) -> str:
                 cached=_fmt_tokens(totals["cached"]),
                 output=_fmt_tokens(totals["completion"]),
                 cost=_fmt_cost(totals["cost"]) if any_cost else "-",
+            )
+        )
+    lines.extend(["", "## Speed & behavior", ""])
+    lines.append(
+        "| Suite | Model | Thinking | Tasks | Task wall | Avg/task | Turns | "
+        "LLM% | Tool% | Tool calls | Search calls | Behavior trials |"
+    )
+    lines.append(
+        "| --- | --- | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |"
+    )
+    for _results_dir, row in all_rows:
+        turns = row.get("mean_turns")
+        behavior_trials = row.get("behavior_counted_trials") or 0
+        lines.append(
+            "| {suite} | {model} | {thinking} | {tasks} | {wall} | {avg} | "
+            "{turns} | {llm} | {tool} | {calls} | {search} | {btrial} |".format(
+                suite=row["suite"],
+                model=row["model"],
+                thinking=row.get("thinking", "default"),
+                tasks=row.get("total_tasks", 0),
+                wall=_fmt_duration(row.get("total_wall_clock_seconds")),
+                avg=_fmt_duration(row.get("mean_wall_clock_seconds")),
+                turns=f"{turns:.1f}" if turns else "-",
+                llm=_fmt_percent(row.get("inference_percent")),
+                tool=_fmt_percent(row.get("tool_percent")),
+                calls=_fmt_count(row.get("mean_tool_calls")),
+                search=_fmt_count(row.get("mean_search_calls")),
+                btrial=behavior_trials or "-",
             )
         )
     lines.extend(["", "## Per-cell detail", ""])

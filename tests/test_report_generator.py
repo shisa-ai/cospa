@@ -30,6 +30,7 @@ def _write_trial(
     failure_class: str | None = None,
     with_trace: bool = True,
     model_cost: dict | None = None,
+    behavior: dict | None = None,
 ) -> None:
     trial_dir.mkdir(parents=True, exist_ok=True)
     model_block = {
@@ -57,6 +58,7 @@ def _write_trial(
                 "exit_code": 0,
                 "created_at": "2026-08-16T00:00:00+00:00",
                 "run_end_time": "2026-08-16T00:00:10+00:00",
+                **({"behavior": behavior} if behavior is not None else {}),
             }
         )
     )
@@ -158,6 +160,54 @@ def test_report_renders_summary_table_and_links_to_traces(tmp_path):
 
     # Generated report equals returned markdown.
     assert text == markdown
+
+
+def test_report_includes_behavior_table_with_speed_and_capability_columns(tmp_path):
+    generate_report = _generator()["generate_report"]
+
+    results_dir = tmp_path / "results"
+    model = "local/test-model"
+    base = results_dir / encode_model_path(model) / "pi_vanilla" / "aider_polyglot"
+    _write_trial(
+        base / encode_task_path("python/one") / "trial-1",
+        passed=True,
+        task_id="python/one",
+        wall_clock=120.0,
+        token_usage={
+            "prompt_tokens": 10_000,
+            "cached_tokens": 5_000,
+            "completion_tokens": 1_000,
+            "response_count": 8,
+        },
+        behavior={
+            "status": "observed",
+            "agent_seconds": 100.0,
+            "inference_seconds": 70.0,
+            "tool_seconds": 20.0,
+            "other_seconds": 10.0,
+            "tool_calls": 30,
+            "search_calls": 4,
+        },
+    )
+    output = tmp_path / "report.md"
+    markdown = generate_report([results_dir], output)
+
+    assert "## Speed & behavior" in markdown
+    for column in (
+        "Avg/task",
+        "Turns",
+        "LLM%",
+        "Tool%",
+        "Tool calls",
+        "Search calls",
+    ):
+        assert column in markdown, f"missing behavior column {column}"
+    assert "8.0" in markdown  # mean turns from response_count
+    assert "70.0%" in markdown  # LLM% = inference/agent
+    assert "20.0%" in markdown  # Tool% = tool/agent
+    assert "30.0" in markdown  # mean tool calls
+    assert "4.0" in markdown  # mean search calls
+    assert "2m00s" in markdown  # avg/task wall
 
 
 def test_report_includes_campaign_elapsed_and_cost(tmp_path):

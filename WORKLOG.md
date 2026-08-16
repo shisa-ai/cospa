@@ -2393,3 +2393,26 @@ Append-only development log for the `cospa` repository.
   footer describing manifest/verdict/out/jobs layout for agent consumption.
 - Next: fold stability metrics into the report once the 96-attempt run is
   authoritative; consider elapsed-column promotion and per-language cuts.
+
+## 2026-08-16 — Add per-cell speed and behavior table to report
+
+- Context: the report's summary table showed cost and tokens but not the
+  comparative speed/capability shape (turns, inference share, tool intensity)
+  that the terminal viewer exposes.
+- Change: add a `## Speed & behavior` section to
+  `scripts/generate-report.py` rendering Avg/task, mean turns, LLM%, Tool%,
+  mean tool calls, mean search calls, and behavior-trial coverage per cell
+  from the viewer's existing aggregation.
+- Evidence: RED test failed before the section existed; GREEN covers a
+  behavior-observed manifest asserting each column value (turns 8.0, LLM%
+  70.0%, Tool% 20.0%, calls 30.0, search 4.0, avg wall 2m00s). Full pytest
+  reports 399 passes with only the pre-existing `test_check_models.sh`
+  fixture failure. The regenerated real report shows the expected shape:
+  FeatureBench at 180 turns / 91.8 calls versus BCB agentic at 6.9 turns /
+  6.1 calls, SWE-Explore at 98.6% LLM time, and BCB Instruct rendering `-`
+  for absent single-turn behavior data.
+- Decision: dash-render cells without behavior telemetry rather than zero;
+  keep the behavior table derived from the same viewer rows as the summary so
+  the two tables cannot disagree.
+- Next: fold k=3 stability metrics into the report; then the Phase D finalist
+  decision.

@@ -2562,3 +2562,29 @@ Append-only development log for the `cospa` repository.
 - Next: implement profile fingerprinting, then qualify one small deterministic
   diagnostic each for planning, async tests, long context, optimization loops,
   and frozen web before another scaffold campaign.
+
+## 2026-08-16 — Make the Superpowers treatment real and reproducible
+
+- Context: the prior repo-local and Harbor-generated Superpowers files lacked
+  required Agent Skills descriptions, so Pi loaded zero skills even though the
+  adapters passed `--skill` paths.
+- Change: pin upstream Superpowers v6.3.0 at
+  `b36e0829c6d0140e93cfef2ca599b1b07d4a7797`; retain the complete referenced
+  workflow closure for systematic debugging, TDD, and verification; validate
+  every source hash; materialize identical generic/Harbor profiles; and record
+  source plus per-skill snapshot hashes in trial manifests.
+- Evidence: RED tests observed an empty Pi resource inventory and absent
+  manifest profile. GREEN loads all three names into a real Pi 0.84.2 session
+  system prompt and reconstructs the same loadable inventory from the Harbor
+  setup command. A live Ornith generic probe read the TDD skill and returned
+  its Iron Law. Docker-backed `hello-world` passed 1/1 under `pi_superpowers`
+  at `results/e2e-smoke-terminal-bench-superpowers-v1-20260816T2045Z/`.
+- Validation: 68/68 focused tests pass. Full pytest reports 412 passes and the
+  pre-existing `test_check_models.sh` fixture failure; standalone shell tests
+  report only that fixture's two unrelated failures. Docker retained zero
+  empty Harbor networks.
+- Decision: historical Superpowers-labeled rows are invalid as methodology
+  evidence. Use `superpowers-bench-v1` for future Pi/OpenCode comparisons and
+  treat full interactive Superpowers as a separate product-profile question.
+- Next: add the controlled OpenCode baseline and identical Superpowers arm,
+  then run the small Ornith c=2 comparison.

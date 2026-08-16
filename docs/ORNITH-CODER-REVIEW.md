@@ -1241,3 +1241,32 @@ time, after the agent has finished. Evidence: new RED→GREEN tests
 and cpp runs where the restored tests were actually compiled/run. Prior Aider
 runs (Bonsai smokes, DeepSeek V4 Flash full run, Muse-Glimmer run) are
 contaminated and were cleared; Aider must be re-run to produce clean numbers.
+
+### Superpowers profile correction (2026-08-16 follow-up)
+
+The prior `pi_superpowers` treatment passed explicit skill paths, but both the
+repo-local and Harbor-generated `SKILL.md` files lacked Agent Skills
+frontmatter and a description. Pi 0.84.2 consequently reported
+`description is required`, loaded neither file, and placed no Superpowers
+resources in the session system prompt. Historical Superpowers-labeled runs
+therefore do not measure the claimed methodology treatment.
+
+Status: `fixed (unit + integration + end-to-end)`. `superpowers-bench-v1` pins
+upstream Superpowers v6.3.0 at
+`b36e0829c6d0140e93cfef2ca599b1b07d4a7797`, includes the complete referenced
+closure for systematic debugging, TDD, and verification, rejects file hash
+drift, and uses only repo-local content. Generic and Harbor adapters load the
+same three skills, while trial manifests record the source revision and
+per-skill snapshot hashes. A real Pi resource-loader test proves all three
+names reach the actual session system prompt; a generated-Harbor-profile test
+materializes and loads the same inventory. A live authenticated Ornith generic
+probe selected `read`, opened the pinned TDD skill, and returned its Iron Law.
+A Docker-backed Ornith `pi_superpowers` `hello-world` trial then exited zero,
+passed the native Harbor verifier, exported a two-response Pi trace, and left
+zero empty Harbor networks. The durable result is under
+`results/e2e-smoke-terminal-bench-superpowers-v1-20260816T2045Z/`.
+
+Relevant verification reports 68/68 focused tests passing. Full pytest reports
+412 passed and the pre-existing `test_check_models.sh` fixture failure; the
+standalone shell suite likewise reports only that fixture's two assertions,
+which are unrelated to the Superpowers path.

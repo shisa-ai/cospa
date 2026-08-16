@@ -15,6 +15,11 @@ import sys
 from pathlib import Path
 from typing import Any
 
+from harness.skill_profiles import (
+    superpowers_container_skill_paths,
+    superpowers_install_command,
+)
+
 
 try:
     from harbor.agents.installed.base import BaseInstalledAgent
@@ -99,10 +104,7 @@ _CODING_EVAL_AGENT_ENV_KEYS = (
     "CODING_EVAL_REASONING_EFFORT",
 )
 
-_CONTAINER_BENCH_SKILLS = (
-    "/installed-agent/bench-skills/systematic-debugging",
-    "/installed-agent/bench-skills/verification-before-completion",
-)
+_CONTAINER_BENCH_SKILLS = superpowers_container_skill_paths()
 
 _PI_RUNTIME_DIR = "/opt/coding-eval-pi-runtime"
 _COMPAT_NODE_DIR = "/opt/coding-eval-node-compat"
@@ -369,25 +371,10 @@ NODE
         async def _install_bench_skills(self, environment: BaseEnvironment) -> None:
             if not self.include_bench_skills:
                 return
-            command = r"""
-mkdir -p /installed-agent/bench-skills/systematic-debugging
-cat >/installed-agent/bench-skills/systematic-debugging/SKILL.md <<'EOF'
-# Systematic Debugging
-
-When a task fails, form a concrete hypothesis, run the smallest useful
-diagnostic command, inspect the actual output, and make one targeted change.
-Do not guess repeatedly without checking the result.
-EOF
-
-mkdir -p /installed-agent/bench-skills/verification-before-completion
-cat >/installed-agent/bench-skills/verification-before-completion/SKILL.md <<'EOF'
-# Verification Before Completion
-
-Before finishing, run the task's relevant tests or validation command. If that
-is impossible, state exactly what command could not run and why.
-EOF
-"""
-            await self.exec_as_root(environment, command=command)
+            await self.exec_as_root(
+                environment,
+                command=superpowers_install_command(),
+            )
 
         async def install(self, environment: BaseEnvironment) -> None:
             await self.exec_as_root(
@@ -492,6 +479,9 @@ else:
                 "cli_command": self.cli_command,
                 "npm_package": self.npm_package,
                 "include_bench_skills": self.include_bench_skills,
+                "bench_skills_install_command": (
+                    superpowers_install_command() if self.include_bench_skills else ""
+                ),
                 "include_devstack_profile": self.include_devstack_profile,
             }
 
@@ -544,6 +534,8 @@ class PiDevstackSuperpowersHarborAgent(_BasePiCliHarborAgent):
         _CONTAINER_BENCH_SKILLS[0],
         "--skill",
         _CONTAINER_BENCH_SKILLS[1],
+        "--skill",
+        _CONTAINER_BENCH_SKILLS[2],
     )
     include_bench_skills = True
     _agent_name = "coding-eval-pi-devstack-superpowers"
@@ -561,6 +553,8 @@ class PiSuperpowersHarborAgent(_BasePiCliHarborAgent):
         _CONTAINER_BENCH_SKILLS[0],
         "--skill",
         _CONTAINER_BENCH_SKILLS[1],
+        "--skill",
+        _CONTAINER_BENCH_SKILLS[2],
     )
     include_bench_skills = True
     _agent_name = "coding-eval-pi-superpowers"
@@ -588,6 +582,8 @@ class LittleCoderSuperpowersHarborAgent(LittleCoderHarborAgent):
         _CONTAINER_BENCH_SKILLS[0],
         "--skill",
         _CONTAINER_BENCH_SKILLS[1],
+        "--skill",
+        _CONTAINER_BENCH_SKILLS[2],
     )
     include_bench_skills = True
     _agent_name = "coding-eval-little-coder-superpowers"

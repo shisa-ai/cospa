@@ -63,20 +63,5 @@ pi list
 {% endif %}
 
 {% if include_bench_skills %}
-mkdir -p /installed-agent/bench-skills/systematic-debugging
-cat >/installed-agent/bench-skills/systematic-debugging/SKILL.md <<'EOF'
-# Systematic Debugging
-
-When a task fails, form a concrete hypothesis, run the smallest useful
-diagnostic command, inspect the actual output, and make one targeted change.
-Do not guess repeatedly without checking the result.
-EOF
-
-mkdir -p /installed-agent/bench-skills/verification-before-completion
-cat >/installed-agent/bench-skills/verification-before-completion/SKILL.md <<'EOF'
-# Verification Before Completion
-
-Before finishing, run the task's relevant tests or validation command. If that
-is impossible, state exactly what command could not run and why.
-EOF
+{{ bench_skills_install_command }}
 {% endif %}

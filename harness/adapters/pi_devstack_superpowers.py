@@ -20,6 +20,7 @@ from harness.adapters.session_utils import (
     trial_session_args,
     with_no_network_hint,
 )
+from harness.skill_profiles import load_superpowers_profile
 from harness.subprocess_utils import run_command
 
 
@@ -34,8 +35,12 @@ class PiDevstackSuperpowersAdapter:
     """Pi devstack extensions + Superpowers bench skills."""
 
     name = "pi_devstack_superpowers"
-    version = "devstack-superpowers-bench"
+    version = "devstack-superpowers-bench-v1"
     uses_workspace_sandbox = True
+
+    @staticmethod
+    def manifest_metadata() -> dict:
+        return {"capability_profile": load_superpowers_profile()}
 
     def run(
         self,

@@ -311,6 +311,7 @@ small, frozen profiles:
 | `pi_async_execution` | Background-task tools and wakeups |
 | `pi_long_context` | VCC policy + continuation, with complete config |
 | `pi_optimization_loop` | Multiloop extension + skill |
+| `superpowers-bench-v1` | Pinned systematic debugging, TDD, and verification methodology |
 | `pi_web_research` | Smart-fetch + Camoufox with controlled network |
 | `pi_devstack_full` | Frozen canonical workstation profile |
 
@@ -327,6 +328,17 @@ Every profile should pin and record:
 - Pi/Node versions;
 - network policy and allowlisted hosts;
 - model, thinking level, sampling, and capability/wall budgets.
+
+`superpowers-bench-v1` is now an implemented example of this policy. It pins
+upstream Superpowers v6.3.0 at
+`b36e0829c6d0140e93cfef2ca599b1b07d4a7797` and selects the complete
+headless-safe workflow closure for `systematic-debugging`,
+`test-driven-development`, and `verification-before-completion`. Generic and
+Harbor adapters materialize the same checksum-verified files. Trial manifests
+record the source revision and per-skill snapshot hashes, and qualification
+loads the files through Pi's real resource loader and asserts that all three
+names reach the actual session system prompt. This is a controlled methodology
+treatment, not the complete interactive Superpowers product.
 
 ### Four-arm causal pattern
 

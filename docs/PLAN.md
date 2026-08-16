@@ -216,9 +216,12 @@ reorder — earlier items unblock later ones.
 - [ ] **P14. Superpowers ablation (2×2).** Add adapters `pi_superpowers`
       and `little_coder_superpowers`. For bench runs, **strip interactive
       skill-check flows** (no user present to answer clarifying questions)
-      and keep only systematic-debugging + verification-before-completion
-      skills. 2×2 = {pi, little_coder} × {baseline, +superpowers-bench}.
-      Optional / last — depends on TB timing (P11).
+      and use the pinned, headless-safe `superpowers-bench-v1` subset:
+      systematic-debugging, test-driven-development, and
+      verification-before-completion with their referenced support files.
+      The TDD skill is required because the debugging workflow delegates its
+      implementation phase to it. 2×2 = {pi, little_coder} × {baseline,
+      +superpowers-bench}. Optional / last — depends on TB timing (P11).
 - [ ] **P15. Write up.** Results table, harness comparison, per-model
       findings. `RESULTS.md` at the repo root.
 
@@ -241,9 +244,9 @@ that scaffold matrix: it is a no-tool, one-generation orthogonal anchor.
 | `pi_vanilla` | `pi --no-extensions` — 4 tools, ~1K-token prompt | Floor. Minimal scaffold. |
 | `pi_devstack` | devstack pi profile (curated extensions + skills) | "Pi as we run it." Mid-scaffold. |
 | `little_coder` | little-coder launcher (pi + 20 ext + 30 skills) | Maximal targeted scaffold for small models. |
-| `pi_superpowers` | `pi_vanilla` + Superpowers debugging/verification skills | Ablation: does generic methodology help or hurt without devstack extensions? |
-| `pi_devstack_superpowers` | devstack extensions + Superpowers debugging/verification skills | Direct `pi_devstack` vs `pi_devstack` + Superpowers bench ablation. |
-| `little_coder_superpowers` | `little_coder` + Superpowers debugging/verification skills | Same Superpowers ablation for little-coder. |
+| `pi_superpowers` | `pi_vanilla` + pinned Superpowers debugging/TDD/verification profile | Ablation: does generic methodology help or hurt without devstack extensions? |
+| `pi_devstack_superpowers` | devstack extensions + the same pinned Superpowers profile | Direct `pi_devstack` vs `pi_devstack` + Superpowers bench ablation. |
+| `little_coder_superpowers` | `little_coder` + the same pinned Superpowers profile | Same Superpowers ablation for little-coder. |
 | `bigcodebench_openai` | One OpenAI-compatible user message; no system prompt or tools | Separate BigCodeBench protocol anchor; never compared as a scaffold arm. |
 
 Prediction (worth testing): little_coder > pi_devstack > pi_vanilla on

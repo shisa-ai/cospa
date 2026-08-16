@@ -2,14 +2,13 @@
 pi_superpowers adapter — pi + Superpowers skills (bench mode).
 
 Strips interactive skill-check flows (no user present to answer clarifying
-questions). Keeps only systematic-debugging + verification-before-completion
-skills. This is the "Superpowers helps pi_vanilla on TB (recovery discipline)"
-arm of the 2x2 ablation.
+questions). Loads the pinned systematic-debugging, test-driven-development,
+and verification-before-completion profile. This is the "Superpowers helps
+pi_vanilla on TB (recovery discipline)" arm of the 2x2 ablation.
 
-We use --no-skills to disable default discovery, then explicitly load ONLY
-the bench-appropriate skills from a configured allowlist. We do NOT pass the
-entire ~/.pi/agent/skills directory, because that brings in arbitrary
-interactive user skills (review finding #8).
+We use --no-skills to disable default discovery, then explicitly load only the
+checksum-verified repo-local profile. We do not pass the mutable
+~/.pi/agent/skills directory, which can contain arbitrary interactive skills.
 """
 
 import subprocess
@@ -18,6 +17,10 @@ from pathlib import Path
 from typing import Optional
 
 from harness.adapters.sampling import validate_pi_sampling_params
+from harness.skill_profiles import (
+    load_superpowers_profile,
+    superpowers_skill_paths,
+)
 from harness.adapters.session_utils import (
     behavior_trace_args,
     behavior_trace_env,
@@ -27,29 +30,6 @@ from harness.adapters.session_utils import (
 from harness.subprocess_utils import run_command
 
 
-# Bench-appropriate skills only. These are the Superpowers subset that helps
-# with systematic debugging and verification discipline without requiring a
-# human in the loop.
-BENCH_SKILLS = [
-    "systematic-debugging",
-    "verification-before-completion",
-]
-
-# Known interactive skills that MUST be stripped under bench mode.
-INTERACTIVE_SKILLS = {
-    "check",
-    "realitycheck",
-    "shisa-kb",
-    "rc-analyze",
-    "rc-export",
-    "rc-extract",
-    "rc-search",
-    "rc-stats",
-    "rc-synthesize",
-    "rc-validate",
-}
-
-
 @dataclass
 class AdapterResult:
     returncode: int
@@ -57,35 +37,21 @@ class AdapterResult:
     error: Optional[str] = None
 
 
-def _resolve_bench_skill_paths() -> list:
-    """Return --skill paths for each bench skill that exists on disk.
-
-    Prefer installed user skills under ~/.pi/agent/skills/<name>/, then fall
-    back to the repo-local bench skill definitions. We never return the bare
-    skills directory — only individual, allowlisted skill subdirs.
-    """
-    skills_roots = [
-        Path.home() / ".pi" / "agent" / "skills",
-        Path(__file__).resolve().parents[1] / "bench_skills",
-    ]
-    paths = []
-    for name in BENCH_SKILLS:
-        if name in INTERACTIVE_SKILLS:
-            continue
-        for skills_root in skills_roots:
-            candidate = skills_root / name
-            if candidate.is_dir():
-                paths.append(str(candidate))
-                break
-    return paths
+def _resolve_bench_skill_paths() -> list[str]:
+    """Return checksum-validated, repo-local paths for the pinned treatment."""
+    return superpowers_skill_paths()
 
 
 class PiSuperpowersAdapter:
     """Pi + Superpowers skills (bench mode, no interactive flows)."""
 
     name = "pi_superpowers"
-    version = "superpowers-bench"
+    version = "superpowers-bench-v1"
     uses_workspace_sandbox = True
+
+    @staticmethod
+    def manifest_metadata() -> dict:
+        return {"capability_profile": load_superpowers_profile()}
 
     def run(self, task_data: dict, workdir: Path, log_file: Path, stderr_file: Path) -> AdapterResult:
         """
@@ -93,7 +59,8 @@ class PiSuperpowersAdapter:
 
         Uses --no-skills to disable default discovery, then loads only the
         allowlisted bench skills (systematic-debugging,
-        verification-before-completion). Interactive skills are stripped.
+        test-driven-development, verification-before-completion). Interactive
+        skills are stripped.
         """
         prompt = with_no_network_hint(task_data.get("prompt", ""))
         validate_pi_sampling_params(

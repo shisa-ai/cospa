@@ -18,6 +18,7 @@ from harness.adapters.session_utils import (
     trial_session_args,
     with_no_network_hint,
 )
+from harness.skill_profiles import load_superpowers_profile
 from harness.subprocess_utils import run_command
 
 
@@ -32,8 +33,12 @@ class LittleCoderSuperpowersAdapter:
     """Little-coder + Superpowers skills (bench mode, no interactive flows)."""
 
     name = "little_coder_superpowers"
-    version = "superpowers-bench"
+    version = "superpowers-bench-v1"
     uses_workspace_sandbox = True
+
+    @staticmethod
+    def manifest_metadata() -> dict:
+        return {"capability_profile": load_superpowers_profile()}
 
     def run(self, task_data: dict, workdir: Path, log_file: Path, stderr_file: Path) -> AdapterResult:
         """

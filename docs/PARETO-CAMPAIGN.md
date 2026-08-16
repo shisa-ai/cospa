@@ -382,18 +382,39 @@ with distinct task types, and four FeatureBench tasks from distinct
 repositories. Seeded SHA-256 ranks select rows only from the mechanically
 qualified fixed panels; DS4 baseline outcomes are not selection inputs.
 
-Run every selected task as three independent `pi_vanilla high` trials at c=8.
-Report all 96 attempts, per-task mean pass probability, and outcome-flip rate;
-do not convert any-pass/best-of-three into Pass@1. Then promote only Pareto
-finalists to BCB hermetic143, full PolyBench, full Terminal-Bench, FeatureBench
-Fast/full, or a frozen freshness campaign. Publish paired effects, standalone
-uncertainty, language/repository/task-type cuts, partial executable diagnostics,
-failure rates, task/campaign time, tokens, and cost.
+The k=3 wave completed with all 96 attempts authoritative under DS4
+`pi_vanilla high` at c=8 (one isolated Lightning trial-3 repair after a
+transient endpoint connection error). Results per suite:
+
+| Suite | Tasks | Mean pass probability | Flip tasks | Flip rate | Pairwise disagreement |
+| --- | ---: | ---: | ---: | ---: | ---: |
+| BCB Agentic strata8 | 8 | 29.2% | 1/8 | 12.5% | 8.3% |
+| Multi-SWE language7 | 7 | 14.3% | 2/7 | 28.6% | 19.0% |
+| Terminal mix5 | 5 | 40.0% | 2/5 | 40.0% | 26.7% |
+| PolyBench language2x4 | 8 | 8.3% | 2/8 | 25.0% | 16.7% |
+| FeatureBench distinct4 | 4 | 0.0% | 0/4 | 0.0% | 0.0% |
+| Panel diagnostic (not a capability score) | 32 | 18.75% | 7/32 | 21.9% | 14.6% |
+
+Stability conclusions: 25 of 32 tasks (78%) were unanimous across three
+independent attempts, so the default k=1 protocol loses little suite-level
+signal; 7 flip tasks (21.9%) show stochastic outcomes concentrate in
+Terminal (40% flip rate) and repository-repair suites rather than BCB.
+Best-of-three was never reported as Pass@1. Durable root:
+`results/runs/ds4-pareto-stability32-k3-c8-20260816` with the fail-closed
+analysis at `results/reports/ds4-pareto-stability32-analysis.json` and the
+one-sheet report at
+`results/reports/ds4-pareto-baseline-k1-and-stability32.md`.
+
+Promote only Pareto finalists to BCB hermetic143, full PolyBench, full
+Terminal-Bench, FeatureBench Fast/full, or a frozen freshness campaign.
+Publish paired effects, standalone uncertainty, language/repository/task-type
+cuts, partial executable diagnostics, failure rates, task/campaign time,
+tokens, and cost.
 
 ## Implementation order
 
-Items 1–8 and the matched scaffold gate in item 9 are complete as of
-2026-08-16; the stability repeats are active.
+Items 1–8 and the matched scaffold gate plus stability sentinel in item 9
+are complete as of 2026-08-16; finalist promotion is the remaining phase.
 
 1. Freeze this campaign and its nested manifests.
 2. Run the qualified BCB Pareto60 and hermetic143 suite IDs.

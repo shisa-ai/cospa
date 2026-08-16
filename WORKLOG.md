@@ -2416,3 +2416,26 @@ Append-only development log for the `cospa` repository.
   the two tables cannot disagree.
 - Next: fold k=3 stability metrics into the report; then the Phase D finalist
   decision.
+
+## 2026-08-16 — Complete Stability32 k=3 sentinel
+
+- Context: the frozen 32-task outcome-blind sentinel needed three independent
+  DS4 `pi_vanilla high` attempts per task at c=8 to quantify stochastic
+  outcome variance before any finalist promotion.
+- Evidence: all 96 attempts are authoritative after one isolated Lightning
+  trial-3 repair (transient endpoint connection error; rerun completed as an
+  ordinary incorrect verdict in 2193s). Per-suite mean pass probability /
+  flip rate: BCB 29.2%/12.5%, Multi-SWE 14.3%/28.6%, Terminal 40.0%/40.0%,
+  PolyBench 8.3%/25.0%, FeatureBench 0.0%/0%. Panel diagnostic: 18.75% mean
+  pass probability, 7/32 flip tasks (21.9%), 14.6% pairwise disagreement.
+  The fail-closed analyzer exits zero with no issues; the regenerated
+  one-sheet report resolves 707/707 links.
+- Decision: 25/32 tasks were unanimous, validating k=1 as the routine
+  protocol; flips concentrate in Terminal and repository-repair suites, so
+  close paired decisions there deserve repeat evidence. No best-of-three is
+  reported as Pass@1. Durable artifacts: the result root, the analysis JSON,
+  and the one-sheet report under `results/`.
+- Validation: analyzer complete=true over exactly the frozen manifest's 32
+  task IDs x 3 trials with identity, thinking-policy, and failure-taxonomy
+  checks; full metrics recorded in `docs/PARETO-CAMPAIGN.md` Phase D.
+- Next: Phase D finalist promotion decisions on the retained k=1 protocol.

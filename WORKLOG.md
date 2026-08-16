@@ -2346,3 +2346,24 @@ Append-only development log for the `cospa` repository.
   aggregate panel stability block is explicitly labeled not a capability score.
 - Next: apply the analyzer to the queued 96-attempt Stability32 result root,
   repair only infrastructure failures, and publish the complete report.
+
+## 2026-08-16 — Record k=1 token and cost envelope
+
+- Context: the campaign needed its measured one-pass shape — task mix,
+  concurrency, wall time, token split, and cost — recorded against the
+  declared one-day, few-million-output-token budget.
+- Change: extend the DS4 baseline table in `docs/PARETO-CAMPAIGN.md` with
+  uncached-prompt, cache-read, and output-token columns, a 336-task totals
+  row, and budget-envelope observations.
+- Evidence: viewer JSON aggregation over the seven durable k=1 cells
+  (143+60+25+20+64+12+12 tasks): 19h17m summed task wall, about 4h50m c=8
+  campaign elapsed, 6.8M uncached prompt, 229M cache-read, 3.0M output
+  tokens, and $2.45 plus the $0.30 SymPy repair. Re-read the changed section
+  end to end.
+- Decision: keep suite scores separate in the measured table; record that
+  locally served vLLM/SGLang do not emit reasoning_tokens in usage (the
+  zeros are a server limitation, not absent reasoning) while the DeepSeek
+  official API reports them via completion_tokens_details.
+- Next: turn this table into a script-generated per-run one-sheet report with
+  links to raw traces; rerun BCB Instruct at matched thinking if it joins a
+  headline geomean.

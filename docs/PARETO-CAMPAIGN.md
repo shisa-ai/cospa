@@ -97,17 +97,34 @@ scheduling and contention. Estimated dollars use the viewer's current
 checked-in pricing metadata, even when an older manifest recorded zero local
 billing. `CI` is the standalone 95% Wilson interval for the binary rate; WCC
 itself is continuous and its any-hit interval is shown only as a secondary
-diagnostic.
+diagnostic. Token columns are viewer-aggregated from trial manifests:
+uncached prompt, cache-read, and completion (output) tokens.
 
-| Suite / observed policy | Result | Task wall | Campaign elapsed | Estimated cost |
-| --- | ---: | ---: | ---: | ---: |
-| BCB-Hard Instruct hermetic143, no thinking | 17/143 (11.9%, CI 7.6–18.2) | 41m56s | 7m10s | $0.0430 |
-| BCB-Hard Agentic Pareto60, vanilla `high` | 22/60 (36.7%, CI 25.6–49.3) | 1h00m27s | 7m43s for final52 + 1m01s smoke8 | $0.0705 |
-| Multi-SWE Flash hermetic25, vanilla `high` | 9/25 (36.0%, CI 20.2–55.5) + 1 budget-exhausted | 3h06m19s | 30m36s | $0.2779 on 24/25 token-covered tasks |
-| Terminal-Bench Pareto20, vanilla `high` | 11/20 (55.0%, CI 34.2–74.2) + 2 budget-exhausted | 1h25m25s | 17m24s | $0.0758 on 18/20 token-covered tasks |
-| PolyBench balanced64, vanilla `high` | 15/64 (23.4%, CI 14.7–35.1) + 2 budget-exhausted | 7h32m51s | 59m49s | $0.9187 on 63/64 token-covered tasks |
-| FeatureBench Lite Pareto12, vanilla `high` | 2/12 (16.7%, CI 4.7–44.8) | 10h52m raw attempts | 2h40m raw + isolated repair | $1.02 raw + $0.30 repair |
-| SWE-Explore Verified12, vanilla `high` | 0.0968 WCC; 10/12 any-hit (CI 55.2–95.3) | 26m26s | 5m28s | $0.0432 |
+| Suite / observed policy | Result | Task wall | Campaign elapsed | Uncached prompt | Cached read | Output | Estimated cost |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| BCB-Hard Instruct hermetic143, no thinking | 17/143 (11.9%, CI 7.6–18.2) | 41m56s | 7m10s | 28K | 0 | 140K | $0.0430 |
+| BCB-Hard Agentic Pareto60, vanilla `high` | 22/60 (36.7%, CI 25.6–49.3) | 1h00m27s | 7m43s for final52 + 1m01s smoke8 | 138K | 1.5M | 168K | $0.0705 |
+| Multi-SWE Flash hermetic25, vanilla `high` | 9/25 (36.0%, CI 20.2–55.5) + 1 budget-exhausted | 3h06m19s | 30m36s | 700K | 26.6M | 376K | $0.2779 on 24/25 token-covered tasks |
+| Terminal-Bench Pareto20, vanilla `high` | 11/20 (55.0%, CI 34.2–74.2) + 2 budget-exhausted | 1h25m25s | 17m24s | 187K | 3.7M | 140K | $0.0758 on 18/20 token-covered tasks |
+| PolyBench balanced64, vanilla `high` | 15/64 (23.4%, CI 14.7–35.1) + 2 budget-exhausted | 7h32m51s | 59m49s | 3.7M | 55.6M | 887K | $0.9187 on 63/64 token-covered tasks |
+| FeatureBench Lite Pareto12, vanilla `high` | 2/12 (16.7%, CI 4.7–44.8) | 10h52m raw attempts | 2h40m raw + isolated repair | 2.0M | 140M | 1.2M | $1.02 raw + $0.30 repair |
+| SWE-Explore Verified12, vanilla `high` | 0.0968 WCC; 10/12 any-hit (CI 55.2–95.3) | 26m26s | 5m28s | 157K | 1.8M | 58K | $0.0432 |
+| **All 336 k=1 tasks** | — | **19h17m summed** | **≈4h50m** | **6.8M** | **229M** | **3.0M** | **$2.45** (+$0.30 repair) |
+
+Budget-envelope observations for the one-pass portfolio:
+
+- About 97% of processed tokens are cache reads; only 6.8M uncached prompt
+  and 3.0M output tokens are new compute per full pass.
+- FeatureBench consumes 47% of output tokens and 61% of cache reads for 12 of
+  336 tasks; it is the budget strain point and the first place to trim.
+- BCB Instruct is the cheapest per-task signal (about 18s and $0.0003 per
+  task); its zero cache count reflects the single-turn protocol.
+- `reasoning_tokens` is zero throughout: locally served vLLM and SGLang do
+  not report a separate reasoning count in usage (reasoning text is returned
+  in a separate field), while the DeepSeek official API does via
+  `completion_tokens_details.reasoning_tokens`.
+- The isolated SymPy transport repair added 70M cached tokens and $0.30
+  outside the main-table totals.
 
 Durable result roots for this baseline are:
 

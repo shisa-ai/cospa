@@ -1,6 +1,7 @@
 """Controlled OpenCode baseline/Superpowers adapter tests."""
 
 import json
+import subprocess
 import threading
 from contextlib import contextmanager
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
@@ -103,6 +104,42 @@ def _task_data() -> dict:
         "timeout": 600,
         "client_session_id": "123e4567-e89b-12d3-a456-426614174000",
     }
+
+
+def test_opencode_marks_agent_wall_timeout_as_budget_exhausted(tmp_path):
+    adapter = load_adapter("opencode_vanilla")
+    with (
+        patch.object(opencode, "validate_opencode_runtime"),
+        patch.object(opencode, "load_opencode_connection", return_value=_connection()),
+        patch.object(
+            opencode,
+            "load_model_metadata",
+            return_value={
+                "context_window": 262144,
+                "max_tokens": 81920,
+                "reasoning": True,
+                "name": "Ornith",
+            },
+        ),
+        patch.object(opencode, "build_opencode_config", return_value={}),
+        patch.object(
+            opencode,
+            "_run_configured_opencode",
+            side_effect=subprocess.TimeoutExpired(["opencode"], 600),
+        ),
+    ):
+        result = adapter.run(
+            {
+                **_task_data(),
+                "model_base_url": _connection()["base_url"],
+            },
+            tmp_path,
+            tmp_path / "session.log",
+            tmp_path / "stderr.log",
+        )
+
+    assert result.returncode == -1
+    assert result.budget_exhausted is True
 
 
 def test_opencode_fails_closed_for_unimplemented_harbor_protocol():

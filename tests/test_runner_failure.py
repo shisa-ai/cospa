@@ -11,6 +11,7 @@ ORNITH-CODER-REVIEW.md finding #6 / follow-up audit item C.
 """
 
 import json
+import subprocess
 import sys
 import tempfile
 from pathlib import Path
@@ -59,6 +60,29 @@ class FakeFlakyInfraAdapter:
         if self.calls == 1:
             return AdapterResult(returncode=-1, error="adapter timed out")
         return AdapterResult(returncode=0, error=None)
+
+
+class FakeWorkspaceTimeoutAdapter:
+    """Workspace adapter that reaches the declared agent wall deadline."""
+
+    name = "fake_workspace_timeout"
+    version = "test"
+
+    def __init__(self):
+        self.calls = 0
+
+    def run(self, task_data, workdir, log_file, stderr_file):
+        self.calls += 1
+        return type(
+            "TimeoutResult",
+            (),
+            {
+                "returncode": -1,
+                "error": "Agent capability budget exhausted",
+                "budget_exhausted": True,
+                "usage": None,
+            },
+        )()
 
 
 class FakeHarborTimeoutSuite:
@@ -241,6 +265,61 @@ def test_retry_retries_infrastructure_failure_then_records_success():
     assert verdict["passed"] is True
     assert manifest["retry"]["attempt"] == 2
     assert manifest["retry"]["max_attempts"] == 3
+
+
+def test_pi_vanilla_marks_subprocess_timeout_as_budget_exhausted(tmp_path):
+    """The real workspace adapter must distinguish its wall deadline from infra."""
+    adapter = PiVanillaAdapter()
+    with (
+        patch("harness.adapters.pi_vanilla.validate_pi_sampling_params"),
+        patch(
+            "harness.adapters.pi_vanilla.run_command",
+            side_effect=subprocess.TimeoutExpired(["pi"], 30),
+        ),
+    ):
+        result = adapter.run(
+            {
+                "model_id": "test/model",
+                "prompt": "solve it",
+                "problem": "task-one",
+                "timeout": 30,
+            },
+            tmp_path,
+            tmp_path / "session.log",
+            tmp_path / "stderr.log",
+        )
+
+    assert result.returncode == -1
+    assert result.budget_exhausted is True
+
+
+def test_retry_does_not_retry_workspace_agent_budget_exhaustion():
+    """A workspace-agent wall deadline is capability signal, not infrastructure."""
+    suite = FakeWrongAnswerSuite(passed=True)
+    adapter = FakeWorkspaceTimeoutAdapter()
+
+    with tempfile.TemporaryDirectory() as tmp:
+        tmp = Path(tmp)
+        manifest, verdict = run_trial_with_retries(
+            suite,
+            adapter,
+            "test/model",
+            "task/one",
+            1,
+            tmp / "results",
+            tmp / "vendor",
+            retries=2,
+        )
+
+    assert adapter.calls == 1
+    assert suite.verify_calls == 0
+    assert manifest["exit_code"] == 124
+    assert manifest["budget_exhausted"] is True
+    assert "retry" not in manifest
+    assert verdict["passed"] is False
+    assert verdict["failure_class"] == "budget_exhausted"
+    assert verdict["budget_exhausted"] is True
+    assert verdict.get("adapter_failed") is not True
 
 
 def test_retry_does_not_retry_harbor_agent_budget_exhaustion():

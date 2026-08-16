@@ -518,6 +518,7 @@ class AdapterResult:
     usage: Optional[object] = None
     error: Optional[str] = None
     behavior: Optional[dict[str, Any]] = None
+    budget_exhausted: bool = False
 
 
 class _OpenCodeAdapter:
@@ -595,7 +596,11 @@ class _OpenCodeAdapter:
                 behavior=behavior,
             )
         except subprocess.TimeoutExpired:
-            return AdapterResult(returncode=-1, error="OpenCode trial timed out")
+            return AdapterResult(
+                returncode=-1,
+                error="OpenCode agent capability budget exhausted",
+                budget_exhausted=True,
+            )
         except Exception as error:
             return AdapterResult(returncode=-1, error=str(error))
 

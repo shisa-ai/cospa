@@ -841,6 +841,19 @@ def run_trial(
             manifest["timing"]["wall_clock_seconds"] = time.time() - start_time
             manifest["run_end_time"] = datetime.now(timezone.utc).isoformat()
 
+            # Workspace adapters own the full agent wall deadline. Reaching it
+            # is a capability-budget outcome, not retryable infrastructure,
+            # matching Harbor's AgentTimeoutError semantics above.
+            if getattr(result, "budget_exhausted", False):
+                manifest["exit_code"] = 124
+                manifest["budget_exhausted"] = True
+                manifest["error"] = (
+                    getattr(result, "error", None)
+                    or "Agent capability budget exhausted"
+                )
+                budget_exhausted = True
+                adapter_failed = True
+
             # Capture error if adapter reported one
             if hasattr(result, "error") and result.error:
                 manifest["error"] = result.error

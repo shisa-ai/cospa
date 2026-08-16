@@ -2631,3 +2631,22 @@ Append-only development log for the `cospa` repository.
   prompt equivalence.
 - Next: run the outcome-blind Ornith c=2 Pi/OpenCode × baseline/Superpowers
   pilot with matched budgets and sampling.
+
+## 2026-08-16 — Classify workspace agent deadlines as budget exhaustion
+
+- Context: the Ornith c=2 pilot's final two Pi-baseline tasks each reached the
+  suite's exact 1,800-second agent deadline. Generic adapters returned `-1`, so
+  the runner mislabeled both as retryable infrastructure and launched duplicate
+  episodes instead of preserving capability-budget outcomes.
+- Change: add explicit `budget_exhausted` signaling to every generic Pi,
+  Superpowers, Little Coder, and OpenCode adapter; normalize those deadlines to
+  exit 124 in the runner; skip benchmark verification; and suppress retries.
+- Evidence: both RED tests reproduced the real failure shape: Pi's subprocess
+  timeout exposed no budget signal, and the generic runner made three attempts.
+  Both are GREEN, OpenCode has a matching timeout test, 21 focused tests pass,
+  and the final full suite reports 429 passing tests.
+- Decision: an agent wall deadline has the same semantics in workspace-native
+  and Harbor suites. Transport and unexpected adapter exceptions remain
+  retryable infrastructure; historical pilot artifacts remain immutable.
+- Next: record the interrupted baseline-only pilot separately. Do not estimate
+  a Superpowers or cross-harness effect without matched treatment cells.

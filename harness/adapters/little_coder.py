@@ -25,6 +25,7 @@ class AdapterResult:
     returncode: int
     usage: Optional[object] = None
     error: Optional[str] = None
+    budget_exhausted: bool = False
 
 
 class LittleCoderAdapter:
@@ -84,6 +85,6 @@ class LittleCoderAdapter:
             return AdapterResult(returncode=result.returncode)
 
         except subprocess.TimeoutExpired:
-            return AdapterResult(returncode=-1)
+            return AdapterResult(returncode=-1, budget_exhausted=True)
         except Exception as e:
             return AdapterResult(returncode=-1, error=str(e))

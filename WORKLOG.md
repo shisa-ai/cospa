@@ -2484,6 +2484,34 @@ Append-only development log for the `cospa` repository.
 - Next: execute the matrix (~19h serial), generate per-row and combined
   one-sheets, and publish the campaign analysis (task #16).
 
+## 2026-08-16 — Add failure-audit script with capacity-streak detection
+
+- Context: trace review revealed that naive failure classification had
+  mislabeled codex usage-limit hits as context limits because the classifier
+  matched embedded task prose inside the shell command rather than the real
+  error surface; cascading capacity events also need explicit detection.
+- Change: add `scripts/audit-failures.py`. `classify_failure` reads the
+  manifest error field or the terminal stdout/stderr segment of grader output
+  — never the embedded command — and maps it onto a signature taxonomy
+  (budget_exhausted, verifier_timeout, compose_failure, usage_limit,
+  auth_forbidden, context_limit, connection_error, http_error, timeout_other,
+  adapter_error_other, incorrect). `audit_cell` adds trace evidence
+  (instant-death failures with ≤2 session entries) and flags runs of ≥3
+  consecutive same-class failures in end-time order as capacity events
+  distinct from scattered model-quality failures.
+- Evidence: RED tests failed before the script existed. GREEN covers the
+  noise-proof classifier (task prose containing 'usage limit' and 'context
+  length' inside the command no longer misclassifies), manifest-error
+  preference, per-cell taxonomy with trace counts, and a four-failure
+  usage-limit streak reported as one capacity event while a scattered
+  incorrect stays non-event. Full pytest reports 403 passes with only the
+  pre-existing `test_check_models.sh` fixture failure.
+- Decision: the audit is the authoritative failure view for task #16's
+  analysis; raw failure_class labels alone are not sufficient evidence.
+- Next: run the audit across every matrix root, correct contaminated cells
+  (spark PolyBench/FeatureBench usage-limit hits), and fold the corrected
+  taxonomy into the campaign report.
+
 ## 2026-08-16 — Define capability-oriented harness evaluation
 
 - Context: current BCB/PB vanilla-versus-devstack scores provide little stable

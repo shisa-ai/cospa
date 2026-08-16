@@ -29,7 +29,7 @@ selection, recovery behaviors) fits a small model's capabilities.
 BigCodeBench is a separate one-generation capability anchor, not a scaffold
 variant.
 
-Harness variants, same agent loop, same model:
+Harness/scaffold variants, same model and capability budgets:
 
 | Adapter | What it is |
 |---|---|
@@ -39,6 +39,11 @@ Harness variants, same agent loop, same model:
 | `pi_superpowers` | vanilla pi plus the benchmark-safe Superpowers skill subset |
 | `pi_devstack_superpowers` | devstack extensions plus the same benchmark-safe skills |
 | `little_coder_superpowers` | `little-coder` plus the same benchmark-safe skills |
+| `opencode_vanilla` | pinned OpenCode Build with only Pi's read/bash/edit/write tool classes |
+| `opencode_superpowers` | the controlled OpenCode baseline plus the identical pinned skill profile |
+
+The OpenCode arms currently run workspace-native suites only; they do not yet
+have distinct Harbor agents and therefore are not Terminal-Bench arms.
 
 ## Evaluation protocol
 
@@ -124,11 +129,11 @@ All Python code runs inside the `cospa` mamba environment
 
 Aider Polyglot adapters require Linux bubblewrap (`bwrap`) and socat. Each
 trial gets an empty-root namespace containing only its writable workdir,
-selected system/language runtimes, a private pi config for the selected model,
-disposable dependency/browser caches, and its own telemetry session. Public
-networking is disabled; a Unix-socket relay exposes only the selected model
-endpoint. Shared repositories, `vendor/`, `results/`, other home-directory
-state, and prior pi sessions are absent. Model-written code is graded in a
+selected system/language runtimes, a private adapter config for the selected
+model, disposable dependency/browser caches, and its own telemetry session.
+Public networking is disabled; a Unix-socket relay exposes only the selected
+model endpoint. Shared repositories, `vendor/`, `results/`, other home-directory
+state, and prior agent sessions are absent. Model-written code is graded in a
 second workdir-only namespace with no network access. The harness fails closed
 if it cannot construct either boundary.
 
@@ -414,6 +419,8 @@ re-running, partial runs compose by directory union. Every run records
 model, adapter, sampling params, model limits/pricing when available, env
 hash, timing, and token/cost usage in `manifest.json`. pi-backed runs also
 copy the raw response trace to `out/pi_session.jsonl` for audit/backfill.
+OpenCode runs retain its native JSON events in `out/session.log` and isolated
+trial state while deleting the credential-bearing runtime config after exit.
 Terminal-Bench agents first export container-side pi traces into Harbor job
 artifacts, then the runner/backfill copies those traces into the same
 `out/pi_session.jsonl` location.
@@ -436,9 +443,8 @@ post-cutover scores.
 
 ## Current Verified State
 
-- Python tests: `mamba run -n cospa python -m pytest -q` reports `299 passed,
-  2 failed`. The failures are the documented non-hermetic `check-models`
-  endpoint fixture and the PyYAML block-scalar newline assertion.
+- Python tests: `mamba run -n cospa python -m pytest -q` reports 426 passed.
+  `bash tests/scripts/run_all.sh` also passes all shell checks.
 - Focused BigCodeBench/lock tests report 34 passes; real offline verification
   passes all 15 gold tasks, rejects all 15 null tasks, and leaves no hidden
   dataset export in retained trial workdirs.
@@ -456,6 +462,10 @@ post-cutover scores.
 - Terminal-Bench Docker smokes: `local/ornith-1.0-35b` + `hello-world`
   passed through Harbor 0.16 with both `pi_vanilla` and the mounted,
   sanitized `pi_devstack` profile.
+- OpenCode 1.18.8 baseline/Superpowers qualification passes through the real
+  workspace sandbox and model-only relay with exact model-card sampling and
+  native JSONL usage/tool traces. A live Ornith request loaded the pinned TDD
+  skill through OpenCode's native skill tool and returned its Iron Law.
 - Devstack smoke artifact:
   `results/e2e-smoke-terminal-bench-devstack-profile-v5-20260716T034155Z/local%2Fornith-1.0-35b/pi_devstack/terminal_bench/hello-world/trial-1/`.
 - Aider smoke scores produced before 2026-08-12 are protocol-contaminated and

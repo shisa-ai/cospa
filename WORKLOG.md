@@ -2602,3 +2602,32 @@ Append-only development log for the `cospa` repository.
 - Decision: endpoint absence is now a fixture property rather than a host-state
   assumption.
 - Next: resume full validation of the OpenCode adapter unit.
+
+## 2026-08-16 — Add controlled OpenCode ablation arms
+
+- Context: the primary harness experiment needs Pi/OpenCode baseline and
+  identical-Superpowers cells without silently inheriting user config, extra
+  tools, auxiliary agents, or a different provider route.
+- Change: add pinned OpenCode 1.18.8 baseline/Superpowers adapters with only
+  read/bash/edit/write (plus native `skill` in the treatment), isolated XDG
+  state, ephemeral credential-bearing config, native JSONL usage/tool summaries,
+  explicit parser manifests, and fail-closed Harbor/reasoning checks. Extend the
+  sandbox with declared read-only/writable adapter mounts. Override OpenCode's
+  non-UUID `ses_...` headers with one canonical UUID per trial so codex-pool
+  accepts the existing Shisa host/port/path without rerouting.
+- Evidence: RED/GREEN tests cover registration distinctness, route preservation,
+  exact sampling and outbound tool schemas, pinned-only skill discovery,
+  session headers, no retained API key, JSONL usage/search/tool parsing, sandbox
+  state isolation, parser manifests, and Harbor rejection. The installed CLI
+  passed both arms through a real bubblewrap/model relay and fake endpoint. A
+  live authenticated Ornith treatment selected the native skill tool, loaded
+  `test-driven-development`, and returned its exact Iron Law in two requests.
+- Validation: `mamba run -n cospa python -m pytest -q` reports 426 passes;
+  `bash tests/scripts/run_all.sh` passes all shell checks; `git diff --check`
+  is clean.
+- Decision: use `opencode_vanilla` and `opencode_superpowers` only on
+  workspace-native suites until a distinct Harbor agent exists. Cross-harness
+  rows retain native prompts/tool descriptions and estimate harness fit, not
+  prompt equivalence.
+- Next: run the outcome-blind Ornith c=2 Pi/OpenCode × baseline/Superpowers
+  pilot with matched budgets and sampling.

@@ -152,6 +152,8 @@ def _sandbox_agent_command(
     relay_socket: Path | None,
     model_url: str | None,
     task_name: str | None = None,
+    readonly_paths: Sequence[str | os.PathLike[str]] = (),
+    writable_paths: Sequence[str | os.PathLike[str]] = (),
 ) -> list[str]:
     """Build a filesystem-allowlisted command with optional model access."""
     workdir = Path(workdir).resolve()
@@ -179,6 +181,37 @@ def _sandbox_agent_command(
                 "Hermetic sandbox requires a hostname or loopback model URL; "
                 f"got IP literal {endpoint.hostname}"
             )
+    extra_readonly = [Path(path).resolve() for path in readonly_paths]
+    extra_writable = [Path(path).resolve() for path in writable_paths]
+    for path in (*extra_readonly, *extra_writable):
+        if not path.exists():
+            raise ValueError(f"Declared sandbox path does not exist: {path}")
+    if any(not path.is_dir() for path in extra_writable):
+        raise ValueError("Writable sandbox paths must be directories")
+    protected_writable_roots = {
+        Path("/"),
+        Path("/bin"),
+        Path("/etc"),
+        Path("/lib"),
+        Path("/lib64"),
+        Path("/opt"),
+        Path("/sbin"),
+        Path("/usr"),
+    }
+    if any(path in protected_writable_roots for path in extra_writable):
+        raise ValueError("Refusing a writable mount over a system path")
+    for readonly in extra_readonly:
+        for writable in extra_writable:
+            if (
+                readonly == writable
+                or readonly in writable.parents
+                or writable in readonly.parents
+            ):
+                raise ValueError(
+                    f"Sandbox read-only and writable paths overlap: "
+                    f"{readonly}, {writable}"
+                )
+
     hosts_file = sandbox_root / "hosts"
     hosts_lines = ["127.0.0.1 localhost", "::1 localhost"]
     if endpoint and endpoint.hostname not in {
@@ -306,7 +339,15 @@ def _sandbox_agent_command(
 
     _append_dir_options(
         wrapped,
-        [Path("/run"), Path("/tmp"), Path("/mnt"), sandbox_parent, sandbox_cwd],
+        [
+            Path("/run"),
+            Path("/tmp"),
+            Path("/mnt"),
+            sandbox_parent,
+            sandbox_cwd,
+            *extra_readonly,
+            *extra_writable,
+        ],
     )
     wrapped.extend(
         [
@@ -320,6 +361,23 @@ def _sandbox_agent_command(
             "/run",
         ]
     )
+    # /tmp and /run were replaced by tmpfs above, so recreate any declared
+    # descendants there before applying the bind mounts. Other destinations
+    # remain from the allowlist directory setup.
+    for path in (*extra_readonly, *extra_writable):
+        for volatile_root in (Path("/tmp"), Path("/run")):
+            if path != volatile_root and volatile_root in path.parents:
+                relative = path.relative_to(volatile_root)
+                current = volatile_root
+                for part in relative.parts:
+                    current /= part
+                    wrapped.extend(["--dir", str(current)])
+                break
+    for path in extra_readonly:
+        wrapped.extend(["--ro-bind", str(path), str(path)])
+    for path in extra_writable:
+        wrapped.extend(["--bind", str(path), str(path)])
+
     if explicit_session_dir is not None and not (
         explicit_session_dir == workdir or workdir in explicit_session_dir.parents
     ):
@@ -513,6 +571,8 @@ def run_command(
     sandbox_name: str | None = None,
     sandbox_model_url: str | None = None,
     sandbox_model_access: bool = True,
+    sandbox_readonly_paths: Sequence[str | os.PathLike[str]] = (),
+    sandbox_writable_paths: Sequence[str | os.PathLike[str]] = (),
 ) -> subprocess.CompletedProcess:
     """Run a command in its own process group and clean up on timeout.
 
@@ -547,6 +607,8 @@ def run_command(
                 relay_socket if model_url else None,
                 model_url,
                 sandbox_name,
+                sandbox_readonly_paths,
+                sandbox_writable_paths,
             )
         except Exception:
             _stop_model_relay(relay)

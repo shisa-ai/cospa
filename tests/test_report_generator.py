@@ -365,3 +365,46 @@ def test_geomean_rate_prefers_continuous_score_over_anyhit_pass_rate():
     assert rate({"score_type": "binary_resolution", "pass_rate": 36.0}) == 0.36
     assert rate({"score_type": "binary_resolution", "pass_rate": 0.5}) == 0.5
     assert rate({"score_type": "binary_resolution"}) is None
+
+
+def test_geomean_smoothed_column_laplace():
+    """Smoothed geomean applies (passed+1)/(total+2) so zero components
+    rank instead of annihilating; strict column stays floored at 0."""
+    module = _generator()
+    rate = module["_smoothed_rate"]
+    assert abs(rate({"score_type": "binary_resolution", "passed_tasks": 0, "total_tasks": 12}) - 1/14) < 1e-9
+    assert abs(rate({"score_type": "binary_resolution", "passed_tasks": 9, "total_tasks": 25}) - 10/27) < 1e-9
+    # Continuous rows: rate itself, floored at the same Laplace floor.
+    r = rate({"score_type": "continuous_non_coding", "score": 9.7, "total_tasks": 12})
+    assert abs(r - 0.097) < 1e-9
+    r0 = rate({"score_type": "continuous_non_coding", "score": 0.0, "total_tasks": 12})
+    assert abs(r0 - 1/14) < 1e-9
+
+
+def test_geomean_table_includes_macro_and_micro_columns(tmp_path):
+    """Macro = arithmetic mean of per-suite rates; micro = pooled
+    passed/total across the group's rows."""
+    generate_report = _generator()["generate_report"]
+    model, adapter = "local/test-model", "pi_vanilla"
+
+    def cell(root: Path, suite: str, tasks: list[bool]):
+        base = root / encode_model_path(model) / adapter / suite
+        for i, passed in enumerate(tasks):
+            _write_trial(
+                base / encode_task_path(f"t/{suite}{i}") / "trial-1",
+                passed=passed,
+                task_id=f"t/{suite}{i}",
+            )
+
+    root = tmp_path / "run-main"
+    cell(root, "aider_polyglot", [True, False])                  # 1/2
+    cell(root, "featurebench_lite_pareto12", [True, False, False, False])  # 1/4
+
+    markdown = generate_report(
+        [root], tmp_path / "r.md", canonical_suite_size=lambda s: None
+    )
+    # macro = (0.5 + 0.25) / 2 = 37.5%; micro = 2 / 6 = 33.3%
+    import re
+    row = [l for l in markdown.splitlines() if l.startswith(f"| {model} | {adapter} | high |")]
+    assert row, "geomean row missing"
+    assert "37.5%" in row[0] and "33.3%" in row[0]

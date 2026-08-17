@@ -1,6 +1,6 @@
 # Cospa Run Report
 
-_Generated 2026-08-17T13:53:50+0900 · harness pi 0.84.2 (pi_vanilla, --no-extensions)_
+_Generated 2026-08-18T02:35:07+0900 · harness pi 0.84.2 (pi_vanilla, --no-extensions)_
 
 ## Summary
 
@@ -17,12 +17,12 @@ _Generated 2026-08-17T13:53:50+0900 · harness pi 0.84.2 (pi_vanilla, --no-exten
 
 ## Headline geomean
 
-Geometric mean of per-suite rates per model configuration, across primary complete cells only (partials excluded; continuous diagnostics contribute their rate; any 0% component floors the geomean at 0).
+Geometric mean of per-suite rates per model configuration, across primary complete cells only (partials excluded; continuous diagnostics contribute their rate; any 0% component floors the strict geomean at 0). The smoothed column applies Laplace (passed+1)/(total+2) so zero components rank instead of annihilating. Macro mean is the unweighted average of per-suite rates; micro pooled is total passed / total tasks (larger panels weigh more; SWE-Explore contributes its any-hit count).
 
-| Model | Adapter | Thinking | Cells | Geomean |
-| --- | --- | --- | ---: | ---: |
-| local/deepseek-v4-flash-0731 | bigcodebench_openai | not_applicable | 1 | 11.9% |
-| local/deepseek-v4-flash-0731 | pi_vanilla | high | 6 | 25.5% |
+| Model | Adapter | Thinking | Cells | Geomean | Geomean (smoothed) | Macro mean | Micro pooled |
+| --- | --- | --- | ---: | ---: | ---: | ---: | ---: |
+| local/deepseek-v4-flash-0731 | bigcodebench_openai | not_applicable | 1 | 11.9% | 12.4% | 11.9% | 11.9% |
+| local/deepseek-v4-flash-0731 | pi_vanilla | high | 6 | 25.5% | 26.9% | 29.6% | 35.8% |
 
 
 ## Speed & behavior

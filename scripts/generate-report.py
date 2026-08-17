@@ -141,6 +141,22 @@ def _geomean_rate(row: dict) -> float | None:
     return rate / 100.0 if rate > 1.0 else rate
 
 
+def _smoothed_rate(row: dict) -> float | None:
+    """Laplace-smoothed rate (passed+1)/(total+2) for ranking aggregates.
+
+    Zero components stop annihilating the geometric mean; continuous rows
+    keep their rate but are floored at the same Laplace floor.
+    """
+    total = row.get("total_tasks") or 0
+    if total <= 0:
+        return None
+    if row.get("score_type") == "continuous_non_coding":
+        base = _geomean_rate(row) or 0.0
+        return max(base, 1.0 / (total + 2))
+    passed = row.get("passed_tasks") or 0
+    return (passed + 1) / (total + 2)
+
+
 def _fmt_score(row: dict) -> str:
     if row.get("score_type") == "continuous_non_coding":
         return f"{row.get('score', 0.0):.1f}% {row.get('headline_metric', 'diag')}"
@@ -476,10 +492,15 @@ def generate_report(
                 "Geometric mean of per-suite rates per model configuration, "
                 "across primary complete cells only (partials excluded; "
                 "continuous diagnostics contribute their rate; any 0% "
-                "component floors the geomean at 0).",
+                "component floors the strict geomean at 0). The smoothed "
+                "column applies Laplace (passed+1)/(total+2) so zero "
+                "components rank instead of annihilating. Macro mean is the "
+                "unweighted average of per-suite rates; micro pooled is "
+                "total passed / total tasks (larger panels weigh more; "
+                "SWE-Explore contributes its any-hit count).",
                 "",
-                "| Model | Adapter | Thinking | Cells | Geomean |",
-                "| --- | --- | --- | ---: | ---: |",
+                "| Model | Adapter | Thinking | Cells | Geomean | Geomean (smoothed) | Macro mean | Micro pooled |",
+                "| --- | --- | --- | ---: | ---: | ---: | ---: | ---: |",
             ]
         )
         for key in sorted(geomean_groups):
@@ -496,9 +517,33 @@ def generate_report(
                 geomean = math.exp(
                     sum(math.log(rate) for rate in rates) / len(rates)
                 )
+            smoothed = [
+                _smoothed_rate(row)
+                for row in geomean_groups[key]
+            ]
+            smoothed = [s for s in smoothed if s is not None]
+            if smoothed:
+                smoothed_geomean = math.exp(
+                    sum(math.log(s) for s in smoothed) / len(smoothed)
+                )
+            else:
+                smoothed_geomean = 0.0
+            macro = sum(rates) / len(rates) if rates else 0.0
+            passed_sum = sum(
+                row.get("passed_tasks") or 0
+                for row in geomean_groups[key]
+                if row.get("total_tasks")
+            )
+            total_sum = sum(
+                row.get("total_tasks") or 0
+                for row in geomean_groups[key]
+                if row.get("total_tasks")
+            )
+            micro = passed_sum / total_sum if total_sum else 0.0
             lines.append(
                 f"| {key[0]} | {key[1]} | {key[2]} | {len(rates)} | "
-                f"{100.0 * geomean:.1f}% |"
+                f"{100.0 * geomean:.1f}% | {100.0 * smoothed_geomean:.1f}% | "
+                f"{100.0 * macro:.1f}% | {100.0 * micro:.1f}% |"
             )
         lines.append("")
 

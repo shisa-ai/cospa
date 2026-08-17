@@ -2790,3 +2790,17 @@ Append-only development log for the `cospa` repository.
   test_report_includes_headline_geomean_per_model_config,
   test_geomean_rate_prefers_continuous_score_over_anyhit_pass_rate; full
   suite 434 passed.
+
+## 2026-08-18 — Report aggregation: smoothed geomean, macro, micro columns
+
+- User questioned strict geomean (two 0% suites annihilate ornith to 0.0%).
+  Kept strict geomean as headline, added: Laplace-smoothed geomean
+  ((passed+1)/(total+2), continuous rows floored at the same floor), macro
+  mean (unweighted mean of per-suite rates), micro pooled (sum passed / sum
+  total; SWE-Explore contributes its any-hit count, footnoted).
+- Current numbers: DS4 25.5/26.9/29.6/35.8; qwen 25.1/26.2/25.5/30.1;
+  ornith 0.0/11.1/9.9/17.3 — ordering stable across aggregations, spreads
+  differ (micro lifts big-panel strengths).
+- Evidence: test_geomean_smoothed_column_laplace,
+  test_geomean_table_includes_macro_and_micro_columns; full suite 436
+  passed. All three row reports regenerated.

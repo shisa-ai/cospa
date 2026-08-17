@@ -2745,3 +2745,24 @@ Append-only development log for the `cospa` repository.
   `{incorrect: 8, connection_error: 1, budget_exhausted: 1}`. Report ledger
   updated to record the resolution.
 - Next: none required; report/ledger consumers now see the corrected classes.
+
+## 2026-08-17 — Dedup partial runs in one-sheet report
+
+- Context: user flagged reports/ds4-pareto-baseline-k1-and-stability32.md mixing
+  complete cells with stability-k3 subsets and repair re-runs (pareto60 shown
+  as 60- and 8-task rows; featurebench as 12/4/1; totals double-counted to
+  369 tasks / $4.50).
+- Change: generate-report.py now groups cells by (model, adapter, suite,
+  thinking), prefers the latest COMPLETE cell (canonical size via
+  harness.suites.get_task_ids, falling back to max observed when the registry
+  cannot resolve), falls back to the latest partial with a prominent
+  **PARTIAL n/expected** marker, and footnotes every excluded partial with its
+  results root. canonical_suite_size is injectable for host-independent tests.
+- Evidence: RED first — test_report_prefers_complete_run_over_newer_partial
+  and test_report_marks_partial_when_no_complete_run failed on the unfixed
+  script, pass after; full suite 431 passed. Real report regenerated over the
+  same nine roots: summary now 7 rows / 336 tasks / $2.45 with all six partial
+  duplicates (8/4/7/8/5/1 tasks) in the footnote section.
+- Note: runpy.run_path returns a namespace copy, so monkeypatching the
+  returned dict does not affect the function's globals; the DI parameter is
+  the test seam, not module-dict patching.

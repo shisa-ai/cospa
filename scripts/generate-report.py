@@ -24,6 +24,35 @@ if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
 from harness.path_utils import decode_task_path  # noqa: E402
+from harness.suites import load_suite  # noqa: E402
+
+
+def _canonical_suite_size(suite: str) -> int | None:
+    """Best-effort canonical task count for a suite (None if unknown).
+
+    Used to decide whether a cell is complete. Suites whose task list needs
+    absent vendor data resolve to None; callers then fall back to the largest
+    observed cell for that suite key.
+    """
+    try:
+        return len(load_suite(suite).get_task_ids())
+    except Exception:
+        return None
+
+
+def _cell_latest_mtime(results_dir: Path, row: dict) -> float:
+    """Newest verdict mtime under a cell directory (0 when unreadable)."""
+    cell_dir = _cell_dir(Path(results_dir), row)
+    latest = 0.0
+    try:
+        for verdict in cell_dir.rglob("verdict.json"):
+            try:
+                latest = max(latest, verdict.stat().st_mtime)
+            except OSError:
+                continue
+    except OSError:
+        pass
+    return latest
 
 
 def _load_viewer():
@@ -290,8 +319,17 @@ def _pi_version() -> str:
     return "unknown"
 
 
-def generate_report(results_dirs: list[Path], output: Path) -> str:
-    """Render the one-sheet report and write it to ``output``."""
+def generate_report(
+    results_dirs: list[Path],
+    output: Path,
+    canonical_suite_size=None,
+) -> str:
+    """Render the one-sheet report and write it to ``output``.
+
+    ``canonical_suite_size`` overrides the default suite-size lookup (a
+    ``suite_name -> expected task count | None`` callable); used by tests.
+    """
+    size_of = canonical_suite_size or _canonical_suite_size
     viewer = _load_viewer()
     output = Path(output)
     report_dir = output.parent
@@ -304,6 +342,41 @@ def generate_report(results_dirs: list[Path], output: Path) -> str:
         handler = viewer.ScoreHandler.__new__(viewer.ScoreHandler)
         rows = handler.get_scores(include_smoke=True)
         all_rows.extend((results_dir, row) for row in rows)
+
+    # Deduplicate suite keys across roots: prefer the latest COMPLETE cell;
+    # only when no complete cell exists fall back to the latest partial,
+    # prominently marked. Excluded partials are footnoted, never silent.
+    groups: dict[tuple, list[tuple[Path, dict]]] = {}
+    for entry in all_rows:
+        row = entry[1]
+        key = (
+            row["model"],
+            row["adapter"],
+            row["suite"],
+            row.get("thinking", "default"),
+        )
+        groups.setdefault(key, []).append(entry)
+
+    primary: list[tuple[Path, dict]] = []
+    excluded: list[tuple[Path, dict]] = []
+    for key, entries in groups.items():
+        suite = key[2]
+        canonical = size_of(suite)
+        observed = [e[1].get("total_tasks", 0) for e in entries] or [0]
+        expected = canonical if canonical else max(observed)
+
+        def _is_complete(entry: tuple[Path, dict]) -> bool:
+            return expected > 0 and entry[1].get("total_tasks", 0) >= expected
+
+        candidates = [e for e in entries if _is_complete(e)] or entries
+        chosen = max(candidates, key=lambda e: _cell_latest_mtime(e[0], e[1]))
+        if not _is_complete(chosen) and expected > 0:
+            chosen[1]["_partial_marker"] = (
+                f"**PARTIAL {chosen[1].get('total_tasks', 0)}/{expected}**"
+            )
+        primary.append(chosen)
+        excluded.extend(e for e in entries if e is not chosen)
+    all_rows = primary
 
     now = datetime.now().astimezone()
     lines = [
@@ -339,13 +412,18 @@ def generate_report(results_dirs: list[Path], output: Path) -> str:
             any_cost = True
         lines.append(
             "| {suite} | {model} | {adapter} | {thinking} | {tasks} | "
-            "{score} | {wall} | {uncached} | {cached} | {output} | {cost} |".format(
+            "{score}{partial} | {wall} | {uncached} | {cached} | {output} | {cost} |".format(
                 suite=row["suite"],
                 model=row["model"],
                 adapter=row["adapter"],
                 thinking=row.get("thinking", "default"),
                 tasks=row.get("total_tasks", 0),
                 score=_fmt_score(row),
+                partial=(
+                    " " + row["_partial_marker"]
+                    if row.get("_partial_marker")
+                    else ""
+                ),
                 wall=_fmt_duration(row.get("total_wall_clock_seconds")),
                 uncached=_fmt_tokens(row.get("prompt_tokens")),
                 cached=_fmt_tokens(row.get("cached_tokens")),
@@ -393,6 +471,30 @@ def generate_report(results_dirs: list[Path], output: Path) -> str:
                 btrial=behavior_trials or "-",
             )
         )
+    if excluded:
+        lines.extend(
+            [
+                "## Excluded partial cells",
+                "",
+                "Duplicate suite keys where a complete cell existed; shown for "
+                "provenance, excluded from all totals above.",
+                "",
+                "| Suite | Model | Thinking | Tasks | Results root |",
+                "| --- | --- | --- | ---: | --- |",
+            ]
+        )
+        for results_dir, row in excluded:
+            lines.append(
+                "| {suite} | {model} | {thinking} | {tasks} | `{root}` |".format(
+                    suite=row["suite"],
+                    model=row["model"],
+                    thinking=row.get("thinking", "default"),
+                    tasks=row.get("total_tasks", 0),
+                    root=results_dir,
+                )
+            )
+        lines.append("")
+
     lines.extend(["", "## Per-cell detail", ""])
 
     for results_dir, row in all_rows:

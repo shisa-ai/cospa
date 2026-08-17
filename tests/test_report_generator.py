@@ -240,3 +240,81 @@ def test_report_includes_campaign_elapsed_and_cost(tmp_path):
     assert "1.0M" in markdown or "1,000,000" in markdown  # uncached
     assert "200K" in markdown or "200,000" in markdown  # output
     assert "$" in markdown  # cost column rendered
+
+
+def _build_single_task_tree(
+    results_dir: Path,
+    *,
+    task_id: str,
+    passed: bool,
+    newer: bool = False,
+) -> None:
+    base = (
+        results_dir
+        / encode_model_path("local/test-model")
+        / "pi_vanilla"
+        / "aider_polyglot"
+    )
+    trial = base / encode_task_path(task_id) / "trial-1"
+    _write_trial(trial, passed=passed, task_id=task_id)
+    if newer:
+        import os
+        stamp = 1787000000.0  # newer than _build_tree defaults
+        for p in trial.rglob("*"):
+            os.utime(p, (stamp, stamp))
+
+
+def test_report_prefers_complete_run_over_newer_partial(tmp_path):
+    """Duplicate suite keys: latest COMPLETE cell wins; partials go to a
+    footnote instead of polluting the summary."""
+    module = _generator()
+    generate_report = module["generate_report"]
+    # Host-independent: force the max-observed heuristic (no canonical size).
+
+    complete_root = tmp_path / "run-complete"
+    _build_tree(complete_root)  # 2 tasks: hello, world
+    import os
+    old = 1786000000.0
+    for p in complete_root.rglob("verdict.json"):
+        os.utime(p, (old, old))
+
+    partial_root = tmp_path / "run-partial"
+    _build_single_task_tree(partial_root, task_id="python/hello", passed=True, newer=True)
+
+    output = tmp_path / "reports" / "one-sheet.md"
+    markdown = generate_report(
+        [complete_root, partial_root], output, canonical_suite_size=lambda s: None
+    )
+
+    # Exactly one summary data row + one speed row for the suite (footnote
+    # section may legitimately mention the excluded partial as well).
+    pre_footnote = markdown.split("## Excluded partial cells")[0]
+    assert pre_footnote.count("| aider_polyglot |") == 2
+    # The complete cell's score is shown (hello mixed trials + world fail ->
+    # 0/2 by viewer aggregation), not the partial's 1/1.
+    assert "0/2 (0.0%)" in markdown
+    # The partial run is relegated to an explicit footnote, not silently lost.
+    assert "Excluded partial cells" in markdown
+    assert "run-partial" in markdown
+    # Totals count each task once (no double counting across roots).
+    assert "**2**" in markdown  # All-cells task total
+
+
+def test_report_marks_partial_when_no_complete_run(tmp_path):
+    """No complete cell exists for a key: latest partial is shown but marked
+    PARTIAL with observed/expected counts."""
+    module = _generator()
+    generate_report = module["generate_report"]
+
+    partial_root = tmp_path / "run-only-partial"
+    _build_single_task_tree(partial_root, task_id="python/hello", passed=True)
+
+    # Canonical size known (2 tasks) -> 1 observed is partial.
+    def fake_size(suite: str):
+        return 2 if suite == "aider_polyglot" else None
+    output = tmp_path / "reports" / "one-sheet.md"
+    markdown = generate_report(
+        [partial_root], output, canonical_suite_size=fake_size
+    )
+
+    assert "**PARTIAL 1/2**" in markdown

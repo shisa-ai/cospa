@@ -318,3 +318,50 @@ def test_report_marks_partial_when_no_complete_run(tmp_path):
     )
 
     assert "**PARTIAL 1/2**" in markdown
+
+
+def test_report_includes_headline_geomean_per_model_config(tmp_path):
+    """Geomean of per-suite rates per (model, adapter, thinking); partial
+    cells excluded; continuous diagnostic rates included."""
+    generate_report = _generator()["generate_report"]
+
+    model, adapter = "local/test-model", "pi_vanilla"
+
+    def cell(root: Path, suite: str, tasks: list[bool]):
+        base = root / encode_model_path(model) / adapter / suite
+        for i, passed in enumerate(tasks):
+            _write_trial(
+                base / encode_task_path(f"t/{suite}{i}") / "trial-1",
+                passed=passed,
+                task_id=f"t/{suite}{i}",
+            )
+
+    root = tmp_path / "run-main"
+    cell(root, "aider_polyglot", [True, False])    # 1/2 -> 0.5
+    cell(root, "featurebench_lite_pareto12", [True, False, False, False])  # 1/4 -> 0.25
+
+    partial = tmp_path / "run-partial-aider"
+    cell(partial, "aider_polyglot", [True])  # newer partial duplicate; excluded
+
+    output = tmp_path / "reports" / "one-sheet.md"
+    markdown = generate_report(
+        [root, partial], output, canonical_suite_size=lambda s: None
+    )
+
+    assert "## Headline geomean" in markdown
+    # sqrt(0.5 * 0.25) = 0.35355 -> 35.4%
+    assert "35.4%" in markdown
+    # Geomean covers 2 cells (partial suite_a duplicate excluded).
+    assert "| local/test-model | pi_vanilla | high | 2 | 35.4% |" in markdown
+
+
+def test_geomean_rate_prefers_continuous_score_over_anyhit_pass_rate():
+    """WCC-style rows contribute their headline score, not the inflated
+    any-hit pass rate; 0-100 values normalize; binary rows use pass_rate."""
+    module = _generator()
+    rate = module["_geomean_rate"]
+    cont = rate({"score_type": "continuous_non_coding", "score": 9.7, "pass_rate": 83.3})
+    assert cont is not None and abs(cont - 0.097) < 1e-9
+    assert rate({"score_type": "binary_resolution", "pass_rate": 36.0}) == 0.36
+    assert rate({"score_type": "binary_resolution", "pass_rate": 0.5}) == 0.5
+    assert rate({"score_type": "binary_resolution"}) is None

@@ -2766,3 +2766,27 @@ Append-only development log for the `cospa` repository.
 - Note: runpy.run_path returns a namespace copy, so monkeypatching the
   returned dict does not affect the function's globals; the DI parameter is
   the test seam, not module-dict patching.
+
+## 2026-08-17 — Viewer default ordering, results archive, report geomean
+
+- Viewer: ./view (and API) now defaults to sorting by model, adapter,
+  thinking (effort ladder: unspecified, off, low, medium, high, xhigh),
+  suite. sort_scores(None) applies DEFAULT_SORT_BY; explicit () stays natural.
+- Results hygiene: archived 7 superseded test roots out of results/runs to
+  archive/results-20260817/ (ds4 terminal-pilot8 v1-v3, ornith pilot15 2x2,
+  qwen health-generate x2, test/model-run-a). All campaign-cited evidence
+  kept in place. ./view output correspondingly shrinks to real cells.
+- Report: new "Headline geomean" section — geometric mean of per-suite rates
+  per (model, adapter, thinking) over primary complete cells. Continuous
+  diagnostics (SWE-Explore WCC) contribute their headline score, NOT the
+  any-hit pass rate (which inflated the first cut: DS4 showed 36.5% before
+  the fix, 25.5% after; qwen 33.2% -> 25.1%). Partials excluded; any 0%
+  component floors the group at 0.
+- Also generated the interim qwen row one-sheet (reports/qwen38-vanilla-high-
+  matrix.md; 7 panels, featurebench 3/12 with fresh no-cache scan). Noted:
+  ./view CLI reads cached scores (showed qwen featurebench 1/12 vs 3/12 on
+  disk); server path uses DEFAULT_USE_CACHE=False.
+- Evidence: tests test_sort_scores_defaults_to_model_adapter_thinking_suite,
+  test_report_includes_headline_geomean_per_model_config,
+  test_geomean_rate_prefers_continuous_score_over_anyhit_pass_rate; full
+  suite 434 passed.

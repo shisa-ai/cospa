@@ -1848,3 +1848,50 @@ def test_view_cli_accepts_results_dir_before_subcommand():
     assert result.returncode == 0, result.stderr
     assert model_id in result.stdout
     assert "50.0%" in result.stdout
+
+
+def test_sort_scores_defaults_to_model_adapter_thinking_suite():
+    """No explicit sort: rows order by model, adapter, thinking ladder, suite."""
+    import importlib.util
+
+    server_path = PROJECT_ROOT / "view-scores" / "server.py"
+    spec = importlib.util.spec_from_file_location(
+        "view_scores_server_default_sort_test", server_path
+    )
+    server_mod = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(server_mod)
+
+    def row(model, adapter, thinking, suite):
+        return {
+            "model": model,
+            "adapter": adapter,
+            "thinking": thinking,
+            "suite": suite,
+            "provider": "p",
+        }
+
+    rows = [
+        row("m", "pi_vanilla", "xhigh", "a"),
+        row("m", "pi_vanilla", "off", "z"),
+        row("m", "pi_vanilla", "high", "a"),
+        row("m", "pi_vanilla", "default", "a"),
+        row("m", "pi_devstack", "xhigh", "a"),
+        row("a", "pi_vanilla", "off", "a"),
+        row("m", "pi_vanilla", "low", "a"),
+        row("m", "pi_vanilla", "off", "b"),
+        row("m", "pi_vanilla", "medium", "a"),
+    ]
+
+    ordered = server_mod.sort_scores(rows, None)
+    got = [(r["model"], r["adapter"], r["thinking"], r["suite"]) for r in ordered]
+    assert got == [
+        ("a", "pi_vanilla", "off", "a"),
+        ("m", "pi_devstack", "xhigh", "a"),
+        ("m", "pi_vanilla", "default", "a"),
+        ("m", "pi_vanilla", "off", "b"),
+        ("m", "pi_vanilla", "off", "z"),
+        ("m", "pi_vanilla", "low", "a"),
+        ("m", "pi_vanilla", "medium", "a"),
+        ("m", "pi_vanilla", "high", "a"),
+        ("m", "pi_vanilla", "xhigh", "a"),
+    ]

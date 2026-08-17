@@ -1,6 +1,6 @@
 # Cospa Run Report
 
-_Generated 2026-08-17T13:34:03+0900 · harness pi 0.84.2 (pi_vanilla, --no-extensions)_
+_Generated 2026-08-17T13:53:50+0900 · harness pi 0.84.2 (pi_vanilla, --no-extensions)_
 
 ## Summary
 
@@ -14,6 +14,16 @@ _Generated 2026-08-17T13:34:03+0900 · harness pi 0.84.2 (pi_vanilla, --no-exten
 | terminal_bench_core_pareto20 | local/deepseek-v4-flash-0731 | pi_vanilla | high | 20 | 11/20 (55.0%) | 1h25m | 187K | 3.7M | 140K | $0.0758 |
 | swe_explore_verified12 | local/deepseek-v4-flash-0731 | pi_vanilla | high | 12 | 9.7% weighted_core_coverage | 26m26s | 157K | 1.8M | 58K | $0.0432 |
 | **All cells** | | | | **336** | — | **19h16m** | **6.9M** | **229.3M** | **3.0M** | **$2.45** |
+
+## Headline geomean
+
+Geometric mean of per-suite rates per model configuration, across primary complete cells only (partials excluded; continuous diagnostics contribute their rate; any 0% component floors the geomean at 0).
+
+| Model | Adapter | Thinking | Cells | Geomean |
+| --- | --- | --- | ---: | ---: |
+| local/deepseek-v4-flash-0731 | bigcodebench_openai | not_applicable | 1 | 11.9% |
+| local/deepseek-v4-flash-0731 | pi_vanilla | high | 6 | 25.5% |
+
 
 ## Speed & behavior
 

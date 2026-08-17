@@ -30,7 +30,7 @@ ANSI_RE = re.compile(r"\033\[[0-9;]*m")
 DEFAULT_INCLUDE_SMOKE = False
 DEFAULT_FILTERS: tuple[str, ...] = ()
 DEFAULT_EXCLUDES: tuple[str, ...] = ()
-DEFAULT_SORT_BY: tuple[str, ...] = ()
+DEFAULT_SORT_BY: tuple[str, ...] = ("model", "adapter", "thinking", "suite")
 DEFAULT_USE_CACHE = True
 DEFAULT_MODELS_CONFIG_PATH = PROJECT_ROOT / "configs" / "models.yaml"
 DEFAULT_PRICING_PROFILE = os.environ.get("CODING_EVAL_PRICING_PROFILE") or None
@@ -286,6 +286,9 @@ def _parse_sort_spec(spec: str) -> tuple[str, str]:
     return field_name, direction or SORT_DEFAULT_DIRECTIONS.get(field_name, "asc")
 
 
+_THINKING_LADDER = {"off": 0, "low": 1, "medium": 2, "high": 3, "xhigh": 4}
+
+
 def _sort_component(row: dict, field: str, direction: str) -> tuple:
     value = row.get(field)
     if value is None:
@@ -296,6 +299,9 @@ def _sort_component(row: dict, field: str, direction: str) -> tuple:
             amount = -amount
         return (0, 0, amount)
     text = str(value).lower()
+    if field == "thinking":
+        # Effort ladder: unspecified values first, then off -> xhigh.
+        return (0, 1, (_THINKING_LADDER.get(text, -1), text))
     if direction == "desc":
         return (0, 1, tuple(-ord(char) for char in text))
     return (0, 1, text)
@@ -308,8 +314,12 @@ def sort_scores(
     """Return scores sorted by terminal/table aliases.
 
     Missing values sort last. Multiple comma-separated specs are supported,
-    e.g. ``pass,cost`` sorts by score first and total cost second.
+    e.g. ``pass,cost`` sorts by score first and total cost second. A ``None``
+    sort applies the default (model, adapter, thinking ladder, suite); an
+    empty spec list leaves rows in natural order.
     """
+    if sort_by is None:
+        sort_by = DEFAULT_SORT_BY
     specs = [_parse_sort_spec(spec) for spec in _split_sort_specs(sort_by)]
     if not specs:
         return list(scores)

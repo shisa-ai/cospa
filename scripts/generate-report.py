@@ -17,6 +17,7 @@ import sys
 from datetime import datetime
 from pathlib import Path
 from typing import Any
+import math
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -124,6 +125,20 @@ def _fmt_count(value: float | None) -> str:
     if count <= 0:
         return "-"
     return f"{count:.1f}"
+
+
+def _geomean_rate(row: dict) -> float | None:
+    """Extract a 0-1 rate for geomean aggregation from a score row.
+
+    Continuous diagnostics (e.g. SWE-Explore WCC) contribute their headline
+    ``score``; their ``pass_rate`` is an any-hit binary rate that would
+    inflate the aggregate. Values on a 0-100 scale are normalized.
+    """
+    value = row.get("score") if row.get("score_type") == "continuous_non_coding" else row.get("pass_rate")
+    if value is None:
+        return None
+    rate = float(value)
+    return rate / 100.0 if rate > 1.0 else rate
 
 
 def _fmt_score(row: dict) -> str:
@@ -443,6 +458,50 @@ def generate_report(
                 cost=_fmt_cost(totals["cost"]) if any_cost else "-",
             )
         )
+    # Headline geomean per model configuration (the "actual score").
+    import math
+
+    geomean_groups: dict[tuple, list[dict]] = {}
+    for _results_dir, row in all_rows:
+        if row.get("_partial_marker"):
+            continue
+        key = (row["model"], row["adapter"], row.get("thinking", "default"))
+        geomean_groups.setdefault(key, []).append(row)
+    if geomean_groups:
+        lines.extend(
+            [
+                "",
+                "## Headline geomean",
+                "",
+                "Geometric mean of per-suite rates per model configuration, "
+                "across primary complete cells only (partials excluded; "
+                "continuous diagnostics contribute their rate; any 0% "
+                "component floors the geomean at 0).",
+                "",
+                "| Model | Adapter | Thinking | Cells | Geomean |",
+                "| --- | --- | --- | ---: | ---: |",
+            ]
+        )
+        for key in sorted(geomean_groups):
+            rates: list[float] = []
+            for row in geomean_groups[key]:
+                rate = _geomean_rate(row)
+                if rate is not None:
+                    rates.append(rate)
+            if not rates:
+                continue
+            if any(rate <= 0.0 for rate in rates):
+                geomean = 0.0
+            else:
+                geomean = math.exp(
+                    sum(math.log(rate) for rate in rates) / len(rates)
+                )
+            lines.append(
+                f"| {key[0]} | {key[1]} | {key[2]} | {len(rates)} | "
+                f"{100.0 * geomean:.1f}% |"
+            )
+        lines.append("")
+
     lines.extend(["", "## Speed & behavior", ""])
     lines.append(
         "| Suite | Model | Thinking | Tasks | Task wall | Avg/task | Turns | "

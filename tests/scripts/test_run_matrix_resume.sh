@@ -19,6 +19,7 @@ trap 'rm -rf "$TMP"' EXIT
 PROJ="$TMP/proj"
 mkdir -p "$PROJ/scripts" "$PROJ/configs" "$PROJ/harness"
 cp "$PROJECT_DIR/scripts/run-matrix.sh" "$PROJ/scripts/run-matrix.sh"
+cp "$PROJECT_DIR/scripts/run-id-lib.sh" "$PROJ/scripts/run-id-lib.sh"
 cat > "$PROJ/configs/models.yaml" <<'EOF'
 models:
   - id: fake/model-one

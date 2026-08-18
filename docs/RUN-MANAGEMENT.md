@@ -192,6 +192,64 @@ file — coordinate), the retry/resume path, and orchestration.
 
 ---
 
+## 4.5 Run-id / results-directory naming convention
+
+Every run lands in `results/runs/<run-id>/`. To keep runs normalized and
+comparable, use one canonical run-id form (the de-facto pattern already used
+by existing run dirs, formalized here):
+
+```
+<model>-<suite>[-<adapter>]-<effort>-c<concurrency>-<YYYYMMDD>T<HHMM>Z
+```
+
+Examples (matching existing dirs):
+
+```
+qwen38-fp8block-bcb-pareto60-high-c8-20260818T0415Z
+qwen38-fp8block-matrix-high-c8-20260818        # multi-suite matrix campaign
+qwen38-bcb-pareto60-effort-low-c8-20260818      # older naming (kept for legacy)
+ds4-bcb-pareto60-pi_devstack-xhigh-c2-20260815T1830Z
+```
+
+### Field rules
+
+| Field | Rule |
+| --- | --- |
+| `<model>` | Short slug, lower-case, no provider prefix. Include the quant/label marker for variant runs: `qwen38-fp8block` vs `qwen38`. |
+| `<suite>` | Suite slug, or `matrix` when one run-id spans multiple suites. |
+| `[-<adapter>]` | Omit for the default `pi_vanilla`; include otherwise (`pi_devstack`, `little_coder`). |
+| `-<effort>` | Thinking tier: `off`, `low`, `medium`, `high`, `xhigh`, `max`. Omit when unset (model default). |
+| `-c<concurrency>` | The `--k` / `--concurrency` value, always present. |
+| `-<YYYYMMDD>` | UTC date. |
+| `T<HHMM>Z` | Append only when disambiguating same-day runs (a second run of the same shape). |
+| `-<note>` | Optional trailing free-form suffix (`-sympy-repair`, `-corrected`). |
+
+### Slug catalogs (source of truth: `scripts/run-id-lib.sh`)
+
+**Model slugs:** `qwen38`, `qwen38-fp8block`, `ds4`, `ornith35`, `gpt53spark`,
+`gpt55`, `gpt56-luna`, `gpt56-terra`, `gpt56-sol`, `glm52`, `glm53`,
+`minimax-m3`, `nemotron`, `qwen36`, `thinkingcap-qwen36`, `bonsai`.
+Unknown ids fall back to a derived slug (provider stripped, lower-cased,
+non-alphanumerics `->` `-`).
+
+**Suite slugs:** `aider-polyglot`, `terminal`, `terminal-pilot8`,
+`terminal-pareto20`, `swe-atlas-pilot12`, `bcb-instruct`, `bcb-instruct-hermetic143`,
+`bcb-agentic`, `bcb-agentic-hermetic143`, `bcb-pareto60`, `polybench`,
+`polybench-balanced64`, `multiswe-hermetic25`, `featurebench-pilot6`,
+`featurebench-pareto12`, `swe-explore-verified12`.
+
+### Auto vs explicit
+
+- **Explicit `--run-id`** is the reproducible, resumable form (P4 key) and
+  should be fully conventional. This is how all existing run dirs were named.
+- **Auto-generated** ids (no `--run-id`) use the conventional prefix plus a
+  unique `-<pid>` so a no-id invocation always runs fresh and never
+  accidentally resumes a same-shape run from the same minute.
+- `scripts/run-id-lib.sh` provides `make_run_id <model> <suite> <thinking> <k> <adapter...>`
+  for ad-hoc naming (`source scripts/run-id-lib.sh && make_run_id …`).
+
+---
+
 ## 5. Non-goals
 
 - Not a replacement for a proper job scheduler; concurrency is still

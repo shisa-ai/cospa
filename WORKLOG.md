@@ -2974,3 +2974,22 @@ Append-only development log for the `cospa` repository.
   test_pi_model_arg_resolves_alias_through_env,
   test_harbor_model_arg_resolves_wire_id,
   test_wire_model_ref_resolves_aliases; full suite 478 passed.
+
+## 2026-08-18 — Add canonical run-id naming convention (RUN-MANAGEMENT)
+
+- Context: run dirs followed an informal `<model>-<suite>-...-c<n>-<date>`
+  pattern, but nothing formalized it and run-matrix.sh's auto run-id was a
+  raw timestamp (unused by any real run). Asked to normalize run naming.
+- Added `scripts/run-id-lib.sh` (slugify fallback + model/suite slug catalogs
+  matching existing dirs + `make_run_id`) emitting
+  `<model>-<suite>[-<adapter>]-<effort>-c<K>-<YYYYMMDD>T<HHMM>Z`; documented
+  the convention in `docs/RUN-MANAGEMENT.md` §4.5. run-matrix.sh now sources
+  the lib and generates a conventional-prefixed run-id when `--run-id` is
+  omitted; multi-model cells fall back to timestamp+pid; explicit ids unchanged.
+- Decision: auto ids append `-<pid>` so a no-run-id invocation always runs
+  fresh — a deterministic conventional id would collide with P4 resume state
+  (caught by the pre-existing test_run_matrix.sh --problems case) and
+  silently skip done cells.
+- Evidence: `tests/scripts/test_run_id_convention.sh` (7 checks); full shell
+  suite green; pytest 480 passed.
+- Next: apply the convention to the fp8-block effort-ladder run-ids.

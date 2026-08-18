@@ -7,6 +7,11 @@
 # Example:
 #   bash scripts/run-matrix.sh --models local/ornith-1.0-35b --adapters pi_vanilla --k 1 --problems 5 --thinking high
 #
+# Run-id naming (docs/RUN-MANAGEMENT.md): pass --run-id in the canonical
+#   <model>-<suite>[-<adapter>]-<effort>-c<concurrency>-<YYYYMMDD>T<HHMM>Z
+# form (e.g. qwen38-fp8block-bcb-pareto60-high-c8-20260818T0415Z). When
+# omitted, a conventional-prefixed id plus a unique pid is generated.
+#
 # Resume/checkpoint (RUN-MANAGEMENT P4): a per-run state file records each
 # cell as pending/running/done/paused. Re-invoking with the SAME --run-id
 # skips cells already done or paused (e.g. paused by the circuit breaker)
@@ -18,12 +23,15 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_DIR="$(dirname "$SCRIPT_DIR")"
 
+# Canonical run-id construction (docs/RUN-MANAGEMENT.md naming convention).
+source "$SCRIPT_DIR/run-id-lib.sh"
+
 # Defaults
 K=1
 PROBLEMS=""
 SUITE="aider_polyglot"
 MODELS_FILE="$PROJECT_DIR/configs/models.yaml"
-RUN_ID="$(date -u +%Y%m%dT%H%M%S.%NZ)-$$"
+RUN_ID=""
 THINKING=""
 FORCE=0
 
@@ -153,9 +161,6 @@ if [[ ${#ADAPTERS[@]} -eq 0 ]]; then
     ADAPTERS=("pi_vanilla" "pi_devstack" "little_coder")
 fi
 
-# Resolve the per-run state file after --run-id is finalized.
-STATE_FILE="$PROJECT_DIR/results/runs/.matrix-${RUN_ID}.json"
-
 # Load models from file if not specified via --models
 if [[ ${#MODELS[@]} -eq 0 ]]; then
     if [[ -f "$MODELS_FILE" ]]; then
@@ -165,6 +170,23 @@ if [[ ${#MODELS[@]} -eq 0 ]]; then
         exit 1
     fi
 fi
+
+# Generate a conventional run-id (docs/RUN-MANAGEMENT.md) when none was
+# passed. Single-model cells get <model>-<suite>[-<adapter>]-<effort>-c<K>-<date>;
+# multi-model matrices fall back to a unique timestamp id rather than naming
+# one model. Explicit --run-id is always honored (and required to resume).
+if [[ -z "$RUN_ID" ]]; then
+    if [[ ${#MODELS[@]} -eq 1 ]]; then
+        # Conventional prefix + pid: unique so a no-run-id invocation always
+        # runs fresh (explicit --run-id is what makes a run resumable).
+        RUN_ID="$(make_run_id "${MODELS[0]}" "$SUITE" "$THINKING" "$K" "${ADAPTERS[@]}")-$$"
+    else
+        RUN_ID="$(date -u +%Y%m%dT%H%M%S.%NZ)-$$"
+    fi
+fi
+
+# Resolve the per-run state file after --run-id is finalized.
+STATE_FILE="$PROJECT_DIR/results/runs/.matrix-${RUN_ID}.json"
 
 echo "── Running matrix ──"
 echo "  Models: ${MODELS[*]}"

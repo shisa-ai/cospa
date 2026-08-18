@@ -2,10 +2,16 @@
 # run-matrix.sh — Run the full eval matrix.
 #
 # Usage:
-#   bash scripts/run-matrix.sh [--models ...] [--adapters ...] [--k 3] [--problems 225] [--run-id ...] [--thinking high]
+#   bash scripts/run-matrix.sh [--models ...] [--adapters ...] [--k 3] [--problems 225] [--run-id ...] [--thinking high] [--force]
 #
 # Example:
 #   bash scripts/run-matrix.sh --models local/ornith-1.0-35b --adapters pi_vanilla --k 1 --problems 5 --thinking high
+#
+# Resume/checkpoint (RUN-MANAGEMENT P4): a per-run state file records each
+# cell as pending/running/done/paused. Re-invoking with the SAME --run-id
+# skips cells already done or paused (e.g. paused by the circuit breaker)
+# so no budget is wasted; --force ignores the state and re-runs everything.
+# The runner's own per-trial resume covers a cell interrupted mid-run.
 
 set -euo pipefail
 
@@ -19,6 +25,48 @@ SUITE="aider_polyglot"
 MODELS_FILE="$PROJECT_DIR/configs/models.yaml"
 RUN_ID="$(date -u +%Y%m%dT%H%M%S.%NZ)-$$"
 THINKING=""
+FORCE=0
+
+# Cell state persistence: flat JSON keyed by "model|adapter" in a per-run
+# state file. Helper bodies use plain python (not mamba) so they run in the
+# script's shell test harness too.
+_cell_state() {
+    # $1=model $2=adapter -> prints "pending"/"running"/"done"/"paused"
+    python3 - "$STATE_FILE" "$1" "$2" <<'PY'
+import json, os, sys
+path = sys.argv[1]
+if not os.path.exists(path):
+    sys.stdout.write("pending")
+    sys.exit(0)
+try:
+    data = json.load(open(path))
+except Exception:
+    sys.stdout.write("pending")
+    sys.exit(0)
+sys.stdout.write(data.get("cells", {}).get(f"{sys.argv[2]}|{sys.argv[3]}", "pending"))
+PY
+}
+
+_set_cell_state() {
+    # $1=state $2=model $3=adapter
+    mkdir -p "$PROJECT_DIR/results/runs"
+    python3 - "$STATE_FILE" "$1" "$2" "$3" <<'PY'
+import json, os, sys
+path, state, model, adapter = sys.argv[1], sys.argv[2], sys.argv[3], sys.argv[4]
+data = {}
+if os.path.exists(path):
+    try:
+        data = json.load(open(path))
+    except Exception:
+        data = {}
+data.setdefault("cells", {})[f"{model}|{adapter}"] = state
+tmp = path + ".tmp"
+with open(tmp, "w") as f:
+    json.dump(data, f, indent=2, sort_keys=True)
+os.replace(tmp, path)
+PY
+}
+
 
 # Initialize arrays empty so `${#ARR[@]}` is safe under `set -u` before the
 # user provides --models/--adapters.
@@ -89,6 +137,10 @@ while [[ $# -gt 0 ]]; do
             THINKING=$2
             shift 2
             ;;
+        --force)
+            FORCE=1
+            shift
+            ;;
         *)
             echo "Unknown option: $1"
             exit 1
@@ -100,6 +152,9 @@ done
 if [[ ${#ADAPTERS[@]} -eq 0 ]]; then
     ADAPTERS=("pi_vanilla" "pi_devstack" "little_coder")
 fi
+
+# Resolve the per-run state file after --run-id is finalized.
+STATE_FILE="$PROJECT_DIR/results/runs/.matrix-${RUN_ID}.json"
 
 # Load models from file if not specified via --models
 if [[ ${#MODELS[@]} -eq 0 ]]; then
@@ -135,8 +190,18 @@ fi
 
 for MODEL in "${MODELS[@]}"; do
     for ADAPTER in "${ADAPTERS[@]}"; do
+        STATE=pending
+        if [[ "$FORCE" -eq 0 ]]; then
+            STATE=$(_cell_state "$MODEL" "$ADAPTER")
+        fi
+        if [[ "$STATE" == "done" || "$STATE" == "paused" ]]; then
+            echo "  ↻ skip $MODEL / $ADAPTER (state: $STATE)"
+            continue
+        fi
         echo "── Model: $MODEL, Adapter: $ADAPTER ──"
+        _set_cell_state "running" "$MODEL" "$ADAPTER"
 
+        set +e
         mamba run -n coding-eval python "$PROJECT_DIR/harness/runner.py" \
             --suite "$SUITE" \
             --adapter "$ADAPTER" \
@@ -145,6 +210,27 @@ for MODEL in "${MODELS[@]}"; do
             --run-id "$RUN_ID" \
             "${THINKING_ARG[@]}" \
             "${PROBLEMS_ARG[@]}"
+        rc=$?
+        set -e
+
+        case $rc in
+            0)
+                _set_cell_state "done" "$MODEL" "$ADAPTER"
+                echo "  ✓ complete"
+                ;;
+            3)
+                # Circuit breaker tripped (RUN-MANAGEMENT P1): pause the cell.
+                _set_cell_state "paused" "$MODEL" "$ADAPTER"
+                echo "  ⚠ paused (circuit breaker); skipped on future resumes"
+                ;;
+            *)
+                # Abort the matrix: a cell failing outside 0/3 (e.g. model
+                # unreachable) should not burn the remaining budget.
+                _set_cell_state "running" "$MODEL" "$ADAPTER"
+                echo "  ✗ cell failed (exit $rc)" >&2
+                exit "$rc"
+                ;;
+        esac
 
         echo ""
     done

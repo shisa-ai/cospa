@@ -2878,3 +2878,18 @@ Append-only development log for the `cospa` repository.
 - Decision: pause-and-exit (resume re-arms) rather than in-process cooldown
   waits; P4 matrix resume will skip a paused cell.
 - Next: P4 run-matrix.sh self-resume/checkpoint, then P5 cost rollup.
+
+## 2026-08-18 — Add run-matrix self-resume/checkpoint (P4)
+
+- Context: RUN-MANAGEMENT P4. Resuming a partially-run matrix was ad-hoc;
+  re-running it re-invoked every cell (and re-probed every model).
+- Change: `scripts/run-matrix.sh` writes a per-run state file
+  (`results/runs/.matrix-<run-id>.json`) recording each cell as
+  pending/running/done/paused. Re-invoking with the same --run-id skips
+  done and paused (circuit-breaker) cells; --force ignores state. A cell
+  failing outside 0/3 aborts the matrix. State file is computed after
+  --run-id is parsed.
+- Evidence: `tests/scripts/test_run_matrix_resume.sh` (13 checks: first run,
+  paused+done recorded, resume skips with zero invocations, --force re-runs,
+  fresh run-id starts fresh). Full shell suite run_all.sh green; test_scripts.py green.
+- Next: P5 cost rollup from usage x models.yaml prices.

@@ -621,3 +621,44 @@ def test_build_index_renders_family_sections_with_thinking_comparison(tmp_path):
     # (appears twice legitimately: topline table + family table)
     assert idx.count("thinking=high") == 0  # markers not leaked
     assert idx.count("| high |") == 2
+
+
+def test_markers_and_index_show_display_labels(tmp_path, monkeypatch):
+    """Markers carry label= from models.yaml names; the index family header
+    and topline show 'Name (slug)' when a label exists."""
+    module = _generator()
+    generate_report = module["generate_report"]
+    model, adapter = "local/test-model", "pi_vanilla"
+
+    def cell(root: Path, suite: str, tasks: list[bool]):
+        base = root / encode_model_path(model) / adapter / suite
+        for i, passed in enumerate(tasks):
+            _write_trial(
+                base / encode_task_path(f"t/{suite}{i}") / "trial-1",
+                passed=passed, task_id=f"t/{suite}{i}",
+            )
+
+    root = tmp_path / "run"
+    cell(root, "aider_polyglot", [True, False])
+    cell(root, "featurebench_lite_pareto12", [True, False])
+
+    import yaml
+
+    cfg = tmp_path / "models.yaml"
+    cfg.write_text(yaml.safe_dump({"models": [
+        {"id": model, "name": "Test Model (QUANT)"},
+    ]}))
+    monkeypatch.setenv("COSPA_MODELS_CONFIG", str(cfg))
+
+    markdown = generate_report(
+        [root], tmp_path / "r.md", canonical_suite_size=lambda s: None
+    )
+    marker = [l for l in markdown.splitlines() if l.startswith("<!-- cospa:agg ")][0]
+    assert 'label="Test Model (QUANT)"' in marker
+
+    reports = tmp_path / "reports"
+    reports.mkdir()
+    (reports / "one.md").write_text(f"# R\n{marker}\n")
+    idx = module["build_index"](reports, reports / "README.md")
+    assert "Test Model (QUANT)" in idx
+    assert "local/test-model" in idx  # slug still present for exactness

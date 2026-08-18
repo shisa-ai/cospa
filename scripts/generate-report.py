@@ -28,6 +28,25 @@ from harness.path_utils import decode_task_path  # noqa: E402
 from harness.suites import load_suite  # noqa: E402
 
 
+def _model_labels() -> dict[str, str]:
+    """id -> display name from models.yaml (COSPA_MODELS_CONFIG overrides)."""
+    import os
+
+    import yaml
+
+    cfg = os.environ.get("COSPA_MODELS_CONFIG") or str(ROOT / "configs" / "models.yaml")
+    try:
+        data = yaml.safe_load(open(cfg)) or {}
+    except (OSError, yaml.YAMLError):
+        return {}
+    items = data.get("models", []) if isinstance(data, dict) else []
+    return {
+        str(m.get("id")): str(m.get("name"))
+        for m in items
+        if isinstance(m, dict) and m.get("id") and m.get("name")
+    }
+
+
 def _canonical_suite_size(suite: str) -> int | None:
     """Best-effort canonical task count for a suite (None if unknown).
 
@@ -590,8 +609,10 @@ def generate_report(
             for row in geomean_groups[key]
         )
         elapsed_seconds = _group_elapsed_seconds(geomean_entries.get(key, []))
+        labels = _model_labels()
+        label = labels.get(key[0], "")
         agg_markers.append(
-            f"<!-- cospa:agg model={key[0]} adapter={key[1]} thinking={key[2]} "
+            f"<!-- cospa:agg model={key[0]} label={json.dumps(label or key[0])} adapter={key[1]} thinking={key[2]} "
             f"cells={len(rates)} geo={100.0 * geomean:.1f} "
             f"smooth={100.0 * smoothed_geomean:.1f} macro={100.0 * macro:.1f} "
             f"micro={100.0 * micro:.1f} tok_in={tok_in} cached={tok_cached} "
@@ -780,7 +801,12 @@ def build_index(reports_dir: Path, output: Path) -> str:
         except OSError:
             continue
         for m in _re.finditer(r"<!-- cospa:agg ([^>]+?)-->", text):
-            fields = dict(_re.findall(r"(\w+)=([\w./%+:-]+)", m.group(1)))
+            body = m.group(1)
+            label_match = _re.search(r'label="([^"]*)"', body)
+            body_wo_label = _re.sub(r' label="[^"]*"', "", body)
+            fields = dict(_re.findall(r"(\w+)=([^ ]+)", body_wo_label))
+            if label_match:
+                fields["label"] = label_match.group(1)
             if not fields.get("model"):
                 continue
             key = (fields.get("model"), fields.get("thinking"), fields.get("tasks"))
@@ -839,8 +865,11 @@ def build_index(reports_dir: Path, output: Path) -> str:
             elapsed_text = (
                 _fmt_duration(float(elapsed)) if elapsed and float(elapsed) > 0 else "-"
             )
+            model_cell = (
+                f"{f.get('label')}" if f.get("label") else f.get("model")
+            )
             out_rows.append(
-                f"| [{name}]({name}) | {f.get('model')} | {f.get('thinking')} | "
+                f"| [{name}]({name}) | {model_cell} | {f.get('thinking')} | "
                 f"{f.get('cells')} | {f.get('geo')}% | {f.get('smooth')}% | "
                 f"{f.get('macro')}% | {f.get('micro')}% | "
                 f"{_fmt_tokens(f.get('tok_in'))} | {_fmt_tokens(f.get('cached'))} | "
@@ -861,7 +890,14 @@ def build_index(reports_dir: Path, output: Path) -> str:
     lines.extend(topline_header)
     lines.extend(_topline_rows(other) or ["| _none_ | | | | | | | | | | | | |"])
     lines.append("")
+    labels = {}
+    for _, f in entries:
+        if f.get("label"):
+            labels[f.get("model", "?")] = f["label"]
     for fam in family_order:
+        fam_header = (
+            f"{labels.get(fam)} (`{fam}`)" if labels.get(fam) else fam
+        )
         rows = sorted(
             families[fam],
             key=lambda e: (
@@ -877,7 +913,7 @@ def build_index(reports_dir: Path, output: Path) -> str:
                 suite = entry.split(":", 1)[0]
                 if suite not in suites:
                     suites.append(suite)
-        lines.extend([f"## {fam}", ""])
+        lines.extend([f"## {fam_header}", ""])
         header = (
             ["| Thinking", "Tasks", "Report", *[f" {s} " for s in suites], " Micro ", " Wall |"]
         )

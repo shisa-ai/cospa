@@ -1,6 +1,6 @@
 # Cospa Run Report
 
-_Generated 2026-08-18T12:52:32+0900 · harness pi 0.84.2 (pi_vanilla, --no-extensions)_
+_Generated 2026-08-18T16:07:41+0900 · harness pi 0.84.2 (pi_vanilla, --no-extensions)_
 
 ## Summary
 
@@ -17,15 +17,15 @@ _Generated 2026-08-18T12:52:32+0900 · harness pi 0.84.2 (pi_vanilla, --no-exten
 | bigcodebench_hard_agentic_pareto60 | local/deepseek-v4-flash-0731 | pi_vanilla | xhigh | 60 | 24/60 (40.0%) | 1h55m | 219K | 3.8M | 341K | $0.1368 |
 | **All cells** | | | | **540** | — | **67h46m** | **23.9M** | **13.4M** | **3.2M** | **$21.30** |
 
-<!-- cospa:agg model=local/deepseek-v4-flash-0731 adapter=pi_vanilla thinking=high cells=1 geo=31.7 smooth=32.3 macro=31.7 micro=31.7 tok_in=130444 cached=1232384 out=148357 wall=3205.6 elapsed=569.7 tasks=60 suites=bigcodebench_hard_agentic_pareto60:31.7 -->
-<!-- cospa:agg model=local/deepseek-v4-flash-0731 adapter=pi_vanilla thinking=low cells=1 geo=33.3 smooth=33.9 macro=33.3 micro=33.3 tok_in=131386 cached=1581312 out=149955 wall=3187.2 elapsed=442.8 tasks=60 suites=bigcodebench_hard_agentic_pareto60:33.3 -->
-<!-- cospa:agg model=local/deepseek-v4-flash-0731 adapter=pi_vanilla thinking=off cells=1 geo=33.3 smooth=33.9 macro=33.3 micro=33.3 tok_in=145923 cached=1146880 out=90659 wall=2008.4 elapsed=301.9 tasks=60 suites=bigcodebench_hard_agentic_pareto60:33.3 -->
-<!-- cospa:agg model=local/deepseek-v4-flash-0731 adapter=pi_vanilla thinking=xhigh cells=1 geo=40.0 smooth=40.3 macro=40.0 micro=40.0 tok_in=219339 cached=3789312 out=341170 wall=6928.4 elapsed=1035.5 tasks=60 suites=bigcodebench_hard_agentic_pareto60:40.0 -->
-<!-- cospa:agg model=local/qwen3.8-27b adapter=pi_vanilla thinking=high cells=1 geo=33.3 smooth=33.9 macro=33.3 micro=33.3 tok_in=8923466 cached=885056 out=877435 wall=83985.4 elapsed=10954.0 tasks=60 suites=bigcodebench_hard_agentic_pareto60:33.3 -->
-<!-- cospa:agg model=local/qwen3.8-27b adapter=pi_vanilla thinking=low cells=1 geo=31.7 smooth=32.3 macro=31.7 micro=31.7 tok_in=2356333 cached=1063360 out=289570 wall=22990.5 elapsed=3030.3 tasks=60 suites=bigcodebench_hard_agentic_pareto60:31.7 -->
-<!-- cospa:agg model=local/qwen3.8-27b adapter=pi_vanilla thinking=medium cells=1 geo=31.7 smooth=32.3 macro=31.7 micro=31.7 tok_in=1774518 cached=891968 out=216333 wall=18278.2 elapsed=2444.3 tasks=60 suites=bigcodebench_hard_agentic_pareto60:31.7 -->
-<!-- cospa:agg model=local/qwen3.8-27b adapter=pi_vanilla thinking=off cells=1 geo=25.0 smooth=25.8 macro=25.0 micro=25.0 tok_in=1968729 cached=1873344 out=156913 wall=13746.0 elapsed=3139.1 tasks=60 suites=bigcodebench_hard_agentic_pareto60:25.0 -->
-<!-- cospa:agg model=local/qwen3.8-27b adapter=pi_vanilla thinking=xhigh cells=1 geo=15.0 smooth=16.1 macro=15.0 micro=15.0 tok_in=8240986 cached=986048 out=944262 wall=89631.0 elapsed=11647.7 tasks=60 suites=bigcodebench_hard_agentic_pareto60:15.0 -->
+<!-- cospa:agg model=local/deepseek-v4-flash-0731 label="DeepSeek V4 Flash 0731" adapter=pi_vanilla thinking=high cells=1 geo=31.7 smooth=32.3 macro=31.7 micro=31.7 tok_in=130444 cached=1232384 out=148357 wall=3205.6 elapsed=569.7 tasks=60 suites=bigcodebench_hard_agentic_pareto60:31.7 -->
+<!-- cospa:agg model=local/deepseek-v4-flash-0731 label="DeepSeek V4 Flash 0731" adapter=pi_vanilla thinking=low cells=1 geo=33.3 smooth=33.9 macro=33.3 micro=33.3 tok_in=131386 cached=1581312 out=149955 wall=3187.2 elapsed=442.8 tasks=60 suites=bigcodebench_hard_agentic_pareto60:33.3 -->
+<!-- cospa:agg model=local/deepseek-v4-flash-0731 label="DeepSeek V4 Flash 0731" adapter=pi_vanilla thinking=off cells=1 geo=33.3 smooth=33.9 macro=33.3 micro=33.3 tok_in=145923 cached=1146880 out=90659 wall=2008.4 elapsed=301.9 tasks=60 suites=bigcodebench_hard_agentic_pareto60:33.3 -->
+<!-- cospa:agg model=local/deepseek-v4-flash-0731 label="DeepSeek V4 Flash 0731" adapter=pi_vanilla thinking=xhigh cells=1 geo=40.0 smooth=40.3 macro=40.0 micro=40.0 tok_in=219339 cached=3789312 out=341170 wall=6928.4 elapsed=1035.5 tasks=60 suites=bigcodebench_hard_agentic_pareto60:40.0 -->
+<!-- cospa:agg model=local/qwen3.8-27b label="Qwen 3.8 27B" adapter=pi_vanilla thinking=high cells=1 geo=33.3 smooth=33.9 macro=33.3 micro=33.3 tok_in=8923466 cached=885056 out=877435 wall=83985.4 elapsed=10954.0 tasks=60 suites=bigcodebench_hard_agentic_pareto60:33.3 -->
+<!-- cospa:agg model=local/qwen3.8-27b label="Qwen 3.8 27B" adapter=pi_vanilla thinking=low cells=1 geo=31.7 smooth=32.3 macro=31.7 micro=31.7 tok_in=2356333 cached=1063360 out=289570 wall=22990.5 elapsed=3030.3 tasks=60 suites=bigcodebench_hard_agentic_pareto60:31.7 -->
+<!-- cospa:agg model=local/qwen3.8-27b label="Qwen 3.8 27B" adapter=pi_vanilla thinking=medium cells=1 geo=31.7 smooth=32.3 macro=31.7 micro=31.7 tok_in=1774518 cached=891968 out=216333 wall=18278.2 elapsed=2444.3 tasks=60 suites=bigcodebench_hard_agentic_pareto60:31.7 -->
+<!-- cospa:agg model=local/qwen3.8-27b label="Qwen 3.8 27B" adapter=pi_vanilla thinking=off cells=1 geo=25.0 smooth=25.8 macro=25.0 micro=25.0 tok_in=1968729 cached=1873344 out=156913 wall=13746.0 elapsed=3139.1 tasks=60 suites=bigcodebench_hard_agentic_pareto60:25.0 -->
+<!-- cospa:agg model=local/qwen3.8-27b label="Qwen 3.8 27B" adapter=pi_vanilla thinking=xhigh cells=1 geo=15.0 smooth=16.1 macro=15.0 micro=15.0 tok_in=8240986 cached=986048 out=944262 wall=89631.0 elapsed=11647.7 tasks=60 suites=bigcodebench_hard_agentic_pareto60:15.0 -->
 
 
 ## Speed & behavior

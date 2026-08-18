@@ -1,6 +1,6 @@
 # Cospa Run Report
 
-_Generated 2026-08-18T12:52:59+0900 · harness pi 0.84.2 (pi_vanilla, --no-extensions)_
+_Generated 2026-08-18T16:07:26+0900 · harness pi 0.84.2 (pi_vanilla, --no-extensions)_
 
 ## Summary
 
@@ -29,7 +29,7 @@ Geometric mean of per-suite rates per model configuration, across primary comple
 - Micro lifts codex/gpt-5.3-codex-spark most (+8.0 pp over macro) — strength concentrated in the larger panels.
 
 
-<!-- cospa:agg model=codex/gpt-5.3-codex-spark adapter=pi_vanilla thinking=high cells=6 geo=20.5 smooth=22.9 macro=22.4 micro=30.4 tok_in=18611893 cached=490694784 out=5924393 wall=66825.2 elapsed=157440.9 tasks=336 suites=bigcodebench_hard_agentic_hermetic143:32.9,featurebench_lite_pareto12:8.3,multi_swe_bench_flash_hermetic25:28.0,swe_explore_verified12:17.4,swe_polybench_verified_balanced64:20.3,terminal_bench:27.5 -->
+<!-- cospa:agg model=codex/gpt-5.3-codex-spark label="GPT-5.3 Codex Spark" adapter=pi_vanilla thinking=high cells=6 geo=20.5 smooth=22.9 macro=22.4 micro=30.4 tok_in=18611893 cached=490694784 out=5924393 wall=66825.2 elapsed=157440.9 tasks=336 suites=bigcodebench_hard_agentic_hermetic143:32.9,featurebench_lite_pareto12:8.3,multi_swe_bench_flash_hermetic25:28.0,swe_explore_verified12:17.4,swe_polybench_verified_balanced64:20.3,terminal_bench:27.5 -->
 
 
 ## Speed & behavior

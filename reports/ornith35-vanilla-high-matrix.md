@@ -1,6 +1,6 @@
 # Cospa Run Report
 
-_Generated 2026-08-18T12:52:51+0900 · harness pi 0.84.2 (pi_vanilla, --no-extensions)_
+_Generated 2026-08-18T16:07:17+0900 · harness pi 0.84.2 (pi_vanilla, --no-extensions)_
 
 ## Summary
 
@@ -30,7 +30,7 @@ Geometric mean of per-suite rates per model configuration, across primary comple
 - Micro lifts shisa/ornith-35b-fp8-block most (+7.4 pp over macro) — strength concentrated in the larger panels.
 
 
-<!-- cospa:agg model=shisa/ornith-35b-fp8-block adapter=pi_vanilla thinking=high cells=6 geo=0.0 smooth=11.1 macro=9.9 micro=17.3 tok_in=752688 cached=8345024 out=419850 wall=370851.3 elapsed=82528.4 tasks=336 suites=bigcodebench_hard_agentic_hermetic143:30.1,featurebench_lite_pareto12:0.0,multi_swe_bench_flash_hermetic25:12.0,swe_explore_verified12:0.0,swe_polybench_verified_balanced64:12.5,terminal_bench:5.0 -->
+<!-- cospa:agg model=shisa/ornith-35b-fp8-block label="Ornith 1.0 35B (Shisa.AI)" adapter=pi_vanilla thinking=high cells=6 geo=0.0 smooth=11.1 macro=9.9 micro=17.3 tok_in=752688 cached=8345024 out=419850 wall=370851.3 elapsed=82528.4 tasks=336 suites=bigcodebench_hard_agentic_hermetic143:30.1,featurebench_lite_pareto12:0.0,multi_swe_bench_flash_hermetic25:12.0,swe_explore_verified12:0.0,swe_polybench_verified_balanced64:12.5,terminal_bench:5.0 -->
 
 
 ## Speed & behavior

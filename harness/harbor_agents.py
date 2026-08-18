@@ -145,6 +145,29 @@ fi
 """.strip()
 
 
+def _resolve_pi_model_arg(
+    model_name: str | None, provider_env: dict | None = None
+) -> str | None:
+    """Substitute provider/resolved-wire-id for pi's --model when the env
+    carries a resolved MODEL_ID for the same provider.
+
+    Containers bake a one-model models.json from
+    CODING_EVAL_PI_PROVIDER_MODEL_ID; pi's --model must land on that exact
+    id or pi sends the raw benchmark id upstream (alias/quant labels like
+    local/qwen3.8-27b-fp8-block would otherwise 400 at the router).
+    """
+    if not model_name:
+        return model_name
+    env = provider_env if provider_env is not None else os.environ
+    provider_name = env.get("CODING_EVAL_PI_PROVIDER_NAME")
+    model_id_env = env.get("CODING_EVAL_PI_PROVIDER_MODEL_ID")
+    if not provider_name or not model_id_env:
+        return model_name
+    if model_name.split("/", 1)[0] != provider_name:
+        return model_name
+    return f"{provider_name}/{model_id_env}"
+
+
 def _configured_thinking() -> str | None:
     thinking = (
         os.environ.get("CODING_EVAL_THINKING")
@@ -428,7 +451,7 @@ NODE
                 "--print",
                 *self.extra_args,
                 "--model",
-                self.model_name,
+                _resolve_pi_model_arg(self.model_name, self._provider_env()),
                 *_thinking_args(),
                 instruction,
             ]
@@ -491,7 +514,7 @@ else:
                 "--print",
                 *self.extra_args,
                 "--model",
-                self._model_name,
+                _resolve_pi_model_arg(self._model_name),
                 *_thinking_args(),
                 instruction,
             ]

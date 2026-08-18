@@ -56,6 +56,27 @@ def resolve_model_base_url(model_id: str) -> str | None:
     return str(value) if value else None
 
 
+def _wire_model_ref(model_id: str | None, models_path=None) -> str | None:
+    """Alias-aware provider/wire-id reference for pi's --model argument.
+
+    pi exact-matches --model against models.json; alias (quant-variant)
+    benchmark ids would leak raw to the router. Resolves through the
+    provider entry's aliases to its wire id.
+    """
+    if not model_id or "/" not in model_id:
+        return model_id
+    from harness.adapters.sampling import _find_pi_model
+
+    path = models_path or (
+        Path.home() / ".pi" / "agent" / "models.json"
+    )
+    entry = _find_pi_model(str(model_id), Path(path))
+    if entry and entry.get("id"):
+        provider, _, _ = str(model_id).partition("/")
+        return f"{provider}/{entry['id']}"
+    return model_id
+
+
 def _command_model_id(cmd: Sequence[str]) -> str | None:
     values = list(cmd)
     try:
@@ -527,6 +548,12 @@ def run_command(
         model_url = None
         if sandbox_model_access:
             model_id = _command_model_id(cmd)
+            if model_id:
+                resolved_ref = _wire_model_ref(model_id)
+                if resolved_ref != model_id:
+                    values = list(cmd)
+                    values[values.index("--model") + 1] = resolved_ref
+                    cmd = values
             model_url = sandbox_model_url or (
                 resolve_model_base_url(model_id) if model_id else None
             )

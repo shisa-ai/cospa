@@ -2951,3 +2951,26 @@ Append-only development log for the `cospa` repository.
   four-model results table. Reports: ornith/spark one-sheets regenerated,
   README index at 4x6-cell rows. Spark poly repair: +1 pass (13/64), 3
   re-run trials hit quota again — documented, not chased.
+
+## 2026-08-18 — Wire-id resolution for alias model ids (fp8-block incident)
+
+- Incident: the qwen FP8-BLOCK row burned 3 launches on 503s — pi sent the
+  raw benchmark id (qwen3.8-27b-fp8-block) upstream; the router 400s unknown
+  names into a codex-account error. Three leak layers found and fixed:
+  (1) harbor run --model (terminal_bench._harbor_model_arg — all Harbor
+  suites inherit), (2) host-side bwrap sandbox pi --model
+  (subprocess_utils._wire_model_ref rewrite), (3) instruct HTTP adapter
+  (earlier alias matching). Container/sandbox models.json bakes a one-model
+  config from the resolved MODEL_ID, so --model must land on that exact id.
+- pi itself is not alias-aware ("Using custom model id" fallback); the
+  aliases live in ~/.pi/agent/models.json and are resolved harness-side.
+- Circuit breaker did NOT catch the agentic-cell leak: pi's internal retries
+  convert provider death into slow NonZeroAgentExitCode adapter failures.
+  338 + 64 garbage verdicts across takes 2-3 detected by trace audit
+  (503 signature in sessions), deleted; instruct cell (49/143, host HTTP
+  path) was real and kept. Take 4 verified live: sandbox cmdline shows
+  --model local/Qwen3.8-27B.
+- Evidence: test_find_pi_model_matches_aliases,
+  test_pi_model_arg_resolves_alias_through_env,
+  test_harbor_model_arg_resolves_wire_id,
+  test_wire_model_ref_resolves_aliases; full suite 478 passed.

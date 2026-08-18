@@ -1895,3 +1895,26 @@ def test_sort_scores_defaults_to_model_adapter_thinking_suite():
         ("m", "pi_vanilla", "high", "a"),
         ("m", "pi_vanilla", "xhigh", "a"),
     ]
+
+
+def test_harbor_model_arg_resolves_wire_id():
+    """harbor run --model uses provider/resolved-wire-id so container-side
+    models.json matching cannot miss on alias (quant-variant) ids."""
+    import importlib.util
+    from pathlib import Path
+
+    root = Path(__file__).resolve().parent.parent
+    spec = importlib.util.spec_from_file_location("tb_model_arg", root / "harness" / "suites" / "terminal_bench.py")
+    mod = importlib.util.module_from_spec(spec)
+    try:
+        spec.loader.exec_module(mod)
+    except Exception:
+        import pytest
+        pytest.skip("terminal_bench imports heavy deps")
+    env = {
+        "CODING_EVAL_PI_PROVIDER_NAME": "local",
+        "CODING_EVAL_PI_PROVIDER_MODEL_ID": "Qwen3.8-27B",
+    }
+    assert mod._harbor_model_arg("local/qwen3.8-27b-fp8-block", env) == "local/Qwen3.8-27B"
+    assert mod._harbor_model_arg("shisa/ornith-35b-fp8-block", env) == "shisa/ornith-35b-fp8-block"
+    assert mod._harbor_model_arg("local/qwen3.8-27b", {}) == "local/qwen3.8-27b"

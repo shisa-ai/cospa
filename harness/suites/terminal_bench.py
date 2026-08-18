@@ -102,6 +102,21 @@ def _parse_task_yaml(text: str) -> Dict[str, Any]:
     return result
 
 
+def _harbor_model_arg(model_id: str, harbor_env: dict) -> str:
+    """harbor run --model value: provider/resolved-wire-id when the env
+    resolved a wire name for the same provider, else the raw benchmark id.
+
+    Containers bake a one-model models.json from the resolved MODEL_ID;
+    passing an alias (quant-variant) id raw would miss container-side
+    matching and leak the alias to the router.
+    """
+    provider = harbor_env.get("CODING_EVAL_PI_PROVIDER_NAME")
+    wire = harbor_env.get("CODING_EVAL_PI_PROVIDER_MODEL_ID")
+    if provider and wire and model_id.split("/", 1)[0] == provider:
+        return f"{provider}/{wire}"
+    return model_id
+
+
 class TerminalBenchSuite:
     """Terminal-Bench suite using Harbor for execution."""
 
@@ -979,7 +994,7 @@ class TerminalBenchSuite:
         cmd = [
             "harbor", "run",
             "--agent", agent,
-            "--model", model_id,
+            "--model", _harbor_model_arg(model_id, harbor_env),
             "--n-attempts", str(n_attempts),
             "--jobs-dir", str(jobs_dir),
             "--allow-agent-host", model_host,

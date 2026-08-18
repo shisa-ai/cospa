@@ -2910,3 +2910,22 @@ Append-only development log for the `cospa` repository.
   numbers stay indexed. Committed the parallel session's ornith
   featurebench failure review (all failures model-side, zero eval defects).
 - Evidence: 5 new/updated tests; full suite 462 passed.
+
+## 2026-08-18 — Add cost rollup from usage x prices (P5)
+
+- Context: RUN-MANAGEMENT P5. Token usage was captured but per-trial cost was
+  not derived from models.yaml prices, and there was no per-run rollup — a
+  blind spot for paid online APIs.
+- Change: new `harness/cost.py` prices a trial from `model.cost`
+  (usd_per_1m_tokens, long-context tiers) x `token_usage`; `runner.py` writes
+  `manifest.cost`. New `harness/cost_summary.py` + `scripts/summarize-costs.py`
+  roll up `cost-summary.json` per run with per-model/per-suite/per-cell
+  breakdowns, re-deriving cost for historical manifests (backfill).
+- Evidence: `tests/test_cost.py` (6), `test_cost_summary.py` (3), runner cost
+  integration test in `test_usage_capture.py` using real codex/gpt-5.5 prices;
+  CLI smoke on a fake run tree. Full suite 458 passed (minus the other
+  agent's in-progress test_report_generator.py); shell suite green.
+- Decision: price locally from configs/models.yaml (deterministic, works for
+  historical backfill) rather than trusting pi's reported cost_usd alone.
+- Next: none in P1-P5; RUN-MANAGEMENT plan complete. Consider wiring
+  cost-summary into generate-report and adding backfill-usage reuse.

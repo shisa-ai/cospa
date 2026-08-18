@@ -13,6 +13,8 @@ import tempfile
 from datetime import datetime, timezone
 from pathlib import Path
 
+import pytest
+
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(PROJECT_ROOT))
 
@@ -690,3 +692,59 @@ def test_run_trial_collects_trial_local_session_from_sandbox_cwd(monkeypatch):
     assert manifest["token_usage"]["status"] == "observed"
     assert manifest["token_usage"]["prompt_tokens"] == 300
     assert manifest["token_usage"]["trace_files"] == ["out/pi_session.jsonl"]
+
+
+def test_run_trial_writes_priced_cost_from_usage(tmp_path, monkeypatch):
+    """P5: manifest.cost is derived from models.yaml prices x pi usage."""
+    from unittest.mock import patch as mpatch
+    import harness.runner as runner_mod
+
+    vendor_dir = tmp_path / "vendor"
+    vendor_dir.mkdir()
+    _make_problem(vendor_dir)
+    results_dir = tmp_path / "results"
+
+    suite = AiderPolyglotSuite()
+    from harness.adapters.pi_vanilla import PiVanillaAdapter
+    adapter = PiVanillaAdapter()
+
+    # Model with real pricing in configs/models.yaml (codex/gpt-5.5):
+    # input 5.0, output 30.0, cacheRead 0.5 per 1M tokens.
+    observed = {
+        "source": "pi-session-jsonl",
+        "status": "observed",
+        "response_count": 1,
+        "prompt_tokens": 1000,
+        "completion_tokens": 500,
+        "cached_tokens": 200,
+        "cache_creation_tokens": 0,
+        "reasoning_tokens": 0,
+        "total_tokens": 1700,
+        "cost_usd": 0.0,
+        "cost_usd_pi": 0.0,
+        "response_models": ["gpt-5.5"],
+        "models": ["GPT-5.5"],
+        "providers": ["codex"],
+        "response_ids": ["chatcmpl-x"],
+        "thinking": None,
+    }
+
+    import subprocess as sp
+
+    with mpatch("harness.runner.collect_pi_session_usage", return_value=observed), \
+         mpatch("harness.adapters.pi_vanilla.run_command") as mock_run:
+        mock_run.return_value = sp.CompletedProcess(
+            args=[], returncode=0, stdout="ok", stderr=""
+        )
+        manifest, verdict = run_trial(
+            suite, adapter, "codex/gpt-5.5", "python/two-fer", 1,
+            results_dir, vendor_dir,
+        )
+
+    assert manifest["token_usage"]["status"] == "observed"
+    cost = manifest.get("cost")
+    assert cost is not None
+    # (1000*5.0 + 500*30.0 + 200*0.5) / 1M = (5000 + 15000 + 100) / 1M
+    assert cost["usd"] == pytest.approx(0.0201)
+    assert cost["source"] == "models-config"
+    assert cost["pricing_unit"] == "usd_per_1m_tokens"

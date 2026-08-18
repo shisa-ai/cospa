@@ -99,9 +99,12 @@ nothing stopped the run mid-way.
 
 ## 3. Improvement plan
 
-Each item is a small RED/GREEN unit, committed separately. They touch
-`harness/runner.py` (shared file — coordinate), the retry/resume path, and
-orchestration.
+**Status: P1–P5 all implemented (2026-08-18).** See the commits referenced on
+`docs/ORNITH-CODER-REVIEW.md`/WORKLOG: P1 circuit breaker (`382908c`), P2+P3
+backoff + structured provider errors (`0c105aa`), P4 matrix self-resume
+(`7166a41`), P5 cost rollup (this unit). Each item below is a small
+RED/GREEN unit, committed separately. They touch `harness/runner.py` (shared
+file — coordinate), the retry/resume path, and orchestration.
 
 ### P1 — Circuit breaker
 

@@ -43,6 +43,7 @@ from harness.behavior import (
 )
 from harness.suites import load_suite
 from harness.harbor_docker import reclaim_stale_harbor_networks
+from harness.cost import trial_cost
 from harness.path_utils import (
     encode_model_path,
     encode_path_component,
@@ -1052,6 +1053,11 @@ def run_trial(
         }
     manifest["timing"]["verifier_seconds"] = time.time() - verifier_started
     manifest["timing"]["total_wall_seconds"] = time.time() - start_time
+
+    # Priced cost (RUN-MANAGEMENT P5): models.yaml prices x usage.
+    cost = trial_cost(manifest.get("model"), manifest.get("token_usage"))
+    if cost is not None:
+        manifest["cost"] = cost
 
     # Structured provider failure record (RUN-MANAGEMENT P3): data-driven
     # retry/backoff and analysis instead of substring matching.

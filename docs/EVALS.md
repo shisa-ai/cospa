@@ -393,6 +393,23 @@ A 30-minute row is a **planning ceiling**, not a recommendation that every
 suite use the same wall timeout. Before any 300+ task campaign, measure 5–12
 representative tasks at `c=1` and `c=2`, including cold and warm verifier costs.
 
+### Four-model matrix results (Phase F, 2026-08-18)
+
+Identical 336-task panel set per model under `pi_vanilla`, `thinking=high`,
+`c=8`, `k=1`. Full one-sheets and the auto index live in `reports/`;
+protocol and caveats in `docs/PARETO-CAMPAIGN.md` Phase F.
+
+| Model | Geomean (smoothed) | Macro | Micro | Signature |
+| --- | ---: | ---: | ---: | --- |
+| local/qwen3.8-27b | 26.2% | 25.5% | 30.1% | instruct 49/143 (best no-think); heaviest tokens (7.9M out) |
+| codex/gpt-5.3-codex-spark | 22.9% | 22.4% | 30.4% | agentic 47/143 and explore 12/12 (best); API-quota capped on poly |
+| shisa/ornith-35b-fp8-block | 11.1% | 9.9% | 17.3% | agentic 43/143 but budget-bound collapse on every long-horizon panel |
+| local/deepseek-v4-flash-0731 (own panels) | 26.9% | 29.6% | 35.8% | efficiency benchmark: same micro as qwen/spark at ~1/3 the wall |
+
+Qwen reasoning-effort sweep on Pareto60: 15/19/19/20/9 of 60 across
+off/low/medium/high/xhigh — `xhigh` collapse is significant (exact McNemar
+p=0.0074 vs high); effort direction is model-specific (DS4's curve was flat).
+
 ### Frozen Ornith runtime pilot v1
 
 `configs/ornith_runtime_pilot_v1.json` is the source of truth for the first

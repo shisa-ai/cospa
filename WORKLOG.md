@@ -2929,3 +2929,25 @@ Append-only development log for the `cospa` repository.
   historical backfill) rather than trusting pi's reported cost_usd alone.
 - Next: none in P1-P5; RUN-MANAGEMENT plan complete. Consider wiring
   cost-summary into generate-report and adding backfill-usage reuse.
+
+## 2026-08-18 — Phase F matrix complete: four-model results, qwen sweep, closure
+
+- All four rows complete on the identical 336-task panel set after repair
+  passes. Final aggregates (smoothed geomean / macro / micro): qwen 26.2/
+  25.5/30.1; spark 22.9/22.4/30.4 (3 poly trials lost to API quota); ornith
+  11.1/9.9/17.3 (strict geomean 0 — zero panels); DS4 26.9/29.6/35.8 on its
+  own panel set. Ornith featurebench classified outage-affected: 2 valid
+  attempts (both fail), 10 zero-byte trials from the stg04 router/sglang
+  serving flap (root-caused to the serving path, harness exonerated; see
+  reports/ornith-featurebench-failure-review-20260818.md and the live probe
+  evidence: intermittent TCP refusals + streaming stalls + 43s trivial
+  completions between healthy windows).
+- Qwen effort sweep (5 distinct rungs, Pareto60, k=1): 15/19/19/20/9 of 60
+  off->xhigh. xhigh collapse is the campaign's first significant effort
+  effect (high vs xhigh exact McNemar p=0.0074); off->high trend within
+  noise (p=0.36). Mirror of DS4's flat curve: effort direction is
+  model-specific.
+- Docs: PARETO-CAMPAIGN.md Phase F results + qwen sweep subsection; EVALS.md
+  four-model results table. Reports: ornith/spark one-sheets regenerated,
+  README index at 4x6-cell rows. Spark poly repair: +1 pass (13/64), 3
+  re-run trials hit quota again — documented, not chased.

@@ -500,8 +500,66 @@ identical scaffold:
   time alongside unrelated campaigns at c=2, staying at the proven ten-network
   operating point); the local-model relay env is set only for `local/*` rows.
 - **Report:** `scripts/generate-report.py` one-sheets per model row plus a
-  combined matrix sheet; behavior columns (turns, LLM%, tool calls) are the
+  combined matrix sheet; behavior columns (turns, Lm%, tool calls) are the
   primary cross-model comparison surface.
+
+#### Phase F results (2026-08-18, post-repair)
+
+All four rows complete on the identical 336-task panel set (agentic143,
+explore12, multiswe25, terminal80, poly64, feature12); per-row one-sheets
+and the auto index live in `reports/`:
+
+| Model | Geomean | Smoothed | Macro | Micro | Wall | Notes |
+| --- | ---: | ---: | ---: | ---: | ---: | --- |
+| DS4 (its own panel set) | 25.5% | 26.9% | 29.6% | 35.8% | 18h34m | panels differ (pareto60/terminal-pareto20); micro not apples-to-apples |
+| Qwen | 25.1% | 26.2% | 25.5% | 30.1% | 64h45m | instruct 49/143 dominates; heaviest token use |
+| Spark | 20.5% | 22.9% | 22.4% | 30.4% | 17h28m | API quota capped: 3 poly trials usage-limited after repair |
+| Ornith | 0.0% | 11.1% | 9.9% | 17.3% | 90h54m | strict geomean floored (0% panels); budget-bound everywhere except BCB |
+
+Per-panel highlights: agentic143 — spark 47, ornith 43, qwen 42, DS4 44
+(different panel mix); instruct143 — qwen 49 vs DS4 17 (qwen is the only
+strong no-think generator); explore — spark 12/12 any-hit, qwen 11, DS4 10,
+ornith 0 (all 12 budget-exhausted); terminal — spark & DS4 22, qwen 19,
+ornith 4 (74/80 budget-exhausted).
+
+Caveats recorded with the data: terminal N=78 for DS4/qwen/spark (hostname x
+egress-control compose conflict on `security-vulhub-minio` and
+`simple-sheets-put` — model-independent mechanical exclusions, reproduced
+identically across models); ornith instruct excluded (endpoint always emits
+reasoning; instruct protocol never yields content); ornith featurebench is
+outage-affected (2 valid attempts, 10 zero-byte trials from the stg04
+router/sglang serving flap of 2026-08-17/18 — see
+`reports/ornith-featurebench-failure-review-20260818.md`); spark polybench
+lost 3 trials to API usage limits.
+
+#### Qwen reasoning-effort sweep on Pareto60 (2026-08-18)
+
+Qwen exposes five distinct rungs (`off`/`low`/`medium` distinct, `high` = no
+effort param, `xhigh`; `minimal` aliases `high`). All five were run on
+`bigcodebench_hard_agentic_pareto60`, `pi_vanilla`, `c=8`, `k=1`:
+
+| Effort | Score |
+| --- | ---: |
+| `off` | 15/60 (25.0%) |
+| `low` | 19/60 (31.7%) |
+| `medium` | 19/60 (31.7%) |
+| `high` | 20/60 (33.3%) |
+| `xhigh` | **9/60 (15.0%)** |
+
+Findings:
+
+- Gentle monotone rise off -> high (+5 tasks), but each adjacent gap is
+  within k=1 repeat noise (off vs high: 12 high-only vs 7 off-only passes,
+  exact McNemar p=0.36).
+- **`xhigh` collapses**: high vs xhigh p=0.0074, low vs xhigh p=0.0063 —
+  the campaign's first statistically significant effort effect, and it is
+  negative. Maximum effort makes the heaviest deliberator overthink past
+  usefulness (budget burn before acting).
+- Contrast with DS4 (flat 20/20/22+19/24, no rung separating from repeat
+  noise): effort direction is model-specific; there is no universal
+  more-thinking-is-better (or -worse) rule across models.
+- Practical: qwen's best operating point is `low`..`high` (equal within
+  noise, `low` is cheapest); `xhigh` is dominated everywhere.
 
 ## Implementation order
 

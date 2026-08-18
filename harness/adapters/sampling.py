@@ -25,8 +25,15 @@ def _find_pi_model(model_id: str, models_json_path: Path) -> dict[str, Any] | No
     models = provider_config.get("models", []) if isinstance(provider_config, dict) else []
     wanted = _normalise_model_id(requested_id)
     for model in models:
-        if isinstance(model, dict) and _normalise_model_id(str(model.get("id", ""))) == wanted:
+        if not isinstance(model, dict):
+            continue
+        if _normalise_model_id(str(model.get("id", ""))) == wanted:
             return model
+        # Optional aliases let multiple benchmark ids resolve to one wire name
+        # (e.g. quant-variant labels pointing at a single registered model).
+        for alias in model.get("aliases", []) or []:
+            if _normalise_model_id(str(alias)) == wanted:
+                return model
     return None
 
 

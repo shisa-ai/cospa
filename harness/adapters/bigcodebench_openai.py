@@ -58,9 +58,26 @@ def load_provider_connection(model_id: str) -> dict[str, str]:
         api_key = os.environ.get(str(api_key_env), api_key)
 
     served_model = requested_model
+
+    def _norm(value: str) -> str:
+        import re as _re
+
+        return _re.sub(r"[^a-z0-9]", "", value.lower())
+
+    wanted = {_norm(model_id), _norm(requested_model)}
     for model in provider.get("models", []):
         candidate = model.get("id") if isinstance(model, dict) else model
         if candidate in (model_id, requested_model):
+            served_model = str(candidate)
+            break
+        aliases = (
+            [str(a) for a in (model.get("aliases") or [])]
+            if isinstance(model, dict)
+            else []
+        )
+        if _norm(str(candidate)) in wanted or any(
+            _norm(a) in wanted for a in aliases
+        ):
             served_model = str(candidate)
             break
 

@@ -563,6 +563,13 @@ def check_model_reachable(model_id: str, timeout: float = 10.0) -> bool:
         resolved_model = model_id
     elif model_name in provider_models:
         resolved_model = model_name
+    else:
+        # Alias-aware fallback (quant-variant labels -> one wire name).
+        from harness.adapters.sampling import _find_pi_model
+
+        entry = _find_pi_model(model_id, models_json)
+        if entry and entry.get("id"):
+            resolved_model = str(entry["id"])
 
     payload = json.dumps({
         "model": resolved_model,

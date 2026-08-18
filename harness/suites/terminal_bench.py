@@ -225,7 +225,11 @@ class TerminalBenchSuite:
             else:
                 candidate = item
             normalized = re.sub(r"[^a-z0-9]", "", str(candidate).lower())
-            if normalized in wanted_models:
+            aliases = [
+                re.sub(r"[^a-z0-9]", "", str(a).lower())
+                for a in ((item.get("aliases") or []) if isinstance(item, dict) else [])
+            ]
+            if normalized in wanted_models or any(a in wanted_models for a in aliases):
                 model_entry = item if isinstance(item, dict) else {"id": item}
                 break
 

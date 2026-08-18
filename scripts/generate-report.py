@@ -511,12 +511,6 @@ def generate_report(
                     rates.append(rate)
             if not rates:
                 continue
-            if any(rate <= 0.0 for rate in rates):
-                geomean = 0.0
-            else:
-                geomean = math.exp(
-                    sum(math.log(rate) for rate in rates) / len(rates)
-                )
             smoothed = [
                 _smoothed_rate(row)
                 for row in geomean_groups[key]
@@ -528,7 +522,7 @@ def generate_report(
                 )
             else:
                 smoothed_geomean = 0.0
-            macro = sum(rates) / len(rates) if rates else 0.0
+            macro = sum(rates) / len(rates)
             passed_sum = sum(
                 row.get("passed_tasks") or 0
                 for row in geomean_groups[key]
@@ -540,12 +534,96 @@ def generate_report(
                 if row.get("total_tasks")
             )
             micro = passed_sum / total_sum if total_sum else 0.0
+            geomean = (
+                0.0
+                if any(rate <= 0.0 for rate in rates)
+                else math.exp(sum(math.log(rate) for rate in rates) / len(rates))
+            )
             lines.append(
                 f"| {key[0]} | {key[1]} | {key[2]} | {len(rates)} | "
                 f"{100.0 * geomean:.1f}% | {100.0 * smoothed_geomean:.1f}% | "
                 f"{100.0 * macro:.1f}% | {100.0 * micro:.1f}% |"
             )
-        lines.append("")
+            tok_in = sum(
+                row.get("prompt_tokens") or 0 for row in geomean_groups[key]
+            )
+            tok_cached = sum(
+                row.get("cached_tokens") or 0 for row in geomean_groups[key]
+            )
+            tok_out = sum(
+                row.get("completion_tokens") or 0 for row in geomean_groups[key]
+            )
+            wall_seconds = sum(
+                row.get("total_wall_clock_seconds") or 0.0
+                for row in geomean_groups[key]
+            )
+            lines.append(
+                f"<!-- cospa:agg model={key[0]} adapter={key[1]} thinking={key[2]} "
+                f"cells={len(rates)} geo={100.0 * geomean:.1f} "
+                f"smooth={100.0 * smoothed_geomean:.1f} macro={100.0 * macro:.1f} "
+                f"micro={100.0 * micro:.1f} tok_in={tok_in} cached={tok_cached} "
+                f"out={tok_out} wall={wall_seconds:.1f} -->"
+            )
+
+        # Deterministic topline reading for the index and humans.
+        agg_lines = [l for l in lines if l.startswith("<!-- cospa:agg ")]
+        if agg_lines:
+            import re as _re
+
+            def _field(line: str, name: str) -> str:
+                m = _re.search(rf"{name}=(\S+)", line)
+                return m.group(1) if m else ""
+
+            agg_rows = [
+                {
+                    "model": _field(l, "model"),
+                    "geo": float(_field(l, "geo") or 0),
+                    "smooth": float(_field(l, "smooth") or 0),
+                    "macro": float(_field(l, "macro") or 0),
+                    "micro": float(_field(l, "micro") or 0),
+                }
+                for l in agg_lines
+            ]
+            by_micro = sorted(agg_rows, key=lambda r: -r["micro"])
+            micro_order = " > ".join(
+                f"{r['model']} ({r['micro']:.1f}%)" for r in by_micro
+            )
+            orderings = {
+                name: [r["model"] for r in sorted(agg_rows, key=lambda r: -r[name])]
+                for name in ("geo", "smooth", "macro", "micro")
+            }
+            consistent = len({tuple(v) for v in orderings.values()}) == 1
+            zeroed = [r["model"] for r in agg_rows if r["geo"] == 0.0]
+            spread = max(agg_rows, key=lambda r: r["micro"] - r["macro"], default=None)
+            lines.extend(["", "## Aggregate reading", ""])
+            lines.append(f"- Ordering by micro pooled: {micro_order}.")
+            if consistent:
+                lines.append(
+                    "- The ordering is consistent across all four aggregations."
+                )
+            else:
+                divergent = [
+                    name
+                    for name, order in orderings.items()
+                    if order != orderings["micro"]
+                ]
+                lines.append(
+                    f"- Ordering diverges under: {', '.join(divergent)} "
+                    "(metric choice changes the ranking)."
+                )
+            if zeroed:
+                lines.append(
+                    "- Strict geomean floors at 0 for: "
+                    f"{', '.join(zeroed)} (zero components on at least one "
+                    "panel; see the smoothed column for ranking)."
+                )
+            if spread is not None and spread["micro"] > spread["macro"]:
+                lines.append(
+                    f"- Micro lifts {spread['model']} most "
+                    f"(+{spread['micro'] - spread['macro']:.1f} pp over macro) "
+                    "— strength concentrated in the larger panels."
+                )
+            lines.append("")
 
     lines.extend(["", "## Speed & behavior", ""])
     lines.append(
@@ -623,26 +701,90 @@ def generate_report(
     return markdown
 
 
+def build_index(reports_dir: Path, output: Path) -> str:
+    """Scan report files for cospa:agg markers; write an index README.
+
+    Ordered by micro pooled (descending) with relative links. The index
+    file itself is excluded from scanning.
+    """
+    import re as _re
+
+    reports_dir = Path(reports_dir)
+    output = Path(output)
+    entries = []
+    for md in sorted(reports_dir.glob("*.md")):
+        if md.resolve() == output.resolve():
+            continue
+        try:
+            text = md.read_text(errors="replace")
+        except OSError:
+            continue
+        for m in _re.finditer(r"<!-- cospa:agg ([^>]+?)-->", text):
+            fields = dict(_re.findall(r"(\w+)=(\S+)", m.group(1)))
+            if fields.get("model"):
+                entries.append((md.name, fields))
+    entries.sort(key=lambda e: -float(e[1].get("micro", 0) or 0))
+    lines = [
+        "# Reports index",
+        "",
+        "Auto-generated from embedded aggregate markers; ordered by micro "
+        "pooled (descending). Regenerate with "
+        "`scripts/generate-report.py --build-index <reports-dir>`.",
+        "",
+        "| Report | Model | Adapter | Thinking | Cells | Geomean | Smoothed | Macro | Micro | In | Cached | Out | Wall |",
+        "| --- | --- | --- | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |",
+    ]
+    for name, f in entries:
+        wall = f.get("wall")
+        wall_text = _fmt_duration(float(wall)) if wall else "-"
+        lines.append(
+            f"| [{name}]({name}) | {f.get('model')} | {f.get('adapter')} | "
+            f"{f.get('thinking')} | {f.get('cells')} | {f.get('geo')}% | "
+            f"{f.get('smooth')}% | {f.get('macro')}% | {f.get('micro')}% | "
+            f"{_fmt_tokens(f.get('tok_in'))} | {_fmt_tokens(f.get('cached'))} | "
+            f"{_fmt_tokens(f.get('out'))} | {wall_text} |"
+        )
+    markdown = "\n".join(lines) + "\n"
+    output.write_text(markdown)
+    return markdown
+
+
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument(
         "--results-dir",
         action="append",
-        required=True,
+        default=None,
         type=Path,
         help="Results directory to include (repeatable).",
     )
     parser.add_argument(
         "--output",
         type=Path,
-        required=True,
+        default=None,
         help="Markdown output path; links are relative to this file.",
+    )
+    parser.add_argument(
+        "--build-index",
+        type=Path,
+        default=None,
+        metavar="REPORTS_DIR",
+        help="Only rebuild <REPORTS_DIR>/README.md from embedded markers.",
     )
     return parser.parse_args()
 
 
 def main() -> int:
     args = parse_args()
+    if args.build_index:
+        out = args.build_index / "README.md"
+        markdown = build_index(args.build_index, out)
+        print(f"wrote index with {markdown.count(chr(10))} lines to {out}")
+        return 0
+    if args.output is None:
+        raise SystemExit("--output is required without --build-index")
+    if not args.results_dir:
+        raise SystemExit("--results-dir is required without --build-index")
     markdown = generate_report(args.results_dir, args.output)
     print(f"wrote {len(markdown.splitlines())} lines to {args.output}")
     return 0

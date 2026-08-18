@@ -1,18 +1,18 @@
 # Cospa Run Report
 
-_Generated 2026-08-18T02:35:25+0900 · harness pi 0.84.2 (pi_vanilla, --no-extensions)_
+_Generated 2026-08-18T10:14:25+0900 · harness pi 0.84.2 (pi_vanilla, --no-extensions)_
 
 ## Summary
 
 | Suite | Model | Adapter | Thinking | Tasks | Score | Task wall | Uncached | Cached | Output | Cost |
 | --- | --- | --- | --- | ---: | --- | ---: | ---: | ---: | ---: | ---: |
 | bigcodebench_hard_agentic_hermetic143 | shisa/ornith-35b-fp8-block | pi_vanilla | high | 143 | 43/143 (30.1%) | 35h36m | 345K | 4.6M | 323K | $1.02 |
-| featurebench_lite_pareto12 | shisa/ornith-35b-fp8-block | pi_vanilla | high | 12 | 0/12 (0.0%) | 2h37m | 665K | 15.5M | 51K | $2.32 |
+| featurebench_lite_pareto12 | shisa/ornith-35b-fp8-block | pi_vanilla | high | 10 | 0/10 (0.0%) **PARTIAL 10/12** | 10h05m | 0 | 0 | 0 | $0 |
 | multi_swe_bench_flash_hermetic25 | shisa/ornith-35b-fp8-block | pi_vanilla | high | 25 | 3/25 (12.0%) | 11h07m | 88K | 900K | 23K | $0.1621 |
 | swe_explore_verified12 | shisa/ornith-35b-fp8-block | pi_vanilla | high | 12 | 0/12 (0.0%) | 2h00m | 64K | 307K | 13K | $0.0655 |
 | swe_polybench_verified_balanced64 | shisa/ornith-35b-fp8-block | pi_vanilla | high | 64 | 8/64 (12.5%) | 29h42m | 251K | 2.5M | 57K | $0.4496 |
 | terminal_bench | shisa/ornith-35b-fp8-block | pi_vanilla | high | 80 | 4/80 (5.0%) | 12h27m | 4K | 45K | 3K | $0.0100 |
-| **All cells** | | | | **336** | — | **93h31m** | **1.4M** | **23.8M** | **471K** | **$4.03** |
+| **All cells** | | | | **334** | — | **101h00m** | **753K** | **8.3M** | **420K** | **$1.71** |
 
 ## Headline geomean
 
@@ -20,7 +20,15 @@ Geometric mean of per-suite rates per model configuration, across primary comple
 
 | Model | Adapter | Thinking | Cells | Geomean | Geomean (smoothed) | Macro mean | Micro pooled |
 | --- | --- | --- | ---: | ---: | ---: | ---: | ---: |
-| shisa/ornith-35b-fp8-block | pi_vanilla | high | 6 | 0.0% | 11.1% | 9.9% | 17.3% |
+| shisa/ornith-35b-fp8-block | pi_vanilla | high | 5 | 0.0% | 12.2% | 11.9% | 17.9% |
+<!-- cospa:agg model=shisa/ornith-35b-fp8-block adapter=pi_vanilla thinking=high cells=5 geo=0.0 smooth=12.2 macro=11.9 micro=17.9 tok_in=752688 cached=8345024 out=419850 wall=327257.1 -->
+
+## Aggregate reading
+
+- Ordering by micro pooled: shisa/ornith-35b-fp8-block (17.9%).
+- The ordering is consistent across all four aggregations.
+- Strict geomean floors at 0 for: shisa/ornith-35b-fp8-block (zero components on at least one panel; see the smoothed column for ranking).
+- Micro lifts shisa/ornith-35b-fp8-block most (+6.0 pp over macro) — strength concentrated in the larger panels.
 
 
 ## Speed & behavior
@@ -28,7 +36,7 @@ Geometric mean of per-suite rates per model configuration, across primary comple
 | Suite | Model | Thinking | Tasks | Task wall | Avg/task | Turns | LLM% | Tool% | Tool calls | Search calls | Behavior trials |
 | --- | --- | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
 | bigcodebench_hard_agentic_hermetic143 | shisa/ornith-35b-fp8-block | high | 143 | 35h36m | 14m56s | 8.7 | 99.3% | 0.7% | 7.6 | 0.4 | 143 |
-| featurebench_lite_pareto12 | shisa/ornith-35b-fp8-block | high | 12 | 2h37m | 13m07s | 69.8 | 79.8% | 0.6% | 13.3 | 6.2 | 12 |
+| featurebench_lite_pareto12 | shisa/ornith-35b-fp8-block | high | 10 | 10h05m | 1h00m | 4.0 | 20.3% | 0.0% | - | - | 2 |
 | multi_swe_bench_flash_hermetic25 | shisa/ornith-35b-fp8-block | high | 25 | 11h07m | 26m43s | 14.2 | 99.7% | 0.3% | 15.8 | 4.3 | 9 |
 | swe_explore_verified12 | shisa/ornith-35b-fp8-block | high | 12 | 2h00m | 10m00s | 6.3 | 100.0% | 0.0% | 7.3 | 2.4 | 12 |
 | swe_polybench_verified_balanced64 | shisa/ornith-35b-fp8-block | high | 64 | 29h42m | 27m51s | 15.4 | 98.5% | 1.3% | 16.4 | 6.0 | 21 |
@@ -198,24 +206,24 @@ Results root: `results/runs/ornith35-vanilla-high-matrix-c8-20260816/shisa%2Forn
 
 | Task | Trials | Task wall | Traces |
 | --- | --- | ---: | --- |
-| Lightning-AI__pytorch-lightning.126fa6f1.test_data.c8b292af.lv1 | [t1 ✗](../results/runs/ornith35-vanilla-high-matrix-c8-20260816/shisa%2Fornith-35b-fp8-block/pi_vanilla/featurebench_lite_pareto12/Lightning-AI__pytorch-lightning.126fa6f1.test_data.c8b292af.lv1/trial-1) | 15m31s | [t1](../results/runs/ornith35-vanilla-high-matrix-c8-20260816/shisa%2Fornith-35b-fp8-block/pi_vanilla/featurebench_lite_pareto12/Lightning-AI__pytorch-lightning.126fa6f1.test_data.c8b292af.lv1/trial-1/out/pi_session.jsonl) |
-| Netflix__metaflow.b390a8d4.test_stub_generator.7bf08c98.lv1 | [t1 ✗](../results/runs/ornith35-vanilla-high-matrix-c8-20260816/shisa%2Fornith-35b-fp8-block/pi_vanilla/featurebench_lite_pareto12/Netflix__metaflow.b390a8d4.test_stub_generator.7bf08c98.lv1/trial-1) | 1m40s | [t1](../results/runs/ornith35-vanilla-high-matrix-c8-20260816/shisa%2Fornith-35b-fp8-block/pi_vanilla/featurebench_lite_pareto12/Netflix__metaflow.b390a8d4.test_stub_generator.7bf08c98.lv1/trial-1/out/pi_session.jsonl) |
-| astropy__astropy.b0db0daa.test_table.48eef659.lv1 | [t1 ✗](../results/runs/ornith35-vanilla-high-matrix-c8-20260816/shisa%2Fornith-35b-fp8-block/pi_vanilla/featurebench_lite_pareto12/astropy__astropy.b0db0daa.test_table.48eef659.lv1/trial-1) | 1m46s | [t1](../results/runs/ornith35-vanilla-high-matrix-c8-20260816/shisa%2Fornith-35b-fp8-block/pi_vanilla/featurebench_lite_pareto12/astropy__astropy.b0db0daa.test_table.48eef659.lv1/trial-1/out/pi_session.jsonl) |
-| huggingface__transformers.e2e8dbed.test_serve.4e7860c7.lv1 | [t1 ✗](../results/runs/ornith35-vanilla-high-matrix-c8-20260816/shisa%2Fornith-35b-fp8-block/pi_vanilla/featurebench_lite_pareto12/huggingface__transformers.e2e8dbed.test_serve.4e7860c7.lv1/trial-1) | 2m23s | [t1](../results/runs/ornith35-vanilla-high-matrix-c8-20260816/shisa%2Fornith-35b-fp8-block/pi_vanilla/featurebench_lite_pareto12/huggingface__transformers.e2e8dbed.test_serve.4e7860c7.lv1/trial-1/out/pi_session.jsonl) |
-| mlflow__mlflow.93dab383.test_databricks_tracing_utils.8ef44eb4.lv1 | [t1 ✗](../results/runs/ornith35-vanilla-high-matrix-c8-20260816/shisa%2Fornith-35b-fp8-block/pi_vanilla/featurebench_lite_pareto12/mlflow__mlflow.93dab383.test_databricks_tracing_utils.8ef44eb4.lv1/trial-1) | 8m51s | [t1](../results/runs/ornith35-vanilla-high-matrix-c8-20260816/shisa%2Fornith-35b-fp8-block/pi_vanilla/featurebench_lite_pareto12/mlflow__mlflow.93dab383.test_databricks_tracing_utils.8ef44eb4.lv1/trial-1/out/pi_session.jsonl) |
-| mwaskom__seaborn.7001ebe7.test_algorithms.1f0181c2.lv1 | [t1 ✗](../results/runs/ornith35-vanilla-high-matrix-c8-20260816/shisa%2Fornith-35b-fp8-block/pi_vanilla/featurebench_lite_pareto12/mwaskom__seaborn.7001ebe7.test_algorithms.1f0181c2.lv1/trial-1) | 17m14s | [t1](../results/runs/ornith35-vanilla-high-matrix-c8-20260816/shisa%2Fornith-35b-fp8-block/pi_vanilla/featurebench_lite_pareto12/mwaskom__seaborn.7001ebe7.test_algorithms.1f0181c2.lv1/trial-1/out/pi_session.jsonl) |
-| mwaskom__seaborn.7001ebe7.test_regression.ce8c62e2.lv1 | [t1 ✗](../results/runs/ornith35-vanilla-high-matrix-c8-20260816/shisa%2Fornith-35b-fp8-block/pi_vanilla/featurebench_lite_pareto12/mwaskom__seaborn.7001ebe7.test_regression.ce8c62e2.lv1/trial-1) | 1m46s | [t1](../results/runs/ornith35-vanilla-high-matrix-c8-20260816/shisa%2Fornith-35b-fp8-block/pi_vanilla/featurebench_lite_pareto12/mwaskom__seaborn.7001ebe7.test_regression.ce8c62e2.lv1/trial-1/out/pi_session.jsonl) |
-| pandas-dev__pandas.82fa2715.test_concat.ebe5de39.lv1 | [t1 ✗](../results/runs/ornith35-vanilla-high-matrix-c8-20260816/shisa%2Fornith-35b-fp8-block/pi_vanilla/featurebench_lite_pareto12/pandas-dev__pandas.82fa2715.test_concat.ebe5de39.lv1/trial-1) | 45m56s | [t1](../results/runs/ornith35-vanilla-high-matrix-c8-20260816/shisa%2Fornith-35b-fp8-block/pi_vanilla/featurebench_lite_pareto12/pandas-dev__pandas.82fa2715.test_concat.ebe5de39.lv1/trial-1/out/pi_session.jsonl) |
-| pydantic__pydantic.e1dcaf9e.test_deprecated_fields.40a2ec54.lv1 | [t1 ✗](../results/runs/ornith35-vanilla-high-matrix-c8-20260816/shisa%2Fornith-35b-fp8-block/pi_vanilla/featurebench_lite_pareto12/pydantic__pydantic.e1dcaf9e.test_deprecated_fields.40a2ec54.lv1/trial-1) | 47m21s | [t1](../results/runs/ornith35-vanilla-high-matrix-c8-20260816/shisa%2Fornith-35b-fp8-block/pi_vanilla/featurebench_lite_pareto12/pydantic__pydantic.e1dcaf9e.test_deprecated_fields.40a2ec54.lv1/trial-1/out/pi_session.jsonl) |
-| pydata__xarray.97f3a746.test_backends_chunks.fa55f68a.lv1 | [t1 ✗](../results/runs/ornith35-vanilla-high-matrix-c8-20260816/shisa%2Fornith-35b-fp8-block/pi_vanilla/featurebench_lite_pareto12/pydata__xarray.97f3a746.test_backends_chunks.fa55f68a.lv1/trial-1) | 1m55s | [t1](../results/runs/ornith35-vanilla-high-matrix-c8-20260816/shisa%2Fornith-35b-fp8-block/pi_vanilla/featurebench_lite_pareto12/pydata__xarray.97f3a746.test_backends_chunks.fa55f68a.lv1/trial-1/out/pi_session.jsonl) |
-| sphinx-doc__sphinx.e347e59c.test_domain_c.4068b9e8.lv1 | [t1 ✗](../results/runs/ornith35-vanilla-high-matrix-c8-20260816/shisa%2Fornith-35b-fp8-block/pi_vanilla/featurebench_lite_pareto12/sphinx-doc__sphinx.e347e59c.test_domain_c.4068b9e8.lv1/trial-1) | 11m21s | [t1](../results/runs/ornith35-vanilla-high-matrix-c8-20260816/shisa%2Fornith-35b-fp8-block/pi_vanilla/featurebench_lite_pareto12/sphinx-doc__sphinx.e347e59c.test_domain_c.4068b9e8.lv1/trial-1/out/pi_session.jsonl) |
-| sympy__sympy.c1097516.test_nullspace.f14fc970.lv1 | [t1 ✗](../results/runs/ornith35-vanilla-high-matrix-c8-20260816/shisa%2Fornith-35b-fp8-block/pi_vanilla/featurebench_lite_pareto12/sympy__sympy.c1097516.test_nullspace.f14fc970.lv1/trial-1) | 1m45s | [t1](../results/runs/ornith35-vanilla-high-matrix-c8-20260816/shisa%2Fornith-35b-fp8-block/pi_vanilla/featurebench_lite_pareto12/sympy__sympy.c1097516.test_nullspace.f14fc970.lv1/trial-1/out/pi_session.jsonl) |
+| Lightning-AI__pytorch-lightning.126fa6f1.test_data.c8b292af.lv1 | [t1 ✗](../results/runs/ornith35-vanilla-high-matrix-c8-20260816/shisa%2Fornith-35b-fp8-block/pi_vanilla/featurebench_lite_pareto12/Lightning-AI__pytorch-lightning.126fa6f1.test_data.c8b292af.lv1/trial-1) | 1h00m | - |
+| Netflix__metaflow.b390a8d4.test_stub_generator.7bf08c98.lv1 | [t1 ✗](../results/runs/ornith35-vanilla-high-matrix-c8-20260816/shisa%2Fornith-35b-fp8-block/pi_vanilla/featurebench_lite_pareto12/Netflix__metaflow.b390a8d4.test_stub_generator.7bf08c98.lv1/trial-1) | 1h00m | - |
+| astropy__astropy.b0db0daa.test_table.48eef659.lv1 | [t1 ✗](../results/runs/ornith35-vanilla-high-matrix-c8-20260816/shisa%2Fornith-35b-fp8-block/pi_vanilla/featurebench_lite_pareto12/astropy__astropy.b0db0daa.test_table.48eef659.lv1/trial-1) | 1h00m | - |
+| huggingface__transformers.e2e8dbed.test_serve.4e7860c7.lv1 | [t1 ✗](../results/runs/ornith35-vanilla-high-matrix-c8-20260816/shisa%2Fornith-35b-fp8-block/pi_vanilla/featurebench_lite_pareto12/huggingface__transformers.e2e8dbed.test_serve.4e7860c7.lv1/trial-1) | 1h01m | - |
+| mlflow__mlflow.93dab383.test_databricks_tracing_utils.8ef44eb4.lv1 | [t1 ✗](../results/runs/ornith35-vanilla-high-matrix-c8-20260816/shisa%2Fornith-35b-fp8-block/pi_vanilla/featurebench_lite_pareto12/mlflow__mlflow.93dab383.test_databricks_tracing_utils.8ef44eb4.lv1/trial-1) | 1h00m | - |
+| mwaskom__seaborn.7001ebe7.test_algorithms.1f0181c2.lv1 | [t1 ✗](../results/runs/ornith35-vanilla-high-matrix-c8-20260816/shisa%2Fornith-35b-fp8-block/pi_vanilla/featurebench_lite_pareto12/mwaskom__seaborn.7001ebe7.test_algorithms.1f0181c2.lv1/trial-1) | 1h00m | - |
+| mwaskom__seaborn.7001ebe7.test_regression.ce8c62e2.lv1 | [t1 ✗](../results/runs/ornith35-vanilla-high-matrix-c8-20260816/shisa%2Fornith-35b-fp8-block/pi_vanilla/featurebench_lite_pareto12/mwaskom__seaborn.7001ebe7.test_regression.ce8c62e2.lv1/trial-1) | 1h00m | - |
+| pandas-dev__pandas.82fa2715.test_concat.ebe5de39.lv1 | [t1 ?](../results/runs/ornith35-vanilla-high-matrix-c8-20260816/shisa%2Fornith-35b-fp8-block/pi_vanilla/featurebench_lite_pareto12/pandas-dev__pandas.82fa2715.test_concat.ebe5de39.lv1/trial-1) | - | - |
+| pydantic__pydantic.e1dcaf9e.test_deprecated_fields.40a2ec54.lv1 | [t1 ?](../results/runs/ornith35-vanilla-high-matrix-c8-20260816/shisa%2Fornith-35b-fp8-block/pi_vanilla/featurebench_lite_pareto12/pydantic__pydantic.e1dcaf9e.test_deprecated_fields.40a2ec54.lv1/trial-1) | - | - |
+| pydata__xarray.97f3a746.test_backends_chunks.fa55f68a.lv1 | [t1 ✗](../results/runs/ornith35-vanilla-high-matrix-c8-20260816/shisa%2Fornith-35b-fp8-block/pi_vanilla/featurebench_lite_pareto12/pydata__xarray.97f3a746.test_backends_chunks.fa55f68a.lv1/trial-1) | 1h00m | [t1](../results/runs/ornith35-vanilla-high-matrix-c8-20260816/shisa%2Fornith-35b-fp8-block/pi_vanilla/featurebench_lite_pareto12/pydata__xarray.97f3a746.test_backends_chunks.fa55f68a.lv1/trial-1/out/pi_session.jsonl) |
+| sphinx-doc__sphinx.e347e59c.test_domain_c.4068b9e8.lv1 | [t1 ✗](../results/runs/ornith35-vanilla-high-matrix-c8-20260816/shisa%2Fornith-35b-fp8-block/pi_vanilla/featurebench_lite_pareto12/sphinx-doc__sphinx.e347e59c.test_domain_c.4068b9e8.lv1/trial-1) | 1h00m | - |
+| sympy__sympy.c1097516.test_nullspace.f14fc970.lv1 | [t1 ✗](../results/runs/ornith35-vanilla-high-matrix-c8-20260816/shisa%2Fornith-35b-fp8-block/pi_vanilla/featurebench_lite_pareto12/sympy__sympy.c1097516.test_nullspace.f14fc970.lv1/trial-1) | 1h00m | [t1](../results/runs/ornith35-vanilla-high-matrix-c8-20260816/shisa%2Fornith-35b-fp8-block/pi_vanilla/featurebench_lite_pareto12/sympy__sympy.c1097516.test_nullspace.f14fc970.lv1/trial-1/out/pi_session.jsonl) |
 
-Failed-trial taxonomy: 12 incorrect.
+Failed-trial taxonomy: 10 budget_exhausted.
 
-Campaign elapsed (c=8 scheduling included): 1h16m.
+Campaign elapsed (c=8 scheduling included): 8h31m.
 
-Traces: 12/12 trials expose `out/pi_session.jsonl`.
+Traces: 2/12 trials expose `out/pi_session.jsonl`.
 
 ### multi_swe_bench_flash_hermetic25 — shisa/ornith-35b-fp8-block / pi_vanilla / high
 

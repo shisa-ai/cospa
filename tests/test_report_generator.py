@@ -349,10 +349,12 @@ def test_report_includes_headline_geomean_per_model_config(tmp_path):
     )
 
     assert "## Headline geomean" in markdown
-    # sqrt(0.5 * 0.25) = 0.35355 -> 35.4%
-    assert "35.4%" in markdown
-    # Geomean covers 2 cells (partial suite_a duplicate excluded).
-    assert "| local/test-model | pi_vanilla | high | 2 | 35.4% |" in markdown
+    # smoothed geomean = sqrt(0.5 * (2/4)) ... Laplace: aider (1+1)/(2+2)=0.5,
+    # featurebench (1+1)/(4+2)=1/3 -> sqrt(0.5 * 0.3333) = 0.4082 -> 40.8%
+    assert "40.8%" in markdown
+
+    # Geomean covers 2 cells (partial aider duplicate excluded).
+    assert "| local/test-model | pi_vanilla | high | 2 | 35.4% | 40.8% | 37.5% | 33.3% |" in markdown
 
 
 def test_geomean_rate_prefers_continuous_score_over_anyhit_pass_rate():
@@ -403,8 +405,104 @@ def test_geomean_table_includes_macro_and_micro_columns(tmp_path):
     markdown = generate_report(
         [root], tmp_path / "r.md", canonical_suite_size=lambda s: None
     )
-    # macro = (0.5 + 0.25) / 2 = 37.5%; micro = 2 / 6 = 33.3%
-    import re
+    # macro = (0.5 + 0.25) / 2 = 37.5%; smoothed geomean 40.8% (no micro col)
     row = [l for l in markdown.splitlines() if l.startswith(f"| {model} | {adapter} | high |")]
     assert row, "geomean row missing"
-    assert "37.5%" in row[0] and "33.3%" in row[0]
+    assert "37.5%" in row[0]
+    assert "| 35.4% | 40.8% | 37.5% | 33.3% |" in row[0]  # strict, smoothed, macro, micro
+    assert "Micro pooled" in markdown  # four-column topline restored
+
+
+def test_report_topline_has_four_aggregates_markers_and_analysis(tmp_path):
+    """All four aggregations render, machine markers are embedded for the
+    index builder, and a short deterministic analysis paragraph appears."""
+    generate_report = _generator()["generate_report"]
+    model, adapter = "local/test-model", "pi_vanilla"
+
+    def cell(root: Path, suite: str, tasks: list[bool]):
+        base = root / encode_model_path(model) / adapter / suite
+        for i, passed in enumerate(tasks):
+            _write_trial(
+                base / encode_task_path(f"t/{suite}{i}") / "trial-1",
+                passed=passed, task_id=f"t/{suite}{i}",
+            )
+
+    root = tmp_path / "run"
+    cell(root, "aider_polyglot", [True, False])
+    cell(root, "featurebench_lite_pareto12", [True, False, False, False])
+
+    markdown = generate_report(
+        [root], tmp_path / "r.md", canonical_suite_size=lambda s: None
+    )
+    # Four aggregate columns present.
+    assert "Geomean | Geomean (smoothed) | Macro mean | Micro pooled" in markdown
+    # Machine marker for the index builder, with all fields.
+    assert "<!-- cospa:agg " in markdown
+    marker = [l for l in markdown.splitlines() if l.startswith("<!-- cospa:agg ")][0]
+    for field in ("model=", "adapter=", "thinking=", "cells=", "geo=", "smooth=", "macro=", "micro="):
+        assert field in marker
+    # Deterministic analysis paragraph.
+    assert "## Aggregate reading" in markdown
+
+
+def test_build_index_orders_by_micro_and_links_reports(tmp_path):
+    """Index builder scans report files for cospa:agg markers and writes a
+    README.md table ordered by micro descending with relative links."""
+    module = _generator()
+    build_index = module["build_index"]
+    reports = tmp_path / "reports"
+    reports.mkdir()
+    (reports / "alpha.md").write_text(
+        "# Alpha\n<!-- cospa:agg model=mA adapter=pi_vanilla thinking=high cells=6 geo=25.5 smooth=26.9 macro=29.6 micro=35.8 -->\n"
+    )
+    (reports / "beta.md").write_text(
+        "# Beta\n<!-- cospa:agg model=mB adapter=pi_vanilla thinking=high cells=6 geo=0.0 smooth=11.1 macro=9.9 micro=17.3 -->\n"
+    )
+    (reports / "README.md").write_text("# stale\n")
+
+    out = reports / "README.md"
+    build_index(reports, out)
+    text = out.read_text()
+    assert "[alpha.md](alpha.md)" in text and "[beta.md](beta.md)" in text
+    assert text.index("mA") < text.index("mB")  # micro 35.8 > 17.3
+    assert "micro=35.8" not in text  # markers not leaked into the table
+
+
+def test_report_markers_and_index_carry_tokens_and_wall(tmp_path):
+    """Markers embed token/cached/out sums plus wall seconds; the index
+    renders them as formatted columns."""
+    module = _generator()
+    generate_report = module["generate_report"]
+    model, adapter = "local/test-model", "pi_vanilla"
+
+    def cell(root: Path, suite: str, tasks: list[bool], token_usage: dict):
+        base = root / encode_model_path(model) / adapter / suite
+        for i, passed in enumerate(tasks):
+            _write_trial(
+                base / encode_task_path(f"t/{suite}{i}") / "trial-1",
+                passed=passed, task_id=f"t/{suite}{i}",
+                token_usage=token_usage,
+            )
+
+    root = tmp_path / "run"
+    usage = {"prompt_tokens": 100, "cached_tokens": 900, "completion_tokens": 50}
+    cell(root, "aider_polyglot", [True, False], usage)
+
+    markdown = generate_report(
+        [root], tmp_path / "r.md", canonical_suite_size=lambda s: None
+    )
+    marker = [l for l in markdown.splitlines() if l.startswith("<!-- cospa:agg ")][0]
+    # 2 trials x usage
+    for field, val in (("tok_in=", "200"), ("cached=", "1800"), ("out=", "100"), ("wall=", "20")):
+        assert field in marker
+    assert "tok_in=200" in marker and "cached=1800" in marker and "out=100" in marker
+
+    reports = tmp_path / "reports"
+    reports.mkdir()
+    (reports / "one.md").write_text(
+        f"# R\n{marker}\n"
+    )
+    out = reports / "README.md"
+    idx = module["build_index"](reports, out)
+    assert "Cached" in idx and "In" in idx and "Out" in idx and "Wall" in idx
+    assert "20s" in idx

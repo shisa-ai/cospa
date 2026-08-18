@@ -2804,3 +2804,19 @@ Append-only development log for the `cospa` repository.
 - Evidence: test_geomean_smoothed_column_laplace,
   test_geomean_table_includes_macro_and_micro_columns; full suite 436
   passed. All three row reports regenerated.
+
+## 2026-08-18 — Four-aggregate topline, analysis, and report index
+
+- Restored all four aggregates as the topline (strict geomean, Laplace
+  smoothed, macro mean, micro pooled) per user preference, plus a
+  deterministic "Aggregate reading" paragraph (ordering consistency,
+  zero-floor notes, biggest micro-vs-macro lift).
+- Reports now embed machine-readable <!-- cospa:agg ... --> markers per
+  model config with scores plus tok_in/cached/out sums and wall seconds.
+- New --build-index mode scans a reports dir for markers and writes
+  README.md ordered by micro pooled descending with relative links,
+  capability (Geomean/Smoothed/Macro/Micro) and verbosity (In/Cached/Out/
+  Wall) columns.
+- Evidence: three new tests (topline markers + analysis, index ordering +
+  links, tokens/wall propagation); full suite 439 passed. All reports and
+  reports/README.md regenerated.

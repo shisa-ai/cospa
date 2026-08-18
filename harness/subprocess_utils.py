@@ -256,23 +256,6 @@ def _sandbox_agent_command(
     cmd = [str(value) for value in cmd]
     sandbox_cwd = agent_sandbox_cwd(workdir, task_name)
     sandbox_parent = sandbox_cwd.parent
-    session_dir: Path | None = None
-    sandbox_session_dir: Path | None = None
-    if "--session-dir" in cmd:
-        option_index = cmd.index("--session-dir")
-        if option_index + 1 >= len(cmd):
-            raise ValueError("--session-dir requires a path")
-        session_dir = Path(cmd[option_index + 1]).resolve()
-        try:
-            session_dir.relative_to(workdir.parent)
-        except ValueError as exc:
-            raise ValueError(
-                "Sandbox session directory must stay within the trial root: "
-                f"{session_dir}"
-            ) from exc
-        session_dir.mkdir(parents=True, exist_ok=True)
-        sandbox_session_dir = sandbox_parent / "pi-sessions"
-        cmd[option_index + 1] = str(sandbox_session_dir)
     pi_home = Path.home() / ".pi"
     sessions_root = pi_home / "agent" / "sessions"
     encoded_cwd = str(sandbox_cwd).strip("/").replace("/", "-")
@@ -472,8 +455,6 @@ def _sandbox_agent_command(
         sandbox_parent,
         sandbox_cwd,
     ]
-    if sandbox_session_dir is not None:
-        sandbox_dirs.append(sandbox_session_dir)
     _append_dir_options(wrapped, sandbox_dirs)
     wrapped.extend(
         [
@@ -501,10 +482,6 @@ def _sandbox_agent_command(
             str(sandbox_cwd),
         ]
     )
-    if session_dir is not None and sandbox_session_dir is not None:
-        wrapped.extend(
-            ["--bind", str(session_dir), str(sandbox_session_dir)]
-        )
     wrapped.extend(["--chdir", str(sandbox_cwd)])
     if endpoint:
         if relay_socket is None or endpoint_port is None:

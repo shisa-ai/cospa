@@ -2858,3 +2858,23 @@ Append-only development log for the `cospa` repository.
   backoff + provider_error (2), full suite 453 passed.
 - Decision: retries wait instead of hammering; provider failures become data.
 - Next: P1 circuit breaker (bounded submission, cell pause, exit 3).
+
+## 2026-08-18 — Add mid-run circuit breaker (P1)
+
+- Context: RUN-MANAGEMENT P1. A dead provider mid-run burned the whole cell
+  budget (ornith case: 9 x 60 min). Only a pre-run reachability probe existed.
+- Change: `harness/resilience.py` gains `agent_produced_output`
+  (distinguishes a hung budget_exhausted from one that did real work),
+  `trial_is_outage`, `write_paused_marker`. Runner now uses a
+  `CircuitBreaker` with bounded submission (c>1 keeps only `concurrency`
+  futures in flight) and pauses the cell after N consecutive provider
+  outages: writes `.cell-paused.json`, finishes heartbeat `paused`, exits 3.
+  Capability outcomes (wrong answer) never trip it. Flags:
+  `--breaker-threshold` (0 disables) / `--no-circuit-breaker`.
+- Evidence: `tests/test_circuit_breaker.py` (4: c=1 pause+marker, disabled,
+  bounded c>1, wrong-answer never trips) + resilience unit tests; my files
+  447 passed (full suite minus the other agent's in-progress
+  `test_report_generator.py`, which fails on the committed baseline too).
+- Decision: pause-and-exit (resume re-arms) rather than in-process cooldown
+  waits; P4 matrix resume will skip a paused cell.
+- Next: P4 run-matrix.sh self-resume/checkpoint, then P5 cost rollup.

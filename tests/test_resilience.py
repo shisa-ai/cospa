@@ -1,5 +1,6 @@
 """Resilience helpers: structured provider errors, retry backoff, circuit breaker."""
 
+import json
 import sys
 from pathlib import Path
 
@@ -8,11 +9,14 @@ sys.path.insert(0, str(PROJECT_ROOT))
 
 from harness.resilience import (  # noqa: E402
     CircuitBreaker,
+    agent_produced_output,
     extract_http_status,
     extract_retry_after,
     provider_error_from,
     provider_outage,
     retry_delay,
+    trial_is_outage,
+    write_paused_marker,
 )
 
 
@@ -158,3 +162,86 @@ def test_breaker_disabled_never_opens():
     for _ in range(10):
         b.record(True)
     assert b.open() is False
+
+
+# --- agent-output detection / outage decision / pause marker ---
+
+
+def test_agent_produced_output(tmp_path):
+    # No session at all -> no output.
+    assert agent_produced_output(tmp_path) is False
+    out = tmp_path / "out"
+    out.mkdir(parents=True)
+    session = out / "pi_session.jsonl"
+    # A real session with a model response -> output produced.
+    session.write_text(
+        json.dumps(
+            {
+                "type": "event",
+                "message": {
+                    "role": "assistant",
+                    "content": "I solved it",
+                    "usage": {"input": 10, "output": 5, "total": 15},
+                },
+            }
+        )
+        + "\n"
+    )
+    assert agent_produced_output(tmp_path) is True
+    # A session with only a header (hung trial) -> no output.
+    session.write_text(json.dumps({"type": "session", "id": "s1"}) + "\n")
+    assert agent_produced_output(tmp_path) is False
+
+
+def test_trial_is_outage(tmp_path):
+    m = _manifest("AgentTimeoutError: timed out after 3600.0 seconds")
+    v = _verdict(failure_class="budget_exhausted")
+    # Hung budget exhaustion with no agent output -> outage.
+    assert trial_is_outage(m, v, tmp_path) is True
+    # Same classification but the agent did real work -> not an outage.
+    out = tmp_path / "out"
+    out.mkdir(parents=True)
+    (out / "pi_session.jsonl").write_text(
+        json.dumps(
+            {
+                "type": "event",
+                "message": {
+                    "role": "assistant",
+                    "content": "work",
+                    "usage": {"input": 1, "output": 1, "total": 2},
+                },
+            }
+        )
+        + "\n"
+    )
+    assert trial_is_outage(m, v, tmp_path) is False
+    # Unambiguous endpoint class counts regardless of output.
+    mc = _manifest("stdout: Connection error.")
+    vc = _verdict(adapter_failed=True)
+    assert trial_is_outage(mc, vc, tmp_path) is True
+    # Capability outcome never counts.
+    assert trial_is_outage(_manifest(None), _verdict(), tmp_path) is False
+
+
+def test_write_paused_marker(tmp_path):
+    b = CircuitBreaker(threshold=3)
+    b.record(True)
+    b.record(True)
+    b.record(True)
+    path = write_paused_marker(
+        tmp_path,
+        b,
+        model="kimi/kimi-k3",
+        adapter="pi_vanilla",
+        suite="featurebench_lite",
+        run_id="r1",
+        last_trial=("t1", 2),
+    )
+    assert path.name == ".cell-paused.json"
+    data = json.loads(path.read_text())
+    assert data["state"] == "paused"
+    assert data["reason"] == "circuit_breaker"
+    assert data["breaker"]["open"] is True
+    assert data["breaker"]["consecutive_outages"] == 3
+    assert data["last_trial"] == ["t1", 2]
+    assert data["paused_at"]

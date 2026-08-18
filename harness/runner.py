@@ -26,7 +26,7 @@ import sys
 import threading
 import time
 import uuid
-from concurrent.futures import ThreadPoolExecutor, as_completed
+from concurrent.futures import FIRST_COMPLETED, ThreadPoolExecutor, wait
 from datetime import datetime, timezone
 from functools import lru_cache
 from pathlib import Path
@@ -43,8 +43,19 @@ from harness.behavior import (
 )
 from harness.suites import load_suite
 from harness.harbor_docker import reclaim_stale_harbor_networks
-from harness.path_utils import encode_path_component
-from harness.resilience import provider_error_from, retry_delay, sleep_seconds
+from harness.path_utils import (
+    encode_model_path,
+    encode_path_component,
+    encode_task_path,
+)
+from harness.resilience import (
+    CircuitBreaker,
+    provider_error_from,
+    retry_delay,
+    sleep_seconds,
+    trial_is_outage,
+    write_paused_marker,
+)
 from harness.subprocess_utils import (
     agent_sandbox_cwd,
     register_termination_callback,
@@ -147,6 +158,21 @@ def parse_args():
             "Wrong answers are not retried."
         ),
     )
+    parser.add_argument(
+        "--breaker-threshold",
+        type=int,
+        default=3,
+        help=(
+            "Consecutive provider outages that trip the circuit breaker and "
+            "pause the cell (RUN-MANAGEMENT P1). 0 disables the breaker."
+        ),
+    )
+    parser.add_argument(
+        "--no-circuit-breaker",
+        action="store_true",
+        default=False,
+        help="Disable the mid-run circuit breaker entirely",
+    )
     return parser.parse_args()
 
 
@@ -170,6 +196,12 @@ def validate_args(args) -> None:
         sys.exit(2)
     if getattr(args, "concurrency", 1) < 1:
         print("✗ --concurrency must be a positive integer", file=sys.stderr)
+        sys.exit(2)
+    if (
+        not getattr(args, "no_circuit_breaker", False)
+        and getattr(args, "breaker_threshold", 3) < 0
+    ):
+        print("✗ --breaker-threshold must be zero or greater", file=sys.stderr)
         sys.exit(2)
 
 
@@ -1117,6 +1149,68 @@ def run_trial_with_retries(
     return last_manifest, last_verdict
 
 
+PAUSE_EXIT_CODE = 3
+
+
+def trial_output_dir(
+    results_dir,
+    model_id: str,
+    adapter_name: str,
+    suite_name: str,
+    task_id: str,
+    trial_k: int,
+) -> Path:
+    """Mirror run_trial's on-disk trial dir (for breaker agent-output checks)."""
+    return (
+        Path(results_dir)
+        / encode_model_path(model_id)
+        / adapter_name
+        / suite_name
+        / encode_task_path(task_id)
+        / f"trial-{trial_k}"
+    )
+
+
+def feed_breaker_and_maybe_pause(
+    breaker: CircuitBreaker,
+    manifest: dict,
+    verdict: dict,
+    trial_dir: Path,
+    *,
+    cell_dir: Path,
+    model_id: str,
+    adapter_name: str,
+    suite_name: str,
+    run_id: str | None,
+    last_trial: tuple[str, int],
+) -> bool:
+    """Feed one trial outcome to the circuit breaker (RUN-MANAGEMENT P1).
+
+    Returns True when the breaker tripped: the cell is paused (a
+    ``.cell-paused.json`` marker is written) and scheduling should stop.
+    """
+    if not breaker.enabled:
+        return False
+    breaker.record(trial_is_outage(manifest, verdict, trial_dir))
+    if not breaker.open():
+        return False
+    marker = write_paused_marker(
+        cell_dir,
+        breaker,
+        model=model_id,
+        adapter=adapter_name,
+        suite=suite_name,
+        run_id=run_id,
+        last_trial=last_trial,
+    )
+    print(
+        f"✗ Circuit breaker tripped after {breaker.consecutive_outages} "
+        f"consecutive provider outages; pausing cell. ({marker})",
+        file=sys.stderr,
+    )
+    return True
+
+
 class RunHeartbeat:
     """Cell-level runner heartbeat for liveness-aware score views."""
 
@@ -1325,13 +1419,33 @@ def main():
             retries=getattr(args, "retries", 2),
         )
 
-    # Preserve the simple ordered output path at c=1. At c>1, one worker owns
-    # each complete task trial (including any infrastructure retries), so the
-    # configured bound applies to actual endpoint/Harbor load rather than only
-    # to the first attempt.
+    # Circuit breaker (RUN-MANAGEMENT P1): pause the cell after a run of
+    # consecutive provider outages instead of burning the remaining budget
+    # against a dead endpoint. Disabled by --no-circuit-breaker or threshold 0.
+    # (getattr defaults keep hand-built test Namespaces working.)
+    breaker = CircuitBreaker(
+        threshold=getattr(args, "breaker_threshold", 3),
+        enabled=(
+            not getattr(args, "no_circuit_breaker", False)
+            and getattr(args, "breaker_threshold", 3) >= 1
+        ),
+    )
+
+    def breaker_last_trial(task_id, trial_k):
+        return trial_output_dir(
+            args.results_dir,
+            args.model,
+            adapter.name,
+            suite.name,
+            task_id,
+            trial_k,
+        )
+
     try:
         if concurrency == 1:
             for task_id, trial_k in jobs:
+                if breaker.open():
+                    break
                 print(f"── Task: {task_id} ──")
                 heartbeat.update(
                     state="running",
@@ -1356,51 +1470,88 @@ def main():
                         f"{status} "
                         f"({manifest['timing'].get('wall_clock_seconds', 0):.1f}s)"
                     )
+                    if feed_breaker_and_maybe_pause(
+                        breaker,
+                        manifest,
+                        verdict,
+                        breaker_last_trial(task_id, trial_k),
+                        cell_dir=args.results_dir,
+                        model_id=args.model,
+                        adapter_name=adapter.name,
+                        suite_name=suite.name,
+                        run_id=args.run_id,
+                        last_trial=(task_id, trial_k),
+                    ):
+                        break
                 except Exception as exc:
                     print(f"ERROR: {exc}")
                 print()
         else:
+            # Bounded submission: keep only `concurrency` futures in flight so
+            # the circuit breaker can stop scheduling new trials when a
+            # provider dies mid-run.
+            queue = list(jobs)
+            pending = {}
+
+            def submit_next():
+                while queue and len(pending) < concurrency and not breaker.open():
+                    task_id, trial_k = queue.pop(0)
+                    pending[executor.submit(execute_trial, task_id, trial_k)] = (
+                        task_id,
+                        trial_k,
+                    )
+
             finished_futures = 0
             with ThreadPoolExecutor(
                 max_workers=concurrency,
                 thread_name_prefix="cospa-trial",
             ) as executor:
-                futures = {
-                    executor.submit(execute_trial, task_id, trial_k): (
-                        task_id,
-                        trial_k,
-                    )
-                    for task_id, trial_k in jobs
-                }
+                submit_next()
                 heartbeat.update(
                     state="running",
                     current_task=None,
                     current_trial=None,
-                    active_trials=min(concurrency, len(jobs)),
-                    queued_trials=max(0, len(jobs) - concurrency),
+                    active_trials=min(concurrency, len(pending)),
+                    queued_trials=max(0, len(queue)),
                 )
-                for future in as_completed(futures):
-                    task_id, trial_k = futures[future]
-                    finished_futures += 1
-                    try:
-                        manifest, verdict = future.result()
-                        completed_trials += 1
-                        status = "✓" if verdict.get("passed") else "✗"
-                        print(
-                            f"── {task_id} trial {trial_k}/{args.k}: {status} "
-                            f"({manifest['timing'].get('wall_clock_seconds', 0):.1f}s)"
+                while pending:
+                    done, _ = wait(pending, return_when=FIRST_COMPLETED)
+                    for future in done:
+                        task_id, trial_k = pending.pop(future)
+                        finished_futures += 1
+                        try:
+                            manifest, verdict = future.result()
+                            completed_trials += 1
+                            status = "✓" if verdict.get("passed") else "✗"
+                            print(
+                                f"── {task_id} trial {trial_k}/{args.k}: {status} "
+                                f"({manifest['timing'].get('wall_clock_seconds', 0):.1f}s)"
+                            )
+                            feed_breaker_and_maybe_pause(
+                                breaker,
+                                manifest,
+                                verdict,
+                                breaker_last_trial(task_id, trial_k),
+                                cell_dir=args.results_dir,
+                                model_id=args.model,
+                                adapter_name=adapter.name,
+                                suite_name=suite.name,
+                                run_id=args.run_id,
+                                last_trial=(task_id, trial_k),
+                            )
+                        except Exception as exc:
+                            print(
+                                f"── {task_id} trial {trial_k}/{args.k}: "
+                                f"ERROR: {exc}"
+                            )
+                        remaining = len(queue) + len(pending)
+                        heartbeat.update(
+                            completed_trials=completed_trials,
+                            active_trials=min(concurrency, remaining),
+                            queued_trials=max(0, remaining - concurrency),
                         )
-                    except Exception as exc:
-                        print(
-                            f"── {task_id} trial {trial_k}/{args.k}: "
-                            f"ERROR: {exc}"
-                        )
-                    remaining = len(jobs) - finished_futures
-                    heartbeat.update(
-                        completed_trials=completed_trials,
-                        active_trials=min(concurrency, remaining),
-                        queued_trials=max(0, remaining - concurrency),
-                    )
+                    if not breaker.open():
+                        submit_next()
     except BaseException:
         heartbeat.finish(
             "failed",
@@ -1408,6 +1559,18 @@ def main():
             active_trials=0,
         )
         raise
+
+    if breaker.open():
+        heartbeat.finish(
+            "paused",
+            current_task=None,
+            current_trial=None,
+            completed_trials=completed_trials,
+            active_trials=0,
+            queued_trials=0,
+        )
+        print("Cell paused by circuit breaker.")
+        sys.exit(PAUSE_EXIT_CODE)
 
     heartbeat.finish(
         "complete",

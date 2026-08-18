@@ -13,9 +13,12 @@ retry backoff, and the mid-run circuit breaker (RUN-MANAGEMENT P1-P3).
 
 from __future__ import annotations
 
+import json
 import random
 import re
 import time
+from datetime import datetime, timezone
+from pathlib import Path
 from typing import Any
 
 from harness.failure_classify import classify_failure, manifest_surface
@@ -177,6 +180,89 @@ class CircuitBreaker:
             "consecutive_outages": self.consecutive_outages,
             "open": self.open(),
         }
+
+
+def agent_produced_output(trial_dir) -> bool:
+    """True when any pi session in the trial produced model responses.
+
+    Used to tell a hung ``budget_exhausted`` trial (no responses — the
+    endpoint never answered) apart from one that did real work and hit its
+    budget. Reads the usage-captured session copies in ``out/`` first, then
+    falls back to Harbor job artifacts.
+    """
+    from harness.telemetry import summarize_pi_session
+
+    trial_dir = Path(trial_dir)
+    candidates: list[Path] = []
+    single = trial_dir / "out" / "pi_session.jsonl"
+    multi = trial_dir / "out" / "pi_sessions"
+    if single.exists():
+        candidates.append(single)
+    if multi.is_dir():
+        candidates += sorted(multi.glob("*.jsonl"))
+    if not candidates:
+        for p in trial_dir.rglob("*.jsonl"):
+            if "pi-sessions" in p.parts:
+                candidates.append(p)
+    for path in candidates:
+        try:
+            summary = summarize_pi_session(path)
+        except OSError:
+            continue
+        if summary.get("response_count", 0) > 0:
+            return True
+    return False
+
+
+def trial_is_outage(manifest: dict, verdict: dict, trial_dir) -> bool:
+    """Provider outage signal for this trial (lazily checks agent output).
+
+    Unambiguous endpoint classes count directly. A ``budget_exhausted``
+    trial counts only when the agent produced no output (it hung). Capability
+    and eval-side outcomes never count.
+    """
+    cls = classify_failure(verdict, manifest)
+    if cls not in PROVIDER_OUTAGE_CLASSES and cls != "budget_exhausted":
+        return False
+    agent_produced = True
+    if cls == "budget_exhausted":
+        agent_produced = agent_produced_output(trial_dir)
+    return provider_outage(manifest, verdict, agent_produced)
+
+
+def write_paused_marker(
+    cell_dir,
+    breaker: CircuitBreaker,
+    *,
+    model: str,
+    adapter: str,
+    suite: str,
+    run_id: str | None,
+    last_trial: tuple[str, int],
+) -> Path:
+    """Write a durable ``.cell-paused.json`` marker for a tripped breaker.
+
+    A matrix orchestrator (RUN-MANAGEMENT P4) skips a paused cell until it is
+    re-armed; a standalone runner exits with a distinct code after writing it.
+    """
+    cell_dir = Path(cell_dir)
+    cell_dir.mkdir(parents=True, exist_ok=True)
+    payload = {
+        "state": "paused",
+        "reason": "circuit_breaker",
+        "breaker": breaker.snapshot(),
+        "model": model,
+        "adapter": adapter,
+        "suite": suite,
+        "run_id": run_id,
+        "last_trial": [last_trial[0], last_trial[1]],
+        "paused_at": datetime.now(timezone.utc).isoformat(),
+    }
+    path = cell_dir / ".cell-paused.json"
+    tmp = path.with_suffix(path.suffix + ".tmp")
+    tmp.write_text(json.dumps(payload, indent=2) + "\n")
+    tmp.replace(path)
+    return path
 
 
 def sleep_seconds(seconds: float) -> None:

@@ -409,3 +409,103 @@ def test_zero_adapter_return_code_still_runs_verify():
 
     assert len(verify_calls) == 1, "verify() should run once when adapter succeeds"
     suite.verify = original_verify
+
+
+class FakeConnectionErrorAdapter:
+    """Adapter that fails with a provider connection error every call."""
+
+    name = "fake_connection_error"
+    version = "test"
+
+    def __init__(self):
+        self.calls = 0
+
+    def run(self, task_data, workdir, log_file, stderr_file):
+        self.calls += 1
+        return AdapterResult(
+            returncode=-1,
+            error=(
+                "NonZeroAgentExitCodeError: Command failed\n"
+                "stdout: Connection error.\n"
+                "stderr: None"
+            ),
+        )
+
+
+class FakeUsageLimitAdapter:
+    """Adapter that fails with a rate-limited response, then succeeds."""
+
+    name = "fake_usage_limit"
+    version = "test"
+
+    def __init__(self):
+        self.calls = 0
+
+    def run(self, task_data, workdir, log_file, stderr_file):
+        self.calls += 1
+        if self.calls == 1:
+            return AdapterResult(
+                returncode=-1,
+                error=(
+                    "NonZeroAgentExitCodeError: Command failed\n"
+                    "stdout: HTTP 429 Too Many Requests; retry-after: 5\n"
+                    "stderr: None"
+                ),
+            )
+        return AdapterResult(returncode=0, error=None)
+
+
+def test_connection_error_trial_records_structured_provider_error():
+    """P3: a provider failure records structured provider_error on the manifest."""
+    suite = FakeWrongAnswerSuite(passed=False)
+    adapter = FakeConnectionErrorAdapter()
+
+    with tempfile.TemporaryDirectory() as tmp:
+        tmp = Path(tmp)
+        manifest, verdict = run_trial(
+            suite,
+            adapter,
+            "codex/gpt-5.6-luna",
+            "task/one",
+            1,
+            tmp / "results",
+            tmp / "vendor",
+        )
+
+    assert manifest.get("error"), "manifest should carry the error surface"
+    pe = manifest.get("provider_error")
+    assert pe is not None
+    assert pe["kind"] == "connection_error"
+    assert pe["provider"] == "codex"
+
+
+def test_retry_backoff_sleeps_between_attempts():
+    """P2: retries wait before the next attempt (backoff/Retry-After)."""
+    suite = FakeWrongAnswerSuite(passed=False)
+    adapter = FakeUsageLimitAdapter()
+
+    sleeps = []
+
+    def fake_sleep(seconds):
+        sleeps.append(seconds)
+
+    with tempfile.TemporaryDirectory() as tmp:
+        tmp = Path(tmp)
+        manifest, verdict = run_trial_with_retries(
+            suite,
+            adapter,
+            "kimi/kimi-k3",
+            "task/one",
+            1,
+            tmp / "results",
+            tmp / "vendor",
+            retries=1,
+            sleep_fn=fake_sleep,
+            retry_delay_fn=lambda pe, attempt: pe.get("retry_after") or 1.0,
+        )
+
+    # First call rate-limited (with Retry-After), second succeeded.
+    assert adapter.calls == 2
+    assert sleeps == [5.0], "should sleep for Retry-After (5s) between attempts"
+    assert manifest.get("retry") == {"attempt": 2, "max_attempts": 2}
+    assert verdict["passed"] is False  # FakeWrongAnswerSuite always fails verify

@@ -44,6 +44,7 @@ from harness.behavior import (
 from harness.suites import load_suite
 from harness.harbor_docker import reclaim_stale_harbor_networks
 from harness.path_utils import encode_path_component
+from harness.resilience import provider_error_from, retry_delay, sleep_seconds
 from harness.subprocess_utils import (
     agent_sandbox_cwd,
     register_termination_callback,
@@ -1020,6 +1021,13 @@ def run_trial(
     manifest["timing"]["verifier_seconds"] = time.time() - verifier_started
     manifest["timing"]["total_wall_seconds"] = time.time() - start_time
 
+    # Structured provider failure record (RUN-MANAGEMENT P3): data-driven
+    # retry/backoff and analysis instead of substring matching.
+    if adapter_failed:
+        provider_error = provider_error_from(manifest, verdict)
+        if provider_error is not None:
+            manifest["provider_error"] = provider_error
+
     # Write verdict
     verdict_path = trial_dir / "verdict.json"
     with open(verdict_path, "w") as f:
@@ -1065,8 +1073,16 @@ def run_trial_with_retries(
     thinking=None,
     *,
     retries=2,
+    sleep_fn=sleep_seconds,
+    retry_delay_fn=retry_delay,
 ):
-    """Run a trial, retrying only infrastructure-shaped failures."""
+    """Run a trial, retrying only infrastructure-shaped failures.
+
+    Between attempts, waits with ``retry_delay_fn`` — honoring the provider's
+    ``Retry-After`` when present, otherwise exponential backoff
+    (RUN-MANAGEMENT P2). ``sleep_fn`` and ``retry_delay_fn`` are injectable
+    for deterministic tests.
+    """
     max_attempts = max(1, int(retries) + 1)
     last_manifest = None
     last_verdict = None
@@ -1089,10 +1105,15 @@ def run_trial_with_retries(
         if not _is_retryable_infra_failure(manifest, verdict):
             return manifest, verdict
         if attempt < max_attempts:
+            provider_error = manifest.get("provider_error") or provider_error_from(
+                manifest, verdict
+            )
+            delay = retry_delay_fn(provider_error, attempt)
             print(
                 f"[retry] infrastructure failure for {task_id}/trial-{trial_k}; "
-                f"retrying attempt {attempt + 1}/{max_attempts}"
+                f"retrying attempt {attempt + 1}/{max_attempts} after {delay:.1f}s"
             )
+            sleep_fn(delay)
     return last_manifest, last_verdict
 
 

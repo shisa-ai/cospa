@@ -56,7 +56,12 @@ def classify_failure(verdict: dict, manifest: dict) -> str:
     if not surface:
         return "adapter_error_other" if verdict.get("adapter_failed") else "incorrect"
 
-    if "usage limit" in surface or "rate limit" in surface:
+    if (
+        "usage limit" in surface
+        or "rate limit" in surface
+        or "too many requests" in surface
+        or "429" in surface
+    ):
         return "usage_limit"
     if "403" in surface or "forbidden" in surface:
         return "auth_forbidden"

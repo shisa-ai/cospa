@@ -2841,3 +2841,20 @@ Append-only development log for the `cospa` repository.
   separately.
 - Next: P1+P2+P3 (resilient retry/backoff + circuit breaker + structured
   provider errors), then P4 (matrix self-resume), then P5 (cost rollup).
+
+## 2026-08-18 — Add resilient retry: provider errors + backoff (P2/P3)
+
+- Context: RUN-MANAGEMENT P2/P3 for long-running online-API evals. Retries
+  were immediate and identity, and provider failures were only visible as
+  substring text.
+- Change: new `harness/resilience.py` (structured provider-error record,
+  retry backoff honoring Retry-After, outage classifier). Runner now records
+  `manifest.provider_error = {kind, status, retry_after, provider}` on
+  provider-shaped failures, and `run_trial_with_retries` sleeps between
+  attempts (Retry-After > exponential backoff, jittered; injectable for
+  tests). Classifier fix: 429/"too many requests" now classified `usage_limit`
+  (a gap the P3 test exposed).
+- Evidence: `tests/test_resilience.py` (11), `test_runner_failure.py` retry
+  backoff + provider_error (2), full suite 453 passed.
+- Decision: retries wait instead of hammering; provider failures become data.
+- Next: P1 circuit breaker (bounded submission, cell pause, exit 3).

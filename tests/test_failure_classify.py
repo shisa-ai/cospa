@@ -80,6 +80,10 @@ def test_provider_rules_read_manifest_surface_only():
             "usage_limit",
         ),
         (
+            COMMAND_NOISE + "stdout: HTTP 429 Too Many Requests; retry-after: 5\n",
+            "usage_limit",
+        ),
+        (
             COMMAND_NOISE + "stdout: HTTP 502: upstream 403 Forbidden\n",
             "auth_forbidden",
         ),

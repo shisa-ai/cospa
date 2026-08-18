@@ -803,12 +803,64 @@ def build_index(reports_dir: Path, output: Path) -> str:
     lines = [
         "# Reports index",
         "",
-        "Auto-generated from embedded aggregate markers. One section per "
-        "model family; rows are unique (thinking, tasks) runs so effort "
-        "rungs sit beside full-matrix rows. Regenerate with "
+        "Auto-generated from embedded aggregate markers; ordered by micro "
+        "pooled (descending). One row per (model, thinking); duplicate "
+        "markers across reports collapse. Family sections below add "
+        "thinking-level comparison. Regenerate with "
         "`scripts/generate-report.py --build-index <reports-dir>`.",
         "",
     ]
+
+    # Topline: one row per (model, thinking), keeping the run backed by the
+    # most tasks — identical semantics to the original dd9c4b5 layout.
+    topline_best: dict[tuple, tuple[str, dict]] = {}
+    for name, f in entries:
+        tkey = (f.get("model"), f.get("thinking"))
+        tasks = int(float(f.get("tasks", 0) or 0))
+        if tkey not in topline_best or tasks > int(
+            float(topline_best[tkey][1].get("tasks", 0) or 0)
+        ):
+            topline_best[tkey] = (name, f)
+    topline_entries = sorted(
+        topline_best.values(), key=lambda e: -float(e[1].get("micro", 0) or 0)
+    )
+
+    topline_header = [
+        "| Report | Model | Thinking | Cells | Geomean | Smoothed | Macro | Micro | In | Cached | Out | Wall | Elapsed |",
+        "| --- | --- | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |",
+    ]
+
+    def _topline_rows(entries_list):
+        out_rows = []
+        for name, f in entries_list:
+            wall = f.get("wall")
+            wall_text = _fmt_duration(float(wall)) if wall else "-"
+            elapsed = f.get("elapsed")
+            elapsed_text = (
+                _fmt_duration(float(elapsed)) if elapsed and float(elapsed) > 0 else "-"
+            )
+            out_rows.append(
+                f"| [{name}]({name}) | {f.get('model')} | {f.get('thinking')} | "
+                f"{f.get('cells')} | {f.get('geo')}% | {f.get('smooth')}% | "
+                f"{f.get('macro')}% | {f.get('micro')}% | "
+                f"{_fmt_tokens(f.get('tok_in'))} | {_fmt_tokens(f.get('cached'))} | "
+                f"{_fmt_tokens(f.get('out'))} | {wall_text} | {elapsed_text} |"
+            )
+        return out_rows
+
+    authoritative = [
+        e for e in topline_entries if int(float(e[1].get("tasks", 0) or 0)) >= 300
+    ]
+    other = [e for e in topline_entries if e not in authoritative]
+    lines.extend(["## Authoritative full-matrix runs", ""])
+    lines.append("Complete runs on the identical 336-task panel set.")
+    lines.append("")
+    lines.extend(topline_header)
+    lines.extend(_topline_rows(authoritative) or ["| _none yet_ | | | | | | | | | | | | |"])
+    lines.extend(["", "## Other cells", ""])
+    lines.extend(topline_header)
+    lines.extend(_topline_rows(other) or ["| _none_ | | | | | | | | | | | | |"])
+    lines.append("")
     for fam in family_order:
         rows = sorted(
             families[fam],

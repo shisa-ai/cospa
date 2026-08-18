@@ -618,5 +618,6 @@ def test_build_index_renders_family_sections_with_thinking_comparison(tmp_path):
     assert "off" in idx and "xhigh" in idx and "high" in idx
     assert "pareto60" in idx and "hermetic143" in idx
     # dedup: duplicate (model, thinking, tasks) collapsed to one high row
+    # (appears twice legitimately: topline table + family table)
     assert idx.count("thinking=high") == 0  # markers not leaked
-    assert idx.count("| high |") == 1
+    assert idx.count("| high |") == 2

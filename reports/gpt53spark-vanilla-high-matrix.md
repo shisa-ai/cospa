@@ -1,6 +1,6 @@
 # Cospa Run Report
 
-_Generated 2026-08-18T12:01:01+0900 · harness pi 0.84.2 (pi_vanilla, --no-extensions)_
+_Generated 2026-08-18T12:52:59+0900 · harness pi 0.84.2 (pi_vanilla, --no-extensions)_
 
 ## Summary
 
@@ -10,9 +10,10 @@ _Generated 2026-08-18T12:01:01+0900 · harness pi 0.84.2 (pi_vanilla, --no-exten
 | featurebench_lite_pareto12 | codex/gpt-5.3-codex-spark | pi_vanilla | high | 12 | 1/12 (8.3%) | 4h00m | 2.4M | 123.4M | 730K | $0 |
 | multi_swe_bench_flash_hermetic25 | codex/gpt-5.3-codex-spark | pi_vanilla | high | 25 | 7/25 (28.0%) | 1h51m | 3.0M | 88.1M | 832K | $0 |
 | swe_explore_verified12 | codex/gpt-5.3-codex-spark | pi_vanilla | high | 12 | 17.4% weighted_core_coverage | 17m26s | 836K | 12.6M | 140K | $0 |
-| swe_polybench_verified_balanced64 | codex/gpt-5.3-codex-spark | pi_vanilla | high | 64 | 13/64 (20.3%) | 5h14m | 7.5M | 200.2M | 1.9M | $0 |
+| swe_polybench_verified_balanced64 | codex/gpt-5.3-codex-spark | pi_vanilla | high | 64 | 13/64 (20.3%) | 5h24m | 7.7M | 205.4M | 1.9M | $0 |
 | terminal_bench | codex/gpt-5.3-codex-spark | pi_vanilla | high | 80 | 22/80 (27.5%) | 5h35m | 3.1M | 53.0M | 1.2M | $0 |
-| **All cells** | | | | **336** | — | **18h23m** | **18.3M** | **485.5M** | **5.9M** | **$0** |
+| **All cells** | | | | **336** | — | **18h33m** | **18.6M** | **490.7M** | **5.9M** | **$0** |
+| codex/gpt-5.3-codex-spark | pi_vanilla | high | 6 | 20.5% | 22.9% | 22.4% | 30.4% |
 
 ## Headline geomean
 
@@ -20,7 +21,6 @@ Geometric mean of per-suite rates per model configuration, across primary comple
 
 | Model | Adapter | Thinking | Cells | Geomean | Geomean (smoothed) | Macro mean | Micro pooled |
 | --- | --- | --- | ---: | ---: | ---: | ---: | ---: |
-| codex/gpt-5.3-codex-spark | pi_vanilla | high | 6 | 20.5% | 22.9% | 22.4% | 30.4% |
 
 ## Aggregate reading
 
@@ -29,7 +29,7 @@ Geometric mean of per-suite rates per model configuration, across primary comple
 - Micro lifts codex/gpt-5.3-codex-spark most (+8.0 pp over macro) — strength concentrated in the larger panels.
 
 
-<!-- cospa:agg model=codex/gpt-5.3-codex-spark adapter=pi_vanilla thinking=high cells=6 geo=20.5 smooth=22.9 macro=22.4 micro=30.4 tok_in=18346777 cached=485503104 out=5864104 wall=66217.8 elapsed=155188.2 tasks=336 -->
+<!-- cospa:agg model=codex/gpt-5.3-codex-spark adapter=pi_vanilla thinking=high cells=6 geo=20.5 smooth=22.9 macro=22.4 micro=30.4 tok_in=18611893 cached=490694784 out=5924393 wall=66825.2 elapsed=157440.9 tasks=336 suites=bigcodebench_hard_agentic_hermetic143:32.9,featurebench_lite_pareto12:8.3,multi_swe_bench_flash_hermetic25:28.0,swe_explore_verified12:17.4,swe_polybench_verified_balanced64:20.3,terminal_bench:27.5 -->
 
 
 ## Speed & behavior
@@ -40,7 +40,7 @@ Geometric mean of per-suite rates per model configuration, across primary comple
 | featurebench_lite_pareto12 | codex/gpt-5.3-codex-spark | high | 12 | 4h00m | 20m05s | 180.8 | 84.3% | 12.8% | 179.1 | 40.6 | 10 |
 | multi_swe_bench_flash_hermetic25 | codex/gpt-5.3-codex-spark | high | 25 | 1h51m | 4m28s | 75.0 | 85.2% | 12.3% | 73.7 | 15.7 | 25 |
 | swe_explore_verified12 | codex/gpt-5.3-codex-spark | high | 12 | 17m26s | 1m27s | 38.6 | 99.8% | 0.2% | 37.6 | 11.2 | 12 |
-| swe_polybench_verified_balanced64 | codex/gpt-5.3-codex-spark | high | 64 | 5h14m | 4m55s | 67.4 | 78.7% | 21.2% | 66.1 | 16.2 | 64 |
+| swe_polybench_verified_balanced64 | codex/gpt-5.3-codex-spark | high | 64 | 5h24m | 5m04s | 69.8 | 79.1% | 20.6% | 68.8 | 16.9 | 64 |
 | terminal_bench | codex/gpt-5.3-codex-spark | high | 80 | 5h35m | 4m12s | 35.8 | 74.9% | 26.2% | 33.7 | 6.7 | 62 |
 
 ## Per-cell detail
@@ -327,13 +327,13 @@ Results root: `results/runs/gpt53spark-vanilla-high-matrix-c8-20260816/codex%2Fg
 | langchain-ai__langchain-5625 | [t1 ✗](../results/runs/gpt53spark-vanilla-high-matrix-c8-20260816/codex%2Fgpt-5.3-codex-spark/pi_vanilla/swe_polybench_verified_balanced64/langchain-ai__langchain-5625/trial-1) | 1m38s | [t1](../results/runs/gpt53spark-vanilla-high-matrix-c8-20260816/codex%2Fgpt-5.3-codex-spark/pi_vanilla/swe_polybench_verified_balanced64/langchain-ai__langchain-5625/trial-1/out/pi_session.jsonl) |
 | microsoft__vscode-189223 | [t1 ✗](../results/runs/gpt53spark-vanilla-high-matrix-c8-20260816/codex%2Fgpt-5.3-codex-spark/pi_vanilla/swe_polybench_verified_balanced64/microsoft__vscode-189223/trial-1) | 11m32s | [t1](../results/runs/gpt53spark-vanilla-high-matrix-c8-20260816/codex%2Fgpt-5.3-codex-spark/pi_vanilla/swe_polybench_verified_balanced64/microsoft__vscode-189223/trial-1/out/pi_session.jsonl) |
 | mrdoob__three.js-14836 | [t1 ✗](../results/runs/gpt53spark-vanilla-high-matrix-c8-20260816/codex%2Fgpt-5.3-codex-spark/pi_vanilla/swe_polybench_verified_balanced64/mrdoob__three.js-14836/trial-1) | 2m03s | [t1](../results/runs/gpt53spark-vanilla-high-matrix-c8-20260816/codex%2Fgpt-5.3-codex-spark/pi_vanilla/swe_polybench_verified_balanced64/mrdoob__three.js-14836/trial-1/out/pi_session.jsonl) |
-| mui__material-ui-11858 | [t1 ✗](../results/runs/gpt53spark-vanilla-high-matrix-c8-20260816/codex%2Fgpt-5.3-codex-spark/pi_vanilla/swe_polybench_verified_balanced64/mui__material-ui-11858/trial-1) | 21s | [t1](../results/runs/gpt53spark-vanilla-high-matrix-c8-20260816/codex%2Fgpt-5.3-codex-spark/pi_vanilla/swe_polybench_verified_balanced64/mui__material-ui-11858/trial-1/out/pi_session.jsonl) |
+| mui__material-ui-11858 | [t1 ✗](../results/runs/gpt53spark-vanilla-high-matrix-c8-20260816/codex%2Fgpt-5.3-codex-spark/pi_vanilla/swe_polybench_verified_balanced64/mui__material-ui-11858/trial-1) | 4m53s | [t1](../results/runs/gpt53spark-vanilla-high-matrix-c8-20260816/codex%2Fgpt-5.3-codex-spark/pi_vanilla/swe_polybench_verified_balanced64/mui__material-ui-11858/trial-1/out/pi_session.jsonl) |
 | mui__material-ui-13690 | [t1 ✗](../results/runs/gpt53spark-vanilla-high-matrix-c8-20260816/codex%2Fgpt-5.3-codex-spark/pi_vanilla/swe_polybench_verified_balanced64/mui__material-ui-13690/trial-1) | 2m22s | [t1](../results/runs/gpt53spark-vanilla-high-matrix-c8-20260816/codex%2Fgpt-5.3-codex-spark/pi_vanilla/swe_polybench_verified_balanced64/mui__material-ui-13690/trial-1/out/pi_session.jsonl) |
 | mui__material-ui-14882 | [t1 ✗](../results/runs/gpt53spark-vanilla-high-matrix-c8-20260816/codex%2Fgpt-5.3-codex-spark/pi_vanilla/swe_polybench_verified_balanced64/mui__material-ui-14882/trial-1) | 1m55s | [t1](../results/runs/gpt53spark-vanilla-high-matrix-c8-20260816/codex%2Fgpt-5.3-codex-spark/pi_vanilla/swe_polybench_verified_balanced64/mui__material-ui-14882/trial-1/out/pi_session.jsonl) |
 | mui__material-ui-15359 | [t1 ✓](../results/runs/gpt53spark-vanilla-high-matrix-c8-20260816/codex%2Fgpt-5.3-codex-spark/pi_vanilla/swe_polybench_verified_balanced64/mui__material-ui-15359/trial-1) | 1m59s | [t1](../results/runs/gpt53spark-vanilla-high-matrix-c8-20260816/codex%2Fgpt-5.3-codex-spark/pi_vanilla/swe_polybench_verified_balanced64/mui__material-ui-15359/trial-1/out/pi_session.jsonl) |
 | mui__material-ui-15534 | [t1 ✗](../results/runs/gpt53spark-vanilla-high-matrix-c8-20260816/codex%2Fgpt-5.3-codex-spark/pi_vanilla/swe_polybench_verified_balanced64/mui__material-ui-15534/trial-1) | 3m44s | [t1](../results/runs/gpt53spark-vanilla-high-matrix-c8-20260816/codex%2Fgpt-5.3-codex-spark/pi_vanilla/swe_polybench_verified_balanced64/mui__material-ui-15534/trial-1/out/pi_session.jsonl) |
-| mui__material-ui-17301 | [t1 ✗](../results/runs/gpt53spark-vanilla-high-matrix-c8-20260816/codex%2Fgpt-5.3-codex-spark/pi_vanilla/swe_polybench_verified_balanced64/mui__material-ui-17301/trial-1) | 23s | [t1](../results/runs/gpt53spark-vanilla-high-matrix-c8-20260816/codex%2Fgpt-5.3-codex-spark/pi_vanilla/swe_polybench_verified_balanced64/mui__material-ui-17301/trial-1/out/pi_session.jsonl) |
-| mui__material-ui-19072 | [t1 ✗](../results/runs/gpt53spark-vanilla-high-matrix-c8-20260816/codex%2Fgpt-5.3-codex-spark/pi_vanilla/swe_polybench_verified_balanced64/mui__material-ui-19072/trial-1) | 24s | [t1](../results/runs/gpt53spark-vanilla-high-matrix-c8-20260816/codex%2Fgpt-5.3-codex-spark/pi_vanilla/swe_polybench_verified_balanced64/mui__material-ui-19072/trial-1/out/pi_session.jsonl) |
+| mui__material-ui-17301 | [t1 ✗](../results/runs/gpt53spark-vanilla-high-matrix-c8-20260816/codex%2Fgpt-5.3-codex-spark/pi_vanilla/swe_polybench_verified_balanced64/mui__material-ui-17301/trial-1) | 3m38s | [t1](../results/runs/gpt53spark-vanilla-high-matrix-c8-20260816/codex%2Fgpt-5.3-codex-spark/pi_vanilla/swe_polybench_verified_balanced64/mui__material-ui-17301/trial-1/out/pi_session.jsonl) |
+| mui__material-ui-19072 | [t1 ✗](../results/runs/gpt53spark-vanilla-high-matrix-c8-20260816/codex%2Fgpt-5.3-codex-spark/pi_vanilla/swe_polybench_verified_balanced64/mui__material-ui-19072/trial-1) | 2m45s | [t1](../results/runs/gpt53spark-vanilla-high-matrix-c8-20260816/codex%2Fgpt-5.3-codex-spark/pi_vanilla/swe_polybench_verified_balanced64/mui__material-ui-19072/trial-1/out/pi_session.jsonl) |
 | mui__material-ui-25874 | [t1 ✗](../results/runs/gpt53spark-vanilla-high-matrix-c8-20260816/codex%2Fgpt-5.3-codex-spark/pi_vanilla/swe_polybench_verified_balanced64/mui__material-ui-25874/trial-1) | 7m27s | [t1](../results/runs/gpt53spark-vanilla-high-matrix-c8-20260816/codex%2Fgpt-5.3-codex-spark/pi_vanilla/swe_polybench_verified_balanced64/mui__material-ui-25874/trial-1/out/pi_session.jsonl) |
 | mui__material-ui-34610 | [t1 ✓](../results/runs/gpt53spark-vanilla-high-matrix-c8-20260816/codex%2Fgpt-5.3-codex-spark/pi_vanilla/swe_polybench_verified_balanced64/mui__material-ui-34610/trial-1) | 3m04s | [t1](../results/runs/gpt53spark-vanilla-high-matrix-c8-20260816/codex%2Fgpt-5.3-codex-spark/pi_vanilla/swe_polybench_verified_balanced64/mui__material-ui-34610/trial-1/out/pi_session.jsonl) |
 | prettier__prettier-11637 | [t1 ✗](../results/runs/gpt53spark-vanilla-high-matrix-c8-20260816/codex%2Fgpt-5.3-codex-spark/pi_vanilla/swe_polybench_verified_balanced64/prettier__prettier-11637/trial-1) | 3m46s | [t1](../results/runs/gpt53spark-vanilla-high-matrix-c8-20260816/codex%2Fgpt-5.3-codex-spark/pi_vanilla/swe_polybench_verified_balanced64/prettier__prettier-11637/trial-1/out/pi_session.jsonl) |
@@ -360,7 +360,7 @@ Results root: `results/runs/gpt53spark-vanilla-high-matrix-c8-20260816/codex%2Fg
 
 Failed-trial taxonomy: 50 incorrect, 1 budget_exhausted.
 
-Campaign elapsed (c=8 scheduling included): 41h29m.
+Campaign elapsed (c=8 scheduling included): 42h07m.
 
 Traces: 64/64 trials expose `out/pi_session.jsonl`.
 

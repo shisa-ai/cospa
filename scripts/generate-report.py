@@ -518,11 +518,88 @@ def generate_report(
         geomean_entries.setdefault(key, []).append(entry)
     # Only groups spanning >= 2 cells are aggregates; headers render only
     # when at least one qualifying group exists.
+    def _group_rates(rows: list[dict]) -> list[float]:
+        return [r for r in (_geomean_rate(row) for row in rows) if r is not None]
+
+    def _group_rates(rows: list[dict]) -> list[float]:
+        return [r for r in (_geomean_rate(row) for row in rows) if r is not None]
+
     eligible_groups = {
         key: rows
         for key, rows in geomean_groups.items()
-        if sum(1 for row in rows if _geomean_rate(row) is not None) >= 2
+        if len(_group_rates(rows)) >= 2
     }
+
+    agg_markers: list[str] = []
+    for key in sorted(geomean_groups):
+        rates: list[float] = []
+        for row in geomean_groups[key]:
+            rate = _geomean_rate(row)
+            if rate is not None:
+                rates.append(rate)
+        smoothed = [
+            _smoothed_rate(row)
+            for row in geomean_groups[key]
+        ]
+        smoothed = [s for s in smoothed if s is not None]
+        if smoothed:
+            smoothed_geomean = math.exp(
+                sum(math.log(s) for s in smoothed) / len(smoothed)
+            )
+        else:
+            smoothed_geomean = 0.0
+        macro = sum(rates) / len(rates) if rates else 0.0
+        passed_sum = sum(
+            row.get("passed_tasks") or 0
+            for row in geomean_groups[key]
+            if row.get("total_tasks")
+        )
+        total_sum = sum(
+            row.get("total_tasks") or 0
+            for row in geomean_groups[key]
+            if row.get("total_tasks")
+        )
+        micro = passed_sum / total_sum if total_sum else 0.0
+        geomean = (
+            0.0
+            if any(rate <= 0.0 for rate in rates)
+            else math.exp(sum(math.log(rate) for rate in rates) / len(rates))
+        )
+        if len(rates) >= 2:
+            # A one-cell group is not an aggregate; it stays in Summary.
+            lines.append(
+                f"| {key[0]} | {key[1]} | {key[2]} | {len(rates)} | "
+                f"{100.0 * geomean:.1f}% | {100.0 * smoothed_geomean:.1f}% | "
+                f"{100.0 * macro:.1f}% | {100.0 * micro:.1f}% |"
+            )
+        suite_rates = ",".join(
+            f"{row['suite']}:{100.0 * (_geomean_rate(row) or 0.0):.1f}"
+            for row in geomean_groups[key]
+        )
+        tok_in = sum(
+            row.get("prompt_tokens") or 0 for row in geomean_groups[key]
+        )
+        tok_cached = sum(
+            row.get("cached_tokens") or 0 for row in geomean_groups[key]
+        )
+        tok_out = sum(
+            row.get("completion_tokens") or 0 for row in geomean_groups[key]
+        )
+        wall_seconds = sum(
+            row.get("total_wall_clock_seconds") or 0.0
+            for row in geomean_groups[key]
+        )
+        elapsed_seconds = _group_elapsed_seconds(geomean_entries.get(key, []))
+        agg_markers.append(
+            f"<!-- cospa:agg model={key[0]} adapter={key[1]} thinking={key[2]} "
+            f"cells={len(rates)} geo={100.0 * geomean:.1f} "
+            f"smooth={100.0 * smoothed_geomean:.1f} macro={100.0 * macro:.1f} "
+            f"micro={100.0 * micro:.1f} tok_in={tok_in} cached={tok_cached} "
+            f"out={tok_out} wall={wall_seconds:.1f} "
+            f"elapsed={elapsed_seconds if elapsed_seconds is not None else -1.0:.1f} "
+            f"tasks={total_sum} suites={suite_rates} -->"
+        )
+
     if eligible_groups:
         lines.extend(
             [
@@ -543,134 +620,67 @@ def generate_report(
                 "| --- | --- | --- | ---: | ---: | ---: | ---: | ---: |",
             ]
         )
-        agg_markers: list[str] = []
-        for key in sorted(eligible_groups):
-            rates: list[float] = []
-            for row in geomean_groups[key]:
-                rate = _geomean_rate(row)
-                if rate is not None:
-                    rates.append(rate)
-            # A one-cell group is not an aggregate; it stays in the Summary.
-            if len(rates) < 2:
-                continue
-            smoothed = [
-                _smoothed_rate(row)
-                for row in geomean_groups[key]
-            ]
-            smoothed = [s for s in smoothed if s is not None]
-            if smoothed:
-                smoothed_geomean = math.exp(
-                    sum(math.log(s) for s in smoothed) / len(smoothed)
-                )
-            else:
-                smoothed_geomean = 0.0
-            macro = sum(rates) / len(rates)
-            passed_sum = sum(
-                row.get("passed_tasks") or 0
-                for row in geomean_groups[key]
-                if row.get("total_tasks")
-            )
-            total_sum = sum(
-                row.get("total_tasks") or 0
-                for row in geomean_groups[key]
-                if row.get("total_tasks")
-            )
-            micro = passed_sum / total_sum if total_sum else 0.0
-            geomean = (
-                0.0
-                if any(rate <= 0.0 for rate in rates)
-                else math.exp(sum(math.log(rate) for rate in rates) / len(rates))
-            )
-            lines.append(
-                f"| {key[0]} | {key[1]} | {key[2]} | {len(rates)} | "
-                f"{100.0 * geomean:.1f}% | {100.0 * smoothed_geomean:.1f}% | "
-                f"{100.0 * macro:.1f}% | {100.0 * micro:.1f}% |"
-            )
-            tok_in = sum(
-                row.get("prompt_tokens") or 0 for row in geomean_groups[key]
-            )
-            tok_cached = sum(
-                row.get("cached_tokens") or 0 for row in geomean_groups[key]
-            )
-            tok_out = sum(
-                row.get("completion_tokens") or 0 for row in geomean_groups[key]
-            )
-            wall_seconds = sum(
-                row.get("total_wall_clock_seconds") or 0.0
-                for row in geomean_groups[key]
-            )
-            elapsed_seconds = _group_elapsed_seconds(geomean_entries.get(key, []))
-            agg_markers.append(
-                f"<!-- cospa:agg model={key[0]} adapter={key[1]} thinking={key[2]} "
-                f"cells={len(rates)} geo={100.0 * geomean:.1f} "
-                f"smooth={100.0 * smoothed_geomean:.1f} macro={100.0 * macro:.1f} "
-                f"micro={100.0 * micro:.1f} tok_in={tok_in} cached={tok_cached} "
-                f"out={tok_out} wall={wall_seconds:.1f} "
-                f"elapsed={elapsed_seconds if elapsed_seconds is not None else -1.0:.1f} "
-                f"tasks={total_sum} -->"
-            )
 
         # Deterministic topline reading for the index and humans.
-        agg_lines = agg_markers
-        if agg_lines:
-            import re as _re
+        import re as _re
 
-            def _field(line: str, name: str) -> str:
-                m = _re.search(rf"{name}=(\S+)", line)
-                return m.group(1) if m else ""
+        def _field(line: str, name: str) -> str:
+            m = _re.search(rf"{name}=(\S+)", line)
+            return m.group(1) if m else ""
 
-            agg_rows = [
-                {
-                    "model": _field(l, "model"),
-                    "geo": float(_field(l, "geo") or 0),
-                    "smooth": float(_field(l, "smooth") or 0),
-                    "macro": float(_field(l, "macro") or 0),
-                    "micro": float(_field(l, "micro") or 0),
-                }
-                for l in agg_lines
-            ]
-            by_micro = sorted(agg_rows, key=lambda r: -r["micro"])
-            micro_order = " > ".join(
-                f"{r['model']} ({r['micro']:.1f}%)" for r in by_micro
-            )
-            orderings = {
-                name: [r["model"] for r in sorted(agg_rows, key=lambda r: -r[name])]
-                for name in ("geo", "smooth", "macro", "micro")
+        agg_rows = [
+            {
+                "model": _field(l, "model"),
+                "geo": float(_field(l, "geo") or 0),
+                "smooth": float(_field(l, "smooth") or 0),
+                "macro": float(_field(l, "macro") or 0),
+                "micro": float(_field(l, "micro") or 0),
             }
-            consistent = len({tuple(v) for v in orderings.values()}) == 1
-            zeroed = [r["model"] for r in agg_rows if r["geo"] == 0.0]
-            spread = max(agg_rows, key=lambda r: r["micro"] - r["macro"], default=None)
-            lines.extend(["", "## Aggregate reading", ""])
-            lines.append(f"- Ordering by micro pooled: {micro_order}.")
-            if consistent:
-                lines.append(
-                    "- The ordering is consistent across all four aggregations."
-                )
-            else:
-                divergent = [
-                    name
-                    for name, order in orderings.items()
-                    if order != orderings["micro"]
-                ]
-                lines.append(
-                    f"- Ordering diverges under: {', '.join(divergent)} "
-                    "(metric choice changes the ranking)."
-                )
-            if zeroed:
-                lines.append(
-                    "- Strict geomean floors at 0 for: "
-                    f"{', '.join(zeroed)} (zero components on at least one "
-                    "panel; see the smoothed column for ranking)."
-                )
-            if spread is not None and spread["micro"] > spread["macro"]:
-                lines.append(
-                    f"- Micro lifts {spread['model']} most "
-                    f"(+{spread['micro'] - spread['macro']:.1f} pp over macro) "
-                    "— strength concentrated in the larger panels."
-                )
-            lines.append("")
-        if agg_markers:
-            lines.extend(["", *agg_markers, ""])
+            for l in agg_markers
+        ]
+        by_micro = sorted(agg_rows, key=lambda r: -r["micro"])
+        micro_order = " > ".join(
+            f"{r['model']} ({r['micro']:.1f}%)" for r in by_micro
+        )
+        orderings = {
+            name: [r["model"] for r in sorted(agg_rows, key=lambda r: -r[name])]
+            for name in ("geo", "smooth", "macro", "micro")
+        }
+        consistent = len({tuple(v) for v in orderings.values()}) == 1
+        zeroed = [r["model"] for r in agg_rows if r["geo"] == 0.0]
+        spread = max(agg_rows, key=lambda r: r["micro"] - r["macro"], default=None)
+        lines.extend(["", "## Aggregate reading", ""])
+        lines.append(f"- Ordering by micro pooled: {micro_order}.")
+        if consistent:
+            lines.append(
+                "- The ordering is consistent across all four aggregations."
+            )
+        else:
+            divergent = [
+                name
+                for name, order in orderings.items()
+                if order != orderings["micro"]
+            ]
+            lines.append(
+                f"- Ordering diverges under: {', '.join(divergent)} "
+                "(metric choice changes the ranking)."
+            )
+        if zeroed:
+            lines.append(
+                "- Strict geomean floors at 0 for: "
+                f"{', '.join(zeroed)} (zero components on at least one "
+                "panel; see the smoothed column for ranking)."
+            )
+        if spread is not None and spread["micro"] > spread["macro"]:
+            lines.append(
+                f"- Micro lifts {spread['model']} most "
+                f"(+{spread['micro'] - spread['macro']:.1f} pp over macro) "
+                "\u2014 strength concentrated in the larger panels."
+            )
+        lines.append("")
+
+    if agg_markers:
+        lines.extend(["", *agg_markers, ""])
 
     lines.extend(["", "## Speed & behavior", ""])
     lines.append(
@@ -749,19 +759,19 @@ def generate_report(
 
 
 def build_index(reports_dir: Path, output: Path) -> str:
-    """Scan report files for cospa:agg markers; write an index README.
+    """Scan report files for cospa:agg markers; write a per-family index.
 
-    One row per (model, thinking) — duplicate markers across reports
-    collapse, keeping the entry backed by the most tasks. Full-matrix runs
-    (>= 300 tasks on the identical panel set) get their own section;
-    everything else is listed under Other cells. Ordered by micro pooled
-    (descending). The index file itself is excluded from scanning.
+    One section per model family; within a family, one row per
+    (thinking, tasks) run — so full-matrix rows and effort-sweep rungs
+    coexist. Duplicate markers (same model/thinking/tasks across reports)
+    collapse. Columns are the union of suites seen for the family plus
+    aggregate/verbosity columns. Ordered by family best micro pooled.
     """
     import re as _re
 
     reports_dir = Path(reports_dir)
     output = Path(output)
-    best: dict[tuple, tuple[str, int, dict]] = {}
+    best: dict[tuple, tuple[str, dict]] = {}
     for md in sorted(reports_dir.glob("*.md")):
         if md.resolve() == output.resolve():
             continue
@@ -770,65 +780,83 @@ def build_index(reports_dir: Path, output: Path) -> str:
         except OSError:
             continue
         for m in _re.finditer(r"<!-- cospa:agg ([^>]+?)-->", text):
-            fields = dict(_re.findall(r"(\w+)=(\S+)", m.group(1)))
+            fields = dict(_re.findall(r"(\w+)=([\w./%+:-]+)", m.group(1)))
             if not fields.get("model"):
                 continue
-            key = (fields.get("model"), fields.get("thinking"))
-            tasks = int(float(fields.get("tasks", 0) or 0))
-            if key not in best or tasks > best[key][1]:
-                best[key] = (md.name, tasks, fields)
-    ordered = sorted(
-        best.values(), key=lambda e: -float(e[2].get("micro", 0) or 0)
+            key = (fields.get("model"), fields.get("thinking"), fields.get("tasks"))
+            if key not in best:
+                best[key] = (md.name, fields)
+    entries = [(name, f) for name, f in best.values()]
+
+    # Family buckets keyed by model; ordered by best micro.
+    families: dict[str, list[tuple[str, dict]]] = {}
+    for name, f in entries:
+        families.setdefault(f.get("model", "?"), []).append((name, f))
+    family_order = sorted(
+        families,
+        key=lambda fam: -max(
+            float(f.get("micro", 0) or 0) for _, f in families[fam]
+        ),
     )
-    authoritative = [e for e in ordered if e[1] >= 300]
-    other = [e for e in ordered if e[1] < 300]
 
-    header = [
-        "| Report | Model | Thinking | Cells | Geomean | Smoothed | Macro | Micro | In | Cached | Out | Wall | Elapsed |",
-        "| --- | --- | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |",
+    ladder = {"off": 0, "low": 1, "medium": 2, "high": 3, "xhigh": 4}
+    lines = [
+        "# Reports index",
+        "",
+        "Auto-generated from embedded aggregate markers. One section per "
+        "model family; rows are unique (thinking, tasks) runs so effort "
+        "rungs sit beside full-matrix rows. Regenerate with "
+        "`scripts/generate-report.py --build-index <reports-dir>`.",
+        "",
     ]
-
-    def rows(entries):
-        out_lines = []
-        for name, _tasks, f in entries:
+    for fam in family_order:
+        rows = sorted(
+            families[fam],
+            key=lambda e: (
+                ladder.get(e[1].get("thinking", ""), 99),
+                e[1].get("thinking", ""),
+            ),
+        )
+        suites: list[str] = []
+        for _, f in rows:
+            for entry in (f.get("suites") or "").split(","):
+                if not entry:
+                    continue
+                suite = entry.split(":", 1)[0]
+                if suite not in suites:
+                    suites.append(suite)
+        lines.extend([f"## {fam}", ""])
+        header = (
+            ["| Thinking", "Tasks", "Report", *[f" {s} " for s in suites], " Micro ", " Wall |"]
+        )
+        lines.append(
+            "| Thinking | Tasks | Report | " + " | ".join(suites)
+            + " | Micro | In | Cached | Out | Wall | Elapsed |"
+        )
+        lines.append(
+            "| --- | ---: | --- | " + " | ".join(["---:"] * len(suites))
+            + " | ---: | ---: | ---: | ---: | ---: | ---: |"
+        )
+        for name, f in rows:
+            rate_by_suite = {}
+            for entry in (f.get("suites") or "").split(","):
+                if ":" in entry:
+                    s, r = entry.split(":", 1)
+                    rate_by_suite[s] = r
+            cells = " | ".join(rate_by_suite.get(s, "-") for s in suites)
             wall = f.get("wall")
             wall_text = _fmt_duration(float(wall)) if wall else "-"
             elapsed = f.get("elapsed")
             elapsed_text = (
                 _fmt_duration(float(elapsed)) if elapsed and float(elapsed) > 0 else "-"
             )
-            out_lines.append(
-                f"| [{name}]({name}) | {f.get('model')} | "
-                f"{f.get('thinking')} | {f.get('cells')} | {f.get('geo')}% | "
-                f"{f.get('smooth')}% | {f.get('macro')}% | {f.get('micro')}% | "
+            lines.append(
+                f"| {f.get('thinking')} | {f.get('tasks')} | [{name}]({name}) | "
+                f"{cells} | {f.get('micro')}% | "
                 f"{_fmt_tokens(f.get('tok_in'))} | {_fmt_tokens(f.get('cached'))} | "
                 f"{_fmt_tokens(f.get('out'))} | {wall_text} | {elapsed_text} |"
             )
-        return out_lines
-
-    lines = [
-        "# Reports index",
-        "",
-        "Auto-generated from embedded aggregate markers; ordered by micro "
-        "pooled (descending). One row per (model, thinking); duplicate "
-        "markers across reports collapse. Regenerate with "
-        "`scripts/generate-report.py --build-index <reports-dir>`.",
-        "",
-        "## Authoritative full-matrix runs",
-        "",
-        "Complete runs on the identical 336-task panel set.",
-        "",
-        *header,
-    ]
-    if authoritative:
-        lines.extend(rows(authoritative))
-    else:
-        lines.append("| _none yet_ | | | | | | | | | | | | |")
-    lines.extend(["", "## Other cells", "", *header])
-    if other:
-        lines.extend(rows(other))
-    else:
-        lines.append("| _none_ | | | | | | | | | | | | |")
+        lines.append("")
     markdown = "\n".join(lines) + "\n"
     output.write_text(markdown)
     return markdown

@@ -1,6 +1,6 @@
 # Cospa Run Report
 
-_Generated 2026-08-18T10:36:47+0900 · harness pi 0.84.2 (pi_vanilla, --no-extensions)_
+_Generated 2026-08-18T12:53:33+0900 · harness pi 0.84.2 (pi_vanilla, --no-extensions)_
 
 ## Summary
 
@@ -14,6 +14,7 @@ _Generated 2026-08-18T10:36:47+0900 · harness pi 0.84.2 (pi_vanilla, --no-exten
 | terminal_bench_core_pareto20 | local/deepseek-v4-flash-0731 | pi_vanilla | high | 20 | 11/20 (55.0%) | 1h25m | 187K | 3.7M | 140K | $0.0758 |
 | swe_explore_verified12 | local/deepseek-v4-flash-0731 | pi_vanilla | high | 12 | 9.7% weighted_core_coverage | 26m26s | 157K | 1.8M | 58K | $0.0432 |
 | **All cells** | | | | **336** | — | **19h16m** | **6.9M** | **229.3M** | **3.0M** | **$2.45** |
+| local/deepseek-v4-flash-0731 | pi_vanilla | high | 6 | 25.5% | 26.9% | 29.6% | 35.8% |
 
 ## Headline geomean
 
@@ -21,16 +22,16 @@ Geometric mean of per-suite rates per model configuration, across primary comple
 
 | Model | Adapter | Thinking | Cells | Geomean | Geomean (smoothed) | Macro mean | Micro pooled |
 | --- | --- | --- | ---: | ---: | ---: | ---: | ---: |
-| local/deepseek-v4-flash-0731 | pi_vanilla | high | 6 | 25.5% | 26.9% | 29.6% | 35.8% |
 
 ## Aggregate reading
 
-- Ordering by micro pooled: local/deepseek-v4-flash-0731 (35.8%).
+- Ordering by micro pooled: local/deepseek-v4-flash-0731 (35.8%) > local/deepseek-v4-flash-0731 (11.9%).
 - The ordering is consistent across all four aggregations.
 - Micro lifts local/deepseek-v4-flash-0731 most (+6.2 pp over macro) — strength concentrated in the larger panels.
 
 
-<!-- cospa:agg model=local/deepseek-v4-flash-0731 adapter=pi_vanilla thinking=high cells=6 geo=25.5 smooth=26.9 macro=29.6 micro=35.8 tok_in=6888608 cached=229286656 out=2841517 wall=66879.5 elapsed=40226.4 tasks=193 -->
+<!-- cospa:agg model=local/deepseek-v4-flash-0731 adapter=bigcodebench_openai thinking=not_applicable cells=1 geo=11.9 smooth=12.4 macro=11.9 micro=11.9 tok_in=28010 cached=0 out=139649 wall=2515.9 elapsed=429.6 tasks=143 suites=bigcodebench_hard_instruct_hermetic143:11.9 -->
+<!-- cospa:agg model=local/deepseek-v4-flash-0731 adapter=pi_vanilla thinking=high cells=6 geo=25.5 smooth=26.9 macro=29.6 micro=35.8 tok_in=6888608 cached=229286656 out=2841517 wall=66879.5 elapsed=40226.4 tasks=193 suites=bigcodebench_hard_agentic_pareto60:36.7,featurebench_lite_pareto12:16.7,multi_swe_bench_flash_hermetic25:36.0,swe_polybench_verified_balanced64:23.4,terminal_bench_core_pareto20:55.0,swe_explore_verified12:9.7 -->
 
 
 ## Speed & behavior

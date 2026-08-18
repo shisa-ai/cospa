@@ -1,6 +1,6 @@
 # Cospa Run Report
 
-_Generated 2026-08-18T10:36:28+0900 · harness pi 0.84.2 (pi_vanilla, --no-extensions)_
+_Generated 2026-08-18T12:52:42+0900 · harness pi 0.84.2 (pi_vanilla, --no-extensions)_
 
 ## Summary
 
@@ -14,6 +14,7 @@ _Generated 2026-08-18T10:36:28+0900 · harness pi 0.84.2 (pi_vanilla, --no-exten
 | swe_polybench_verified_balanced64 | local/qwen3.8-27b | pi_vanilla | high | 64 | 19/64 (29.7%) | 19h14m | 4.8M | 141.1M | 2.3M | $72.90 |
 | terminal_bench | local/qwen3.8-27b | pi_vanilla | high | 80 | 19/80 (23.8%) | 9h53m | 1.0M | 18.8M | 490K | $10.49 |
 | **All cells** | | | | **479** | — | **64h52m** | **20.9M** | **459.5M** | **8.0M** | **$241.72** |
+| local/qwen3.8-27b | pi_vanilla | high | 6 | 25.1% | 26.2% | 25.5% | 30.1% |
 
 ## Headline geomean
 
@@ -21,16 +22,16 @@ Geometric mean of per-suite rates per model configuration, across primary comple
 
 | Model | Adapter | Thinking | Cells | Geomean | Geomean (smoothed) | Macro mean | Micro pooled |
 | --- | --- | --- | ---: | ---: | ---: | ---: | ---: |
-| local/qwen3.8-27b | pi_vanilla | high | 6 | 25.1% | 26.2% | 25.5% | 30.1% |
 
 ## Aggregate reading
 
-- Ordering by micro pooled: local/qwen3.8-27b (30.1%).
+- Ordering by micro pooled: local/qwen3.8-27b (34.3%) > local/qwen3.8-27b (30.1%).
 - The ordering is consistent across all four aggregations.
 - Micro lifts local/qwen3.8-27b most (+4.6 pp over macro) — strength concentrated in the larger panels.
 
 
-<!-- cospa:agg model=local/qwen3.8-27b adapter=pi_vanilla thinking=high cells=6 geo=25.1 smooth=26.2 macro=25.5 micro=30.1 tok_in=20871985 cached=459489498 out=7913175 wall=233159.3 elapsed=55315.1 tasks=336 -->
+<!-- cospa:agg model=local/qwen3.8-27b adapter=bigcodebench_openai thinking=not_applicable cells=1 geo=34.3 smooth=34.5 macro=34.3 micro=34.3 tok_in=29907 cached=0 out=68511 wall=404.8 elapsed=151.5 tasks=143 suites=bigcodebench_hard_instruct_hermetic143:34.3 -->
+<!-- cospa:agg model=local/qwen3.8-27b adapter=pi_vanilla thinking=high cells=6 geo=25.1 smooth=26.2 macro=25.5 micro=30.1 tok_in=20871985 cached=459489498 out=7913175 wall=233159.3 elapsed=55315.1 tasks=336 suites=bigcodebench_hard_agentic_hermetic143:29.4,featurebench_lite_pareto12:25.0,multi_swe_bench_flash_hermetic25:28.0,swe_explore_verified12:17.3,swe_polybench_verified_balanced64:29.7,terminal_bench:23.8 -->
 
 
 ## Speed & behavior

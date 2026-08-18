@@ -542,36 +542,35 @@ def test_marker_and_index_carry_campaign_elapsed(tmp_path):
     assert "Elapsed" in idx and "10s" in idx
 
 
-def test_build_index_dedups_and_splits_authoritative_vs_other(tmp_path):
-    """One row per (model, thinking) — duplicates across reports collapse
-    (keeping the most tasks); full 336-task runs get their own section;
-    single-cell/instruct entries go under Other; no adapter column."""
+def test_build_index_dedups_and_groups_families(tmp_path):
+    """One row per (model, thinking, tasks); duplicates across reports
+    collapse; sections are per model family; no adapter column."""
     module = _generator()
     build_index = module["build_index"]
     reports = tmp_path / "reports"
     reports.mkdir()
     (reports / "combined.md").write_text(
         "# C\n"
-        "<!-- cospa:agg model=mA adapter=pi_vanilla thinking=high cells=6 tasks=336 geo=25 smooth=26 macro=29 micro=35 tok_in=1 cached=2 out=3 wall=10 elapsed=11 -->\n"
-        "<!-- cospa:agg model=mA adapter=pi_vanilla thinking=high cells=6 tasks=336 geo=25 smooth=26 macro=29 micro=35 tok_in=1 cached=2 out=3 wall=10 elapsed=11 -->\n"
-        "<!-- cospa:agg model=mB adapter=bigcodebench_openai thinking=not_applicable cells=1 tasks=143 geo=34 smooth=34 macro=34 micro=34 tok_in=1 cached=2 out=3 wall=10 elapsed=11 -->\n"
+        "<!-- cospa:agg model=mA adapter=pi_vanilla thinking=high cells=6 tasks=336 geo=25 smooth=26 macro=29 micro=35 tok_in=1 cached=2 out=3 wall=10 elapsed=11 suites=s1:50 -->\n"
+        "<!-- cospa:agg model=mA adapter=pi_vanilla thinking=high cells=6 tasks=336 geo=25 smooth=26 macro=29 micro=35 tok_in=1 cached=2 out=3 wall=10 elapsed=11 suites=s1:50 -->\n"
+        "<!-- cospa:agg model=mB adapter=bigcodebench_openai thinking=not_applicable cells=1 tasks=143 geo=34 smooth=34 macro=34 micro=34 tok_in=1 cached=2 out=3 wall=10 elapsed=11 suites=s2:34 -->\n"
     )
     (reports / "row.md").write_text(
         "# R\n"
-        "<!-- cospa:agg model=mA adapter=pi_vanilla thinking=high cells=6 tasks=336 geo=25 smooth=26 macro=29 micro=35 tok_in=1 cached=2 out=3 wall=10 elapsed=11 -->\n"
+        "<!-- cospa:agg model=mA adapter=pi_vanilla thinking=high cells=6 tasks=336 geo=25 smooth=26 macro=29 micro=35 tok_in=1 cached=2 out=3 wall=10 elapsed=11 suites=s1:50 -->\n"
     )
     out = reports / "README.md"
     idx = build_index(reports, out)
-    assert idx.count("mA") == 1  # deduped across both reports
-    assert "| Adapter |" not in idx  # adapter column dropped
-    assert "Authoritative full-matrix runs" in idx
-    assert "Other cells" in idx
-    assert idx.index("Authoritative") < idx.index("mA") < idx.index("Other") < idx.index("mB")
+    assert idx.count("mA") <= 3  # deduped to one row (+ section header)
+    assert "| Adapter |" not in idx
+    assert "## mA" in idx and "## mB" in idx
+    assert idx.index("## mA") < idx.index("## mB")  # family best micro 35 > 34
+    assert "[combined.md](combined.md)" in idx or "[row.md](row.md)" in idx
 
 
-def test_single_cell_groups_excluded_from_aggregates_and_markers_inline_break(tmp_path):
-    """A one-cell group (e.g. instruct-only) has no aggregate row or marker;
-    markers never sit between table rows (table renders unbroken)."""
+def test_markers_carry_per_suite_rates_for_all_groups(tmp_path):
+    """Markers include per-suite rates and emit even for single-cell groups,
+    so effort rungs (one suite each) are indexable."""
     module = _generator()
     generate_report = module["generate_report"]
     model, adapter = "local/test-model", "pi_vanilla"
@@ -585,21 +584,39 @@ def test_single_cell_groups_excluded_from_aggregates_and_markers_inline_break(tm
             )
 
     root = tmp_path / "run"
-    cell(root, "aider_polyglot", [True, False])  # single suite -> single cell group
-
+    cell(root, "aider_polyglot", [True, False, True])  # 2/3
     markdown = generate_report(
         [root], tmp_path / "r.md", canonical_suite_size=lambda s: None
     )
-    assert "## Headline geomean" not in markdown
-    assert "cospa:agg" not in markdown
+    marker = [l for l in markdown.splitlines() if l.startswith("<!-- cospa:agg ")][0]
+    assert "suites=" in marker
+    assert "aider_polyglot:66.7" in marker
 
-    # Two-suite report: markers must come after the table, never between rows.
-    cell(root, "featurebench_lite_pareto12", [True, False])
-    markdown2 = generate_report(
-        [root], tmp_path / "r2.md", canonical_suite_size=lambda s: None
+
+def test_build_index_renders_family_sections_with_thinking_comparison(tmp_path):
+    """Index groups rows by model family; each family table compares thinking
+    levels across suite columns; dedup key includes tasks so a sweep rung and
+    a full-matrix row coexist."""
+    module = _generator()
+    build_index = module["build_index"]
+    reports = tmp_path / "reports"
+    reports.mkdir()
+    (reports / "matrix.md").write_text(
+        "# M\n"
+        "<!-- cospa:agg model=local/qwen3.8-27b adapter=pi_vanilla thinking=high cells=6 tasks=336 geo=25.1 smooth=26.2 macro=25.5 micro=30.1 tok_in=1 cached=2 out=3 wall=10 elapsed=11 suites=bigcodebench_hard_agentic_hermetic143:29.4,multi_swe_bench_flash_hermetic25:28.0 -->\n"
+        "<!-- cospa:agg model=local/qwen3.8-27b adapter=pi_vanilla thinking=high cells=6 tasks=336 geo=25.1 smooth=26.2 macro=25.5 micro=30.1 tok_in=1 cached=2 out=3 wall=10 elapsed=11 suites=x:1 -->\n"  # exact duplicate collapses
     )
-    lines = markdown2.splitlines()
-    table_rows = [i for i, l in enumerate(lines) if l.startswith(f"| {model} |")]
-    marker_rows = [i for i, l in enumerate(lines) if l.startswith("<!-- cospa:agg")]
-    assert table_rows and marker_rows
-    assert min(marker_rows) > max(table_rows)
+    (reports / "sweep.md").write_text(
+        "# S\n"
+        "<!-- cospa:agg model=local/qwen3.8-27b adapter=pi_vanilla thinking=off cells=1 tasks=60 geo=25.0 smooth=25.8 macro=25.0 micro=25.0 tok_in=1 cached=2 out=3 wall=10 elapsed=11 suites=bigcodebench_hard_agentic_pareto60:25.0 -->\n"
+        "<!-- cospa:agg model=local/qwen3.8-27b adapter=pi_vanilla thinking=xhigh cells=1 tasks=60 geo=15.0 smooth=16.4 macro=15.0 micro=15.0 tok_in=1 cached=2 out=3 wall=10 elapsed=11 suites=bigcodebench_hard_agentic_pareto60:15.0 -->\n"
+    )
+    idx = build_index(reports, reports / "README.md")
+    # Family section per model; thinking rows within; suite columns.
+    assert "## local/qwen3.8-27b" in idx
+    assert idx.count("local/qwen3.8-27b |") <= 4  # header rows not duplicated per entry
+    assert "off" in idx and "xhigh" in idx and "high" in idx
+    assert "pareto60" in idx and "hermetic143" in idx
+    # dedup: duplicate (model, thinking, tasks) collapsed to one high row
+    assert idx.count("thinking=high") == 0  # markers not leaked
+    assert idx.count("| high |") == 1

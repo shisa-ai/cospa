@@ -84,16 +84,11 @@ def parse_args():
         required=True,
         help=(
             "Adapter name (pi_vanilla, pi_devstack, "
-<<<<<<< HEAD
             "pi_devstack_superpowers, little_coder, "
             "pi_superpowers, little_coder_superpowers, "
-            "bigcodebench_openai)"
-=======
-            "pi_devstack_superpowers, little_coder, pi_superpowers, "
-            "little_coder_superpowers, pi_measuretwice_check_same, "
+            "bigcodebench_openai, pi_measuretwice_check_same, "
             "pi_measuretwice_check_cross, pi_measuretwice_repair_same, "
             "pi_measuretwice_repair_cross)"
->>>>>>> 618a87c (feat: add Harbor-native Measure Twice recovery)
         ),
     )
     parser.add_argument("--model", required=True, help="Model ID (e.g. nvidia/nemotron-3-ultra-550b-a55b)")

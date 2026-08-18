@@ -27,9 +27,8 @@ EOF
 
 cat > "$BIN/mamba" <<'EOF'
 #!/usr/bin/env bash
+echo "$*" >> "$MAMBA_LOG"
 if [[ "$*" == "run -n cospa python --version" ]]; then
-MAMBA_LOG="$TMP/mamba.log"
-export MAMBA_LOG
     echo "Python 3.12.13"
     exit 0
 elif [[ "$*" == *"fetch-swe-bench-live.py"*"--check"* ]]; then
@@ -117,7 +116,8 @@ chmod +x "$BIN/pi" "$BIN/mamba" "$BIN/harbor" "$BIN/docker" "$BIN/git" "$BIN/npm
 NPM_LOG="$TMP/npm.log"
 GIT_LOG="$TMP/git.log"
 UV_LOG="$TMP/uv.log"
-export NPM_LOG GIT_LOG UV_LOG
+MAMBA_LOG="$TMP/mamba.log"
+export NPM_LOG GIT_LOG UV_LOG MAMBA_LOG
 TEST_PATH="$BIN:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
 OUT=$(PATH="$TEST_PATH" bash "$PROJ/scripts/setup.sh" 2>&1)
 RC=$?

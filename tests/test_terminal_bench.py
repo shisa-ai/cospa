@@ -873,12 +873,24 @@ def test_run_harbor_job_mounts_pinned_measuretwice_source_for_recovery_arms():
     assert len(set(agents.values())) == len(adapters)
     for adapter, cmd in commands.items():
         mounts = json.loads(cmd[cmd.index("--mounts") + 1])
-        assert mounts == [{
+        # The pi-runtime/compat-node mounts come from the shared Harbor agent
+        # profile; assert the pinned Measure Twice source is present and the
+        # mounts stay a strict subset of the known read-only binds.
+        expected = {
             "type": "bind",
             "source": str(extension.resolve()),
             "target": "/opt/coding-eval-measuretwice",
             "read_only": True,
-        }], adapter
+        }
+        assert expected in mounts, adapter
+        assert all(m["read_only"] for m in mounts), adapter
+        assert {
+            m["target"] for m in mounts
+        } <= {
+            "/opt/coding-eval-measuretwice",
+            "/opt/coding-eval-pi-runtime",
+            "/opt/coding-eval-node-compat",
+        }, adapter
 
 
 def test_run_harbor_job_rejects_cross_review_without_reviewer_model():

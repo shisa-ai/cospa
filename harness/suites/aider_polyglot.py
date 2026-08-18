@@ -748,6 +748,9 @@ class AiderPolyglotSuite:
         if not canonical_dir.is_dir():
             raise ValueError(f"Canonical verifier snapshot is missing: {canonical_dir}")
         cls._copy_for_verification(canonical_dir, dest)
+        # Re-inject hidden tests: the pre-agent canonical snapshot never
+        # contains them, so restore them from the vendor problem dir here.
+        cls._restore_hidden_tests(task_data, dest)
 
         for relative in task_data.get("solution_files", []):
             solution = Path(relative)

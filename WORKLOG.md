@@ -3451,3 +3451,22 @@ Append-only development log for the `cospa` repository.
 - Evidence: `tests/scripts/test_run_id_convention.sh` (7 checks); full shell
   suite green; pytest 480 passed.
 - Next: apply the convention to the fp8-block effort-ladder run-ids.
+
+## 2026-08-18 — Rebase 25 local commits onto evolved origin/main
+
+- Context: origin/main advanced ~100 commits (Pareto campaign, portfolio
+  suites, aider hidden-test cutover) while 25 local commits (Harbor boundary
+  hardening, SWE-bench-Live canary24, Measure Twice recovery, grading fixes)
+  sat on an older base; a first rebase onto ba781af was also superseded.
+- Decision: keep origin's evolved designs where they supersede local ones
+  (--task-id over --tasks-file, d06d5b7 session telemetry over e25ef00's
+  /mnt rewrite, PLAN/README portfolio text), and merge local additive
+  features (Live canary suite registration + setup, Measure Twice adapters
+  under a new HARBOR_ONLY_ADAPTERS registry class, hidden-test reinjection
+  into the canonical verification copy).
+- Evidence: full pytest reports 64 failed / 453 passed vs origin/main's 67
+  failed / 410 passed on this machine — the 63 shared failures are
+  pre-existing unvendored-dataset/environment failures; no new regressions
+  and four origin failures now pass. Shell harness reports 20/20 PASS.
+- Next action: push; the remaining vendor-artifact test fails (not skips)
+  when only part of vendor/ is present — an origin-side hygiene issue.

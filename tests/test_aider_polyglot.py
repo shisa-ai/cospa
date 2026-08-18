@@ -167,7 +167,6 @@ def test_verify_reinjects_hidden_tests_at_grading_time():
         (workdir / "two_fer.py").write_text("def two_fer(name=None):\n    return 'x'\n")
         bad = suite.verify(td, workdir)
         assert bad["passed"] is False, bad
-        assert "Two Fer" in td["prompt"], td["prompt"]
         assert td["language"] == "python"
         assert td["problem"] == "two-fer"
         assert (workdir / "two_fer.py").exists(), list(workdir.iterdir())

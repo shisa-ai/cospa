@@ -1,6 +1,6 @@
 # Cospa Run Report
 
-_Generated 2026-08-18T10:14:25+0900 · harness pi 0.84.2 (pi_vanilla, --no-extensions)_
+_Generated 2026-08-18T10:36:37+0900 · harness pi 0.84.2 (pi_vanilla, --no-extensions)_
 
 ## Summary
 
@@ -21,7 +21,6 @@ Geometric mean of per-suite rates per model configuration, across primary comple
 | Model | Adapter | Thinking | Cells | Geomean | Geomean (smoothed) | Macro mean | Micro pooled |
 | --- | --- | --- | ---: | ---: | ---: | ---: | ---: |
 | shisa/ornith-35b-fp8-block | pi_vanilla | high | 5 | 0.0% | 12.2% | 11.9% | 17.9% |
-<!-- cospa:agg model=shisa/ornith-35b-fp8-block adapter=pi_vanilla thinking=high cells=5 geo=0.0 smooth=12.2 macro=11.9 micro=17.9 tok_in=752688 cached=8345024 out=419850 wall=327257.1 -->
 
 ## Aggregate reading
 
@@ -29,6 +28,9 @@ Geometric mean of per-suite rates per model configuration, across primary comple
 - The ordering is consistent across all four aggregations.
 - Strict geomean floors at 0 for: shisa/ornith-35b-fp8-block (zero components on at least one panel; see the smoothed column for ranking).
 - Micro lifts shisa/ornith-35b-fp8-block most (+6.0 pp over macro) — strength concentrated in the larger panels.
+
+
+<!-- cospa:agg model=shisa/ornith-35b-fp8-block adapter=pi_vanilla thinking=high cells=5 geo=0.0 smooth=12.2 macro=11.9 micro=17.9 tok_in=752688 cached=8345024 out=419850 wall=327257.1 elapsed=44175.7 tasks=324 -->
 
 
 ## Speed & behavior

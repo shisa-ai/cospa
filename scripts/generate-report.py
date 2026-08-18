@@ -41,6 +41,36 @@ def _canonical_suite_size(suite: str) -> int | None:
         return None
 
 
+def _group_elapsed_seconds(entries: list[tuple[Path, dict]]) -> float | None:
+    """Campaign span across a group's cells: earliest manifest start to
+    latest manifest end (includes c=8 overlap and idle gaps alike)."""
+    from datetime import datetime
+
+    starts: list[datetime] = []
+    ends: list[datetime] = []
+    for results_dir, row in entries:
+        cell_dir = _cell_dir(Path(results_dir), row)
+        for manifest_path in cell_dir.glob("**/manifest.json"):
+            try:
+                manifest = json.loads(manifest_path.read_text())
+            except (OSError, json.JSONDecodeError):
+                continue
+            if not isinstance(manifest, dict):
+                continue
+            for key, bucket in (("created_at", starts), ("run_end_time", ends)):
+                raw = manifest.get(key)
+                if not raw:
+                    continue
+                try:
+                    bucket.append(datetime.fromisoformat(raw))
+                except (TypeError, ValueError):
+                    continue
+    if not starts or not ends:
+        return None
+    span = (max(ends) - min(starts)).total_seconds()
+    return span if span > 0 else None
+
+
 def _cell_latest_mtime(results_dir: Path, row: dict) -> float:
     """Newest verdict mtime under a cell directory (0 when unreadable)."""
     cell_dir = _cell_dir(Path(results_dir), row)
@@ -478,12 +508,22 @@ def generate_report(
     import math
 
     geomean_groups: dict[tuple, list[dict]] = {}
-    for _results_dir, row in all_rows:
+    geomean_entries: dict[tuple, list[tuple[Path, dict]]] = {}
+    for entry in all_rows:
+        row = entry[1]
         if row.get("_partial_marker"):
             continue
         key = (row["model"], row["adapter"], row.get("thinking", "default"))
         geomean_groups.setdefault(key, []).append(row)
-    if geomean_groups:
+        geomean_entries.setdefault(key, []).append(entry)
+    # Only groups spanning >= 2 cells are aggregates; headers render only
+    # when at least one qualifying group exists.
+    eligible_groups = {
+        key: rows
+        for key, rows in geomean_groups.items()
+        if sum(1 for row in rows if _geomean_rate(row) is not None) >= 2
+    }
+    if eligible_groups:
         lines.extend(
             [
                 "",
@@ -503,13 +543,15 @@ def generate_report(
                 "| --- | --- | --- | ---: | ---: | ---: | ---: | ---: |",
             ]
         )
-        for key in sorted(geomean_groups):
+        agg_markers: list[str] = []
+        for key in sorted(eligible_groups):
             rates: list[float] = []
             for row in geomean_groups[key]:
                 rate = _geomean_rate(row)
                 if rate is not None:
                     rates.append(rate)
-            if not rates:
+            # A one-cell group is not an aggregate; it stays in the Summary.
+            if len(rates) < 2:
                 continue
             smoothed = [
                 _smoothed_rate(row)
@@ -557,16 +599,19 @@ def generate_report(
                 row.get("total_wall_clock_seconds") or 0.0
                 for row in geomean_groups[key]
             )
-            lines.append(
+            elapsed_seconds = _group_elapsed_seconds(geomean_entries.get(key, []))
+            agg_markers.append(
                 f"<!-- cospa:agg model={key[0]} adapter={key[1]} thinking={key[2]} "
                 f"cells={len(rates)} geo={100.0 * geomean:.1f} "
                 f"smooth={100.0 * smoothed_geomean:.1f} macro={100.0 * macro:.1f} "
                 f"micro={100.0 * micro:.1f} tok_in={tok_in} cached={tok_cached} "
-                f"out={tok_out} wall={wall_seconds:.1f} -->"
+                f"out={tok_out} wall={wall_seconds:.1f} "
+                f"elapsed={elapsed_seconds if elapsed_seconds is not None else -1.0:.1f} "
+                f"tasks={total_sum} -->"
             )
 
         # Deterministic topline reading for the index and humans.
-        agg_lines = [l for l in lines if l.startswith("<!-- cospa:agg ")]
+        agg_lines = agg_markers
         if agg_lines:
             import re as _re
 
@@ -624,6 +669,8 @@ def generate_report(
                     "— strength concentrated in the larger panels."
                 )
             lines.append("")
+        if agg_markers:
+            lines.extend(["", *agg_markers, ""])
 
     lines.extend(["", "## Speed & behavior", ""])
     lines.append(
@@ -704,14 +751,17 @@ def generate_report(
 def build_index(reports_dir: Path, output: Path) -> str:
     """Scan report files for cospa:agg markers; write an index README.
 
-    Ordered by micro pooled (descending) with relative links. The index
-    file itself is excluded from scanning.
+    One row per (model, thinking) — duplicate markers across reports
+    collapse, keeping the entry backed by the most tasks. Full-matrix runs
+    (>= 300 tasks on the identical panel set) get their own section;
+    everything else is listed under Other cells. Ordered by micro pooled
+    (descending). The index file itself is excluded from scanning.
     """
     import re as _re
 
     reports_dir = Path(reports_dir)
     output = Path(output)
-    entries = []
+    best: dict[tuple, tuple[str, int, dict]] = {}
     for md in sorted(reports_dir.glob("*.md")):
         if md.resolve() == output.resolve():
             continue
@@ -721,29 +771,64 @@ def build_index(reports_dir: Path, output: Path) -> str:
             continue
         for m in _re.finditer(r"<!-- cospa:agg ([^>]+?)-->", text):
             fields = dict(_re.findall(r"(\w+)=(\S+)", m.group(1)))
-            if fields.get("model"):
-                entries.append((md.name, fields))
-    entries.sort(key=lambda e: -float(e[1].get("micro", 0) or 0))
+            if not fields.get("model"):
+                continue
+            key = (fields.get("model"), fields.get("thinking"))
+            tasks = int(float(fields.get("tasks", 0) or 0))
+            if key not in best or tasks > best[key][1]:
+                best[key] = (md.name, tasks, fields)
+    ordered = sorted(
+        best.values(), key=lambda e: -float(e[2].get("micro", 0) or 0)
+    )
+    authoritative = [e for e in ordered if e[1] >= 300]
+    other = [e for e in ordered if e[1] < 300]
+
+    header = [
+        "| Report | Model | Thinking | Cells | Geomean | Smoothed | Macro | Micro | In | Cached | Out | Wall | Elapsed |",
+        "| --- | --- | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |",
+    ]
+
+    def rows(entries):
+        out_lines = []
+        for name, _tasks, f in entries:
+            wall = f.get("wall")
+            wall_text = _fmt_duration(float(wall)) if wall else "-"
+            elapsed = f.get("elapsed")
+            elapsed_text = (
+                _fmt_duration(float(elapsed)) if elapsed and float(elapsed) > 0 else "-"
+            )
+            out_lines.append(
+                f"| [{name}]({name}) | {f.get('model')} | "
+                f"{f.get('thinking')} | {f.get('cells')} | {f.get('geo')}% | "
+                f"{f.get('smooth')}% | {f.get('macro')}% | {f.get('micro')}% | "
+                f"{_fmt_tokens(f.get('tok_in'))} | {_fmt_tokens(f.get('cached'))} | "
+                f"{_fmt_tokens(f.get('out'))} | {wall_text} | {elapsed_text} |"
+            )
+        return out_lines
+
     lines = [
         "# Reports index",
         "",
         "Auto-generated from embedded aggregate markers; ordered by micro "
-        "pooled (descending). Regenerate with "
+        "pooled (descending). One row per (model, thinking); duplicate "
+        "markers across reports collapse. Regenerate with "
         "`scripts/generate-report.py --build-index <reports-dir>`.",
         "",
-        "| Report | Model | Adapter | Thinking | Cells | Geomean | Smoothed | Macro | Micro | In | Cached | Out | Wall |",
-        "| --- | --- | --- | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |",
+        "## Authoritative full-matrix runs",
+        "",
+        "Complete runs on the identical 336-task panel set.",
+        "",
+        *header,
     ]
-    for name, f in entries:
-        wall = f.get("wall")
-        wall_text = _fmt_duration(float(wall)) if wall else "-"
-        lines.append(
-            f"| [{name}]({name}) | {f.get('model')} | {f.get('adapter')} | "
-            f"{f.get('thinking')} | {f.get('cells')} | {f.get('geo')}% | "
-            f"{f.get('smooth')}% | {f.get('macro')}% | {f.get('micro')}% | "
-            f"{_fmt_tokens(f.get('tok_in'))} | {_fmt_tokens(f.get('cached'))} | "
-            f"{_fmt_tokens(f.get('out'))} | {wall_text} |"
-        )
+    if authoritative:
+        lines.extend(rows(authoritative))
+    else:
+        lines.append("| _none yet_ | | | | | | | | | | | | |")
+    lines.extend(["", "## Other cells", "", *header])
+    if other:
+        lines.extend(rows(other))
+    else:
+        lines.append("| _none_ | | | | | | | | | | | | |")
     markdown = "\n".join(lines) + "\n"
     output.write_text(markdown)
     return markdown

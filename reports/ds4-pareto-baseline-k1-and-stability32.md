@@ -1,6 +1,6 @@
 # Cospa Run Report
 
-_Generated 2026-08-18T10:14:07+0900 · harness pi 0.84.2 (pi_vanilla, --no-extensions)_
+_Generated 2026-08-18T10:36:47+0900 · harness pi 0.84.2 (pi_vanilla, --no-extensions)_
 
 ## Summary
 
@@ -21,16 +21,16 @@ Geometric mean of per-suite rates per model configuration, across primary comple
 
 | Model | Adapter | Thinking | Cells | Geomean | Geomean (smoothed) | Macro mean | Micro pooled |
 | --- | --- | --- | ---: | ---: | ---: | ---: | ---: |
-| local/deepseek-v4-flash-0731 | bigcodebench_openai | not_applicable | 1 | 11.9% | 12.4% | 11.9% | 11.9% |
-<!-- cospa:agg model=local/deepseek-v4-flash-0731 adapter=bigcodebench_openai thinking=not_applicable cells=1 geo=11.9 smooth=12.4 macro=11.9 micro=11.9 tok_in=28010 cached=0 out=139649 wall=2515.9 -->
 | local/deepseek-v4-flash-0731 | pi_vanilla | high | 6 | 25.5% | 26.9% | 29.6% | 35.8% |
-<!-- cospa:agg model=local/deepseek-v4-flash-0731 adapter=pi_vanilla thinking=high cells=6 geo=25.5 smooth=26.9 macro=29.6 micro=35.8 tok_in=6888608 cached=229286656 out=2841517 wall=66879.5 -->
 
 ## Aggregate reading
 
-- Ordering by micro pooled: local/deepseek-v4-flash-0731 (35.8%) > local/deepseek-v4-flash-0731 (11.9%).
+- Ordering by micro pooled: local/deepseek-v4-flash-0731 (35.8%).
 - The ordering is consistent across all four aggregations.
 - Micro lifts local/deepseek-v4-flash-0731 most (+6.2 pp over macro) — strength concentrated in the larger panels.
+
+
+<!-- cospa:agg model=local/deepseek-v4-flash-0731 adapter=pi_vanilla thinking=high cells=6 geo=25.5 smooth=26.9 macro=29.6 micro=35.8 tok_in=6888608 cached=229286656 out=2841517 wall=66879.5 elapsed=40226.4 tasks=193 -->
 
 
 ## Speed & behavior

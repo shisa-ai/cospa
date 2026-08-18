@@ -2893,3 +2893,20 @@ Append-only development log for the `cospa` repository.
   paused+done recorded, resume skips with zero invocations, --force re-runs,
   fresh run-id starts fresh). Full shell suite run_all.sh green; test_scripts.py green.
 - Next: P5 cost rollup from usage x models.yaml prices.
+
+## 2026-08-18 — Index cleanup: dedup, sections, marker placement, file prune
+
+- Fixed broken geomean table rendering: cospa:agg markers moved out of the
+  table body into a contiguous block after the Aggregate reading section.
+- Single-cell groups (instruct rows) no longer emit aggregate rows or
+  markers — a one-cell "geomean" is just the cell; it stays in Summary.
+- Index: dropped the Adapter column; one row per (model, thinking) with
+  duplicates across reports collapsing (most tasks wins); markers now carry
+  tasks= and elapsed=; two sections — Authoritative full-matrix runs
+  (>= 300 tasks on identical panels) vs Other cells; added Wall + Elapsed
+  (campaign span) columns next to token verbosity columns.
+- Removed reports/four-model-matrix.md per user (README index + per-row
+  one-sheets cover it); generated the spark per-row one-sheet so its
+  numbers stay indexed. Committed the parallel session's ornith
+  featurebench failure review (all failures model-side, zero eval defects).
+- Evidence: 5 new/updated tests; full suite 462 passed.

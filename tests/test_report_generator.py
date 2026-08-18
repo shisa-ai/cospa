@@ -487,15 +487,16 @@ def test_report_markers_and_index_carry_tokens_and_wall(tmp_path):
     root = tmp_path / "run"
     usage = {"prompt_tokens": 100, "cached_tokens": 900, "completion_tokens": 50}
     cell(root, "aider_polyglot", [True, False], usage)
+    cell(root, "featurebench_lite_pareto12", [True, False], usage)
 
     markdown = generate_report(
         [root], tmp_path / "r.md", canonical_suite_size=lambda s: None
     )
     marker = [l for l in markdown.splitlines() if l.startswith("<!-- cospa:agg ")][0]
-    # 2 trials x usage
-    for field, val in (("tok_in=", "200"), ("cached=", "1800"), ("out=", "100"), ("wall=", "20")):
+    # 4 trials x usage
+    for field in ("tok_in=", "cached=", "out=", "wall="):
         assert field in marker
-    assert "tok_in=200" in marker and "cached=1800" in marker and "out=100" in marker
+    assert "tok_in=400" in marker and "cached=3600" in marker and "out=200" in marker
 
     reports = tmp_path / "reports"
     reports.mkdir()
@@ -505,4 +506,100 @@ def test_report_markers_and_index_carry_tokens_and_wall(tmp_path):
     out = reports / "README.md"
     idx = module["build_index"](reports, out)
     assert "Cached" in idx and "In" in idx and "Out" in idx and "Wall" in idx
-    assert "20s" in idx
+    assert "40s" in idx
+
+
+def test_marker_and_index_carry_campaign_elapsed(tmp_path):
+    """Group elapsed = span from earliest trial start to latest trial end,
+    carried in the marker and rendered as an Elapsed index column."""
+    module = _generator()
+    generate_report = module["generate_report"]
+    model, adapter = "local/test-model", "pi_vanilla"
+
+    def cell(root: Path, suite: str, tasks: list[bool]):
+        base = root / encode_model_path(model) / adapter / suite
+        for i, passed in enumerate(tasks):
+            _write_trial(
+                base / encode_task_path(f"t/{suite}{i}") / "trial-1",
+                passed=passed, task_id=f"t/{suite}{i}",
+            )
+
+    root = tmp_path / "run"
+    cell(root, "aider_polyglot", [True, False])  # 00:00:00 -> 00:00:10 each
+    cell(root, "featurebench_lite_pareto12", [True, False])
+
+    markdown = generate_report(
+        [root], tmp_path / "r.md", canonical_suite_size=lambda s: None
+    )
+    marker = [l for l in markdown.splitlines() if l.startswith("<!-- cospa:agg ")][0]
+    assert "elapsed=" in marker
+    assert "elapsed=10.0" in marker  # identical timestamps -> span == one trial
+
+    reports = tmp_path / "reports"
+    reports.mkdir()
+    (reports / "one.md").write_text(f"# R\n{marker}\n")
+    idx = module["build_index"](reports, reports / "README.md")
+    assert "Elapsed" in idx and "10s" in idx
+
+
+def test_build_index_dedups_and_splits_authoritative_vs_other(tmp_path):
+    """One row per (model, thinking) — duplicates across reports collapse
+    (keeping the most tasks); full 336-task runs get their own section;
+    single-cell/instruct entries go under Other; no adapter column."""
+    module = _generator()
+    build_index = module["build_index"]
+    reports = tmp_path / "reports"
+    reports.mkdir()
+    (reports / "combined.md").write_text(
+        "# C\n"
+        "<!-- cospa:agg model=mA adapter=pi_vanilla thinking=high cells=6 tasks=336 geo=25 smooth=26 macro=29 micro=35 tok_in=1 cached=2 out=3 wall=10 elapsed=11 -->\n"
+        "<!-- cospa:agg model=mA adapter=pi_vanilla thinking=high cells=6 tasks=336 geo=25 smooth=26 macro=29 micro=35 tok_in=1 cached=2 out=3 wall=10 elapsed=11 -->\n"
+        "<!-- cospa:agg model=mB adapter=bigcodebench_openai thinking=not_applicable cells=1 tasks=143 geo=34 smooth=34 macro=34 micro=34 tok_in=1 cached=2 out=3 wall=10 elapsed=11 -->\n"
+    )
+    (reports / "row.md").write_text(
+        "# R\n"
+        "<!-- cospa:agg model=mA adapter=pi_vanilla thinking=high cells=6 tasks=336 geo=25 smooth=26 macro=29 micro=35 tok_in=1 cached=2 out=3 wall=10 elapsed=11 -->\n"
+    )
+    out = reports / "README.md"
+    idx = build_index(reports, out)
+    assert idx.count("mA") == 1  # deduped across both reports
+    assert "| Adapter |" not in idx  # adapter column dropped
+    assert "Authoritative full-matrix runs" in idx
+    assert "Other cells" in idx
+    assert idx.index("Authoritative") < idx.index("mA") < idx.index("Other") < idx.index("mB")
+
+
+def test_single_cell_groups_excluded_from_aggregates_and_markers_inline_break(tmp_path):
+    """A one-cell group (e.g. instruct-only) has no aggregate row or marker;
+    markers never sit between table rows (table renders unbroken)."""
+    module = _generator()
+    generate_report = module["generate_report"]
+    model, adapter = "local/test-model", "pi_vanilla"
+
+    def cell(root: Path, suite: str, tasks: list[bool]):
+        base = root / encode_model_path(model) / adapter / suite
+        for i, passed in enumerate(tasks):
+            _write_trial(
+                base / encode_task_path(f"t/{suite}{i}") / "trial-1",
+                passed=passed, task_id=f"t/{suite}{i}",
+            )
+
+    root = tmp_path / "run"
+    cell(root, "aider_polyglot", [True, False])  # single suite -> single cell group
+
+    markdown = generate_report(
+        [root], tmp_path / "r.md", canonical_suite_size=lambda s: None
+    )
+    assert "## Headline geomean" not in markdown
+    assert "cospa:agg" not in markdown
+
+    # Two-suite report: markers must come after the table, never between rows.
+    cell(root, "featurebench_lite_pareto12", [True, False])
+    markdown2 = generate_report(
+        [root], tmp_path / "r2.md", canonical_suite_size=lambda s: None
+    )
+    lines = markdown2.splitlines()
+    table_rows = [i for i, l in enumerate(lines) if l.startswith(f"| {model} |")]
+    marker_rows = [i for i, l in enumerate(lines) if l.startswith("<!-- cospa:agg")]
+    assert table_rows and marker_rows
+    assert min(marker_rows) > max(table_rows)

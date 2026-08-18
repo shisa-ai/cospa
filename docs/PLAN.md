@@ -229,6 +229,11 @@ reorder — earlier items unblock later ones.
       timeout semantics; preserved historical artifacts retain their old labels.
 - [ ] **P15. Write up.** Results table, harness comparison, per-model
       findings. `RESULTS.md` at the repo root.
+- [ ] **P16. Run-management resilience (RUN-MANAGEMENT P1–P5).** Circuit
+      breaker for mid-run provider outages, retry backoff / Retry-After,
+      structured provider-error capture, `run-matrix.sh` self-resume, and
+      cost rollup. Full assessment and design in `docs/RUN-MANAGEMENT.md`;
+      motivated by the ornith featurebench dead-endpoint burn.
 
 Defer / out of scope for v1: full Terminal-Bench 2.0 (use Core for now),
 model serving automation, automated regression on every commit.

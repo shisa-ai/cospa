@@ -2820,3 +2820,24 @@ Append-only development log for the `cospa` repository.
 - Evidence: three new tests (topline markers + analysis, index ordering +
   links, tokens/wall propagation); full suite 439 passed. All reports and
   reports/README.md regenerated.
+
+## 2026-08-18 — Document run-management plan (P1-P5 resilience)
+
+- Context: long-running evals over online APIs (Kimi, GLM, GPT, Claude) need
+  mid-run resilience. The ornith featurebench run exposed the gap: 9 trials x
+  60 min burned against a dead model endpoint because only a pre-run
+  reachability probe guards the start.
+- Change: add `docs/RUN-MANAGEMENT.md` auditing existing capabilities (per-trial
+  resume, infra-shaped retry, reachability probe, heartbeat, failure taxonomy,
+  backfill tools) and the five gaps: (P1) mid-run circuit breaker, (P2) retry
+  backoff / Retry-After, (P3) structured provider-error capture, (P4)
+  run-matrix self-resume/checkpoint, (P5) cost rollup. Pointer added to
+  PLAN.md punchlist (P16). Durable ornith failure review at
+  `reports/ornith-featurebench-failure-review-20260818.md`.
+- Evidence: audit of `harness/runner.py` (resume/retry/reachability), failure
+  taxonomy, and per-attempt log analysis of the ornith run (all 9 completed
+  trials = model-side failures, 0 eval failures).
+- Decision: implement P1-P5 as small RED/GREEN units in order, committed
+  separately.
+- Next: P1+P2+P3 (resilient retry/backoff + circuit breaker + structured
+  provider errors), then P4 (matrix self-resume), then P5 (cost rollup).

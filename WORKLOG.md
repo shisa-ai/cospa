@@ -1398,6 +1398,23 @@ Append-only development log for the `cospa` repository.
   end-to-end)`. Qualify gold/baseline behavior in the other seven languages and
   audit one protected model trial before freezing core48 or launching a matrix.
 
+## 2026-07-22 — Add Laguna S 2.1 to the local model shortlist
+
+- Context: Poolside released Laguna S 2.1 after the original model survey; its
+  official 71.9 GB NVFP4 target and 2.23 GB DFlash draft fit one PRO 6000 and
+  report stronger overlapping coding scores than Ornith.
+- Evidence: reviewed the release post, official HF collection/model cards,
+  repository file trees, quantization config, and DFlash benchmark card;
+  recalculated weight, KV, fit, and bandwidth-model estimates.
+- Decision: rank Laguna as the first 1-GPU trial while preserving explicit
+  caveats for Poolside-harness scores, 100K+ thinking traces, Pi tool-call
+  failures, unaudited tensor headers, and the early serving stack.
+- Validation: re-read `docs/MODELS.md` end to end; `git diff --check` and a
+  Markdown table-column check pass.
+- Next action: run both thinking modes with preserved reasoning on one PRO
+  6000, record token counts/tool-call recovery, then validate NVFP4+DFlash
+  speed and 262K-context memory use before promoting it to the matrix.
+
 ## 2026-07-22 — Register Laguna S 2.1 for the canary
 
 - Context: the direct vLLM endpoint at `localhost:8001` now serves
@@ -1575,45 +1592,6 @@ Append-only development log for the `cospa` repository.
 - Next action: qualify a small server-off recovery subset before considering
   another full 225-task pair.
 
-## 2026-08-02 — Add Harbor-native Measure Twice recovery arms
-
-- Added four distinct Terminal-Bench-only adapters for check/repair with the
-  executor or a cross reviewer. Each custom Harbor agent pins Pi 0.80.3, writes
-  an isolated bounded Measure Twice config, loads only the explicit extension,
-  and exports raw evidence with the existing Pi/session/workdir artifacts.
-- Added a fail-closed read-only source mount requiring a clean Measure Twice
-  repository at `CODING_EVAL_MEASURETWICE_COMMIT`. Cross arms also fail before
-  Harbor launch when no reviewer model is declared; they register that model on
-  the selected provider endpoint and pin reviewer thinking separately.
-- Preserved the native Harbor verifier as quality authority: hidden tests are
-  not exposed as extension checks, and Terminal-Bench protection remains
-  partial under `docs/PROTECTION-AUDIT.md`.
-- Evidence: RED/GREEN Measure Twice tests; full
-  `mamba run -n coding-eval python -m pytest -q` = 272 passed; shell harness =
-  50 passed; Harbor 0.16.1 native import constructed the cross-repair agent;
-  the real clean Measure Twice source mounted at commit `c6aa65d`, and all seven
-  predeclared Terminal-Bench candidates were present in the pinned vendor set.
-- Status: `wired (unit + real pinned artifact + native import)`, not
-  end-to-end. A scored Harbor run remains blocked on model credits and a
-  dedicated container-reachable relay hostname.
-
-## 2026-07-22 — Add Laguna S 2.1 to the local model shortlist
-
-- Context: Poolside released Laguna S 2.1 after the original model survey; its
-  official 71.9 GB NVFP4 target and 2.23 GB DFlash draft fit one PRO 6000 and
-  report stronger overlapping coding scores than Ornith.
-- Evidence: reviewed the release post, official HF collection/model cards,
-  repository file trees, quantization config, and DFlash benchmark card;
-  recalculated weight, KV, fit, and bandwidth-model estimates.
-- Decision: rank Laguna as the first 1-GPU trial while preserving explicit
-  caveats for Poolside-harness scores, 100K+ thinking traces, Pi tool-call
-  failures, unaudited tensor headers, and the early serving stack.
-- Validation: re-read `docs/MODELS.md` end to end; `git diff --check` and a
-  Markdown table-column check pass.
-- Next action: run both thinking modes with preserved reasoning on one PRO
-  6000, record token counts/tool-call recovery, then validate NVFP4+DFlash
-  speed and 262K-context memory use before promoting it to the matrix.
-
 ## 2026-08-01 — Persist trial-local sessions through sandbox
 
 - Context: the first real DS4 `pi_devstack` Aider run passed all 17 native
@@ -1642,6 +1620,28 @@ Append-only development log for the `cospa` repository.
   port-8080 collision; all other 46 assertions pass. `git diff --check` passes.
 - Next action: keep the one-task DS4 result as bounded smoke evidence only;
   choose a multi-language slice before making a suite-level quality claim.
+
+## 2026-08-02 — Add Harbor-native Measure Twice recovery arms
+
+- Added four distinct Terminal-Bench-only adapters for check/repair with the
+  executor or a cross reviewer. Each custom Harbor agent pins Pi 0.80.3, writes
+  an isolated bounded Measure Twice config, loads only the explicit extension,
+  and exports raw evidence with the existing Pi/session/workdir artifacts.
+- Added a fail-closed read-only source mount requiring a clean Measure Twice
+  repository at `CODING_EVAL_MEASURETWICE_COMMIT`. Cross arms also fail before
+  Harbor launch when no reviewer model is declared; they register that model on
+  the selected provider endpoint and pin reviewer thinking separately.
+- Preserved the native Harbor verifier as quality authority: hidden tests are
+  not exposed as extension checks, and Terminal-Bench protection remains
+  partial under `docs/PROTECTION-AUDIT.md`.
+- Evidence: RED/GREEN Measure Twice tests; full
+  `mamba run -n coding-eval python -m pytest -q` = 272 passed; shell harness =
+  50 passed; Harbor 0.16.1 native import constructed the cross-repair agent;
+  the real clean Measure Twice source mounted at commit `c6aa65d`, and all seven
+  predeclared Terminal-Bench candidates were present in the pinned vendor set.
+- Status: `wired (unit + real pinned artifact + native import)`, not
+  end-to-end. A scored Harbor run remains blocked on model credits and a
+  dedicated container-reachable relay hostname.
 
 ## 2026-08-02 — Correct special-case Aider grading
 
